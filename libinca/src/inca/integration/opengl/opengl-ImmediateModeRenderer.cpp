@@ -18,12 +18,13 @@ using inca::id_t;
 
 
 // Import C++-ified OpenGL
-#include "gl.hpp"
+#include "GL.hpp"
 using namespace GL;
 
 
 // Macros to make long names shorter
 #define RENDERER        ImmediateModeRenderer<OpenGLTraits>
+#define RASTERIZER      RENDERER::Rasterizer
 #define VIEWPORT        RENDERER::Viewport
 #define MATRIX_STACK    RENDERER::MatrixStack
 #define LIGHTING_UNIT   RENDERER::LightingUnit
@@ -63,12 +64,121 @@ void OpenGL_ensureMatrixIsCurrent(const RENDERER &r, id_t id) {
         glMatrixMode(id);
 }
 
+#define SET_CACHE_VALUE(TYPE, PROPERTY, VALUE) {        \
+    r.TYPE ## Properties[PROPERTY].valid = true;        \
+    r.TYPE ## Properties[PROPERTY].value = VALUE;       \
+}
+#define GET_CACHE_VALUE(TYPE, PROPERTY) r.TYPE ## Properties[PROPERTY].value
+
+#define SYNC_BOOL_CACHE_VALUE(PROPERTY, ID) {                       \
+    GLbool result;                                                  \
+    glGetBooleanv(ID, &result);                                     \
+    r.boolProperties[PROPERTY].valid = true;                        \
+    r.boolProperties[PROPERTY].value = static_cast<bool>(result);   \
+}
+#define ENABLE(PROPERTY, ENABLED) {                                 \
+    if (ENABLED)    glEnable(GL_ ## PROPERTY);                      \
+    else            glDisable(GL_ ## PROPERTY);                     \
+    SET_CACHE_VALUE(bool, PROPERTY, ENABLED);                       \
+}
+
+
+/*---------------------------------------------------------------------------*
+ | ImmediateModeRenderer::Rasterizer functions
+ *---------------------------------------------------------------------------*/
+template <>
+RASTERIZER::Rasterizer(RENDERER &r, id_t myID) : Component(r, myID) {
+
+}
+
+// Z-buffering
+template <>
+bool RASTERIZER::isDepthBufferingEnabled() const {
+    if (! IS_CACHE_VALID(bool, DEPTH_TEST))
+        SYNC_BOOL_CACHE_VALUE(DEPTH_TEST, GL_DEPTH_TEST);
+    return GET_CACHE_VALUE(bool, DEPTH_TEST);
+}
+template <>
+void RASTERIZER::enableDepthBuffering(bool enabled) {
+    ENABLE(DEPTH_TEST, enabled);
+}
+
+// Alpha blending
+template <>
+bool RASTERIZER::isAlphaBlendingEnabled() const {
+    return CACHE_VALUE(bool, BLEND);
+}
+template <>
+void RASTERIZER::enableAlphaBlending(bool enabled) {
+    ENABLE(BLEND, enabled);
+}
+
+// Backface (or frontface culling)
+template <>
+bool RASTERIZER::isFaceCullingEnabled() const {
+
+}
+template <>
+void RASTERIZER::enableFaceCulling(bool enabled) {
+
+}
+
+// Illumination
+template <>
+bool RASTERIZER::isLightingEnabled() const {
+
+}
+template <>
+void RASTERIZER::enabledLighting(bool enabled) {
+    ENABLE(LIGHTING, enabled);
+}
+
+// Shading mode
+template <>
+ShadingMode RASTERIZER::shadingMode() const {
+
+}
+template <>
+void RASTERIZER::setShadingMode(ShadingMode mode) {
+
+}
+
+// Point antialiasing
+template <>
+bool RASTERIZER::isPointSmoothingEnabled() const {
+
+}
+template <>
+void RASTERIZER::enablePointSmoothing(bool enabled) {
+    ENABLE(POINT_SMOOTHING, enabled);
+}
+
+// Line antialiasing
+template <>
+bool isLineSmoothingEnabled() const {
+
+}
+template <>
+void enableLineSmoothing(bool enabled) {
+    ENABLE(LINE_SMOOTHING, enabled);
+}
+
+// Polygon antialiasing
+template <>
+bool RASTERIZER::isPolygonSmoothingEnabled() const {
+
+}
+template <>
+void RASTERIZER::enablePolygonSmoothing(bool enabled) {
+    ENABLE(POLYGON_SMOOTHING, enabled);
+}
+
 
 /*---------------------------------------------------------------------------*
  | ImmediateModeRenderer::Viewport functions
  *---------------------------------------------------------------------------*/
 template <>
-MATRIX_STACK::Viewport(RENDERER &r, id_t myID) {
+MATRIX_STACK::Viewport(RENDERER &r, id_t myID) : Component(r, myID) {
 
 }
 
@@ -79,7 +189,7 @@ MATRIX_STACK::Viewport(RENDERER &r, id_t myID) {
 // Constructor
 template <>
 MATRIX_STACK::MatrixStack(RENDERER &r, id_t myID)
-        : renderer(r), id(myID), depth(1), currentValid(false) {
+        : Component(r, myID), depth(1), currentValid(false) {
     // Query the implementation's depth limitation
     switch (id) {
         case GL_MODELVIEW:
@@ -99,13 +209,13 @@ MATRIX_STACK::MatrixStack(RENDERER &r, id_t myID)
 
 // Retrieve current stack depth
 template <>
-GLint MATRIX_STACK::stackDepth() const {
+int MATRIX_STACK::stackDepth() const {
     return depth;
 }
 
 // Retrieve stack depth limit
 template <>
-GLint MATRIX_STACK::maximumStackDepth() const {
+int MATRIX_STACK::maximumStackDepth() const {
     return maxDepth;
 }
 
@@ -124,7 +234,7 @@ bool MATRIX_STACK::isEmpty() const {
 // Push a matrix onto the stack
 template <>
 void MATRIX_STACK::push() const {
-    if (depth == maxDepth) {
+    if (isFull()) {
         // Whoops! Can't do that!
         cerr << "MatrixStack::push(): Exceeded maximum depth of "
              << maxDepth << endl;
@@ -137,7 +247,7 @@ void MATRIX_STACK::push() const {
 // Pop a matrix off the stack
 template <>
 void MATRIX_STACK::pop() const {
-    if (depth == 1) {
+    if (isEmpty()) {
         // Whoops! Can't do that!
         cerr << "MatrixStack::pop(): Can't pop an empty stack" << endl;
     } else {
@@ -321,14 +431,12 @@ RENDERER::Point3D MATRIX_STACK::transform(const Point3D &p) const {
     return current % p;         // Multiply through the matrix
 }
 
-#if 0
 // Transform a Vector from world to local coordinates
 template <>
 RENDERER::Vector3D MATRIX_STACK::transform(const Vector3D &v) const {
     get();                      // Ensure that the cached matrix is current
     return current % v;         // Multiply through the matrix
 }
-#endif
 
 // Transform a Point from local to world coordinates
 template <>
@@ -337,14 +445,12 @@ RENDERER::Point3D MATRIX_STACK::untransform(const Point3D &p) const {
     return inverse % p;         // Multiply through the matrix
 }
 
-#if 0
 // Transform a Vector from local to world coordinates
 template <>
 RENDERER::Vector3D MATRIX_STACK::untransform(const Vector3D &v) const {
     getInverse();               // Ensure that the cached inverse is current
     return inverse % v;         // Multiply through the matrix
 }
-#endif
 
 // If this matrix stack is not selec
 void MATRIX_STACK::ensureActive() const {
