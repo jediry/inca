@@ -94,6 +94,31 @@ public:
 
 namespace inca {
     namespace imaging {
+// Rhs color is the one "on top"
+template <typename scalar, ColorSpace cs, bool hasAlpha>
+Color<scalar, cs, hasAlpha> operator%(const Color<scalar, cs, hasAlpha> &c1,
+                                      const Color<scalar, cs, true> &c2) {
+    // The number of actual "color" channels (excluding alpha)
+    size_t components = colorspace_traits<cs, false>::components;
+
+    // Either c1 has alpha, or we assign it an alpha of 1
+    scalar alphaC1 = hasAlpha ? c1[components] : scalar(1);
+    scalar alphaC2 = c2[components];
+    scalar alphaR  = alphaC2 + alphaC1 * (1 - alphaC2);
+
+    Color<scalar, cs, hasAlpha> result;
+
+    // Do the associative color thing
+    for (index_t i = 0; i < components; i++) {
+        result[i] = (alphaC2 * c2[i]
+                     + (alphaC1 * c1[i]) * (1 - alphaC2)) / alphaR;
+    }
+
+    // If we have an alpha channel, store the new alpha
+    if (hasAlpha)
+        result[components] = alphaR;
+}
+
         // These'll do for now.
         template <>
         struct inca::imaging::colorspace_traits<sRGB, false> {
