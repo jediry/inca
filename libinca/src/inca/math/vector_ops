@@ -73,6 +73,7 @@
 #define M(D1,D2,O)  Matrix<scalar, dim ## D1, dim ## D2, order ## O>
 
 #define POINT(D)    Point<scalar, D>
+#define VECTOR(D)   Vector<scalar, D>
 
 #define OSTREAM_OP_L(RHS)                                                   \
     ostream & operator<<(ostream &o, const RHS & rhs) {                     \
@@ -218,7 +219,7 @@ namespace inca {
         TEMPLATE(0,0) L_OP_L( Q, Q, +, Q );                     // Q = Q + Q
         TEMPLATE(0,0) L_OP_L( Q, Q, -, Q );                     // Q = Q - Q
 
-        TEMPLATE(2,1) L_OP_L( M(1,2,0), M(0,1,0), +, M(0,1,0) );// M = M + M
+        TEMPLATE(2,1) L_OP_L( M(0,1,0), M(0,1,0), +, M(0,1,0) );// M = M + M
         TEMPLATE(2,1) L_OP_L( M(0,1,0), M(0,1,0), -, M(0,1,0) );// M = M - M
 //       TEMPLATE(2,1) L_OP_L( M(0,1,0), M(0,1,0), *, M(0,1,0) );    // M = M * M
 //       TEMPLATE(2,1) L_OP_L( M(0,1,0), M(0,1,0), /, M(0,1,0) );    // M = M / M
@@ -420,8 +421,8 @@ namespace inca {
 
         // The normalized natural axis of the quaternion
         TEMPLATE(0,0)
-        V(XXX) axis(const Q &q) {
-            return normalize(V(XXX)(q[1], q[2], q[3]));
+        VECTOR(3) axis(const Q &q) {
+            return normalize(VECTOR(3)(q[1], q[2], q[3]));
         }
 
         // Conjugate of a quaternion
@@ -652,6 +653,7 @@ namespace inca {
 #undef L
 
 #undef POINT
+#undef VECTOR
 
 #undef OSTREAM_OP_L
 #undef L_ASSIGN_S

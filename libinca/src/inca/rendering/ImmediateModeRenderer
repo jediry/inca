@@ -106,6 +106,10 @@ protected:
  | Initialization functions
  *---------------------------------------------------------------------------*/
 public:
+    // Constructor
+    ImmediateModeRenderer()
+        : _currentRenderPass(Opacity), _currentPrimitiveType(Points) { }
+
     void initialize() {
         _frameStats.reset();
         _totalStats.reset();

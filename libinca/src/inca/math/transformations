@@ -57,6 +57,7 @@ namespace inca {
                                                  SCALAR_ARG c) {
             for (index_t i = 0; i < m.size; i++)
                 m[i] = c;
+            return m;
         }
 
         // Generate a matrix filled with a constant value

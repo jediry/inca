@@ -23,7 +23,7 @@ float roundf(float x) {
 }
 
 // ...or for doubles...
-double roundl(double x) {
+double round(double x) {
     return (double)long(x);
 }
 
