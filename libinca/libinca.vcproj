@@ -23,10 +23,11 @@
 				Name="VCCLCompilerTool"
 				Optimization="0"
 				AdditionalIncludeDirectories=".\src"
-				PreprocessorDefinitions="WIN32;_DEBUG"
+				PreprocessorDefinitions="WIN32;_DEBUG;BOOST_DISABLE_ASSERTS"
 				MinimalRebuild="FALSE"
 				BasicRuntimeChecks="0"
 				RuntimeLibrary="1"
+				ForceConformanceInForLoopScope="TRUE"
 				RuntimeTypeInfo="TRUE"
 				UsePrecompiledHeader="2"
 				PrecompiledHeaderThrough="inca-common.h"
@@ -70,9 +71,10 @@
 				GlobalOptimizations="TRUE"
 				OptimizeForProcessor="2"
 				AdditionalIncludeDirectories=".\src"
-				PreprocessorDefinitions="WIN32;NDEBUG"
+				PreprocessorDefinitions="WIN32;NDEBUG;BOOST_DISABLE_ASSERTS"
 				MinimalRebuild="FALSE"
 				RuntimeLibrary="0"
+				ForceConformanceInForLoopScope="TRUE"
 				RuntimeTypeInfo="TRUE"
 				UsePrecompiledHeader="0"
 				PrecompiledHeaderThrough=""
@@ -115,20 +117,48 @@
 			Name="raster"
 			Filter="">
 			<File
-				RelativePath=".\src\inca\raster\Block">
+				RelativePath=".\src\inca\raster\algorithms">
+			</File>
+			<File
+				RelativePath=".\src\inca\raster\concepts">
+			</File>
+			<File
+				RelativePath=".\src\inca\raster\MultiArrayRaster">
 			</File>
 			<File
 				RelativePath=".\src\inca\raster\Raster">
 			</File>
 			<File
-				RelativePath=".\src\inca\raster\RasterAnalyzer">
+				RelativePath=".\src\inca\raster\RasterView">
 			</File>
-			<File
-				RelativePath=".\src\inca\raster\RasterFilter">
-			</File>
-			<File
-				RelativePath=".\src\inca\raster\RasterGenerator">
-			</File>
+			<Filter
+				Name="operators"
+				Filter="">
+				<File
+					RelativePath=".\src\inca\raster\operators\arithmetic">
+				</File>
+				<File
+					RelativePath=".\src\inca\raster\operators\complex">
+				</File>
+				<File
+					RelativePath=".\src\inca\raster\operators\Dft">
+				</File>
+				<File
+					RelativePath=".\src\inca\raster\operators\hacked_in_lambda">
+				</File>
+				<File
+					RelativePath=".\src\inca\raster\operators\masking">
+				</File>
+				<File
+					RelativePath=".\src\inca\raster\operators\operator-bases">
+				</File>
+				<File
+					RelativePath=".\src\inca\raster\operators\selection">
+				</File>
+				<File
+					RelativePath=".\src\inca\raster\operators\transformation">
+				</File>
+			</Filter>
 		</Filter>
 		<Filter
 			Name="integration"
@@ -176,6 +206,18 @@
 					RelativePath=".\src\inca\integration\hardware-math\math_api.cpp">
 				</File>
 			</Filter>
+			<Filter
+				Name="fftw"
+				Filter="">
+				<File
+					RelativePath=".\src\inca\integration\fftw\fftw-raster-DFT.cpp">
+					<FileConfiguration
+						Name="Debug|Win32">
+						<Tool
+							Name="VCCLCompilerTool"/>
+					</FileConfiguration>
+				</File>
+			</Filter>
 		</Filter>
 		<Filter
 			Name="io"
@@ -194,10 +236,13 @@
 				RelativePath=".\src\inca\math\linalg.hpp">
 			</File>
 			<File
-				RelativePath=".\src\inca\math\macros.hpp">
+				RelativePath=".\src\inca\math\math-macros.hpp">
 			</File>
 			<File
 				RelativePath=".\src\inca\math\scalar.hpp">
+			</File>
+			<File
+				RelativePath="..\..\Documents\src\libinca\src\inca\math\type-traits.hpp">
 			</File>
 			<Filter
 				Name="curve"
@@ -217,7 +262,7 @@
 				Name="solid"
 				Filter="">
 				<File
-					RelativePath=".\src\inca\math\solid\QuadPrism">
+					RelativePath=".\src\inca\math\solid\Block">
 				</File>
 				<File
 					RelativePath=".\src\inca\math\solid\Sphere">
@@ -274,15 +319,24 @@
 					RelativePath=".\src\inca\math\color\Color">
 				</File>
 				<File
-					RelativePath=".\src\inca\math\color\Grayscale.hpp">
+					RelativePath="..\..\Documents\src\libinca\src\inca\math\color\color-type-traits.hpp">
 				</File>
 				<File
-					RelativePath=".\src\inca\math\color\sRGB.hpp">
+					RelativePath=".\src\inca\math\color\Grayscale">
+				</File>
+				<File
+					RelativePath=".\src\inca\math\color\operations">
+				</File>
+				<File
+					RelativePath=".\src\inca\math\color\sRGB">
 				</File>
 			</Filter>
 			<Filter
 				Name="scalar"
 				Filter="">
+				<File
+					RelativePath="..\..\Documents\src\libinca\src\inca\math\scalar\scalar-type-traits.hpp">
+				</File>
 				<File
 					RelativePath=".\src\inca\math\scalar\scalar_ops">
 				</File>
@@ -323,50 +377,54 @@
 			Name="rendering"
 			Filter="">
 			<File
-				RelativePath=".\src\inca\rendering\GridPrimitive.h">
-			</File>
-			<File
-				RelativePath=".\src\inca\rendering\immediate_mode_rendering_api">
-			</File>
-			<File
-				RelativePath=".\src\inca\rendering\ImmediateModeRenderer">
-			</File>
-			<File
-				RelativePath=".\src\inca\rendering\ImmediateModeRenderer-Buffer">
-			</File>
-			<File
-				RelativePath=".\src\inca\rendering\ImmediateModeRenderer-Context">
-			</File>
-			<File
-				RelativePath=".\src\inca\rendering\ImmediateModeRenderer-Device">
-			</File>
-			<File
-				RelativePath=".\src\inca\rendering\ImmediateModeRenderer-LightingUnit">
-			</File>
-			<File
-				RelativePath=".\src\inca\rendering\ImmediateModeRenderer-MatrixStack">
-			</File>
-			<File
-				RelativePath=".\src\inca\rendering\ImmediateModeRenderer-Rasterizer">
-			</File>
-			<File
-				RelativePath=".\src\inca\rendering\ImmediateModeRenderer-Statistics">
-			</File>
-			<File
-				RelativePath=".\src\inca\rendering\ImmediateModeRenderer-TextureUnit">
-			</File>
-			<File
-				RelativePath=".\src\inca\rendering\ImmediateModeRenderer-Viewport">
-			</File>
-			<File
-				RelativePath=".\src\inca\rendering\Primitive">
-			</File>
-			<File
 				RelativePath=".\src\inca\rendering\Renderer.hpp">
 			</File>
-			<File
-				RelativePath=".\src\inca\rendering\types.hpp">
-			</File>
+			<Filter
+				Name="immediate-mode"
+				Filter="">
+				<File
+					RelativePath=".\src\inca\rendering\immediate-mode\ExclusiveAccessCachePolicy">
+				</File>
+				<File
+					RelativePath=".\src\inca\rendering\immediate-mode\ImmediateModeRenderer">
+				</File>
+				<File
+					RelativePath=".\src\inca\rendering\immediate-mode\ImmediateModeRenderer-Buffer">
+				</File>
+				<File
+					RelativePath=".\src\inca\rendering\immediate-mode\ImmediateModeRenderer-Component">
+				</File>
+				<File
+					RelativePath=".\src\inca\rendering\immediate-mode\ImmediateModeRenderer-Device">
+				</File>
+				<File
+					RelativePath=".\src\inca\rendering\immediate-mode\ImmediateModeRenderer-LightingUnit">
+				</File>
+				<File
+					RelativePath=".\src\inca\rendering\immediate-mode\ImmediateModeRenderer-MatrixStack">
+				</File>
+				<File
+					RelativePath=".\src\inca\rendering\immediate-mode\ImmediateModeRenderer-Rasterizer">
+				</File>
+				<File
+					RelativePath=".\src\inca\rendering\immediate-mode\ImmediateModeRenderer-Statistics">
+				</File>
+				<File
+					RelativePath=".\src\inca\rendering\immediate-mode\ImmediateModeRenderer-TextureUnit">
+				</File>
+				<File
+					RelativePath=".\src\inca\rendering\immediate-mode\ImmediateModeRenderer-Viewport">
+				</File>
+				<File
+					RelativePath=".\src\inca\rendering\immediate-mode\OpenGLTraits.hpp">
+				</File>
+				<File
+					RelativePath=".\src\inca\rendering\immediate-mode\Primitive">
+				</File>
+				<File
+					RelativePath=".\src\inca\rendering\immediate-mode\types.hpp">
+				</File>
+			</Filter>
 		</Filter>
 		<Filter
 			Name="ui"
@@ -445,7 +503,7 @@
 			Name="util"
 			Filter="">
 			<File
-				RelativePath=".\src\inca\util\combination_iterator">
+				RelativePath=".\src\inca\util\Array">
 			</File>
 			<File
 				RelativePath=".\src\inca\util\hash_container">
@@ -454,7 +512,10 @@
 				RelativePath=".\src\inca\util\Logger.hpp">
 			</File>
 			<File
-				RelativePath=".\src\inca\util\metaprogramming">
+				RelativePath=".\src\inca\util\multi-dimensional-macros.hpp">
+			</File>
+			<File
+				RelativePath=".\src\inca\util\MultiArray">
 			</File>
 			<File
 				RelativePath=".\src\inca\util\new_property.h">
@@ -478,6 +539,9 @@
 				RelativePath=".\src\inca\util\StreamTokenizer.hpp">
 			</File>
 			<File
+				RelativePath=".\src\inca\util\template-metaprogramming-macros.hpp">
+			</File>
+			<File
 				RelativePath=".\src\inca\util\Timer">
 			</File>
 			<File
@@ -496,14 +560,27 @@
 				RelativePath=".\src\inca\util\ustring.hpp">
 			</File>
 			<File
-				RelativePath=".\src\inca\util\weak_ptr_iterator">
-			</File>
-			<File
 				RelativePath=".\src\inca\util\weak_ptr_set">
 			</File>
-			<File
-				RelativePath=".\src\inca\util\wraparound_iterator">
-			</File>
+			<Filter
+				Name="iterators"
+				Filter="">
+				<File
+					RelativePath=".\src\inca\util\iterators\MultiArrayIterator">
+				</File>
+				<File
+					RelativePath=".\src\inca\util\iterators\MultiDimensionalIterator">
+				</File>
+				<File
+					RelativePath=".\src\inca\util\iterators\ReverseIteratorAdapter">
+				</File>
+				<File
+					RelativePath=".\src\inca\util\iterators\WeakPtrIteratorAdapter">
+				</File>
+				<File
+					RelativePath=".\src\inca\util\iterators\WraparoundIteratorAdapter">
+				</File>
+			</Filter>
 		</Filter>
 		<Filter
 			Name="world"

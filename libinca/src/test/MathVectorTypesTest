@@ -32,7 +32,7 @@
 #include <boost/preprocessor/repetition/enum.hpp>
 
 
-template <typename scalar, size_t dim>
+template <typename scalar, inca::SizeType dim>
 class MathVectorTypesTest : public CppUnit::TestFixture {
 private:
     // Convenience typedefs
@@ -66,15 +66,15 @@ protected:
 public:
     void setUp() {
         // Set up arrays for the array-style constructors
-        for (index_t i = 0; i < dim; i++) {
+        for (IndexType i = 0; i < dim; i++) {
             e1[i] = scalar_t(i);
             e2[i] = scalar_t(i + 1);
         }
-        for (index_t i = 0; i < 2 * dim; i++) {
+        for (IndexType i = 0; i < 2 * dim; i++) {
             e3[i] = scalar_t(i);
             e4[i] = scalar_t(i + 1);
         }
-        for (index_t i = 0; i < dim * dim; i++) {
+        for (IndexType i = 0; i < dim * dim; i++) {
             e5[i] = scalar_t(i);
             e6[i] = scalar_t(i + 1);
         }
@@ -170,13 +170,13 @@ public:
 
     void testArrayPointConstructor() {
         Point p(e1);
-        for (index_t i = 0; i < dim; i++)
+        for (IndexType i = 0; i < dim; i++)
             CPPUNIT_ASSERT(p[i] == e1[i]);
     }
 
     void testArrayVectorConstructor() {
         Vector v(e1);
-        for (index_t i = 0; i < dim; i++)
+        for (IndexType i = 0; i < dim; i++)
             CPPUNIT_ASSERT(v[i] == e1[i]);
     }
 
@@ -184,7 +184,7 @@ public:
         Ray r(e3);
         const Point & p = r.position();
         const Vector & v = r.direction();
-        for (index_t i = 0; i < dim; i++) {
+        for (IndexType i = 0; i < dim; i++) {
             CPPUNIT_ASSERT(p[i] == e3[i]);
             CPPUNIT_ASSERT(v[i] == e3[i + dim]);
         }
@@ -193,13 +193,13 @@ public:
     void testArrayMatrixConstructor() {
         Matrix2xN m1(e3);
         MatrixNxN m2(e5);
-        index_t count = 0;
-        for (index_t i = 0; i < 2; i++)
-            for (index_t j = 0; j < dim; j++)
+        IndexType count = 0;
+        for (IndexType i = 0; i < 2; i++)
+            for (IndexType j = 0; j < dim; j++)
                 CPPUNIT_ASSERT(m1(i, j) == e3[count++]);
         count = 0;
-        for (index_t i = 0; i < dim; i++)
-            for (index_t j = 0; j < dim; j++)
+        for (IndexType i = 0; i < dim; i++)
+            for (IndexType j = 0; j < dim; j++)
                 CPPUNIT_ASSERT(m2(i, j) == e5[count++]);
     }
 
@@ -211,10 +211,10 @@ public:
         Point p1(e1);
         Point p2(e2);
         Point p = p1;
-        for (index_t i = 0; i < dim; i++)
+        for (IndexType i = 0; i < dim; i++)
             CPPUNIT_ASSERT(p[i] == p1[i]);
         p = p2;
-        for (index_t i = 0; i < dim; i++)
+        for (IndexType i = 0; i < dim; i++)
             CPPUNIT_ASSERT(p[i] == p2[i]);
     }
 
@@ -222,10 +222,10 @@ public:
         Vector v1(e1);
         Vector v2(e2);
         Vector v = v1;
-        for (index_t i = 0; i < dim; i++)
+        for (IndexType i = 0; i < dim; i++)
             CPPUNIT_ASSERT(v[i] == v1[i]);
         v = v2;
-        for (index_t i = 0; i < dim; i++)
+        for (IndexType i = 0; i < dim; i++)
             CPPUNIT_ASSERT(v[i] == v2[i]);
     }
 
@@ -233,12 +233,12 @@ public:
         Ray r1(e1);
         Ray r2(e2);
         Ray r = r1;
-        for (index_t i = 0; i < dim; i++) {
+        for (IndexType i = 0; i < dim; i++) {
             CPPUNIT_ASSERT(r.position()[i] == r1.position()[i]);
             CPPUNIT_ASSERT(r.direction()[i] == r1.direction()[i]);
         }
         r = r2;
-        for (index_t i = 0; i < dim; i++) {
+        for (IndexType i = 0; i < dim; i++) {
             CPPUNIT_ASSERT(r.position()[i] == r2.position()[i]);
             CPPUNIT_ASSERT(r.direction()[i] == r2.direction()[i]);
         }
@@ -249,12 +249,12 @@ public:
         MatrixNxN m2(e6);
         MatrixNxN m;
         m = m1;
-        for (index_t i = 0; i < dim; i++)
-            for (index_t j = 0; j < dim; j++)
+        for (IndexType i = 0; i < dim; i++)
+            for (IndexType j = 0; j < dim; j++)
                 CPPUNIT_ASSERT(m(i, j) == m1(i, j));
         m = m2;
-        for (index_t i = 0; i < dim; i++)
-            for (index_t j = 0; j < dim; j++)
+        for (IndexType i = 0; i < dim; i++)
+            for (IndexType j = 0; j < dim; j++)
                 CPPUNIT_ASSERT(m(i, j) == m2(i, j));
     }
 
@@ -267,7 +267,7 @@ public:
         string s = p;
         ostringstream ss;
         ss << "(";
-        for (index_t i = 0; i < dim; i++) {
+        for (IndexType i = 0; i < dim; i++) {
             ss << e1[i];
             if (i != dim - 1) ss << ", ";
         }
@@ -280,7 +280,7 @@ public:
         string s = v;
         ostringstream ss;
         ss << "(";
-        for (index_t i = 0; i < dim; i++) {
+        for (IndexType i = 0; i < dim; i++) {
             ss << e1[i];
             if (i != dim - 1) ss << ", ";
         }

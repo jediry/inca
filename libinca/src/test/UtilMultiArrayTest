@@ -1,0 +1,346 @@
+/* -*- C++ -*-
+ *
+ * File: UtilMultiArrayTest
+ *
+ * Author: Ryan L. Saunders
+ *
+ * Copyright 2004, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ *      XXX The element type must support assignment and the == operator, and
+ *      assignment/comparison to integer. And default constructor.
+ *
+ * Implementation note:
+ *      This file is designed to be included by IncaTestMain.cpp, and may not
+ *      work correctly otherwise, as it depends on IncaTestMain.cpp already
+ *      having included some other things.
+ */
+
+#ifndef TEST_UTIL_MULTI_ARRAY
+#define TEST_UTIL_MULTI_ARRAY
+
+// Import MultiArray implementation
+#include <inca/util/MultiArray>
+
+// Import STL algorithms
+#include <numeric>
+
+// Import multi-dimensional preprocessor metaprogramming macros
+#include <inca/util/multi-dimensional-macros.hpp>
+
+
+template <typename T, inca::SizeType dim>
+class UtilMultiArrayTest : public CppUnit::TestFixture {
+private:
+    // Convenience typedefs
+    typedef UtilMultiArrayTest<T, dim> ThisTest;
+    typedef inca::MultiArray<T, dim> MultiArray;
+
+    // How many dimensions are we working in?
+    static const SizeType dimensionality = dim;
+
+protected:
+    // We use this to ASSERT a little more verbosely for tests we haven't
+    // gotten around to implementing yet.
+    static const bool not_implemented = false;
+
+
+/*---------------------------------------------------------------------------*
+ | Test configuration
+ *---------------------------------------------------------------------------*/
+public:
+    // Set up for the tests
+    void setUp() {
+        // Initialize all of the extent variables
+        for (int i = 0; i < dimensionality; ++i)
+            extents[i] = 3 + i % 3;             // Store either 3, 4, or 5
+        #define COPY_EXTENT(DIM) if (DIM <= dimensionality) e ## DIM = extents[DIM];
+        FOR_EACH(9, COPY_EXTENT);
+        #undef COPY_EXTENT
+
+        // Figure out how big we expect an array of this dimensionality to be
+        expectedSize = std::accumulate(extents.begin(), extents.end(), 1,
+                            std::multiplies<typename MultiArray::SizeType>());
+
+        // Initialize the index variables
+        origin = typename MultiArray::IndexArray(0);
+        a0 = 2; a1 = 3; a2 = 1; a3 = 1; a4 = 2;
+        a5 = 4; a6 = 2; a7 = 1; a8 = 0; a9 = 1;
+        #define COPY_ANOTHER(DIM) if (DIM <= dimensionality) another[DIM] = a ## DIM;
+        FOR_EACH(9, COPY_ANOTHER);
+        #undef COPY_ANOTHER
+    }
+
+    void tearDown() { }
+
+
+    // Create the CppUnit test suite
+    CPPUNIT_TEST_SUITE(ThisTest);
+        // Print a nice, friendly header for this suite
+        CPPUNIT_TEST(beginSuite);
+
+        // Constructor tests
+        CPPUNIT_TEST(testDefaultConstructor);
+        CPPUNIT_TEST(testArbitraryDimensionalConstructor);
+        CPPUNIT_TEST(testDimensionSpecificConstructor);
+        CPPUNIT_TEST(testCopyConstructor);
+
+        // Accessor tests
+        CPPUNIT_TEST(testLinearElementAccessors);
+        CPPUNIT_TEST(testArbitraryDimensionalElementAccessors);
+        CPPUNIT_TEST(testIndexLookup);
+
+        // Iterator tests
+        CPPUNIT_TEST(testIterator);
+        CPPUNIT_TEST(testConstIterator);
+        CPPUNIT_TEST(testReverseIterator);
+        CPPUNIT_TEST(testConstReverseIterator);
+
+        // Resizing & swapping tests
+        CPPUNIT_TEST(testResize);
+        CPPUNIT_TEST(testSwap);
+
+        // Storage order/index base configuration tests
+        CPPUNIT_TEST(testIndexBases);
+
+        // Print a nice, friendly footer for this suite
+        CPPUNIT_TEST(endSuite);
+    CPPUNIT_TEST_SUITE_END();
+
+
+protected:
+    // Functions for doing dimension-specific access
+    typename MultiArray::ElementType checkOrigin(MultiArray & ma) {
+        if (dimensionality == 2)   return ma(0, 0);
+/*        if (dimensionality == 1)        return ma(0);
+        else if (dimensionality == 2)   return ma(0, 0);
+        else if (dimensionality == 3)   return ma(0, 0, 0);
+        else if (dimensionality == 4)   return ma(0, 0, 0, 0);
+        else if (dimensionality == 5)   return ma(0, 0, 0, 0, 0);
+        else if (dimensionality == 6)   return ma(0, 0, 0, 0, 0, 0);
+        else if (dimensionality == 7)   return ma(0, 0, 0, 0, 0, 0, 0);
+        else if (dimensionality == 8)   return ma(0, 0, 0, 0, 0, 0, 0, 0);
+        else if (dimensionality == 9)   return ma(0, 0, 0, 0, 0, 0, 0, 0, 0);
+        else if (dimensionality == 10)  return ma(0, 0, 0, 0, 0, 0, 0, 0, 0, 0);*/
+        else                            return 0;
+    }
+
+    typename MultiArray::ElementType checkAnother(MultiArray & ma) {
+        if (dimensionality == 2)   return ma(a0, a1);
+/*        if (dimensionality == 1)        return ma(a0);
+        else if (dimensionality == 2)   return ma(a0, a1);
+        else if (dimensionality == 3)   return ma(a0, a1, a2);
+        else if (dimensionality == 4)   return ma(a0, a1, a2, a3);
+        else if (dimensionality == 5)   return ma(a0, a1, a2, a3, a4);
+        else if (dimensionality == 6)   return ma(a0, a1, a2, a3, a4, a5);
+        else if (dimensionality == 7)   return ma(a0, a1, a2, a3, a4, a5, a6);
+        else if (dimensionality == 8)   return ma(a0, a1, a2, a3, a4, a5, a6, a7);
+        else if (dimensionality == 9)   return ma(a0, a1, a2, a3, a4, a5, a6, a7, a8);
+        else if (dimensionality == 10)  return ma(a0, a1, a2, a3, a4, a5, a6, a7, a8, a9); */
+        else                            return 0;
+    }
+
+    // Ready-made extents for testing constructors and accessors
+    typename MultiArray::ExtentArray extents;
+    typename MultiArray::SizeType e0, e1, e2, e3, e4, e5, e6, e7, e8, e9;
+    typename MultiArray::IndexArray origin, another;
+    typename MultiArray::IndexType a0, a1, a2, a3, a4, a5, a6, a7, a8, a9;
+
+    // Expected results
+    typename MultiArray::SizeType expectedSize;
+
+
+/*---------------------------------------------------------------------------*
+ | Test suite information
+ *---------------------------------------------------------------------------*/
+public:
+    void beginSuite() {
+        cerr << "Testing MultiArray<" << typeid(T).name() << ", " << dim << ">: ";
+    }
+
+    void endSuite() {
+        cerr << endl;
+    }
+
+
+/*---------------------------------------------------------------------------*
+ | Constructor tests
+ *---------------------------------------------------------------------------*/
+public:
+    void testDefaultConstructor() {
+        MultiArray ma;
+        CPPUNIT_ASSERT(ma.size() == 0);                 // Zero elements
+
+        for (IndexType i = 0; i < dimensionality; i++)  // Zero extent
+            CPPUNIT_ASSERT(ma.extent(i) == 0);
+
+        CPPUNIT_ASSERT(ma.data() == NULL);              // NULL data pointer
+
+        // All other behavior is undefined...        
+    }
+
+    void testArbitraryDimensionalConstructor() {
+        MultiArray ma(extents);                         // Make an array
+        CPPUNIT_ASSERT(ma.size() == expectedSize);      // Check size
+        for (IndexType i = 0; i < dimensionality; ++i)  // Check extents
+            CPPUNIT_ASSERT(ma.extent(i) == extents(i));
+    }
+
+    void testDimensionSpecificConstructor() {
+        CPPUNIT_ASSERT(not_implemented);
+    }
+
+    void testCopyConstructor() {
+        CPPUNIT_ASSERT(not_implemented);
+    }
+
+
+/*---------------------------------------------------------------------------*
+ | Accessor function tests
+ *---------------------------------------------------------------------------*/
+public:
+    void testLinearElementAccessors() {
+        MultiArray ma(extents);
+        MultiArray::IndexType last = ma.size() - 1;
+        ma[0]       = 0;                            // Set first/last to known
+        ma[last]    = 0;                            // values
+        CPPUNIT_ASSERT(ma[0] == 0);
+        CPPUNIT_ASSERT(ma[last] == 0);
+        ma[0]       = 100;                          // Change them
+        ma[last]    = 50;
+        CPPUNIT_ASSERT(ma[0] == 100);
+        CPPUNIT_ASSERT(ma[last] == 50);
+
+        CPPUNIT_ASSERT(*ma.data() == 100);          // Make sure this matches
+        CPPUNIT_ASSERT(*(ma.data() + last) == 50);  // ptr arithmetic
+    }
+
+    void testArbitraryDimensionalElementAccessors() {
+        MultiArray ma(extents);
+        ma(origin)  = 0;                            // Set origin and another
+        ma(another) = 0;                            // location to known values
+        CPPUNIT_ASSERT(ma(origin) == 0);
+        CPPUNIT_ASSERT(ma(another) == 0);
+//        CPPUNIT_ASSERT(checkOrigin(ma) == 0);
+//        CPPUNIT_ASSERT(checkAnother(ma) == 0);
+        ma(origin)  = 100;                          // Change to new values
+        ma(another) = 50;
+        CPPUNIT_ASSERT(ma(origin) == 100);
+        CPPUNIT_ASSERT(ma(another) == 50);
+//        CPPUNIT_ASSERT(checkOrigin(ma) == 100);
+//        CPPUNIT_ASSERT(checkAnother(ma) == 50);
+
+        IndexType anotherIndex = ma.indexOf(another);
+        CPPUNIT_ASSERT(*ma.origin() == 100);        // Make sure this matches
+        CPPUNIT_ASSERT(*(ma.data() + anotherIndex) == 50);  // ptr arithmetic
+    }
+
+    void testIndexLookup() {
+        CPPUNIT_ASSERT(not_implemented);
+    }
+
+
+/*---------------------------------------------------------------------------*
+ | Iterator tests
+ *---------------------------------------------------------------------------*/
+public:
+    void testIterator() {
+        MultiArray ma(extents);
+        MultiArray::Iterator i = ma.begin();
+        typename MultiArray::IndexArray indices(0);
+        ma(indices) = 0;
+        indices[dimensionality - 1]++;
+        ma(indices) = 1;
+        CPPUNIT_ASSERT(*i == 0);                    // Test linear access
+        i++;
+        CPPUNIT_ASSERT(*i == 1);
+        ++i;
+        i--;
+        CPPUNIT_ASSERT(*i == 1);
+
+        indices[0]++;   ma(indices) = 15;
+        CPPUNIT_ASSERT(*(i + ma.stride(0)) == 15);  // Test add offset
+        i += ma.stride(0);
+        CPPUNIT_ASSERT(*i == 15);                   // Test jump-by-offset
+
+        indices[0]++;   ma(indices) = 18;
+        CPPUNIT_ASSERT(*(++i[0]) == 18);            // Test axis increment
+        indices[1]++;   ma(indices) = 27;
+        CPPUNIT_ASSERT(*(++i[1]) == 27);
+        indices[dimensionality - 1]++;   ma(indices) = 34;
+        CPPUNIT_ASSERT(*(++i[dimensionality - 1]) == 34);
+        
+        *i = 29;
+        CPPUNIT_ASSERT(*i == 29);                   // Test assign via iterator
+    }
+
+    void testConstIterator() {
+        MultiArray ma(extents);
+        MultiArray::ConstIterator i = ma.begin();
+        typename MultiArray::IndexArray indices(0);
+        ma(indices) = 0;
+        indices[dimensionality - 1]++;
+        ma(indices) = 1;
+        CPPUNIT_ASSERT(*i == 0);                    // Test linear access
+        i++;
+        CPPUNIT_ASSERT(*i == 1);
+        ++i;
+        i--;
+        CPPUNIT_ASSERT(*i == 1);
+
+        indices[0]++;   ma(indices) = 15;
+        CPPUNIT_ASSERT(*(i + ma.stride(0)) == 15);  // Test add offset
+        i += ma.stride(0);
+        CPPUNIT_ASSERT(*i == 15);                   // Test jump-by-offset
+
+        indices[0]++;   ma(indices) = 18;
+        CPPUNIT_ASSERT(*(++i[0]) == 18);            // Test axis increment
+        indices[1]++;   ma(indices) = 27;
+        CPPUNIT_ASSERT(*(++i[1]) == 27);
+        indices[dimensionality - 1]++;   ma(indices) = 34;
+        CPPUNIT_ASSERT(*(++i[dimensionality - 1]) == 34);
+    }
+
+    void testReverseIterator() {
+        CPPUNIT_ASSERT(not_implemented);
+    }
+
+    void testConstReverseIterator() {
+        CPPUNIT_ASSERT(not_implemented);
+    }
+
+
+/*---------------------------------------------------------------------------*
+ | Resizing & swapping tests
+ *---------------------------------------------------------------------------*/
+public:
+    void testResize() {
+        CPPUNIT_ASSERT(not_implemented);
+    }
+
+    void testSwap() {
+        CPPUNIT_ASSERT(not_implemented);
+    }
+
+
+/*---------------------------------------------------------------------------*
+ | Storage order/index base configuration tests
+ *---------------------------------------------------------------------------*/
+public:
+    void testIndexBases() {
+        CPPUNIT_ASSERT(not_implemented);
+    }
+    
+
+/*---------------------------------------------------------------------------*
+ | Slicing tests
+ *---------------------------------------------------------------------------*/
+public:
+
+};
+
+// Clean up the preprocessor's namespace
+#define UNDEFINE_INCA_MULTI_DIM_MACROS
+#include <inca/util/multi-dimensional-macros.hpp>
+
+#endif

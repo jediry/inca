@@ -24,7 +24,8 @@ using namespace inca;
 
 
 // Comment out these symbol definitions to exclude specific test sets
-#define TEST_INCA_UTIL_PROPERTY         1
+#define TEST_INCA_UTIL_PROPERTY         0
+#define TEST_INCA_UTIL_CONTAINERS       0
 #define TEST_INCA_MATH                  0
 
 
@@ -34,8 +35,12 @@ using namespace inca;
 #   include "UtilPropertyTest.hpp"
 #endif
 
+// Inca util containers
+#if TEST_INCA_UTIL_CONTAINERS
+#   include "UtilMultiArrayTest"
+#endif
 
-// Inca::Math library
+// inca::math library
 #if TEST_INCA_MATH
 #   include <inca/math.hpp>
 #   include "MathScalarTest"
@@ -57,10 +62,15 @@ int main(int argc, char **argv) {
 #if TEST_INCA_UTIL_PROPERTY
     runner.addTest(UtilPropertyTest::suite());
 #endif
-
+#if TEST_INCA_UTIL_CONTAINERS
+    runner.addTest(UtilMultiArrayTest<int, 2>::suite());
+    runner.addTest(UtilMultiArrayTest<char, 4>::suite());
+    runner.addTest(UtilMultiArrayTest<double, 6>::suite());
+    runner.addTest(UtilMultiArrayTest<char, 9>::suite());
+#endif
 
 /*---------------------------------------------------------------------------*
- | Inca::Math library tests
+ | inca::math library tests
  *---------------------------------------------------------------------------*/
 #if TEST_INCA_MATH
     // Test the various math models
@@ -96,6 +106,7 @@ int main(int argc, char **argv) {
     runner.addTest(MathVectorOpsTest<long double, 6>::suite());
 //    runner.addTest(MathVectorOpsTest<long long, 7>::suite());
 #endif
+
 
     // Finally, let's go do it
     bool result = runner.run("");

@@ -12,10 +12,10 @@ AC_PREREQ(2.53)
 AC_INIT(libinca, 0.5.0, rls@tamu.edu, libinca)
 AC_CONFIG_SRCDIR(src/inca/inca-common.h)
 AC_CONFIG_AUX_DIR(config)
-#AC_CONFIG_MACRO_DIR(./ac_tools)
-AC_CONFIG_FILES(Makefile src/Makefile)
+AC_CONFIG_MACRO_DIR(config)
+AC_CONFIG_FILES(Makefile src/Makefile test_raster/Makefile)
+AC_CONFIG_HEADERS(src/inca/config-ac.h)
 AM_INIT_AUTOMAKE($PACKAGE_NAME, $PACKAGE_VERSION)
-AM_CONFIG_HEADER(src/inca/config-ac.h)
 AC_CANONICAL_HOST
 
 
@@ -27,10 +27,6 @@ AC_PROG_RANLIB      # Tool for building static libraries
 
 # Compiler configuration
 AC_LANG(C++)
-CFLAGS=
-CPPFLAGS=
-CXXFLAGS="-g3"
-LDFLAGS=
 
 
 ###############################################################################

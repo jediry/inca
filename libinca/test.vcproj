@@ -13,8 +13,8 @@
 	<Configurations>
 		<Configuration
 			Name="Debug|Win32"
-			OutputDirectory="C:\temp"
-			IntermediateDirectory="C:\temp"
+			OutputDirectory="C:\temp\Build\$(ConfigurationName)"
+			IntermediateDirectory="C:\temp\Build\$(ConfigurationName)"
 			ConfigurationType="1"
 			CharacterSet="2"
 			ManagedExtensions="FALSE">
@@ -25,7 +25,7 @@
 				PreprocessorDefinitions="WIN32;_DEBUG"
 				MinimalRebuild="FALSE"
 				BasicRuntimeChecks="0"
-				RuntimeLibrary="1"
+				RuntimeLibrary="3"
 				WarningLevel="3"
 				DebugInformationFormat="3"/>
 			<Tool
@@ -33,7 +33,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalOptions="/LTCG"
-				AdditionalDependencies="libinca.lib"
+				AdditionalDependencies="libinca.lib cppunitd.lib"
 				OutputFile="$(OutDir)\$(ProjectName).exe"
 				LinkIncremental="1"
 				AdditionalLibraryDirectories="$(OutDir)"
@@ -62,8 +62,8 @@
 		</Configuration>
 		<Configuration
 			Name="Release|Win32"
-			OutputDirectory="$(SolutionDir)$(ConfigurationName)"
-			IntermediateDirectory="$(ConfigurationName)"
+			OutputDirectory="C:\temp\Build\$(ConfigurationName)"
+			IntermediateDirectory="C:\temp\Build\$(ConfigurationName)"
 			ConfigurationType="1"
 			CharacterSet="2"
 			ManagedExtensions="TRUE">
@@ -120,6 +120,9 @@
 		</File>
 		<File
 			RelativePath=".\src\test\unit_test_main.cpp">
+		</File>
+		<File
+			RelativePath=".\src\test\UtilMultiArrayTest">
 		</File>
 		<File
 			RelativePath=".\src\test\UtilPropertyTest.hpp">
