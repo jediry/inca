@@ -67,7 +67,7 @@ public:
     static const size_t SUPPORTED_BUTTONS = 10;
 
     // How long can a click be (in seconds)
-    static const Timer::scalar_t CLICK_DURATION = 0.5;
+    const Timer::scalar_t CLICK_DURATION;
 
 
 /*---------------------------------------------------------------------------*
@@ -76,7 +76,7 @@ public:
 public:
     // Default initializer
     GLUTWidgetContainer(const string &title)
-        : GLUTWindow(title), initialized(false) { }
+        : GLUTWindow(title), initialized(false), CLICK_DURATION(0.5f) { }
 
 
 /*---------------------------------------------------------------------------*

@@ -17,12 +17,15 @@ using namespace inca::world;
 
 
 // Declare a convenient alias for this template specialization
-typedef immediate_mode_rendering_api<OpenGL> OpenGL_API;
+#define OPEN_GL_API immediate_mode_rendering_api<OpenGL>::
 
 // Import OpenGL
 #if __MS_WINDOZE__
     // Windows OpenGL seems to need this
 #   include <windows.h>
+
+    // I'd also rather VS didn't complain about casting to boolean
+#   pragma warning (disable : 4800)
 #endif
 #include <GL/gl.h>
 #include <GL/glu.h>
@@ -34,7 +37,7 @@ namespace inca {
  | Rendering functions
  *---------------------------------------------------------------------------*/
 #if 0
-void OpenGL_API::initialize() {
+void OPEN_GL_API initialize() {
     glEnable(GL_DEPTH_TEST);        // We want Z-buffering
     glCullFace(GL_BACK);            // The BACK ones, you idiot!
 
@@ -57,28 +60,28 @@ void OpenGL_API::initialize() {
  | Framebuffer control functions
  *---------------------------------------------------------------------------*/
 // Clear the framebuffer
-void OpenGL_API::clear_framebuffer() {
+void OPEN_GL_API clear_framebuffer() {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 }
 
 #if 0
 // Access the framebuffer (or some sub-region)
-ImagePtr OpenGL_API::framebuffer() const {
+ImagePtr OPEN_GL_API framebuffer() const {
 
 }
 
-ImagePtr OpenGL_API::framebuffer(index_t x, index_t y,
+ImagePtr OPEN_GL_API framebuffer(index_t x, index_t y,
                                      size_t w, size_t h) const {
 
 }
 
-void OpenGL_API::framebuffer(index_t x, index_t y) const {
+void OPEN_GL_API framebuffer(index_t x, index_t y) const {
 
 }
 #endif
 
 // Change the framebuffer's size
-void OpenGL_API::resize_framebuffer(size_t w, size_t h) {
+void OPEN_GL_API resize_framebuffer(size_t w, size_t h) {
     // Set up the clipping rectangle accordingly
     glViewport(0, 0, w, h);
     cerr << "new viewport size " << w << 'x' << h << endl;
@@ -88,42 +91,79 @@ void OpenGL_API::resize_framebuffer(size_t w, size_t h) {
 /*---------------------------------------------------------------------------*
  | Rendering state control functions
  *---------------------------------------------------------------------------*/
-void OpenGL_API::lock_z_buffer(bool locked) {
+template <>
+void OPEN_GL_API lock_z_buffer(bool locked) {
     locked ? glDepthMask(GL_FALSE) : glDepthMask(GL_TRUE);
 }
-bool OpenGL_API::is_z_buffer_locked() {
+template <>
+bool OPEN_GL_API is_z_buffer_locked() {
     GLboolean result;
     glGetBooleanv(GL_DEPTH_WRITEMASK, &result);
     return static_cast<bool>(result);
 }
-void OpenGL_API::enable_z_buffer(bool enabled) {
+template <>
+void OPEN_GL_API enable_z_buffer(bool enabled) {
     enabled ? glEnable(GL_DEPTH_TEST) : glDisable(GL_DEPTH_TEST);
 }
-bool OpenGL_API::is_z_buffer_enabled() {
+template <>
+bool OPEN_GL_API is_z_buffer_enabled() {
     return static_cast<bool>(glIsEnabled(GL_DEPTH_TEST));
 }
-void OpenGL_API::enable_alpha_blending(bool enabled) {
+
+template <>
+void OPEN_GL_API enable_alpha_blending(bool enabled) {
     enabled ? glEnable(GL_BLEND) : glDisable(GL_BLEND);
 }
-bool OpenGL_API::is_alpha_blending_enabled() {
+template <>
+bool OPEN_GL_API is_alpha_blending_enabled() {
     return static_cast<bool>(glIsEnabled(GL_BLEND));
 }
-void OpenGL_API::enable_lighting(bool enabled) {
+
+template <>
+void OPEN_GL_API enable_lighting(bool enabled) {
     enabled ? glEnable(GL_LIGHTING) : glDisable(GL_LIGHTING);
 }
-bool OpenGL_API::is_lighting_enabled() {
+template <>
+bool OPEN_GL_API is_lighting_enabled() {
     return static_cast<bool>(glIsEnabled(GL_LIGHTING));
 }
 
-void OpenGL_API::set_shading_mode(ShadingMode mode) {
+template <>
+void OPEN_GL_API enable_point_smoothing(bool enabled) {
+    enabled ? glEnable(GL_POINT_SMOOTH) : glDisable(GL_POINT_SMOOTH);
+}
+template <>
+bool OPEN_GL_API is_point_smoothing_enabled() {
+    return static_cast<bool>(glIsEnabled(GL_POINT_SMOOTH));
+}
+template <>
+void OPEN_GL_API set_point_size(float size) {
+    glPointSize(size);
+}
+
+template <>
+void OPEN_GL_API enable_line_smoothing(bool enabled) {
+    enabled ? glEnable(GL_LINE_SMOOTH) : glDisable(GL_LINE_SMOOTH);
+}
+template <>
+bool OPEN_GL_API is_line_smoothing_enabled() {
+    return static_cast<bool>(glIsEnabled(GL_LINE_SMOOTH));
+}
+template <>
+void OPEN_GL_API set_line_width(float width) {
+    glLineWidth(width);
+}
+
+template <>
+void OPEN_GL_API set_shading_mode(ShadingMode mode) {
     switch (mode) {
         case SmoothShade:   glShadeModel(GL_SMOOTH);    break;
         case FlatShade:     glShadeModel(GL_FLAT);      break;
         case Paint:         /* Do nothing */;           break;
     }
 }
-
-ShadingMode OpenGL_API::shading_mode() {
+template <>
+ShadingMode OPEN_GL_API shading_mode() {
     GLint value;
     glGetIntegerv(GL_SHADE_MODEL, &value);
     if (value == GL_SMOOTH) return SmoothShade;
@@ -134,34 +174,40 @@ ShadingMode OpenGL_API::shading_mode() {
 /*---------------------------------------------------------------------------*
  | Transformation matrix functions (TI)
  *---------------------------------------------------------------------------*/
-void OpenGL_API::select_projection_matrix() { glMatrixMode(GL_PROJECTION); }
-void OpenGL_API::select_transformation_matrix() { glMatrixMode(GL_MODELVIEW); }
-void OpenGL_API::reset_selected_matrix() { glLoadIdentity(); }
-void OpenGL_API::push_matrix() { glPushMatrix(); }
-void OpenGL_API::pop_matrix() { glPopMatrix(); }
-
 template <>
-void OpenGL_API::apply_translation(const math::ScalarList<float, 3> &t) {
-    glTranslatef(t[0], t[1], t[2]);
+void OPEN_GL_API select_projection_matrix() { glMatrixMode(GL_PROJECTION); }
+template <>
+void OPEN_GL_API select_transformation_matrix() { glMatrixMode(GL_MODELVIEW); }
+template <>
+void OPEN_GL_API reset_selected_matrix() { glLoadIdentity(); }
+template <>
+void OPEN_GL_API push_matrix() { glPushMatrix(); }
+template <>
+void OPEN_GL_API pop_matrix() { glPopMatrix(); }
+
+template <> template <>
+void immediate_mode_rendering_api<inca::rendering::OpenGL>
+    ::apply_translation<float, 3>(const ScalarList<float, 3> &t) {
+        glTranslatef(t[0], t[1], t[2]);
 }
 
-template <>
-void OpenGL_API::apply_translation(const math::ScalarList<double, 3> &t) {
+template <> template <>
+void OPEN_GL_API apply_translation<double, 3>(const ScalarList<double, 3> &t) {
     glTranslated(t[0], t[1], t[2]);
 }
 
-template <>
-void OpenGL_API::unapply_translation(const math::ScalarList<float, 3> &t) {
+template <> template <>
+void OPEN_GL_API unapply_translation<float, 3>(const ScalarList<float, 3> &t) {
     glTranslatef(-t[0], -t[1], -t[2]);
 }
 
-template <>
-void OpenGL_API::unapply_translation(const math::ScalarList<double, 3> &t) {
+template <> template <>
+void OPEN_GL_API unapply_translation<double, 3>(const ScalarList<double, 3> &t) {
     glTranslated(-t[0], -t[1], -t[2]);
 }
 
-template <>
-void OpenGL_API::apply_rotation(const math::Quaternion<double> &q) {
+template <> template <>
+void OPEN_GL_API apply_rotation<double>(const Quaternion<double> &q) {
     // If the first element of q is 1, this is an identity rotation
     if (! effectivelyEqual(q[0], 1.0)) {
         // Here we split 'q' into an axis and a rotation angle about that axis
@@ -171,8 +217,8 @@ void OpenGL_API::apply_rotation(const math::Quaternion<double> &q) {
     }
 }
 
-template <>
-void OpenGL_API::unapply_rotation(const math::Quaternion<double> &q) {
+template <> template <>
+void OPEN_GL_API unapply_rotation<double>(const Quaternion<double> &q) {
     if (! effectivelyEqual(q[0], 1.0)) {
         // Note that we're getting the NEGATION of the rotation angle here
         const double angle = -radiansToDegrees(2.0 * arccos(q[0]));
@@ -181,37 +227,37 @@ void OpenGL_API::unapply_rotation(const math::Quaternion<double> &q) {
     }
 }
 
-template <>
-void OpenGL_API::apply_scaling(const math::ScalarList<float, 3> &s) {
+template <> template <>
+void OPEN_GL_API apply_scaling<float, 3>(const ScalarList<float, 3> &s) {
     glScaled(s[0], s[1], s[2]);
 }
 
-template <>
-void OpenGL_API::unapply_scaling(const math::ScalarList<float, 3> &s) {
+template <> template <>
+void OPEN_GL_API unapply_scaling<float, 3>(const ScalarList<float, 3> &s) {
     glScaled(1.0 / s[0], 1.0 / s[1], 1.0 / s[2]);
 }
 
-template <>
-void OpenGL_API::apply_scaling(const math::ScalarList<double, 3> &s) {
+template <> template <>
+void OPEN_GL_API apply_scaling<double, 3>(const ScalarList<double, 3> &s) {
     glScaled(s[0], s[1], s[2]);
 }
 
-template <>
-void OpenGL_API::unapply_scaling(const math::ScalarList<double, 3> &s) {
+template <> template <>
+void OPEN_GL_API unapply_scaling<double, 3>(const ScalarList<double, 3> &s) {
     glScaled(1.0 / s[0], 1.0 / s[1], 1.0 / s[2]);
 }
 
-template <>
-void OpenGL_API::apply_orthographic_projection(
+template <> template <>
+void OPEN_GL_API apply_orthographic_projection<float>(
                 const math::Vector<float, 2> &extents,
                 const math::Vector<float, 2> &clipping) {
-    float dx = extents[0] / 2.0,
-          dy = extents[1] / 2.0;
+    float dx = extents[0] / 2.0f,
+          dy = extents[1] / 2.0f;
     glOrtho(-dx, dx, -dy, dy, clipping[0], clipping[1]);
 }
 
-template <>
-void OpenGL_API::apply_orthographic_projection(
+template <> template <>
+void OPEN_GL_API apply_orthographic_projection<double>(
                 const math::Vector<double, 2> &extents,
                 const math::Vector<double, 2> &clipping) {
     double dx = extents[0] / 2.0,
@@ -220,8 +266,8 @@ void OpenGL_API::apply_orthographic_projection(
     glOrtho(-dx, dx, -dy, dy, clipping[0], clipping[1]);
 }
 
-template <>
-void OpenGL_API::apply_perspective_projection(
+template <> template <>
+void OPEN_GL_API apply_perspective_projection<float>(
                 const math::Vector<float, 2> &angles,
                 const math::Vector<float, 2> &clipping) {
     float aspectRatio = angles[1] / angles[0];
@@ -229,8 +275,8 @@ void OpenGL_API::apply_perspective_projection(
                    clipping[0], clipping[1]);
 }
 
-template <>
-void OpenGL_API::apply_perspective_projection(
+template <> template <>
+void OPEN_GL_API apply_perspective_projection<double>(
                 const math::Vector<double, 2> &angles,
                 const math::Vector<double, 2> &clipping) {
     double aspectRatio = angles[1] / angles[0];
@@ -242,7 +288,8 @@ void OpenGL_API::apply_perspective_projection(
 /*---------------------------------------------------------------------------*
  | True-immediate mode rendering functions (TI)
  *---------------------------------------------------------------------------*/
-void OpenGL_API::begin_render_immediate(PrimitiveType type) {
+template <>
+void OPEN_GL_API begin_render_immediate(PrimitiveType type) {
     switch (type) {
         case Points:                glBegin(GL_POINTS);         break;
         case Lines:                 glBegin(GL_LINES);          break;
@@ -262,70 +309,71 @@ void OpenGL_API::begin_render_immediate(PrimitiveType type) {
     }
 }
 
-void OpenGL_API::end_render_immediate() {
+template <>
+void OPEN_GL_API end_render_immediate() {
     glEnd();
 }
 
-template <>
-void OpenGL_API::set_background_color<float, sRGB, false>(
+template <> template <>
+void OPEN_GL_API set_background_color<float, sRGB, false>(
         const Color<float, sRGB, false> &c) {
     glClearColor(c[0], c[1], c[2], 1.0f);
 }
 
-template <>
-void OpenGL_API::set_background_color<double, sRGB, false>(
+template <> template <>
+void OPEN_GL_API set_background_color<double, sRGB, false>(
         const Color<double, sRGB, false> &c) {
-    glClearColor(c[0], c[1], c[2], 1.0);
+    glClearColor(float(c[0]), float(c[1]), float(c[2]), 1.0f);
 }
 
-template <>
-void OpenGL_API::set_background_color<float, sRGB, true>(
+template <> template <>
+void OPEN_GL_API set_background_color<float, sRGB, true>(
         const Color<float, sRGB, true> &c) {
     glClearColor(c[0], c[1], c[2], c[3]);
 }
 
-template <>
-void OpenGL_API::set_background_color<double, sRGB, true>(
+template <> template <>
+void OPEN_GL_API set_background_color<double, sRGB, true>(
         const Color<double, sRGB, true> &c) {
-    glClearColor(c[0], c[1], c[2], c[3]);
+    glClearColor(float(c[0]), float(c[1]), float(c[2]), float(c[3]));
 }
 
-template <>
-void OpenGL_API::set_drawing_color<float, sRGB, false>(
+template <> template <>
+void OPEN_GL_API set_drawing_color<float, sRGB, false>(
         const Color<float, sRGB, false> &c) {
     glColor3f(c[0], c[1], c[2]);
 }
 
-template <>
-void OpenGL_API::set_drawing_color<float, sRGB, true>(
+template <> template <>
+void OPEN_GL_API set_drawing_color<float, sRGB, true>(
         const Color<float, sRGB, true> &c) {
     glColor4f(c[0], c[1], c[2], c[3]);
 }
 
-template <>
-void OpenGL_API::set_drawing_color<double, sRGB, false>(
+template <> template <>
+void OPEN_GL_API set_drawing_color<double, sRGB, false>(
         const Color<double, sRGB, false> &c) {
     glColor3d(c[0], c[1], c[2]);
 }
 
-template <>
-void OpenGL_API::set_drawing_color<double, sRGB, true>(
+template <> template <>
+void OPEN_GL_API set_drawing_color<double, sRGB, true>(
         const Color<double, sRGB, true> &c) {
     glColor4d(c[0], c[1], c[2], c[3]);
 }
 
-template <>
-void OpenGL_API::set_normal<double, 3>(const Vector<double, 3> &n) {
+template <> template <>
+void OPEN_GL_API set_normal<double, 3>(const Vector<double, 3> &n) {
     glNormal3d(n[0], n[1], n[2]);
 }
 
-template <>
-void OpenGL_API::set_texture_coordinates<float, 3>(const Point<float, 3> &t) {
+template <> template <>
+void OPEN_GL_API set_texture_coordinates<float, 3>(const Point<float, 3> &t) {
     glTexCoord3f(t[0], t[1], t[2]);
 }
 
-template <>
-void OpenGL_API::render_vertex<double, 2>(const Point<double, 2> &v) {
+template <> template <>
+void OPEN_GL_API render_vertex<double, 2>(const Point<double, 2> &v) {
     glVertex2d(v[0], v[1]);
 }
 
@@ -334,7 +382,7 @@ void OpenGL_API::render_vertex<double, 2>(const Point<double, 2> &v) {
  | Semi-immediate mode functions
  *---------------------------------------------------------------------------*/
 #if 0
-void OpenGL_API::render() {
+void OPEN_GL_API render() {
     // Zero out our statistics
 //    _triangleCount = 0;
 

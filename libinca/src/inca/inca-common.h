@@ -80,7 +80,7 @@ namespace inca {
 #include <vector>
 #include <list>
 #include <boost/multi_array.hpp>
-#include "util/hash_container"  // Hash containers are non-standard
+#include <inca/util/hash_container>     // Hash containers are non-standard
 namespace inca {
     using std::vector;
     using std::list;
@@ -95,8 +95,6 @@ namespace inca {
 // Declare special primitive types
 namespace inca {
     typedef int index_t;                // Index into a list
-//    typedef unsigned int    index_t;    // Index into a list
-//    typedef int             s_index_t;  // Signed index (allowing -1, etc.)
     typedef unsigned short  uchar;      // Unicode character
 };
 

@@ -9,8 +9,8 @@
  * Description:
  */
 
-#ifndef INCA_INTEGRATION_WIN32_TIMER
-#define INCA_INTEGRATION_WIN32_TIMER
+// Import system configuration
+#include <inca/inca-common.h>
 
 #if __MS_WINDOZE__  // Ensure we're compiling for the right platform
 
@@ -20,34 +20,28 @@
 // Import the BEAST
 #include <windows.h>
 
-
-template <typename scalar, bool notifyListeners>
-inca::Timer::counter_t
-inca::Timer::getSystemCounterFrequency() {
+clock_t inca::getSystemClockFrequency() {
     LARGE_INTEGER freq;
     if (QueryPerformanceFrequency(&freq)) {
-        return counter_t(freq.LowPart);
+        return clock_t(freq.LowPart);
     } else {
-        logger << "Timer::getSystemCounterFrequency(): No "
-                  "high-performance counter available on this system";
+        logger << "getSystemClockFrequency(): "
+                  "No high-performance counter available on this system";
         logger.error();
-        return counter_t(0);
+        return clock_t(0);
     }
 }
 
-template <typename scalar, bool notifyListeners>
-inca::Timer::counter_t
-inca::Timer::getSystemCounterValue() {
+clock_t inca::getSystemClocks() {
     LARGE_INTEGER count;
     if (QueryPerformanceCounter(&count)) {
-        return counter_t(count.LowPart);
+        return clock_t(count.LowPart);
     } else {
-        logger << "Timer::getSystemCounterValue(): No "
-                  "high-performance counter available on this system";
+        logger << "getSystemClocks(): "
+                  "No high-performance counter available on this system";
         logger.error();
-        return counter_t(0);
+        return clock_t(0);
     }
 }
-#endif
 
 #endif

@@ -28,7 +28,7 @@
 #if __MS_WINDOZE__              // Microsoft systems have these headers, and have a
 #   include <hash_map>          // dual-purpose 'hash_compare' functor
 #   include <hash_set>
-#   define STL_EXT_NAMESPACE stext
+#   define STL_EXT_NAMESPACE stdext
 
     // Implement hash stuff to work on Boost's shared_ptr
     namespace std {

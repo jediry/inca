@@ -55,6 +55,10 @@
 #include <inca/inca-common.h>
 
 
+// Disable the annoying "this : used in base member initializer list" warning
+// under Visual Studio
+#pragma warning (disable : 4355)
+
 /*****************************************************************************
  * This macro sets up the additional typedefs, etc. that are needed so that
  * properties can be declared without having to pass the owner's type in as

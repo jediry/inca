@@ -131,8 +131,8 @@ public:
  *---------------------------------------------------------------------------*/
 public:
     explicit Timer(scalar_arg_t startTime     = scalar_t(0),
-                   scalar_arg_t minTime       = scalar_traits::min(),
-                   scalar_arg_t maxTime       = scalar_traits::max(),
+                   scalar_arg_t minTime       = inca::math::scalar_traits<scalar>::min(),
+                   scalar_arg_t maxTime       = inca::math::scalar_traits<scalar>::max(),
                    scalar_arg_t pulseInterval = scalar_t(0.0),
                    scalar_arg_t timeWarp      = scalar_t(1.0))
             : _running(false), _reversed(false), _maySkipPulses(true),
@@ -322,7 +322,7 @@ public:
                 _lastPulseClocks = _maximumTimeClocks
                                  - (_lastPulseClocks - _maximumTimeClocks);
 
-                _reversed = ~_reversed;             // Bounce!
+                _reversed = !_reversed;             // Bounce!
                 _pulseIntervalClocks = -_pulseIntervalClocks;
                 break;
             case Loop:
@@ -355,7 +355,7 @@ public:
                 _lastPulseClocks = _minimumTimeClocks
                                  - (_lastPulseClocks - _lastPulseClocks);
 
-                _reversed = ~_reversed;             // Bounce!
+                _reversed = !_reversed;             // Bounce!
                 _pulseIntervalClocks = -_pulseIntervalClocks;
                 break;
             case Loop:
@@ -410,9 +410,9 @@ public:
     clock_t timeToClocks(scalar_arg_t time) const {
         // See if this exceeds clock_t's abilities
         if (time > _maxRepresentableTime)
-            return scalar_traits<clock_t>::max();
+            return inca::math::scalar_traits<clock_t>::max();
         else if (time < _minRepresentableTime)
-            return scalar_traits<clock_t>::min();
+            return inca::math::scalar_traits<clock_t>::min();
         else
             return clock_t(time * _systemClockFrequency / timeWarpFactor());
     }
@@ -594,8 +594,8 @@ public:
             _timeWarpFactor = warp;
 
             // The limits imposed by clock_t have now changed, so recalculate
-            _minRepresentableTime = clocksToTime(scalar_traits<clock_t>::min());
-            _maxRepresentableTime = clocksToTime(scalar_traits<clock_t>::max());
+            _minRepresentableTime = clocksToTime(inca::math::scalar_traits<clock_t>::min());
+            _maxRepresentableTime = clocksToTime(inca::math::scalar_traits<clock_t>::max());
         }
     }
 

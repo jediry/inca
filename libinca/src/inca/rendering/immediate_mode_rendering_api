@@ -50,6 +50,12 @@ struct inca::rendering::immediate_mode_rendering_api {
     static bool is_alpha_blending_enabled();
     static void enable_lighting(bool enabled);
     static bool is_lighting_enabled();
+    static void enable_point_smoothing(bool enabled);
+    static bool is_point_smoothing_enabled();
+    static void set_point_size(float size);
+    static void enable_line_smoothing(bool enabled);
+    static bool is_line_smoothing_enabled();
+    static void set_line_width(float width);
 
     static void set_shading_mode(ShadingMode mode);
     static ShadingMode shading_mode();

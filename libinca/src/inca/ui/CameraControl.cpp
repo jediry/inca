@@ -12,6 +12,7 @@
 
 // Import class definition
 #include "CameraControl.hpp"
+using namespace inca;
 using namespace inca::ui;
 
 

@@ -24,4 +24,15 @@
 #   define _USE_MATH_DEFINES 1
 #endif
 
+// ...and Windows doesn't have a few math thingies that we kinda need
+#define M_PIl M_PI      // Alias the long double version to the double version
+#define M_El M_E
+
+float       roundf(float x);        // Prototype floating point round functions
+double      round(double x);        // implemented in integration/win32
+long double roundl(long double x);
+
+// Windows also doesn't seem to know what a clock_t is...(sigh)
+typedef long clock_t;
+
 #endif

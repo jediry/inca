@@ -146,6 +146,8 @@ public:
     static value_type infinity() {
         return has_infinity ? nl::infinity() : nl::max();
     }
+    static value_type absolute_tolerance() { return ss::absolute_tolerance(); }
+    static value_type relative_tolerance() { return ss::relative_tolerance(); }
 
     // Implementation details
     static const bool is_builtin   = ss::is_builtin;// Is this a fundamental?
@@ -176,6 +178,10 @@ namespace inca {
                         + typeid(scalar).name() + ')';
             }
 
+            // Assume exactness
+            static scalar absolute_tolerance() { return scalar(0); }
+            static scalar relative_tolerance() { return scalar(0); }
+
             // Assume not a builtin type
             static const bool is_builtin = false;
             static const bool pass_by_value = false;
@@ -192,10 +198,12 @@ namespace inca {
         };
 
         // Specializations for known scalar types
-#define BUILTIN_TYPE_SPECIALIZATION(SCALAR)                                 \
+#define BUILTIN_TYPE_SPECIALIZATION(SCALAR, TOLERANCE)                      \
         template <> struct scalar_simple_specialization<SCALAR> {           \
             typedef ::std::numeric_limits<SCALAR> nl;                       \
             static string name() { return #SCALAR; }                        \
+            static SCALAR absolute_tolerance() { return SCALAR(TOLERANCE); }\
+            static SCALAR relative_tolerance() { return SCALAR(TOLERANCE); }\
             static const bool pass_by_value = true;                         \
             static const bool is_builtin = true;                            \
             static const bool is_integral = nl::is_integer;                 \
@@ -207,21 +215,21 @@ namespace inca {
             static const bool supports_algebraic_ops        = ! is_integral;\
             static const bool supports_transcendental_ops   = ! is_integral;\
         };
-        BUILTIN_TYPE_SPECIALIZATION(bool);
-        BUILTIN_TYPE_SPECIALIZATION(char);
-        BUILTIN_TYPE_SPECIALIZATION(unsigned char);
-        BUILTIN_TYPE_SPECIALIZATION(signed char);
-        BUILTIN_TYPE_SPECIALIZATION(short);
-        BUILTIN_TYPE_SPECIALIZATION(unsigned short);
-        BUILTIN_TYPE_SPECIALIZATION(int);
-        BUILTIN_TYPE_SPECIALIZATION(unsigned int);
-        BUILTIN_TYPE_SPECIALIZATION(long);
-        BUILTIN_TYPE_SPECIALIZATION(unsigned long);
-        BUILTIN_TYPE_SPECIALIZATION(long long);
-        BUILTIN_TYPE_SPECIALIZATION(unsigned long long);
-        BUILTIN_TYPE_SPECIALIZATION(float);
-        BUILTIN_TYPE_SPECIALIZATION(double);
-        BUILTIN_TYPE_SPECIALIZATION(long double);
+        BUILTIN_TYPE_SPECIALIZATION(bool, 0);
+        BUILTIN_TYPE_SPECIALIZATION(char, 0);
+        BUILTIN_TYPE_SPECIALIZATION(unsigned char, 0);
+        BUILTIN_TYPE_SPECIALIZATION(signed char, 0);
+        BUILTIN_TYPE_SPECIALIZATION(short, 0);
+        BUILTIN_TYPE_SPECIALIZATION(unsigned short, 0);
+        BUILTIN_TYPE_SPECIALIZATION(int, 0);
+        BUILTIN_TYPE_SPECIALIZATION(unsigned int, 0);
+        BUILTIN_TYPE_SPECIALIZATION(long, 0);
+        BUILTIN_TYPE_SPECIALIZATION(unsigned long, 0);
+        BUILTIN_TYPE_SPECIALIZATION(long long, 0);
+        BUILTIN_TYPE_SPECIALIZATION(unsigned long long, 0);
+        BUILTIN_TYPE_SPECIALIZATION(float, 1e-7f);
+        BUILTIN_TYPE_SPECIALIZATION(double, 1e-15);
+        BUILTIN_TYPE_SPECIALIZATION(long double, 1e-25L);
 #undef  BUILTIN_TYPE_SPECIALIZATION
     };
 };
@@ -231,9 +239,9 @@ namespace inca {
 #define IS_WITHIN_TEMPLATE      typename
 #define IS_NOT_WITHIN_TEMPLATE  
 #define INCA_MATH_SCALAR_TYPEDEFS(SCALAR, TYPENAME, PREF, SUFF)             \
-    typedef inca::math::scalar_traits<SCALAR> scalar_traits;                \
-    typedef TYPENAME scalar_traits::value_type PREF ## scalar_t     ## SUFF;\
-    typedef TYPENAME scalar_traits::arg_type   PREF ## scalar_arg_t ## SUFF;
+    typedef inca::math::scalar_traits<SCALAR>  PREF ## scalar_traits ## SUFF;\
+    typedef TYPENAME inca::math::scalar_traits<SCALAR>::value_type PREF ## scalar_t     ## SUFF;\
+    typedef TYPENAME inca::math::scalar_traits<SCALAR>::arg_type   PREF ## scalar_arg_t ## SUFF;
 
 #endif
 

@@ -155,6 +155,11 @@ public:
             logger.warning();
         }
     }
+    
+    void setPointSize(float size)  { api::set_point_size(size); }
+    void setLineWidth(float width) { api::set_line_width(width); }
+    void enablePointSmoothing(bool enabled) { api::enable_point_smoothing(enabled); }
+    void enableLineSmoothing(bool enabled)  { api::enable_line_smoothing(enabled); }
 
     void enableLight(world::LightPtr lite);
     void disableLight(world::LightPtr lite);
