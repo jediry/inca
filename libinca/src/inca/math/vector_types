@@ -101,7 +101,8 @@ namespace inca {
          * representing a geometric transformation. The usual matrix operations
          * are defined for it.
          *********************************************************************/
-        template <typename scalar, size_t maj, size_t min, bool rowMaj = true>
+        template <typename scalar, size_t maj, size_t min,
+                  bool rowMajAccess = true, bool rowMajorStorage = true>
         class Matrix;
 
         /*********************************************************************
@@ -148,22 +149,14 @@ public:
      * Array subscript accessor operator definition. This returns a reference
      * to the requested item in the array.
      */
-    scalar_t & operator[](index_t i) { return elements[i]; }
-
-    /**
-     * \overload operator[](index_t)
-     */
     const scalar_t & operator[](index_t i) const { return elements[i]; }
+    scalar_t & operator[](index_t i) { return elements[i]; }
 
     /**
      * Pointer to internal C-style array used to hold elements.
      */
-    scalar_t * contents() { return elements; }
-
-    /**
-     * \overload contents()
-     */
     const scalar_t * contents() const { return elements; }
+    scalar_t * contents() { return elements; }
 
     /**
      * Creates a string representation of elements in this list.
@@ -272,27 +265,40 @@ public:
     }
 };
 
-
-// These macros are used to instantiate the variable-arg-count constructors
+// This macro is used by the calls to BOOST_PP_REPEAT to assign constructor
+// parameters to their corresponding slot in the list
 #define ASSIGN_ARG(Z, IDX, JUNK) elements[IDX] = e ## IDX;
+
+// This macro is used to instantiate the variable-arg-count constructors
 #define PARAM_LIST_CONSTRUCTOR(Z, DIM, CLASS)                               \
     explicit CLASS(BOOST_PP_ENUM_PARAMS(DIM, scalar_arg_t e)) {             \
         /* Cause a compile-time failure if this constructor is used with    \
          * an instance of the wrong dimensionality.                         \
          */                                                                 \
-        BOOST_STATIC_ASSERT(DIM == dim);                                    \
+        BOOST_STATIC_ASSERT(DIM == size);                                   \
                                                                             \
         /* Copy each paramter to its slot in the array */                   \
         BOOST_PP_REPEAT(DIM, ASSIGN_ARG, BOOST_PP_EMPTY);                   \
     }
 
+// This macro is used to instantiate the List<N>(List<N-1>, scalar) constructors
+#define UP_DIM_CONSTRUCTOR(Z, K, CLASS)                                     \
+    explicit CLASS(const CLASS<scalar_t, dim - K> &lst,                     \
+                   BOOST_PP_REPEAT(K,                                       \
+        /* Cause a compile-time failure if this constructor is used with    \
+         * an instance of the wrong dimensionality.                         \
+         */                                                                 \
+        BOOST_STATIC_ASSERT(DIM == size);                                   \
+                                                                            \
+        /* Copy each paramter to its slot in the array */                   \
+        BOOST_PP_REPEAT(DIM, ASSIGN_ARG, BOOST_PP_EMPTY);                   \
 // This macro is a shortcut for a function constraint specifying that the first
 // type must be convertible to the second
 #define IS_CONVERTIBLE(T1, T2) typename constraint<boost::is_convertible<T1, T2>::satisfied = 0
 
 
 template <typename scalar, size_t dim>
-class inca::math::Point<scalar, dim> : public ScalarList<scalar, dim> {
+class inca::math::Point : public ScalarList<scalar, dim> {
 public:
     /* Scalar implementation typedefs */
     INCA_MATH_SCALAR_TYPEDEFS(scalar, IS_WITHIN_TEMPLATE, /* */, /* */);
@@ -322,7 +328,8 @@ public:
      * Attempting to invoke a constructor for a different dimensionality will
      * cause a compile-time failure.
      */
-    BOOST_PP_REPEAT_FROM_TO(2, 9, PARAM_LIST_CONSTRUCTOR, Point);
+    BOOST_PP_REPEAT_FROM_TO(MIN_DIMENSION, MAX_DIMENSION,
+                            PARAM_LIST_CONSTRUCTOR, Point);
 
     /**
      * Cross-scalar assignment constructor. This constructor accepts a Point of
@@ -347,7 +354,7 @@ public:
 
 
 template <typename scalar, size_t dim>
-class inca::math::Vector<scalar, dim> : public ScalarList<scalar, dim> {
+class inca::math::Vector : public ScalarList<scalar, dim> {
 public:
     /* Scalar implementation typedefs */
     INCA_MATH_SCALAR_TYPEDEFS(scalar, IS_WITHIN_TEMPLATE, /* */, /* */);
@@ -383,7 +390,8 @@ public:
      * Attempting to invoke a constructor for a different dimensionality will
      * cause a compile-time failure.
      */
-    BOOST_PP_REPEAT_FROM_TO(2, 9, PARAM_LIST_CONSTRUCTOR, Vector);
+    BOOST_PP_REPEAT_FROM_TO(MIN_DIMENSION, MAX_DIMENSION,
+                            PARAM_LIST_CONSTRUCTOR, Vector);
 
     /**
      * Cross-scalar assignment constructor. This constructor accepts a Vector of
@@ -458,7 +466,8 @@ protected:                                                                  \
 };
 
 
-template <typename scalar, size_t _major, size_t _minor, bool _rowMajor>
+template <typename scalar, size_t _major, size_t _minor,
+          bool _rowMajorAccess, bool _rowMajorStorage>
 class inca::math::Matrix : public ScalarList<scalar, _major * _minor> {
 public:
     /* Scalar implementation typedefs */
@@ -467,10 +476,12 @@ public:
     /** What size matrix are we working with? */
     static const size_t major = _major;
     static const size_t minor = _minor;
-    static const bool rowMajor =   _rowMajor;
-    static const bool colMajor = ! _rowMajor;
-    static const size_t rows = rowMajor ? major : minor;
-    static const size_t cols = colMajor ? major : minor;
+    static const bool rowMajorAccess =   _rowMajorAccess;
+    static const bool colMajorAccess = ! _rowMajorAccess;
+    static const bool rowMajorStorage =   _rowMajorStorage;
+    static const bool colMajorStorage = ! _rowMajorStorage;
+    static const size_t rows = rowMajorAccess ? major : minor;
+    static const size_t cols = colMajorAccess ? major : minor;
 
     /** Default (no initialization) constructor. */
     explicit Matrix() { }
@@ -481,14 +492,24 @@ public:
             elements[i] = e;
     }
 
+    /**
+     * scalar_t argument list constructors. Each of these is intended to be used
+     * only with instances with the same number of elements as there are
+     * arguments. Attempting to invoke a constructor for a different
+     * dimensionality will cause a compile-time failure.
+     */
+//    BOOST_PP_REPEAT_FROM_TO(MIN_DIMENSION * MIN_DIMENSION,
+//                            MAX_DIMENSION * MAX_DIMENSION,
+//                            PARAM_LIST_CONSTRUCTOR, Matrix);
+
     /** scalar_t array constructor. */
-    Matrix(scalar_t e[size]) {
+    explicit Matrix(scalar_t e[size]) {
         for (index_t i = 0; i < size; i++)
             elements[i] = e[i];
     }
 
     /** scalar_t double array constructor. */
-    Matrix(scalar_t e[major][minor]) {
+    explicit Matrix(scalar_t e[major][minor]) {
         for (index_t i = 0; i < major; i++)
             for (index_t j = 0; j < minor; j++)
                 elements[indexOf(i, j)] = e[i][j];
@@ -497,43 +518,30 @@ public:
     /**
      * 2D matrix-subscript element accessor.
      */
+    const scalar_t & operator()(index_t maj, index_t min) const {
+        return elements[indexOf(maj, min)];
+    }
     scalar_t & operator()(index_t maj, index_t min) {
         return elements[indexOf(maj, min)];
     }
 
     /**
-     * \overload operator()(index_t, index_t)
-     */
-    const scalar_t & operator()(index_t maj, index_t min) const {
-        return elements[indexOf(maj, min)];
-    }
-
-    /**
      * 2D, storage-order-independent element accessor.
-     */
-    scalar_t & rowCol(index_t r, index_t c) {
-        return elements[rowMajor ? r * cols + c : c * rows + r];
-    }
-
-    /**
-     * \overload rowCol(index_t, index_t)
      */
     const scalar_t & rowCol(index_t r, index_t c) const {
-        return elements[rowMajor ? r * cols + c : c * rows + r];
+        return elements[rowMajorStorage ? r * cols + c : c * rows + r];
     }
-
+    scalar_t & rowCol(index_t r, index_t c) {
+        return elements[rowMajorStorage ? r * cols + c : c * rows + r];
+    }
 
     /**
      * 2D, storage-order-independent element accessor.
      */
-    scalar_t & colRow(index_t c, index_t r) {
+    const scalar_t & colRow(index_t c, index_t r) const {
         return rowCol(r, c);
     }
-
-    /**
-     * \overload colRow(index_t, index_t)
-     */
-    const scalar_t & colRow(index_t r, index_t c) const {
+    scalar_t & colRow(index_t c, index_t r) {
         return rowCol(r, c);
     }
 
@@ -542,7 +550,10 @@ public:
      * major-axis, minor-axis subscripts.
      */
     index_t indexOf(index_t maj, index_t min) const {
-        return maj * minor + min;
+        if (rowMajorStorage == rowMajorAccess)  // Same access as storage
+            return maj * minor + min;
+        else
+            return min * major + maj;
     }
 
     /**
@@ -554,103 +565,12 @@ public:
         for (index_t row = 0; row < rows; row++)
             // Stringify a single row in the matrix. This has to be done
             // differently, depending on the storage scheme
-            if (colMajor)
+            if (colMajorStorage)
                 ss << '[' << stringifyElements(row, cols, rows) << "]\n";
             else
                 ss << '[' << stringifyElements(row * cols, cols, 1) << "]\n";
         return ss.str();
     }
-};
-
-// This macro expands to create a partial template specialization of Matrix
-// with the dimensions fixed. This trick is necessary to create ONLY the
-// appropriate scalar_t argument list constructors. Unlike the
-#define INCA_MATH_MATRIX_TEMPLATE_MINOR(Z, MIN, MAJ)                        \
-template <typename scalar>                                                  \
-class Matrix<scalar, MAJ, MIN> : public ScalarList<scalar, MAJ * MIN> {     \
-public:                                                                     \
-    /* Scalar implementation typedefs */                                    \
-    INCA_MATH_SCALAR_TYPEDEFS(scalar, IS_WITHIN_TEMPLATE, /* */, /* */);    \
-                                                                            \
-    /** What size matrix are we working with? */                            \
-    static const size_t major = MAJ;                                        \
-    static const size_t minor = MIN;                                        \
-                                                                            \
-    /** Default (no initialization) constructor. */                         \
-    explicit Matrix() { }                                                   \
-                                                                            \
-    /** Constant initialization constructor. */                             \
-    explicit Matrix(scalar_arg_t e) {                                       \
-        for (index_t i = 0; i < size; i++)                                  \
-            elements[i] = e;                                                \
-    }                                                                       \
-                                                                            \
-    /** scalar_t array constructor. */                                      \
-    Matrix(scalar_t e[size]) {                                              \
-        for (index_t i = 0; i < size; i++)                                  \
-            elements[i] = e[i];                                             \
-    }                                                                       \
-                                                                            \
-    /**                                                                     \
-     * scalar_t argument list constructor. This constructor takes the       \
-     * same number of arguments as there are elements in the Matrix.        \
-     */                                                                     \
-    explicit Matrix(BOOST_PP_ENUM_PARAMS(BOOST_PP_MUL(MAJ, MIN), scalar_arg_t e)) {\
-        BOOST_PP_REPEAT(MAJ * MIN, ASSIGN_ARG, BOOST_PP_EMPTY);             \
-    }                                                                       \
-                                                                            \
-    /**                                                                     \
-     * 2D matrix-subscript element accessor.                                \
-     * same number of arguments as there are elements in the Vector.        \
-     */                                                                     \
-    scalar_t & operator()(index_t maj, index_t min) {                       \
-        return elements[indexOf(maj, min)];                                 \
-    }                                                                       \
-                                                                            \
-    /**                                                                     \
-     * \overload operator()(index_t, index_t)                               \
-     */                                                                     \
-    const scalar_t & operator()(index_t maj, index_t min) const {           \
-        return elements[indexOf(maj, min)];                                 \
-    }                                                                       \
-                                                                            \
-    /**                                                                     \
-     * Calculate a 1D index into the underlying ScalarList from a pair of   \
-     * major-axis, minor-axis subscripts.                                   \
-     */                                                                     \
-    index_t indexOf(index_t maj, index_t min) const {                       \
-        return maj * minor + min;                                           \
-    }                                                                       \
-                                                                            \
-    /**                                                                     \
-     * Cast to string representation.                                       \
-     * \returns a string like "[1.4, 3.5]\n[0.0, 3.0]"                      \
-     */                                                                     \
-    operator std::string() const {                                          \
-        std::ostringstream ss;                                              \
-        for (index_t i = 0; i < MAJ; i++)                                   \
-            ss << '[' << stringifyElements(i, MIN, MAJ) << "]\n";           \
-        return ss.str();                                                    \
-    }                                                                       \
-};
-
-
-// See the documentation for the above macro. This one keeps the major dimension
-// fixed and iterates across the minor dimension of the Matrix.
-#define INCA_MATH_MATRIX_TEMPLATE_MAJOR(Z, MAJ, JUNK)                       \
-    BOOST_PP_REPEAT_FROM_TO(MIN_DIMENSION, BOOST_PP_INC(MAX_DIMENSION),     \
-                            INCA_MATH_MATRIX_TEMPLATE_MINOR, MAJ);
-
-
-// We have to do the actual specializations of the templates inside of a
-// namespace block, due to a bug in GCC
-namespace inca {
-    namespace math {
-        BOOST_PP_REPEAT_FROM_TO(MIN_DIMENSION, BOOST_PP_INC(MAX_DIMENSION),
-                                INCA_MATH_RAY_TEMPLATE, BOOST_PP_EMPTY);
-//        BOOST_PP_REPEAT_FROM_TO(MIN_DIMENSION, BOOST_PP_INC(MAX_DIMENSION),
-//                                INCA_MATH_MATRIX_TEMPLATE_MAJOR, BOOST_PP_EMPTY);
-    };
 };
 
 
@@ -664,13 +584,12 @@ namespace inca {
 
 
 // Last of all, clean up the preprocessor namespace on our way out
-#undef ASSIGN_ARG
 #undef MAX_DIMENSION
 #undef MIN_DIMENSION
-#undef INCA_MATH_POINT_TEMPLATE
-#undef INCA_MATH_VECTOR_TEMPLATE
-#undef INCA_MATH_RAY_TEMPLATE
-#undef INCA_MATH_MATRIX_TEMPLATE_MAJOR
-#undef INCA_MATH_MATRIX_TEMPLATE_MINOR
+#undef ASSIGN_ARG
+#undef PARAM_LIST_CONSTRUCTOR
+#undef UP_DIM_CONSTRUCTOR
+#undef DOWN_DIM_CONSTRUCTOR
+#undef IS_CONVERTIBLE
 
 #endif

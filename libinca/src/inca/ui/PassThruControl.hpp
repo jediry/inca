@@ -76,6 +76,11 @@ public:
     // My sub-widget has same dimensions as me
     Dimension getSize(WidgetPartConstPtr wp) const { return size; }
 
+    // Ask my parent who the big daddy Window is
+    WindowPtr getContainingWindow() const {
+        return WidgetPart::getContainingWindow();
+    }
+
 
 /*---------------------------------------------------------------------------*
  | Control-related events (passed-thru to the wrapped Control, if there is one)

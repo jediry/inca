@@ -1,11 +1,13 @@
 Makefile
 Makefile.in
 src_catalog
-configure
 aclocal.m4
 autom4te.cache
+config
 config.log
 config.status
-config
-?ebug
+configure
+[Dd]ebug
+[Rr]elease
 *.pcs
+*.ncb

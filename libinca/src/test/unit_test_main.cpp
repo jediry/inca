@@ -25,7 +25,7 @@ using namespace inca;
 
 // Comment out these symbol definitions to exclude specific test sets
 #define TEST_INCA_UTIL_PROPERTY         1
-#define TEST_INCA_MATH                  1
+#define TEST_INCA_MATH                  0
 
 
 // Inca implementation of C#-like properties

@@ -18,29 +18,27 @@
 #define INCA_MATH_TOPOLOGY_EXCEPTIONS
 
 // Include superclass definition
-#include <inca/util/IncaException.hpp>
+#include <inca/util/stream_exception.hpp>
 
 
 // This is part of the Inca polygon modeling library
 namespace inca {
-    namespace poly {
+    namespace math {
         // This is the superclass for all geometry-related exceptions
-        class GeometryException : public IncaException {
+        class GeometryException : public stream_exception {
         public:
             // Constructors
-            GeometryException() : IncaException() { }
-            GeometryException(const GeometryException &e) : IncaException(e) { }
-            GeometryException(const string &msg) : IncaException(msg) { }
+            explicit GeometryException() : stream_exception() { }
+            explicit GeometryException(const string &msg)
+                : stream_exception(msg) { }
         };
 
         // This is thrown when a non-manifold condition is detected
         class NonManifoldGeometryException : public GeometryException {
         public:
             // Constructors
-            NonManifoldGeometryException() : GeometryException() { }
-            NonManifoldGeometryException(const NonManifoldGeometryException &e)
-                : GeometryException(e) { }
-            NonManifoldGeometryException(const string &msg)
+            explicit NonManifoldGeometryException() : GeometryException() { }
+            explicit NonManifoldGeometryException(const string &msg)
                 : GeometryException(msg) { }
         };
 
@@ -48,10 +46,8 @@ namespace inca {
         class DegenerateGeometryException : public GeometryException {
         public:
             // Constructors
-            DegenerateGeometryException() : GeometryException() { }
-            DegenerateGeometryException(const DegenerateGeometryException &e)
-                : GeometryException(e) { }
-            DegenerateGeometryException(const string &msg)
+            explicit DegenerateGeometryException() : GeometryException() { }
+            explicit DegenerateGeometryException(const string &msg)
                 : GeometryException(msg) { }
         };
     };

@@ -296,6 +296,12 @@ void OPEN_GL_API apply_rotation<double>(const Quaternion<double> &q) {
 }
 
 template <> template <>
+void OPEN_GL_API apply_rotation<double, 3>(double angle,
+                                           const Vector<double, 3> &axis) {
+    glRotated(angle * 180.0 / math::PI<double>(), axis[0], axis[1], axis[2]);
+}
+
+template <> template <>
 void OPEN_GL_API unapply_rotation<double>(const Quaternion<double> &q) {
     if (! effectivelyEqual(q[0], 1.0)) {
         // Note that we're getting the NEGATION of the rotation angle here
@@ -304,6 +310,13 @@ void OPEN_GL_API unapply_rotation<double>(const Quaternion<double> &q) {
         glRotated(angle, around[0], around[1], around[2]);
     }
 }
+
+template <> template <>
+void OPEN_GL_API unapply_rotation<double, 3>(double angle,
+                                             const Vector<double, 3> &axis) {
+    glRotated(-angle * 180.0 / math::PI<double>(), axis[0], axis[1], axis[2]);
+}
+
 
 template <> template <>
 void OPEN_GL_API apply_scaling<float, 3>(const ScalarList<float, 3> &s) {
@@ -326,20 +339,20 @@ void OPEN_GL_API unapply_scaling<double, 3>(const ScalarList<double, 3> &s) {
 }
 
 template <> template <>
-void OPEN_GL_API transform(const math::Point<double, 3> &world,
-                                 math::Point<double, 3> &local) {
+void OPEN_GL_API transform<double, 3>(const math::Point<double, 3> &world,
+                                            math::Point<double, 3> &local) {
 
 }
 
 template <> template <>
-void OPEN_GL_API untransform(const math::Point<double, 3> &local,
-                                   math::Point<double, 3> &world) {
+void OPEN_GL_API untransform<double, 3>(const math::Point<double, 3> &local,
+                                              math::Point<double, 3> &world) {
 
 }
 
 template <> template <>
-void OPEN_GL_API project(const math::Point<double, 3> &world,
-                               math::Point<double, 3> &screen) {
+void OPEN_GL_API project<double, 3> (const math::Point<double, 3> &world,
+                                           math::Point<double, 3> &screen) {
 
     // Get ahold of the projection & modelview matrices from GL
     math::Matrix<GLdouble, 4, 4, false> projection, modelview;
@@ -358,8 +371,8 @@ void OPEN_GL_API project(const math::Point<double, 3> &world,
 }
 
 template <> template <>
-void OPEN_GL_API unproject(const math::Point<double, 3> &screen,
-                                 math::Point<double, 3> &world) {
+void OPEN_GL_API unproject<double, 3>(const math::Point<double, 3> &screen,
+                                            math::Point<double, 3> &world) {
 
     // Get ahold of the projection & modelview matrices from GL
     math::Matrix<GLdouble, 4, 4, false> projection, modelview;
@@ -391,9 +404,9 @@ void OPEN_GL_API enable_selection_mode(bool enabled) {
     if (enabled) {
         glSelectBuffer(thsb_size, totally_hacked_selection_buffer);
         glRenderMode(GL_SELECT);    // Enter selection mode
-        cerr << "Enabling: ";
+//        cerr << "Enabling: ";
         check_for_error();
-        cerr << endl;
+//        cerr << endl;
     } else
         num_hit_records = glRenderMode(GL_RENDER);
 }
@@ -410,10 +423,10 @@ void OPEN_GL_API load_selected_ids(SelectionSet &s) {
     if (num_hit_records < 0)
         cerr << "Ack! selection buffer overflowed!\n";
     else {
-        cerr << "There were " << num_hit_records << " hits\n";
-        for (index_t i = 0; i < 10; ++i)
-            cerr << totally_hacked_selection_buffer[i] << ' ';
-        cerr << endl;
+//        cerr << "There were " << num_hit_records << " hits\n";
+//        for (index_t i = 0; i < 10; ++i)
+//            cerr << totally_hacked_selection_buffer[i] << ' ';
+//        cerr << endl;
     }
 
     check_for_error();
@@ -423,12 +436,12 @@ void OPEN_GL_API load_selected_ids(SelectionSet &s) {
         if (count != 1)
             cerr << "- Uh oh! hierarchical selection not supported: "
                  << count << " names on stack!\n";
-        else
-            cerr << "+ Selected: " << totally_hacked_selection_buffer[recordStart + 3] << endl;
+//        else
+//            cerr << "+ Selected: " << totally_hacked_selection_buffer[recordStart + 3] << endl;
         s.select(totally_hacked_selection_buffer[recordStart + 3]);
         recordStart += 3 + count;
     }
-    cerr << endl;
+//    cerr << endl;
     check_for_error();
 }
 

@@ -303,6 +303,15 @@ namespace inca {
             return result;
         }
 
+        // Dot product
+        TEMPLATE(1,0)
+        S dot(const L(0) &l1, const L(0) &l2) {
+            S result = 0;
+            for (index_t i = 0; i < l1.size; i++)
+                result += l1[i] * l2[i];
+            return result;
+        }
+
 //        LIST_ELEMENTWISE_FUNCTION_1_ARG(abs);
 //        LIST_ELEMENTWISE_FUNCTION_1_ARG(floor);
 //        LIST_ELEMENTWISE_FUNCTION_1_ARG(ceiling);
@@ -312,6 +321,21 @@ namespace inca {
 //        LIST_ELEMENTWISE_FUNCTION_1_ARG(sqrt);
 
 //        LIST_ELEMENTWISE_FUNCTION_2_ARG(pow);
+
+
+    /*-----------------------------------------------------------------------*
+     | Point operations
+     *-----------------------------------------------------------------------*/
+        // Cartesian distance between two points (L-2)
+        TEMPLATE(1,0)
+        S distance(const P(0) &p0, const P(0) &p1) {
+            S result = 0;
+            for (index_t i = 0; i < p0.size; i++) { // Accumulate the squares
+                S diff = p1[i] - p0[i];             // of differences along
+                result += diff * diff;              // each axis
+            }
+            return sqrt(result);
+        }
 
 
     /*-----------------------------------------------------------------------*
@@ -326,32 +350,52 @@ namespace inca {
             return sqrt(result);
         }
 
-        // Interior angle between vectors
+        // Interior angle between vectors. The result will lie within [0, pi].
         TEMPLATE(1,0)
         S angle(const V(0) &v1, const V(0) &v2) {
             S cosine = dot(v1, v2) / magnitude(v1) / magnitude(v2);
             return arccos(cosine);
         }
 
-        // Signed angle between vectors, with reference to an "up"
+        // Signed angle between two vectors, with reference to an "up" vector.
+        // The result will lie within the range [-pi, pi]
         // (all vectors should be pre-normalized)
         TEMPLATE(1,0)
-        S angle(const V(0) &v1,
-                     const V(0) &v2,
-                     const V(0) &up) {
+        S signedAngle(const V(0) &v1, const V(0) &v2, const V(0) &up) {
             S cosine = dot(v1, v2),
-                   sine   = dot((v1 % v2), up);
+              sine   = dot((v1 % v2), up);
             return arctan(sine, cosine);
         }
-
-        // Dot product
-        TEMPLATE(1,0)
-        S dot(const V(0) &v1, const V(0) &v2) {
-            S result = 0;
-            for (index_t i = 0; i < v1.size; i++)
-                result += v1[i] * v2[i];
-            return result;
+        // Special case for 2D vectors (doesn't need an 'up' vector).
+        TEMPLATE(0,0)
+        S signedAngle(const VECTOR(2) &v1, const VECTOR(2) &v2) {
+            S alpha = arctan(v1[0], v1[1]),
+              beta  = arctan(v2[0], v2[1]);
+            return beta - alpha;
         }
+
+        // Canonical angle between two vectors. The result will lie within
+        // the range [0, 2pi).
+        TEMPLATE(1,0)
+        S canonicalAngle(const V(0) &v1, const V(0) &v2, const V(0) &up) {
+            S alpha = signedAngle(v1, v2, up);
+            return (alpha >= 0) ? alpha : 2 * PI<S>() + alpha;
+        }
+        // Special case for 2D vectors (doesn't need an 'up' vector).
+        TEMPLATE(0,0)
+        S canonicalAngle(const VECTOR(2) &v1, const VECTOR(2) &v2) {
+            S alpha = signedAngle(v1, v2);
+            return (alpha >= 0) ? alpha : 2 * PI<S>() + alpha;
+        }
+
+//        // Dot product
+//        TEMPLATE(1,0)
+//        S dot(const V(0) &v1, const V(0) &v2) {
+//            S result = 0;
+//            for (index_t i = 0; i < v1.size; i++)
+//                result += v1[i] * v2[i];
+//            return result;
+//        }
 
         // Cross product
         TEMPLATE(1,0)
@@ -371,12 +415,12 @@ namespace inca {
             return v / magnitude(v);
         }
 
-    // Vector normalization
-//    void normalize() {
-//        scalar_t length = magnitude(*this);
-//        if (length != 0)
-//            elements /= length;
-//    }
+//        // Vector normalization
+//        void normalize() {
+//            scalar_t length = magnitude(*this);
+//            if (length != 0)
+//                elements /= length;
+//        }
 
         // Normal-vector reflection
         TEMPLATE(1,0)
@@ -395,9 +439,7 @@ namespace inca {
         // Vector between two points, but perpendicular to another
         // (normalized) vector
         TEMPLATE(1,0)
-        V(0) project(const P(0) &p1,
-                            const P(0) &p2,
-                            const V(0) &n) {
+        V(0) project(const P(0) &p1, const P(0) &p2, const V(0) &n) {
             V(0) tween = p1 - p2;
             return project(tween, n);
         }

@@ -110,40 +110,16 @@
 	</References>
 	<Files>
 		<File
-			RelativePath=".\src\test\IncaTestMain.cpp">
-		</File>
-		<File
-			RelativePath=".\src\test\MathMatrixTest">
-		</File>
-		<File
-			RelativePath=".\src\test\MathPointTest">
-		</File>
-		<File
 			RelativePath=".\src\test\MathScalarTest">
 		</File>
 		<File
-			RelativePath=".\src\test\MathVectorTest">
+			RelativePath=".\src\test\MathVectorOpsTest">
 		</File>
 		<File
-			RelativePath=".\src\test\OBJInterpreterTest.cpp">
-			<FileConfiguration
-				Name="Debug|Win32"
-				ExcludedFromBuild="TRUE">
-				<Tool
-					Name="VCCLCompilerTool"/>
-			</FileConfiguration>
+			RelativePath=".\src\test\MathVectorTypesTest">
 		</File>
 		<File
-			RelativePath=".\src\test\OBJParserTest.cpp">
-			<FileConfiguration
-				Name="Debug|Win32"
-				ExcludedFromBuild="TRUE">
-				<Tool
-					Name="VCCLCompilerTool"/>
-			</FileConfiguration>
-		</File>
-		<File
-			RelativePath=".\src\test\UtilMultiArrayTest.hpp">
+			RelativePath=".\src\test\unit_test_main.cpp">
 		</File>
 		<File
 			RelativePath=".\src\test\UtilPropertyTest.hpp">

@@ -55,13 +55,30 @@ namespace inca {
 
 
 class inca::world::SelectionSet {
+/*---------------------------------------------------------------------------*
+ | Type definitions
+ *---------------------------------------------------------------------------*/
 protected:
     // Container typedefs
     typedef set<unsigned int> IDSet;
 
+public:
+    // Iterator typedefs -- passed up from the set
+    typedef IDSet::iterator         iterator;
+    typedef IDSet::const_iterator   const_iterator;
 
 protected:
     IDSet items; // The set of things that are selected
+
+
+/*---------------------------------------------------------------------------*
+ | Iterator access
+ *---------------------------------------------------------------------------*/
+public:
+    const_iterator begin() const { return items.begin(); }
+          iterator begin()       { return items.begin(); }
+    const_iterator end() const { return items.end(); }
+          iterator end()       { return items.end(); }
 
 
 /*---------------------------------------------------------------------------*
@@ -86,6 +103,7 @@ public:
     void differenceWith(const SelectionSet &s);
     void symmetricDifferenceWith(const SelectionSet &s);
     void complement();
+    void selectAll();
 
     // Set test functions
     bool isEqualTo(const SelectionSet &s) const;
@@ -94,14 +112,10 @@ public:
     bool isSubsetOf(const SelectionSet &s) const;
     bool isStrictSupersetOf(const SelectionSet &s) const;
     bool isStrictSubsetOf(const SelectionSet &s) const;
+    bool isEmpty() const { return items.empty(); }
 
-public:
-    // This is a hook for the template metaprogramming constraints used by
-    // the operators defined later in this file. This will prevent the
-    // compiler from trying to instantiate the operators with any type
-    // other than SelectionSet or one of its subclasses. Note that the subclass's
-    // versions of any overridden functions will be used.
-    static const is_selection_subclass = true;
+    // Cast-to-bool is a synonym for 'not empty?'
+    operator bool() const { return ! isEmpty(); }
 };
 
 
@@ -182,7 +196,7 @@ TEMPLATE SELECTION_RET operator%(SELECTION_CARG s1, SELECTION_CARG s2) {
 }
 
 // Set complement operator
-TEMPLATE SELECTION_RET operator!(SELECTION_CARG s1) {
+TEMPLATE SELECTION_RET operator~(SELECTION_CARG s1) {
     SELECTION s3(s1);
     s3.complement();
     return s3;
@@ -190,7 +204,7 @@ TEMPLATE SELECTION_RET operator!(SELECTION_CARG s1) {
 
 
 /*---------------------------------------------------------------------------*
- | Set comparison operators
+ | Set test operators
  *---------------------------------------------------------------------------*/
 // Set equality test
 TEMPLATE BOOL_RET operator==(SELECTION_CARG s1, SELECTION_CARG s2) {
@@ -198,7 +212,7 @@ TEMPLATE BOOL_RET operator==(SELECTION_CARG s1, SELECTION_CARG s2) {
 }
 
 // Set inequality test
-TEMPLATE BOOL_RET operator==(SELECTION_CARG s1, SELECTION_CARG s2) {
+TEMPLATE BOOL_RET operator!=(SELECTION_CARG s1, SELECTION_CARG s2) {
     return s1.isUnequalTo(s2);
 }
 
@@ -221,6 +235,7 @@ TEMPLATE BOOL_RET operator>(SELECTION_CARG s1, SELECTION_CARG s2) {
 TEMPLATE BOOL_RET operator<(SELECTION_CARG s1, SELECTION_CARG s2) {
     return s1.isStrictSubsetOf(s2);
 }
+
 
 // Clean up the preprocessor namespace
 #undef TEMPLATE

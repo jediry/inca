@@ -1,0 +1,41 @@
+/* -*- C++ -*-
+ *
+ * File: WingedEdgeMesh-MeshElement
+ * 
+ * Author: Ryan L. Saunders
+ *
+ * Copyright 2004, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ *      This file implements the MeshElement inner class belonging to the
+ *      WingedEdgeMesh structure. MeshElement is a base class for all mesh
+ *      sub-parts and contains common things like having a unique ID and a
+ *      pointer back to the parent mesh.
+ *
+ *      This file is not meant to be used directly, but is included by
+ *      the main WingedEdgeMesh header file.
+ */
+
+#ifndef INCA_MATH_TOPOLOGY_WINGED_EDGE_MESH_ELEMENT
+#define INCA_MATH_TOPOLOGY_WINGED_EDGE_MESH_ELEMENT
+
+
+MESH_TEMPLATE class inca::math::MESH::MeshElement {
+/*---------------------------------------------------------------------------*
+ | Accessors & data
+ *---------------------------------------------------------------------------*/
+public:
+    // Unique ID for this element
+    index_t id() const { return _id; }
+    void setID(index_t i) { _id = i; }
+
+    // Access to the parent mesh object
+    MeshPtr mesh() const { return _mesh; }
+    void setMesh(MeshPtr m) { _mesh = m; }
+
+protected:
+    unsigned int _id;       // Unique ID within this mesh
+    MeshPtr _mesh;          // The mesh that we belong to
+};
+
+#endif

@@ -63,3 +63,19 @@ void Application::exit(int status, const string &msg) {
 void Application::registerComponent(UIComponentPtr uic) {
     components.push_back(uic);
 }
+
+
+/*---------------------------------------------------------------------------*
+ | Utility functions
+ *---------------------------------------------------------------------------*/
+// Pull off the first command-line argument and remove it from the list
+string Application::shift(int &argc, char **&argv) {
+    string result;
+    if (argc > 1) {
+        result = argv[1];   // Save the first argument into a string
+        for (index_t i = 1; i < argc; ++i)  // Shuffle pointers for other args
+            argv[i] = argv[i+1];
+        argc--;             // Decrement the count
+    }
+    return result;
+}

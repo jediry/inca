@@ -48,6 +48,7 @@ const GLUTWindow::Timer::scalar_t GLUTWindow::CLICK_DURATION(0.5f);
  | Static GLUT callbacks -- they just call member functions of the window
  *---------------------------------------------------------------------------*/
 void GLUTWindow::reshapeFunc(int width, int height) {
+    cerr << "Reshaping\n";
     windowList[glutGetWindow()]->reshape(width, height);
 }
 void GLUTWindow::entryFunc(int state) {
@@ -87,7 +88,8 @@ void GLUTWindow::idleFunc() {
  *---------------------------------------------------------------------------*/
 // Default constructor
 GLUTWindow::GLUTWindow(const string &title)
-        : position(DEFAULT_POSITION), size(DEFAULT_SIZE),
+        : Window(title),
+          position(DEFAULT_POSITION), size(DEFAULT_SIZE),
           minSize(DEFAULT_MINIMUM_SIZE), maxSize(DEFAULT_MAXIMUM_SIZE),
           aspectRatio(DEFAULT_ASPECT_RATIO),
           fullScreen(DEFAULT_IS_FULL_SCREEN), widgetInitialized(false) {
@@ -98,7 +100,8 @@ GLUTWindow::GLUTWindow(const string &title)
 
 // Widget-specific constructor
 GLUTWindow::GLUTWindow(WidgetPtr w, const string &title)
-        : position(DEFAULT_POSITION), size(DEFAULT_SIZE),
+        : Window(title),
+          position(DEFAULT_POSITION), size(DEFAULT_SIZE),
           minSize(DEFAULT_MINIMUM_SIZE), maxSize(DEFAULT_MAXIMUM_SIZE),
           aspectRatio(DEFAULT_ASPECT_RATIO),
           fullScreen(DEFAULT_IS_FULL_SCREEN), widgetInitialized(false) {
@@ -381,11 +384,13 @@ void GLUTWindow::setFullScreen(bool fs) {
     if (fs && ! fullScreen) {       // ...then we must make it so
         fullScreen = true;              // We're going full-out
         restoreSize = size;             // Store the size for later
+        cerr << "Full screen\n";
         glutPushWindow();               // Store the previous window
             glutSetWindow(windowID);        // Pick this window
             glutFullScreen();               // Full-screen-ify it
         glutPopWindow();                // Restore the previous window
     } else if (!fs && fullScreen) { // ...OK...gotta put it back
+        cerr << "Un-full-screen\n";
         restore();
     }
 #else

@@ -1,0 +1,219 @@
+/* -*- C++ -*-
+ *
+ * File: WingedEdgeMesh-FaceVertex
+ * 
+ * Author: Ryan L. Saunders
+ *
+ * Copyright 2004, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ *      This file implements the FaceVertex inner class belonging to the
+ *      WingedEdgeMesh structure. A FaceVertex in the winged-edge scheme has
+ *      pointers to the Edges on either side of it, as well as the Face and
+ *      Vertex it touches. Additionally, in this implementation, arbitrary
+ *      user data may be associated with a vertex via the VData template
+ *      parameter to the parent mesh (see the main WingedEdgeMesh documentation
+ *      for more information).
+ *
+ *      This file is not meant to be used directly, but is included by
+ *      the main WingedEdgeMesh header file.
+ */
+
+#ifndef INCA_MATH_TOPOLOGY_WINGED_EDGE_MESH_FACE_VERTEX
+#define INCA_MATH_TOPOLOGY_WINGED_EDGE_MESH_FACE_VERTEX
+
+
+MESH_TEMPLATE class inca::math::MESH::FaceVertex : public FVData, public MeshElement {
+/*---------------------------------------------------------------------------*
+ | Friend declarations
+ *---------------------------------------------------------------------------*/
+public:
+    // The mesh & friends need access to protected (modification) functions
+    friend Mesh;
+    friend Vertex;
+    friend Face;
+    friend Edge;
+    friend FaceVertex;
+    friend EdgeVertex;
+
+
+/*---------------------------------------------------------------------------*
+ | Initialization & data
+ *---------------------------------------------------------------------------*/
+public:
+    // Reset this FaceVertex to be unconnected
+    void clear() {
+        _edgeVertexCCW = _edgeVertexCW = NULL;
+        _vertex = NULL;
+        _face = NULL;
+    }
+
+    // Copy user-data into this element
+    void setData(const FVData &fvd) {
+        *static_cast<FVData *>(this) = fvd;
+    }
+
+protected:
+    VertexPtr _vertex;              // The vertex we're attached to
+    FacePtr _face;                  // The face we're attached to
+    EdgeVertexPtr _edgeVertexCCW,   // The EdgeVertices reached by going
+                  _edgeVertexCW;    // CCW/CW around the Vertex
+
+
+/*---------------------------------------------------------------------------*
+ | Topology accessor functions
+ *---------------------------------------------------------------------------*/
+// Vertex accessors
+public:
+    VertexPtr vertex() const { return _vertex; }
+    bool touchesVertex(VertexPtr v) const { return vertex() == v; }
+
+protected:
+    void setVertex(VertexPtr v) { _vertex = v; }
+
+
+// Edge accessors
+public:
+    EdgePtr edgeCCW() const {
+        if (edgeVertexCCW() != NULL)    return edgeVertexCCW()->edge();
+        else                            return NULL;
+    }
+    EdgePtr edgeCW()  const {
+        if (edgeVertexCW() != NULL)     return edgeVertexCW()->edge();
+        else                            return NULL;
+    }
+    bool touchesEdge(EdgePtr e) const {
+        return e == edgeCCW() || e == edgeCW();
+    }
+
+
+// Face accessors
+public:
+    FacePtr face() const { return _face; }
+    bool touchesFace(FacePtr f) const { return face() == f; }
+
+protected:
+    void setFace(FacePtr f) { _face = f; }
+
+
+// FaceVertex accessors
+public:
+    FaceVertexPtr faceVertexCCW() const {
+        return edgeVertexCCW()->faceVertexCCW();
+    }
+    FaceVertexPtr faceVertexCW() const {
+        return edgeVertexCW()->faceVertexCW();
+    }
+    bool touchesFaceVertex(FaceVertexPtr fv) const {
+        if (fv == faceVertexCCW())      return true;
+        else if (fv == faceVertexCW())  return true;
+        else                            return false;
+    }
+
+
+// EdgeVertex accessors
+public:
+    EdgeVertexPtr edgeVertexCCW() const { return _edgeVertexCCW; }
+    EdgeVertexPtr edgeVertexCW()  const { return _edgeVertexCW; }
+    bool touchesEdgeVertex(EdgeVertexPtr ev) const {
+        return (ev == edgeVertexCCW() || ev == edgeVertexCCW());
+    }
+
+protected:
+    void setEdgeVertexCCW(EdgeVertexPtr ev) { _edgeVertexCCW = ev; }
+    void setEdgeVertexCW(EdgeVertexPtr ev)  { _edgeVertexCW = ev; }
+
+
+/*---------------------------------------------------------------------------*
+ | Mesh modification functions
+ *---------------------------------------------------------------------------*/
+protected:
+    // Inserts a fan (delimited by a pair of EdgeVertices) into this
+    // FaceVertex splitting the FV in two if necessary (splitting is not
+    // needed when this FV is attached to a valence-0 vertex (no edges)).
+    void insert(EdgeVertexPtr ccw, EdgeVertexPtr cw) {
+        if (edgeCCW() == NULL) {            // This'll be easy!
+            setEdgeVertexCCW(cw);           // We're the only ones at
+            setEdgeVertexCW(ccw);           // the party!
+
+            cw->setFaceVertexCW(this);
+            ccw->setFaceVertexCCW(this);
+
+            cw->setEdgeVertexCW(ccw);
+            ccw->setEdgeVertexCCW(cw);
+
+        } else {
+            // Make a new FV and clone the data from this one
+            FaceVertexPtr newFV = mesh()->acquireFaceVertex();
+            newFV->setVertex(vertex());
+            newFV->setData(*this);
+
+            // Insert the new FV between my old CCW and 'ccw'
+            newFV->setEdgeVertexCCW(edgeVertexCCW());   // My EdgeVertices!
+            newFV->setEdgeVertexCW(ccw);
+            edgeVertexCCW()->setFaceVertexCW(newFV);    // Tell EVs about
+            ccw->setFaceVertexCCW(newFV);               // their new FV
+            edgeVertexCCW()->setEdgeVertexCW(ccw);      // Tell them about
+            ccw->setEdgeVertexCCW(edgeVertexCCW());     // each other
+
+            // Relink the old FV (now between old CW and 'cw')
+            this->setEdgeVertexCCW(cw);             // My new neighbor
+            cw->setFaceVertexCW(this);              // Hi, I'm FV!
+            cw->setEdgeVertexCW(edgeVertexCW());    // Old CW, meet 'cw'
+            edgeVertexCW()->setEdgeVertexCCW(cw);   // 'cw', meet old CW
+        }
+
+        // Tell the fan about its new Vertex
+        mesh()->linkFanToVertex(vertex(), ccw, cw);
+    }
+
+    // Inserts an EdgeVertex into this FaceVertex, splitting it if necessary.
+    void insert(EdgeVertexPtr e) {
+        insert(e, e);   // Just call the insert-fan version
+    }
+
+    // Embed this FaceVertex at 'v', in between the 'ccw' and 'cw'
+    void embed(VertexPtr v, EdgeVertexPtr ccw, EdgeVertexPtr cw) {
+        // Link me into this slot
+        setVertex(v);
+        setEdgeVertexCW(cw);
+        setEdgeVertexCCW(ccw);
+
+        // Tell them I'm here
+        if (cw != NULL)     cw->setFaceVertexCCW(this);
+        if (ccw != NULL)    ccw->setFaceVertexCW(this);
+#if 0
+        // Do some sanity checks on the insert point
+        if (cw->faceVertexCCW(v) != NULL) {
+            cerr << "FV(" << id() << ")::insertBetween(): There is already a "
+                    "face-vertex at V(" << v->id() << ") CCW from E("
+                 << cw->id() << '\n';
+            return;
+        } else if (ccw->faceVertexCW(v) != NULL) {
+            cerr << "FV(" << id() << ")::insertBetween(): There is already a "
+                    "face-vertex at V(" << v->id() << ") CW from E("
+                 << ccw->id() << '\n';
+            return;
+        } else if (cw->edgeCCW(v) != ccw) {
+            cerr << "FV(" << id() << ")::insertBetween(): E(" << ccw->id()
+                 << ") is not CCW from E(" << cw->id() << ") around V("
+                 << v->id() << ")\n";
+            return;
+        } else if (ccw->edgeCW(v) != cw) {
+            cerr << "FV(" << id() << ")::insertBetween(): E(" << cw->id()
+                 << " is not CW from E(" << ccw->id() << ") around V("
+                 << v->id() << ")\n";
+            return;
+        } else if (ccw->faceCW(v) != cw->faceCCW(v)) {
+            cerr << "FV(" << id() << ")::insertBetween(): E(" << cw->id()
+                 << ") and E(" << ccw->id() << ") do not border the same face "
+                    "at V(" << v->id() << ")\n";
+            return;
+        } else {
+            // Code went here...
+        }
+#endif
+    }
+};
+
+#endif

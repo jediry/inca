@@ -41,6 +41,10 @@ public:
     INCA_MATH_SCALAR_TYPEDEFS(double, IS_WITHIN_TEMPLATE, /* */, /* */);
     typedef inca::math::Point<scalar_t, 2>          Point2D;
     typedef inca::math::Vector<scalar_t, 2>         Vector2D;
+
+    typedef inca::math::Point<scalar_t, 3>          Point3D;
+    typedef inca::math::Vector<scalar_t, 3>         Vector3D;
+
     typedef inca::math::Matrix<double, 4, 4, false> Matrix;
 
     static void check_for_error();
@@ -125,8 +129,14 @@ public:
     static void unapply_translation(const math::ScalarList<scalar_t, dim> &t);
     template <typename scalar_t>
     static void apply_rotation(const math::Quaternion<scalar_t> &q);
+    template <typename scalar_t, size_t dim>
+    static void apply_rotation(scalar_arg_t angle,
+                               const math::Vector<scalar_t, dim> &axis);
     template <typename scalar_t>
     static void unapply_rotation(const math::Quaternion<scalar_t> &q);
+    template <typename scalar_t, size_t dim>
+    static void unapply_rotation(scalar_arg_t angle,
+                               const math::Vector<scalar_t, dim> &axis);
     template <typename scalar_t, size_t dim>
     static void apply_scaling(const math::ScalarList<scalar_t, dim> &s);
     template <typename scalar_t, size_t dim>

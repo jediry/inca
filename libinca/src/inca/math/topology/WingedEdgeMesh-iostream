@@ -1,0 +1,129 @@
+/* -*- C++ -*-
+ *
+ * File: WingedEdgeMesh-iostream
+ * 
+ * Author: Ryan L. Saunders
+ *
+ * Copyright 2004, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ *      This file implements the IOstream << operators for the parts of
+ *      WingedEdgeMesh.
+ *
+ *      This file is not meant to be used directly, but is included by
+ *      the main WingedEdgeMesh header file.
+ */
+
+#ifndef INCA_MATH_TOPOLOGY_WINGED_EDGE_MESH_IOSTREAM
+#define INCA_MATH_TOPOLOGY_WINGED_EDGE_MESH_IOSTREAM
+
+namespace inca {
+    namespace math {
+
+// These are broken in Visual Studio    
+        MESH_TEMPLATE
+        std::ostream & operator<<(std::ostream &os,
+                                  const typename MESH::Vertex &v) {
+            return os << "Vertex(" << v->id() << "): "
+                      << v->edgeCount() << " edges";
+        }
+
+#if 0
+        MESH_TEMPLATE
+        std::ostream & operator<<(std::ostream &os,
+                                  const typename MESH::Face &f) {
+            return os << "Face(" << f->id() << ')';
+        }
+
+        MESH_TEMPLATE
+        std::ostream & operator<<(std::ostream &os,
+                                  const typename MESH::Edge &e) {
+            return os << "Edge(" << e->id() << ')';
+        }
+
+        MESH_TEMPLATE
+        std::ostream & operator<<(std::ostream &os,
+                                  const typename MESH::FaceVertex &fv) {
+            return os << "FaceVertex(" << fv->id() << ')';
+        }
+
+        MESH_TEMPLATE
+        std::ostream & operator<<(std::ostream &os,
+                                  const typename MESH::EdgeVertex &ev) {
+            return os << "EdgeVertex(" << ev->id() << ")";
+        }
+#endif
+
+        MESH_TEMPLATE
+        std::ostream & writeV(std::ostream &os, const typename MESH::Vertex &v) {
+            return os << "Vertex(" << v->id() << "): "
+                      << v->edgeCount() << " edges";
+        }
+
+        MESH_TEMPLATE
+        std::ostream & writeF(std::ostream &os, const typename MESH::Face &f) {
+            return os << "Face(" << f->id() << ')';
+        }
+
+        MESH_TEMPLATE
+        std::ostream & writeE(std::ostream &os, const typename MESH::Edge &e) {
+            return os << "Edge(" << e->id() << ')';
+        }
+
+        MESH_TEMPLATE
+        std::ostream & writeFV(std::ostream &os, const typename MESH::FaceVertex &fv) {
+            return os << "FaceVertex(" << fv->id() << ')';
+        }
+
+        MESH_TEMPLATE
+        std::ostream & writeEV(std::ostream &os, const typename MESH::EdgeVertex &fv) {
+            return os << "EdgeVertex(" << ev->id() << ')';
+        }
+
+        MESH_TEMPLATE
+        std::ostream & operator<<(std::ostream &os, const MESH &m) {
+            os << "Vertices:" << endl;
+            typename MESH::VertexPtrList::const_iterator vi;
+            for (vi = m.vertices().begin(); vi != m.vertices().end(); ++vi) {
+                typename MESH::VertexConstPtr v = *vi;
+                os << "Vertex(" << v->id() << "): "
+                   << v->edgeCount() << " edge(s)";
+            }
+            os << endl;
+
+            os << "Faces:" << endl;
+            typename MESH::FacePtrList::const_iterator fi;
+            for (fi = m.faces().begin(); fi != m.faces().end(); ++fi) {
+                typename MESH::FaceConstPtr f = *fi;
+                os << "Face(" << f->id() << ')';
+            }
+            os << endl;
+
+            os << "Edges:" << endl;
+            typename MESH::EdgePtrList::const_iterator ei;
+            for (ei = m.edges().begin(); ei != m.edges().end(); ++ei) {
+                typename MESH::EdgeConstPtr e = *ei;
+                os << "Edge(" << e->id() << ')';
+            }
+            os << endl;
+
+            os << "FaceVertices:" << endl;
+            typename MESH::FaceVertexPtrList::const_iterator fvi;
+            for (fvi = m.faceVertices().begin(); fvi != m.faceVertices().end(); ++fvi) {
+                typename MESH::FaceVertexConstPtr fv = *fvi;
+                os << "FaceVertex(" << fv->id() << ')';
+            }
+            os << endl;
+            os << endl;
+
+            return os;
+        }
+
+        MESH_TEMPLATE
+        void MESH::dump() {
+            cerr << *this << endl;
+        }
+    };
+};
+
+#endif

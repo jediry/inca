@@ -14,8 +14,8 @@ AC_CONFIG_SRCDIR(src/inca/inca-common.h)
 AC_CONFIG_AUX_DIR(config)
 #AC_CONFIG_MACRO_DIR(./ac_tools)
 AC_CONFIG_FILES(Makefile src/Makefile)
-AC_CONFIG_HEADERS(src/inca/config-ac.h)
 AM_INIT_AUTOMAKE($PACKAGE_NAME, $PACKAGE_VERSION)
+AM_CONFIG_HEADER(src/inca/config-ac.h)
 AC_CANONICAL_HOST
 
 

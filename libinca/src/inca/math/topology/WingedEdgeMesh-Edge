@@ -1,0 +1,663 @@
+/* -*- C++ -*-
+ *
+ * File: WingedEdgeMesh-Edge
+ * 
+ * Author: Ryan L. Saunders
+ *
+ * Copyright 2004, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ *      This file implements the Edge inner class belonging to the
+ *      WingedEdgeMesh structure. An Edge in the winged-edge scheme is the
+ *      primary mesh element, and has pointers to a Vertex at either end, a
+ *      Face on either side, the two other Edges on either side of it at
+ *      each Vertex, and the corresponding FaceVertices. Additionally, in this
+ *      implementation, arbitrary user data may be associated with an Edge
+ *      via the EData template parameter to the parent mesh (see the main
+ *      WingedEdgeMesh documentation for more information).
+ *
+ *      This file is not meant to be used directly, but is included by
+ *      the main WingedEdgeMesh header file.
+ *
+ * Implementation note:
+ *      The EdgeVertex objects belonging to an Edge are actual member
+ *      variables of the Edge, and not held by pointer. The accessor functions
+ *      startEdgeVertex() and endEdgeVertex() get their pointers by taking the
+ *      address of their respective objects. This has a couple of efficiency
+ *      implications that should be considered.
+ *          1) If you are only planning to call a few scattered functions of
+ *             the Edge, you are generally better off using the accessors built
+ *             into Edge, as they are highly inlineable because they avoid
+ *             accessing the EdgeVertex via pointer.
+ *          2) If you are going to call more than one function pertaining to
+ *             a single EdgeVertex, you should get a pointer to that EV. In
+ *             this case, there is still only one pointer dereference per call,
+ *             and the "which end do I want" check is not needed.
+ *          3) If you need an EdgeVertex pointer (such as for a call to swap())
+ *             then you obviously need to call the EV accessor functions.
+ */
+
+#ifndef INCA_MATH_TOPOLOGY_WINGED_EDGE_MESH_EDGE
+#define INCA_MATH_TOPOLOGY_WINGED_EDGE_MESH_EDGE
+
+
+MESH_TEMPLATE class inca::math::MESH::Edge : public EData, public MeshElement {
+/*---------------------------------------------------------------------------*
+ | Friend declarations
+ *---------------------------------------------------------------------------*/
+public:
+    // The mesh & friends need access to protected (modification) functions
+    friend Mesh;
+    friend Vertex;
+    friend Face;
+    friend Edge;
+    friend FaceVertex;
+    friend EdgeVertex;
+
+
+/*---------------------------------------------------------------------------*
+ | Type definitions
+ *---------------------------------------------------------------------------*/
+public:
+    // Iterator definitions
+    typedef basic_mesh_iterator< OrbitCCW<Vertex, Edge> >       vertex_iterator;
+    typedef basic_mesh_iterator< OrbitCCW<Face, Edge> >         face_iterator;
+    typedef basic_mesh_iterator< OrbitCCW<Edge, Edge> >         ccw_edge_iterator;
+    typedef basic_mesh_iterator< OrbitCW<Edge, Edge> >          cw_edge_iterator;
+    typedef basic_mesh_iterator< OrbitCCW<FaceVertex, Edge> >   ccw_face_vertex_iterator;
+    typedef basic_mesh_iterator< OrbitCW<FaceVertex, Edge> >    cw_face_vertex_iterator;
+    typedef basic_mesh_iterator< OrbitCCW<EdgeVertex, Edge> >   edge_vertex_iterator;
+
+
+/*---------------------------------------------------------------------------*
+ | Initialization & data
+ *---------------------------------------------------------------------------*/
+public:
+    // Constructor initializing EdgeVertices
+    Edge() : _startEdgeVertex(this), _endEdgeVertex(this) { }
+
+    // Reset this edge to be unconnected
+    void clear() {
+        _startEdgeVertex.clear();
+        _endEdgeVertex.clear();
+        _positiveFace = NULL;
+        _negativeFace = NULL;
+    }
+
+    // Copy user-data into this element
+    void setData(const EData &ed) {
+        *static_cast<EData *>(this) = ed;
+    }
+
+protected:
+    size_t _vertexCount;    // 0, 1, or 2 -- how many vertices do we have?
+    size_t _faceCount;      // 0, 1, or 2...
+
+    // Starting and ending connections to vertices
+    EdgeVertex _startEdgeVertex, _endEdgeVertex;
+
+    // Adjacent faces, with CCW face-rotation with/against direction of edge
+    FacePtr _positiveFace, _negativeFace;
+
+
+/*---------------------------------------------------------------------------*
+ | Vertex accessor functions
+ *---------------------------------------------------------------------------*/
+// Plain old vertex access functions
+public:
+    VertexPtr startVertex() const { return _startEdgeVertex.vertex(); }
+    VertexPtr endVertex()   const { return _endEdgeVertex.vertex(); }
+    size_t vertexCount() const { return _vertexCount; }
+    bool touchesVertex(VertexConstPtr v) const {
+        return (_startEdgeVertex.touchesVertex(v)
+             || _endEdgeVertex.touchesVertex(v));
+    }
+
+protected:
+    void setStartVertex(VertexPtr v) { _startEdgeVertex.setVertex(v); }
+    void setEndVertex(VertexPtr v)   { _endEdeVertex.setVertex(v); }
+
+
+// Next vertex by orbiting around a particular face
+public:
+    VertexPtr vertexCCW(FaceConstPtr aroundFace) const {
+        if (aroundFace == NULL)                 return NULL;
+        else if (aroundFace == positiveFace())  return endVertex();
+        else if (aroundFace == negativeFace())  return startVertex();
+        else                                    return NULL;
+    }
+    VertexPtr vertexCW(FaceConstPtr aroundFace) const {
+        if (aroundFace == NULL)                 return NULL;
+        else if (aroundFace == positiveFace())  return startVertex();
+        else if (aroundFace == negativeFace())  return endVertex();
+        else                                    return NULL;
+    }
+
+protected:
+    void setCCWVertex(FaceConstPtr aroundFace, VertexPtr v) {
+        if (aroundFace == NULL)                 return;
+        else if (aroundFace == positiveFace())  setEndVertex(v);
+        else if (aroundFace == negativeFace())  setStartVertex(v);
+        else                                    return;
+    }
+    void setCWVertex(FaceConstPtr aroundFace, VertexPtr v) {
+        if (aroundFace == NULL)                 return;
+        else if (aroundFace == positiveFace())  setStartVertex(v);
+        else if (aroundFace == negativeFace())  setEndEdgeVertex(v);
+        else                                    return;
+    }
+
+
+// Conditionally get a vertex or its opposite
+public:
+    VertexPtr thisVertex(VertexConstPtr fromVertex) const {
+        if (fromVertex == NULL)                 return NULL;
+        else if (fromVertex == startVertex())   return startVertex();
+        else if (fromVertex == endVertex())     return endVertex();
+        else                                    return NULL;
+    }
+    VertexPtr otherVertex(VertexConstPtr fromVertex) const {
+        if (fromVertex == NULL)                 return NULL;
+        else if (fromVertex == startVertex())   return endVertex();
+        else if (fromVertex == endVertex())     return startVertex();
+        else                                    return NULL;
+    }
+
+protected:
+    void setThisVertex(VertexConstPtr fromVertex, VertexPtr v) {
+        if (fromVertex == NULL)                 return;
+        else if (fromVertex == startVertex())   setStartVertex(v);
+        else if (fromVertex == endVertex())     setEndVertex(v);
+        else                                    return;
+    }
+    void setOtherVertex(VertexConstPtr fromVertex, VertexPtr v) {
+        if (fromVertex == NULL)                 return;
+        else if (fromVertex == startVertex())   setEndVertex(v);
+        else if (fromVertex == endVertex())     setStartVertex(v);
+        else                                    return;
+    }
+
+// Iterator for cycling through all vertices
+public:
+    vertex_iterator vertices() const {
+        return vertex_iterator(startVertex(), this, this);
+    }
+
+
+/*---------------------------------------------------------------------------*
+ | Face accessor functions
+ *---------------------------------------------------------------------------*/
+// Plain old face access functions
+public:
+    FacePtr positiveFace() const { return _positiveFace; }
+    FacePtr negativeFace() const { return _negativeFace; }
+    size_t faceCount() const { return _faceCount; }
+    bool touchesFace(FaceConstPtr face) const {
+        return (face == _positiveFace || face == _negativeFace);
+    }
+
+protected:
+    void setPositiveFace(FacePtr f) { _positiveFace = f; }
+    void setNegativeFace(FacePtr f) { _negativeFace = f; }
+
+#if 0
+    // Place the given face into the first available "slot" on this
+    // edge (first try the positive face, then negative). If both
+    // slots are taken, then we have a non-manifold condition, and
+    // we blow up.
+    void setAvailableFace(FacePtr f) {
+        if (_positiveFace == NULL)       _positiveFace = f;
+        else if (_negativeFace == NULL)  _negativeFace = f;
+        else {
+            // Ack! We're trying to add 3 faces to this edge!
+            NonManifoldGeometryException e;
+            e.os() << "Attempted to add third F(" << f->id() << ") "
+                      "to E(" << id() << "). The Winged-Edge structure "
+                      "only supports 2-manifold solids.";
+            throw e;
+        }
+    }
+#endif
+
+
+// Next face by orbiting around a particular vertex
+public:
+    FacePtr faceCCW(VertexConstPtr fromVertex) const {
+        if (fromVertex == NULL)                     return NULL;
+        else if (fromVertex == startVertex())       return positiveFace();
+        else if (fromVertex == endVertex())         return negativeFace();
+        else                                        return NULL;
+    }
+    FacePtr faceCW(VertexConstPtr fromVertex) const {
+        if (fromVertex == NULL)                     return NULL;
+        else if (fromVertex == startVertex())       return negativeFace();
+        else if (fromVertex == endVertex())         return positiveFace();
+        else                                        return NULL;
+    }
+
+protected:
+    void setFaceCCW(VertexConstPtr fromVertex, FacePtr f) {
+        if (fromVertex == NULL)                     return;
+        else if (fromVertex == startVertex())       setPositiveFace(f);
+        else if (fromVertex == endVertex())         setNegativeFace(f);
+        else                                        return;
+    }
+    void setFaceCW(VertexConstPtr fromVertex, FacePtr f) {
+        if (fromVertex == NULL)                     return;
+        else if (fromVertex == startVertex())       setNegativeFace(f);
+        else if (fromVertex == endVertex())         setPositiveFace(f);
+        else                                        return;
+    }
+
+
+// Conditionally get a face or its opposite
+public:
+    FacePtr thisFace(FaceConstPtr fromFace) const {
+        if (fromFace == NULL)                   return NULL;
+        else if (fromFace == positiveFace())    return positiveFace();
+        else if (fromFace == negativeFace())    return negativeFace();
+        else                                    return NULL;
+    }
+    FacePtr otherFace(FaceConstPtr fromFace) const {
+        if (fromFace == NULL)                   return NULL;
+        else if (fromFace == positiveFace())    return negativeFace();
+        else if (fromFace == negativeFace())    return positiveFace();
+        else                                    return NULL;
+    }
+
+protected:
+    void setThisFace(FaceConstPtr fromFace, FacePtr f) {
+        if (fromFace == NULL)                   return;
+        else if (fromFace == positiveFace())    setPositiveFace(f);
+        else if (fromFace == negativeFace())    setNegativeFace(f);
+        else                                    return;
+    }
+    void setOtherFace(FaceConstPtr fromFace, FacePtr f) {
+        if (fromFace == NULL)                   return;
+        else if (fromFace == positiveFace())    setNegativeFace(f);
+        else if (fromFace == negativeFace())    setPositiveFace(f);
+        else                                    return;
+    }
+
+
+// Face corresponding to a FaceVertex
+public:
+    FacePtr thisFace(FaceVertexConstPtr fromFV) const {
+        if (fromFV == NULL)                         return NULL;
+        else if (fromFV == positiveFaceVertexCCW()) return positiveFace();
+        else if (fromFV == positiveFaceVertexCW())  return positiveFace();
+        else if (fromFV == negativeFaceVertexCCW()) return negativeFace();
+        else if (fromFV == negativeFaceVertexCW())  return negativeFace();
+        else                                        return NULL;
+    }
+    FacePtr otherFace(FaceVertexConstPtr fromFV) const {
+        if (fromFV == NULL)                         return NULL;
+        else if (fromFV == positiveFaceVertexCCW()) return negativeFace();
+        else if (fromFV == positiveFaceVertexCW())  return negativeFace();
+        else if (fromFV == negativeFaceVertexCCW()) return positiveFace();
+        else if (fromFV == negativeFaceVertexCW())  return positiveFace();
+        else                                        return NULL;
+    }
+
+protected:
+    FacePtr setThisFace(FaceVertexConstPtr fromFV, FacePtr f) {
+        if (fromFV == NULL)                         return;
+        else if (fromFV == positiveFaceVertexCCW()) setPositiveFace(f);
+        else if (fromFV == positiveFaceVertexCW())  setPositiveFace(f);
+        else if (fromFV == negativeFaceVertexCCW()) setNegativeFace(f);
+        else if (fromFV == negativeFaceVertexCW())  setNegativeFace(f);
+        else                                        return;
+    }
+    FacePtr setOtherFace(FaceVertexConstPtr fromFV, FacePtr f) {
+        if (fromFV == NULL)                         return;
+        else if (fromFV == positiveFaceVertexCCW()) setNegativeFace(f);
+        else if (fromFV == positiveFaceVertexCW())  setNegativeFace(f);
+        else if (fromFV == negativeFaceVertexCCW()) setPositiveFace(f);
+        else if (fromFV == negativeFaceVertexCW())  setPositiveFace(f);
+        else                                        return;
+    }
+
+// Iterator for cycling through all faces
+public:
+    face_iterator faces() const {
+        return face_iterator(positiveFace(), this, this);
+    }
+
+
+/*---------------------------------------------------------------------------*
+ | Edge accessor functions
+ *---------------------------------------------------------------------------*/
+// Plain old edge access functions
+public:
+    EdgePtr startEdgeCCW() const { return _startEdgeVertex.edgeCCW(); }
+    EdgePtr startEdgeCW()  const { return _startEdgeVertex.edgeCW(); }
+    EdgePtr endEdgeCCW()   const { return _endEdgeVertex.edgeCCW(); }
+    EdgePtr endEdgeCW()    const { return _endEdgeVertex.edgeCW(); }
+    EdgePtr positiveEdgeCCW() const { return _endEdgeVertex.edgeCW(); }
+    EdgePtr positiveEdgeCW()  const { return _startEdgeVertex.edgeCCW(); }
+    EdgePtr negativeEdgeCCW() const { return _startEdgeVertex.edgeCW(); }
+    EdgePtr negativeEdgeCW()  const { return _endEdgeVertex.edgeCCW(); }
+    bool touchesEdge(EdgeConstPtr e) const {
+        return (_startEdgeVertex.touchesEdge(e)
+             || _endEdgeVertex.touchesEdge(e));
+    }
+
+protected:
+    void setStartEdgeCCW(EdgePtr e) { _startEdgeVertex.setEdgeCCW(e); }
+    void setStartEdgeCW(EdgePtr e)  { _startEdgeVertex.setEdgeCW(e); }
+    void setEndEdgeCCW(EdgePtr e)   { _endEdgeVertex.setEdgeCCW(e); }
+    void setEndEdgeCW(EdgePtr e)    { _endEdgeVertex.setEdgeCW(e); }
+    void setPositiveEdgeCCW(EdgePtr e) { _endEdgeVertex.setEdgeCW(e); }
+    void setPositiveEdgeCW(EdgePtr e)  { _startEdgeVertex.setEdgeCCW(e); }
+    void setNegativeEdgeCCW(EdgePtr e) { _startEdgeVertex.setEdgeCW(e); }
+    void setNegativeEdgeCW(EdgePtr e)  { _endEdgeVertex.setEdgeCCW(e); }
+
+
+// Next edge by orbiting around a particular vertex
+public:
+    EdgePtr edgeCCW(VertexConstPtr aroundVertex) const {
+        if (aroundVertex == NULL)                   return NULL;
+        else if (aroundVertex == startVertex())     return startEdgeCCW();
+        else if (aroundVertex == endVertex())       return endEdgeCCW();
+        else                                        return NULL;
+    }
+    EdgePtr edgeCW(VertexConstPtr aroundVertex) const {
+        if (aroundVertex == NULL)                   return NULL;
+        else if (aroundVertex == startVertex())     return startEdgeCW();
+        else if (aroundVertex == endVertex())       return endEdgeCW();
+        else                                        return NULL;
+    }
+
+protected:
+    void setEdgeCCW(VertexConstPtr aroundVertex, EdgePtr e) {
+        if (aroundVertex == NULL)                   return;
+        else if (aroundVertex == startVertex())     setStartEdgeCCW(e);
+        else if (aroundVertex == endVertex())       setEndEdgeCCW(e);
+        else                                        return;
+    }
+    void setEdgeCW(VertexConstPtr aroundVertex, EdgePtr e) {
+        if (aroundVertex == NULL)                   return;
+        else if (aroundVertex == startVertex())     setStartEdgeCW(e);
+        else if (aroundVertex == endVertex())       setEndEdgeCW(e);
+        else                                        return;
+    }
+
+
+// Next edge by orbiting around a particular face
+// For these functions, NULL is an allowable value, meaning
+// the first uninitialized face.
+public:
+    EdgePtr edgeCCW(FaceConstPtr aroundFace) const {
+        if (aroundFace == positiveFace())           return positiveEdgeCCW();
+        else if (aroundFace == negativeFace())      return negativeEdgeCCW();
+        else                                        return NULL;
+    }
+    EdgePtr edgeCW(FaceConstPtr aroundFace) const {
+        if (aroundFace == positiveFace())           return positiveEdgeCW();
+        else if (aroundFace == negativeFace())      return negativeEdgeCW();
+        else                                        return NULL;
+    }
+
+protected:
+    void setEdgeCCW(FaceConstPtr aroundFace, EdgePtr e) {
+        if (aroundFace == NULL)                     return;
+        else if (aroundFace == positiveFace())      setPositiveEdgeCCW(e);
+        else if (aroundFace == negativeFace())      setNegativeEdgeCCW(e);
+        else                                        return;
+    }
+    void setEdgeCW(FaceConstPtr aroundFace, EdgePtr e) {
+        if (aroundFace == NULL)                     return;
+        else if (aroundFace == positiveFace())      setPositiveEdgeCW(e);
+        else if (aroundFace == negativeFace())      setNegativeEdgeCW(e);
+        else                                        return;
+    }
+
+// Iterators for cycling through all edges
+public:
+    ccw_edge_iterator edgesCCW() const {
+        return ccw_edge_iterator(startEdgeCCW(), this, this);
+    }
+    cw_edge_iterator edgesCW() const {
+        return cw_edge_iterator(startEdgeCCW(), this, this);
+    }
+
+
+/*---------------------------------------------------------------------------*
+ | FaceVertex accessor functions
+ *---------------------------------------------------------------------------*/
+// Plain old face-vertex access functions
+public:
+    FaceVertexPtr startFaceVertexCCW() const { return _startEdgeVertex.faceVertexCCW(); }
+    FaceVertexPtr startFaceVertexCW()  const { return _startEdgeVertex.faceVertexCW(); }
+    FaceVertexPtr endFaceVertexCCW()   const { return _endEdgeVertex.faceVertexCCW(); }
+    FaceVertexPtr endFaceVertexCW()    const { return _endEdgeVertex.faceVertexCW(); }
+    FaceVertexPtr positiveFaceVertexCCW() const { return _endEdgeVertex.faceVertexCW(); }
+    FaceVertexPtr positiveFaceVertexCW()  const { return _startEdgeVertex.faceVertexCCW(); }
+    FaceVertexPtr negativeFaceVertexCCW() const { return _startEdgeVertex.faceVertexCW(); }
+    FaceVertexPtr negativeFaceVertexCW()  const { return _endEdgeVertex.faceVertexCCW(); }
+    bool touchesFaceVertex(FaceVertexConstPtr fv) const {
+        return (_startEdgeVertex.touchesFaceVertex(fv)
+             || _endEdgeVertex.touchesFaceVertex(fv));
+    }
+
+protected:
+    void setStartFaceVertexCCW(FaceVertexPtr fv)  { _startEdgeVertex.setFaceVertexCCW(fv); }
+    void setStartFaceVertexCW(FaceVertexPtr fv)   { _startEdgeVertex.setFaceVertexCW(fv); }
+    void setEndFaceVertexCCW(FaceVertexPtr fv)    { _endEdgeVertex.setFaceVertexCCW(fv); }
+    void setEndFaceVertexCW(FaceVertexPtr fv)     { _endEdgeVertex.setFaceVertexCW(fv); }
+    void setPositiveFaceVertexCCW(FaceVertexPtr fv)  { _endEdgeVertex.setFaceVertexCW(fv); }
+    void setPositiveFaceVertexCW(FaceVertexPtr fv)   { _startEdgeVertex.setFaceVertexCCW(fv); }
+    void setNegativeFaceVertexCCW(FaceVertexPtr fv)  { _startEdgeVertex.setFaceVertexCW(fv); }
+    void setNegativeFaceVertexCW(FaceVertexPtr fv)   { _endEdgeVertex.setFaceVertexCCW(fv); }
+
+
+// Next face-vertex by orbiting around a particular vertex
+public:
+    FaceVertexPtr faceVertexCCW(VertexConstPtr aroundVertex) const {
+        if (aroundVertex == NULL)               return NULL;
+        else if (aroundVertex == startVertex()) return startFaceVertexCCW();
+        else if (aroundVertex == endVertex())   return endFaceVertexCCW();
+        else                                    return NULL;
+    }
+    FaceVertexPtr faceVertexCW(VertexConstPtr aroundVertex) const {
+        if (aroundVertex == NULL)               return NULL;
+        else if (aroundVertex == startVertex()) return startFaceVertexCW();
+        else if (aroundVertex == endVertex())   return endFaceVertexCW();
+        else                                    return NULL;
+    }
+    FaceVertexPtr otherFaceVertexAcrossVertex(FaceVertexConstPtr fv) const {
+        if (fv == startFaceVertexCCW())         return startFaceVertexCW();
+        else if (fv == startFaceVertexCW())     return startFaceVertexCCW();
+        else if (fv == endFaceVertexCCW())      return endFaceVertexCW();
+        else if (fv == endFaceVertexCW())       return endFaceVertexCCW();
+        else                                    return NULL;
+    }
+
+protected:
+    void setFaceVertexCCW(VertexConstPtr aroundVertex, FaceVertexPtr fv) {
+        if (aroundVertex == NULL)               return;
+        else if (aroundVertex == startVertex()) setStartFaceVertexCCW(fv);
+        else if (aroundVertex == endVertex())   setEndFaceVertexCCW(fv);
+        else                                    return;
+    }
+    void setFaceVertexCW(VertexConstPtr aroundVertex, FaceVertexPtr fv) {
+        if (aroundVertex == NULL)               return;
+        else if (aroundVertex == startVertex()) setStartFaceVertexCW(fv);
+        else if (aroundVertex == endVertex())   setEndFaceVertexCW(fv);
+        else                                    return;
+    }
+    void setOtherFaceVertexAcrossVertex(FaceVertexConstPtr from,
+                                        FaceVertexPtr fv) {
+        if (from == startFaceVertexCCW())       setStartFaceVertexCW(fv);
+        else if (from == startFaceVertexCW())   setStartFaceVertexCCW(fv);
+        else if (from == endFaceVertexCCW())    setEndFaceVertexCW(fv);
+        else if (from == endFaceVertexCW())     setEndFaceVertexCCW(fv);
+        else                                    return;
+    }
+
+
+// Next face-vertex by orbiting around a particular face
+public:
+    // For the Face functions, NULL is an allowable value, meaning
+    // the first uninitialized face.
+    FaceVertexPtr faceVertexCCW(FaceConstPtr aroundFace) const {
+        if (aroundFace == positiveFace())       return positiveFaceVertexCCW();
+        else if (aroundFace == negativeFace())  return negativeFaceVertexCCW();
+        else                                    return NULL;
+    }
+    FaceVertexPtr faceVertexCW(FaceConstPtr aroundFace) const {
+        if (aroundFace == positiveFace())       return positiveFaceVertexCW();
+        else if (aroundFace == negativeFace())  return negativeFaceVertexCW();
+        else                                    return NULL;
+    }
+    FaceVertexPtr otherFaceVertexAcrossFace(FaceVertexConstPtr fv) const {
+        if (fv == positiveFaceVertexCCW())      return positveFaceVertexCW();
+        else if (fv == positiveFaceVertexCW())  return positiveFaceVertexCCW();
+        else if (fv == negativeFaceVertexCCW()) return negativeFaceVertexCW();
+        else if (fv == negativeFaceVertexCW())  return negativeFaceVertexCCW();
+        return                                  NULL;
+    }
+
+protected:
+    void setFaceVertexCCW(FaceConstPtr aroundFace, FaceVertexPtr fv) {
+        if (aroundFace == NULL)                 return;
+        else if (aroundFace == positiveFace())  setPositiveFaceVertexCCW(fv);
+        else if (aroundFace == negativeFace())  setNegativeFaceVertexCCW(fv);
+        else                                    return;
+    }
+    void setFaceVertexCW(FaceConstPtr aroundFace, FaceVertexPtr fv) {
+        if (aroundFace == NULL)                 return;
+        else if (aroundFace == positiveFace())  setPositiveFaceVertexCW(fv);
+        else if (aroundFace == negativeFace())  setNegativeFaceVertexCW(fv);
+        else                                    return;
+    }
+    void setOtherFaceVertexAcrossFace(FaceVertexConstPtr from,
+                                      FaceVertexPtr fv) {
+        if (from == positiveFaceVertexCCW())        setPositveFaceVertexCW(fv);
+        else if (from == positiveFaceVertexCW())    setPositiveFaceVertexCCW(fv);
+        else if (from == negativeFaceVertexCCW())   setNegativeFaceVertexCW(fv);
+        else if (from == negativeFaceVertexCW())    setNegativeFaceVertexCCW(fv);
+        else                                        return;
+    }
+
+
+// Particlar face-vertex at a vertex on a face
+public:
+    FaceVertexPtr faceVertex(VertexConstPtr atVertex,
+                             FaceConstPtr onFace) const {
+        if (atVertex == NULL)                   return NULL;
+        else if (atVertex == startVertex()) {
+                 if (onFace == positiveFace())   return positiveFaceVertexCW();
+            else if (onFace == negativeFace())   return negativeFaceVertexCCW();
+        } else if (atVertex == endVertex()) {
+                 if (onFace == positiveFace())   return positiveFaceVertexCCW();
+            else if (onFace == negativeFace())   return negativeFaceVertexCW();
+        }
+        return NULL;
+    }
+    FaceVertexPtr faceVertex(VertexConstPtr atVertex,
+                             EdgeConstPtr onEdge) const {
+        if (atVertex == NULL)                   return NULL;
+        else if (atVertex == startVertex()) {
+                 if (onEdge == startEdgeCCW())  return startFaceVertexCCW();
+            else if (onEdge == startEdgeCW())   return startFaceVertexCW();
+        } else if (atVertex == endVertex()) {
+                 if (onEdge == endEdgeCCW())    return endFaceVertexCCW();
+            else if (onEdge == endEdgeCW())     return endFaceVertexCW();
+        }
+        return NULL;
+    }
+
+
+// Iterators for cycling through all face vertices
+public:
+    ccw_face_vertex_iterator faceVerticesCCW() const {
+        return ccw_face_vertex_iterator(startFaceVertexCCW(), this, this);
+    }
+    cw_face_vertex_iterator faceVerticesCW() const {
+        return cw_face_vertex_iterator(startFaceVertexCCW(), this, this);
+    }
+
+
+/*---------------------------------------------------------------------------*
+ | EdgeVertex accessor functions
+ *---------------------------------------------------------------------------*/
+// See the implementation note at the top of this file
+public:
+    EdgeVertexConstPtr startEdgeVertex() const { return &_startEdgeVertex; }
+    EdgeVertexConstPtr endEdgeVertex()   const { return &_endEdgeVertex; }
+    EdgeVertexPtr      startEdgeVertex()       { return &_startEdgeVertex; }
+    EdgeVertexPtr      endEdgeVertex()         { return &_endEdgeVertex; }
+    EdgeVertexPtr otherEdgeVertex(EdgeVertexPtr ev) {
+        if (ev == NULL)                     return NULL;
+        else if (ev == startEdgeVertex())   return endEdgeVertex();
+        else if (ev == endEdgeVertex())     return startEdgeVertex();
+        else                                return NULL;
+    }
+
+
+// Iterator for cycling through all edge vertices
+public:
+    edge_vertex_iterator edgeVertices() const {
+        return edge_vertex_iterator(startEdgeVertex(), this, this);
+    }
+
+
+/*---------------------------------------------------------------------------*
+ | Mesh search functions
+ *---------------------------------------------------------------------------*/
+public:
+    // These functions start from the current edge and orbit the
+    // given vertex, looking for the end of the "fan" that this edge
+    // beloings to. Equivalently, they look for the first NULL face.
+    //
+    // NULL is returned if we walk the whole orbit w/o finding a NULL
+    // face.
+    EdgePtr findCCWFanExtent(VertexConstPtr aroundVertex) {
+        EdgePtr result = this;
+
+        // If we can't trivially answer, we'll have to go hunting
+        if (faceCCW(aroundVertex) != NULL) {
+            // We're gonna have to go hunt for it
+            EdgePtr current = this;
+            do {
+                current = current->edgeCCW(aroundVertex);
+            } while (current->faceCCW(aroundVertex) != NULL
+                     && current != this);
+
+            if (current == this)    result = NULL;
+            else                    result = current;
+        }
+        return result;
+    }
+
+    EdgePtr findCWFanExtent(VertexConstPtr aroundVertex) {
+        EdgePtr result = this;
+
+        // If we can't trivially answer, we'll have to go hunting
+        if (faceCW(aroundVertex) != NULL) {
+            // We're gonna have to go hunt for it
+            EdgePtr current = this;
+            do {
+                current = current->edgeCW(aroundVertex);
+            } while (current->faceCW(aroundVertex) != NULL
+                     && current != this);
+
+            if (current == this)    result = NULL;
+            else                    result = current;
+        }
+        return result;
+    }
+
+
+/*---------------------------------------------------------------------------*
+ | Mesh modification functions
+ *---------------------------------------------------------------------------*/
+public:
+    // Split this edge, creating a new vertex
+    VertexPtr split(const VData &vd = VData()) {
+        return mesh()->createVertex(this, vd);
+    }
+};
+
+#endif

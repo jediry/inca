@@ -1,0 +1,744 @@
+/* -*- C++ -*-
+ *
+ * File: WingedEdgeMesh
+ * 
+ * Author: Ryan L. Saunders
+ *
+ * Copyright 2004, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ *      This file implements a topological mesh structure using the winged-edge
+ *      data structure. This is a pure topological construct with no additional
+ *      data inherent to it -- any data that should be associated with the
+ *      vertices, edges, faces, or face-vertices must associated externally
+ *      (e.g., using a hash_map) or must be included in the *Data template
+ *      arguments. The template arguments for this class are optional
+ *      classes/structs containing user-data (such as vertex positions,
+ *      normals, texture coordinates, colors, etc.) that will be used as the
+ *      base classes for the mesh components Vertex, Face, Edge, FaceVertex.
+ *      If no additional data is needed, the empty class 'Nothing' can be
+ *      used as a template argument (and is the default for most of them).
+ *
+ *      Because of the sheer volume of code that makes up this structure,
+ *      it has been split up into logical chunks and implemented in separate
+ *      files (for my sake!), which files are then included at the end of this
+ *      one (which is the main file, in case you were wondering).
+ *
+ *      All of the algorithms here assume that vertices are oriented
+ *      CCW (viewed from the "outside" of the face). If face vertices
+ *      are consistently specifed using a CW orientation, then
+ *      everything will work fine topologically, but the "inside"
+ *      and "outside" of the mesh will be reversed. If CW and CCW
+ *      orientations are intermixed, then a topological conflict will
+ *      occur at some point (assuming that the mesh represents a
+ *      closed solid). When the conflict is detected, it will be
+ *      corrected by reversing some of the faces in the mesh.
+ *
+ *      The algorithms for adding and deleting parts of the mesh are
+ *      a bit tricky, and so are extensively commented.
+ */
+// TODO: add checks for un-closed solid
+// FIXME: add functionality to completely reverse the rotations on a
+//        contiguous patch
+
+
+#ifndef INCA_MATH_TOPOLOGY_WINGED_EDGE_MESH
+#define INCA_MATH_TOPOLOGY_WINGED_EDGE_MESH
+
+// Import library configuration
+#include <inca/inca-common.h>
+
+
+// This is part of the Inca math library
+namespace inca {
+    namespace math {
+        // Empty class for use as a default "data" object
+        class Nothing { };
+
+        // Forward declarations
+        template <class MData  = Nothing,
+                  class VData  = Nothing,
+                  class FData  = Nothing,
+                  class EData  = Nothing,
+                  class FVData = Nothing,
+                  class EVData = Nothing>
+            class WingedEdgeMesh;
+    };
+};
+
+
+// Import exception definitions
+#include "NonManifoldGeometryException.hpp"
+#include <inca/util/UnsupportedOperationException.hpp>
+
+// Import container/iterator definitions
+#include <inca/util/object_pool>
+#include <inca/util/wraparound_iterator>
+
+// Make some REALLY long names shorter
+#define MESH_TEMPLATE template <class MData, class VData, class FData, \
+                                class EData, class FVData, class EVData>
+#define MESH WingedEdgeMesh<MData, VData, FData, EData, FVData, EVData>
+
+
+MESH_TEMPLATE class inca::math::WingedEdgeMesh : public MData {
+/*---------------------------------------------------------------------------*
+ | Type declarations
+ *---------------------------------------------------------------------------*/
+public:
+    // Shorthand for a long name
+    typedef MESH Mesh;
+
+    // Forward declarations for inner classes
+    class MeshElement;          // Stuff common to all parts
+    class Vertex;               // Where edges meet
+    class Face;                 // What edges surround
+    class Edge;                 // Edges
+    class FaceVertex;           // Corners within faces
+    class EdgeVertex;           // When edges meet vertices...
+
+    // Pointer typedefs
+    typedef Mesh *                      MeshPtr;
+    typedef Vertex *                    VertexPtr;
+    typedef Face *                      FacePtr;
+    typedef Edge *                      EdgePtr;
+    typedef FaceVertex *                FaceVertexPtr;
+    typedef EdgeVertex *                EdgeVertexPtr;
+    typedef Mesh const *                MeshConstPtr;
+    typedef Vertex const *              VertexConstPtr;
+    typedef Face const *                FaceConstPtr;
+    typedef Edge const *                EdgeConstPtr;
+    typedef FaceVertex const *          FaceVertexConstPtr;
+    typedef EdgeVertex const *          EdgeVertexConstPtr;
+
+    // Container typedefs
+    typedef vector<VertexPtr>           VertexPtrList;
+    typedef vector<FacePtr>             FacePtrList;
+    typedef vector<EdgePtr>             EdgePtrList;
+    typedef vector<FaceVertexPtr>       FaceVertexPtrList;
+
+protected:
+    // Iteration delegate objects used to iterate through part of the mesh:
+    // see the documentation in WingedEdgeMesh-iterator for an explanation of
+    // what these functor-like objects are supposed to do.
+        // This one needs to be specialized for each type of thing
+        template <class T, class OrbitT> struct OrbitCCW;
+        template <class OrbitT> struct OrbitCCW<Vertex, OrbitT>;
+        template <class OrbitT> struct OrbitCCW<Face, OrbitT>;
+        template <class OrbitT> struct OrbitCCW<Edge, OrbitT>;
+        template <class OrbitT> struct OrbitCCW<FaceVertex, OrbitT>;
+        template <>             struct OrbitCCW<Vertex, Edge>;
+//        template <>             struct OrbitCCW<Face, Edge>;
+//        template <>             struct OrbitCCW<Edge, Edge>;
+//        template <>             struct OrbitCCW<FaceVertex, Edge>;
+//        template <>             struct OrbitCCW<EdgeVertex, Edge>;
+
+        // This just does the opposite of whatever the CCW version does
+        template <class T, class OrbitT> struct OrbitCW;
+
+
+/*---------------------------------------------------------------------------*
+ | Sub-object management
+ *---------------------------------------------------------------------------*/
+protected:
+    // A 'reset()' functor that calls 'clear()' on the target object before
+    // the object_pool hands it out
+    template <class T>
+    struct reset_clear {
+        void operator() (T *ptr) const { ptr->clear(); }
+    };
+    
+    // A 'create()' functor that calls 'setID(...)' on the target object after
+    // creating it
+    template <class T>
+    struct id_create {
+        T * operator() (index_t index) const {
+            T *ptr = new T();
+            ptr->setID(index);
+            return ptr;
+        }
+    };
+
+    // ObjectPool typedefs
+    typedef object_pool<Vertex, reset_clear<Vertex>,
+                        id_create<Vertex> >                 VertexPool;
+    typedef object_pool<Face, reset_clear<Face>,
+                        id_create<Face> >                   FacePool;
+    typedef object_pool<Edge, reset_clear<Edge>,
+                        id_create<Edge> >                   EdgePool;
+    typedef object_pool<FaceVertex, reset_clear<FaceVertex>,
+                        id_create<FaceVertex> >             FaceVertexPool;
+
+
+/*---------------------------------------------------------------------------*
+ | Data & accessor functions
+ *---------------------------------------------------------------------------*/
+public:
+    // Vertex accessors
+    const VertexPtr vertex(index_t i) const { return vertexList[i]; }
+          VertexPtr vertex(index_t i)       { return vertexList[i]; }
+    const VertexPtrList & vertices() const { return vertexList; }
+          VertexPtrList & vertices()       { return vertexList; }
+    size_t vertexCount() const { return vertexList.size(); }
+
+    // Face accessors
+    const FacePtr face(index_t i) const { return faceList[i]; }
+          FacePtr face(index_t i)       { return faceList[i]; }
+    const FacePtrList & faces() const { return faceList; }
+          FacePtrList & faces()       { return faceList; }
+    size_t faceCount() const { return faceList.size(); }
+
+    // Edge accessors
+    const EdgePtr edge(index_t i) const { return edgeList[i]; }
+          EdgePtr edge(index_t i)       { return edgeList[i]; }
+    const EdgePtrList & edges() const { return edgeList; }
+          EdgePtrList & edges()       { return edgeList; }
+    size_t edgeCount() const { return edgeList.size(); }
+
+    // FaceVertex accessors
+    const FaceVertexPtr faceVertex(index_t i) const { return faceVertexList[i]; }
+          FaceVertexPtr faceVertex(index_t i)       { return faceVertexList[i]; }
+    const FaceVertexPtrList & faceVertices() const { return faceVertexList; }
+          FaceVertexPtrList & faceVertices()       { return faceVertexList; }
+    size_t faceVertexCount() const { return faceVertexList.size(); }
+
+protected:
+    // Where we get new stuff from
+    VertexPool      vertexPool;
+    FacePool        facePool;
+    EdgePool        edgePool;
+    FaceVertexPool  faceVertexPool;
+
+    // Where we store the ones we're using
+    VertexPtrList       vertexList;
+    FacePtrList         faceList;
+    EdgePtrList         edgeList;
+    FaceVertexPtrList   faceVertexList;
+
+
+/*---------------------------------------------------------------------------*
+ | Mesh search functions
+ *---------------------------------------------------------------------------*/
+public:
+    // Search for an edge connecting the two vertices
+    EdgePtr edgeConnecting(VertexConstPtr v1, VertexConstPtr v2) const {
+        cerr << "Searching for the edge connecting V-" << v1->id() << " & V-" << v2->id() << "...";
+        Vertex::ccw_edge_iterator ei, end;
+        for (ei = v1->edgesCCW(); ei != end; ++ei) {
+            EdgePtr e = *ei;
+            if (e->otherVertex(v1) == v2) {
+                cerr << "E-" << e->id() << endl;
+                return e;   // Yay! We found it! Let's go home!
+            }
+        }
+        cerr << "none\n";
+        // Rats! There isn't one. I'm sorry, master.
+        return NULL;
+    }
+
+
+/*---------------------------------------------------------------------------*
+ | User mesh modification functions
+ *---------------------------------------------------------------------------*/
+public:
+    // Create an unattached vertex
+    VertexPtr createVertex(const VData &vd = VData()) {
+        VertexPtr newV = acquireVertex();   // Create a new vertex
+        newV->setData(vd);                  // ...and assign to it some data
+
+        FaceVertexPtr newFV = acquireFaceVertex();  // We also have to make a
+        newV->setFaceVertex(newFV);         // new face-vertex to go with it
+        newFV->embed(newV, NULL, NULL);
+
+        return newV;
+    }
+
+    // Create a new vertex splitting an existing edge
+    VertexPtr createVertex(EdgePtr toSplit, const VData &vd = VData()) {
+        VertexPtr newV = createVertex(vd);      // Make a new vertex
+
+        FaceVertexPtr fv = newV->faceVertex();
+        EdgePtr newE = createEdge(fv, fv);      // Make a degenerate Edge
+
+        // Now unplug one end of each edge and switch'em
+        newE->endEdgeVertex()->swap(toSplit->endEdgeVertex());
+        newE->setPositiveFace(toSplit->positiveFace());  // Fix faces for
+        newE->setNegativeFace(toSplit->negativeFace());  // the new edge
+        return newV;
+    }
+
+    // Delete a valence-2 (or less) vertex, possibly merging two edges into 1
+    void deleteVertex(VertexPtr v) {
+        // If the valence is too high, we can't do anything
+        if (v->edgeCount() > 2) {
+            cerr << "Refusing to delete valence-" << edgeCount << " vertex "
+                 << v->id() << endl;
+            return;
+        }
+
+        // If there are exactly two edges, merge them into one
+        if (v->edgeCount() == 2) {
+            // Extricate one of the edges so we can delete it.
+            // The other should take its place.
+            EdgePtr e1 = v->edge();
+            EdgePtr e2 = e1->edgeCCW(v);
+            EdgeVertexPtr thisEV = e1->edgeVertex(v);
+            EdgeVertexPtr otherEV = e2->edgeVertex(v)->otherEdgeVertex();
+            swap(thisEV, otherEV);
+
+            releaseEdge(e2);
+            releaseFaceVertex(v->faceVertex());
+            releaseVertex(v);
+
+        // If there's only one edge, it must die as well
+        } else if (v->edgeCount() == 1) {
+            EdgePtr e = v->edge();
+            EdgeVertexPtr ev = e->otherEdgeVertex(v);
+            ev->extricate();    // Get free...you're gonna die!
+
+            releaseEdge(e);
+            releaseFaceVertex(v->faceVertex());
+            releaseVertex(v);
+
+        // Otherwise, there's just the one vertex
+        } else {
+            releaseFaceVertex(v->faceVertex());
+            releaseVertex(v);
+        }
+    }
+
+
+    // Create an edge between two face-vertices
+    EdgePtr createEdge(FaceVertexPtr fv1, FaceVertexPtr fv2,
+                       const EData &ed = EData()) {
+        // Make sure they are part of the same face...
+        if (fv1->face() != fv2->face()) {
+//            throw InvalidModificationException
+            cerr << "Ack new edges can't span multiple faces!!\n";
+            return NULL;
+        }
+
+        // Make a new edge
+        EdgePtr e = acquireEdge();          // Make a new Edge to stick therein
+        fv1->insert(e->startEdgeVertex());  // Stick one end intoeach FV
+        fv2->insert(e->endEdgeVertex());
+        e->setData(ed);                     // Store any data to the edge
+
+        // Split the previous face, if there was one
+        FacePtr f = fv1->face();
+        if (f != NULL) {
+            FacePtr newF = acquireFace();   // Make a new face
+            newF->setData(*f);              // Copy over the old face's data
+
+            cerr << "Repair face not implemented!!!\n";
+        }
+        cerr << "Created an edge from V-" << fv1->vertex()->id()
+             << " to V-" << fv2->vertex()->id() << endl;
+
+        return e;       // That's our boy!
+    }
+
+    // Ensure that a fully-connected loop exists connecting the specified
+    // vertices in a CCW rotation. The 'select' argument is a functor
+    // taking two VertexPtrs (v1, v2) and returning the FaceVertexPtr around
+    // v1 that should be used for an edge between v1 and v2. This allows
+    // 
+    template <class iterator, class FVSelector>
+    FaceVertexPtr createLoopCCW(iterator begin, iterator end,
+                                FVSelector select) {
+        iterator second, last;  // We've got to prime the loop with valid
+        last = end; --last;     // current and next edges
+        second = begin; ++second;
+        EdgePtr prev = NULL;
+        EdgePtr current = edgeConnecting(*last, *begin);
+        EdgePtr next = edgeConnecting(*begin, *second);
+        VertexPtr v1 = NULL,    // The vertices on either side of the
+                  v2 = *begin;  // 'current' Edge
+
+        wraparound_iterator<iterator> from(1, begin, end);
+        wraparound_iterator<iterator> to(2, begin, end);
+        while (from != end) {
+            // ...and they all rolled over and one fell out...
+            prev = current;                     // Shuffle edges
+            current = next;
+            next = edgeConnecting(*from, *to);
+            v1 = v2;                            // Shuffle vertices
+            v2 = *from;
+
+            if (current == NULL) {  // Well then, we'll have to make one
+                FaceVertexPtr fv1, fv2;
+
+                // If the previous/next edges already exist, then the choice
+                // of which FVs to use is simple -- just pick the one that
+                // would precede/follow our new edge in the loop. If not, then
+                // have to have geometric information in order to make the
+                // decision...
+                fv1 = (prev != NULL)
+                    ? prev->faceVertexCW(v1)        // Yay! Easy right answer.
+                    : select(v1, v2->position());   // Ask Mr. Functor
+                fv2 = (next != NULL)
+                    ? next->faceVertexCCW(v2)       // Yay! Easy right answer.
+                    : select(v2, v1->position());   // Ask Mr. Functor
+
+                current = createEdge(fv1, fv2);
+
+                dump();
+            }
+
+            ++from; ++to;   // Next, please!
+        }
+        // Return a FV that is internal to the loop
+        return current->faceVertexCW(v2);
+    }
+
+#if 0
+    // XXX This is not robust w/r to faces
+    void deleteEdge(EdgePtr e) {
+        // Tell everyone to forget about me
+        e->extractFrom(e->startVertex());
+        e->extractFrom(e->endVertex());
+        
+        // Finally, go rejoin the cosmic life force :-)
+        releaseEdge(e);
+    }
+#endif
+
+    /// XXX
+    void dump();
+
+    template <class iterator, class FVSelector>
+    FacePtr createFace(iterator begin, iterator end,
+                       FVSelector select, const FData &fd = FData()) {
+        // First, create all the edges, and get an internal FV
+        FaceVertexPtr fv = createLoopCCW(begin, end, select);
+
+        // Make sure that there isn't already a Face!
+        if (fv->face() != NULL) {
+            // Do something bad here
+            cerr << "Face already exists!!\n";
+            return NULL;
+        }
+
+        // Create a face on this FaceVertex
+        FacePtr f = acquireFace();
+        f->setData(fd);
+        
+        return f;
+    }
+
+
+/*---------------------------------------------------------------------------*
+ | Internal mesh modification operations. These operations generally work
+ | on EdgeVertex fans and Edge loops. These functions are protected
+ | intentionally, as they are low-level operations that assume that
+ | YOU KNOW WHAT YOU ARE DOING on the larger scale. I've tried to document
+ | the expectations that each function has, but I'm not responsible if you
+ | muck up your mesh with these. If you think you want to use these, you
+ | probably want to use one of the public user-level functions above.
+ |
+ | A fan is a sequence of adjacent EdgeVertices (including the FaceVertices
+ | between them), specified by the CCW-most and CW-most EdgeVertices in the
+ | sequence). It is perfectly legitimate for the starting and ending EV to be
+ | identical (a degenerate fan, i.e., a single Edge), but both must be
+ | non-NULL and reachable from one another by traversing the fan.
+ |
+ | A loop is a cycle of adjacent Edges (including the FaceVertices between
+ | them), specified by a FaceVertex internal to the loop, at which the loop
+ | starts/ends. The loop may or may not have a Face in it.
+ *---------------------------------------------------------------------------*/
+protected:
+    // Verify that the two EdgeVertices actually delimit a valid fan.
+    // The fan need not be attached to a vertex, but it must be possible to
+    // get from 'ccw' to 'cw by traversing EdgeVertices. If a loop is made
+    // before finding the other side of the fan, an InvalidGeometryException
+    // will be thrown.
+    void validateFan(EdgeVertex ccw, EdgeVertex cw) const {
+        EdgeVertexPtr ev = ccw;
+        while (ev != cw) {      // Go until we find the other end
+            ev = ev->edgeVertexCW();    // Advance
+            if (ev == ccw) {            // Oops! This shouldn't happen!
+                InvalidGeometryException e;
+                e.os() << "[EV-" << ccw->id() << ", EV-" << cw->id()
+                       << "] is not a valid fan";
+                throw e;
+            }
+        }
+        // Yay! We made it.
+    }
+
+    // Tell every EdgeVertex and FaceVertex in the specified fan that it
+    // is touching the specified Vertex.
+    void linkFanToVertex(VertexPtr v, EdgeVertexPtr ccw, EdgeVertexPtr cw) {
+        EdgeVertexPtr ev = ccw;
+        do {
+            ev->setVertex(v);                       // Tell EV about V
+            if (ev != cw) {
+                ev->faceVertexCW()->setVertex(v);   // Tell FV about V
+                ev = ev->edgeVertexCW();            // Advance
+            }
+        } while (ev != cw);     // Go until we find the other end
+    }
+
+    // Tell every FaceVertex and Edge in the loop that it contains the
+    // specified Face. 'start' had better not be NULL if you know what's
+    // good for ye. 'f' can be NULL (meaning that we're removing the face).
+    void linkLoopToFace(FacePtr f, FaceVertexPtr start) {
+        FaceVertexPtr fv = start;
+        EdgePtr e = fv->edgeCW();
+
+        // Make the loop, leap-frogging until we get back to the start
+        fv->setFace(f);
+        if (e != NULL) {    // If e is NULL, then fv is also the only FV
+            do {
+                e->setThisFace(fv, f);  // Link the Edge to the Face
+                fv = e->otherFaceVertexAcrossFace(fv);  // Get next FV
+                fv->setFace(f);         // Link the FaceVertex to the Face
+            } while (fv != start);  // Stop when we get back home
+        }
+    }
+
+    // Completely interchange two fans, 
+    // This is more efficient than the corresponding sequence of 'insert's
+    // and 'extract's, since it doesn't involve deleting and allocating any
+    // objects. Each EdgeVertex remains a part of its original Edge and
+    // EdgeVertex user-data is NOT swapped.
+    // If the two fans overlap...well...this would be bad. So don't do it.
+    void swap(EdgeVertexPtr ccw1, EdgeVertexPtr cw1,
+              EdgeVertexPtr ccw2, EdgeVertexPtr cw2) {
+        // If they're identical, we can bail right now (no-op)
+        if (ccw1 == ccw2 && cw1 == cw2) {
+            cerr << "swap(): trying to swap identical fans!\n";
+            return;
+        }
+
+        // Trade vertices (if necessary)
+        VertexPtr v1 = ccw1->vertex();
+        VertexPtr v2 = ccw2->vertex();
+        if (v1 != v2) {
+            linkFanToVertex(v1, ccw2, cw2);
+            linkFanToVertex(v2, ccw1, cw1);
+        }
+
+        // Trade adjacent FaceVertices
+        FaceVertexPtr ccwFV1 = ccw1->faceVertexCCW();
+        FaceVertexPtr cwFV1  = cw1->faceVertexCW();
+        FaceVertexPtr ccwFV2 = ccw2->faceVertexCCW();
+        FaceVertexPtr cwFV2  = cw2->faceVertexCW();
+        ccw1->setFaceVertexCCW(ccwFV2);
+        cw1->setFaceVertexCW(cwFV2);
+        ccw2->setFaceVertexCCW(ccwFV1);
+        cw2->setFaceVertexCW(cwFV1);
+        ccwFV1->setEdgeVertexCW(ccw2);
+        cwFV1->setEdgeVertexCCW(cw2);
+        ccwFV2->setEdgeVertexCW(ccw1);
+        cwFV2->setEdgeVertexCCW(cw1);
+
+        // Trade adjacent EdgeVertices
+        EdgeVertexPtr ccwEV1 = ccw1->edgeVertexCCW();
+        EdgeVertexPtr cwEV1  = cw1->edgeVertexCW();
+        EdgeVertexPtr ccwEV2 = ccw2->edgeVertexCCW();
+        EdgeVertexPtr cwEV2  = cw2->edgeVertexCW();
+        ccw1->setEdgeVertexCCW(ccwEV2);
+        cw1->setEdgeVertexCW(cwEV2);
+        ccw2->setEdgeVertexCCW(ccwEV1);
+        cw2->setEdgeVertexCW(cwEV1);
+        ccwEV1->setEdgeVertexCW(ccw2);
+        cwEV1->setEdgeVertexCCW(cw2);
+        ccwEV2->setEdgeVertexCW(ccw1);
+        cwEV2->setEdgeVertexCCW(cw1);
+    }
+
+#if 0
+    /* This is a bit tricky. Resolve links. Going CCW.
+     * Might not be ordered right.
+     */
+    void relinkEdgesCCW(VertexPtr aroundVertex, EdgePtr e1, EdgePtr e2) {
+        EdgePtr fanExtent, e1Neighbor, fanNeighbor, e2Neighbor;
+        bool fanIsReversed = false;
+
+//        cerr << "Relinking edges to get E" << e1->id()
+//             << " CCW around V" << aroundVertex->id()
+//             << " w/respect to E" << e2->id() << '\n'
+//             << "e1: " << *e1 << '\n' << "e2: " << *e2 << '\n';
+
+        // First find how far the fan starting at e1 extends
+        // (possibly reversing it too)
+        FacePtr matchingFace = e2->faceCCW(aroundVertex);
+        if (e1->faceCW(aroundVertex) == matchingFace) {
+            fanExtent = e1->findCCWFanExtent(aroundVertex);
+            fanIsReversed = false;
+
+        // Awwww...CRAP! It's backwards! (Stupid modeler...)
+        } else if (e1->faceCCW(aroundVertex) == matchingFace) {
+            fanExtent = e1->findCWFanExtent(aroundVertex);
+            fanIsReversed = true;
+            throw UnsupportedOperationException("Non-CCW faces not supported!");
+
+        // What the @#$%?
+        } else {
+            // Something has gone horribly wrong, as e1 is not at the
+            // perimeter of a fan around the vertex.
+            NonManifoldGeometryException e;
+            e.os() << "Attempted to reorder edge " << e1->id() << ", "
+                      "which is already hard-linked (i.e. has a face) in "
+                      "the CW direction around vertex "
+                   << aroundVertex->id() << '\n' << e1;
+            throw e;
+        }
+
+        if (fanExtent == NULL) {
+            // This should actually NEVER happen...
+            NonManifoldGeometryException e;
+            e.os() << "Attempted to reorder edges belonging to a "
+                      "continuous fan around vertex "
+                   << aroundVertex->id() << ", containing edge "
+                   << e1->id() << '.';
+            throw e;
+        }
+        
+//        cerr << "fanExtent: (reverse? " << fanIsReversed << ") " << fanExtent;
+//        only needed for non CCW faces
+//        if (fanIsReversed)
+//            reverseFan(aroundVertex, e1, fanExtent);
+
+        // OK! We're good. Let's extract e1's fan from its neighbors
+        e1Neighbor = e1->edgeCW(aroundVertex);
+        fanNeighbor = fanExtent->edgeCCW(aroundVertex);
+        e1Neighbor->setEdgeCCW(aroundVertex, fanNeighbor);
+        fanNeighbor->setEdgeCW(aroundVertex, e1Neighbor);
+
+        // Now put the fan where it belongs
+        e2Neighbor = e2->edgeCCW(aroundVertex);
+        e2Neighbor->setEdgeCW(aroundVertex, fanExtent);
+        fanExtent->setEdgeCCW(aroundVertex, e2Neighbor);
+        e1->setEdgeCW(aroundVertex, e2);
+        e2->setEdgeCCW(aroundVertex, e1);
+    }
+    
+
+    /* Run through the fan centered at a vertex, between the two
+     * edges and switch the CW/CCW orientation of edges. This
+     * operation is never necessary if the vertices for a face are
+     * always specified in a consistent ordering. If, however, some
+     * faces are specified CCW, and others are specified CW, this
+     * discrepancy will eventually cause a topological conflict, and
+     * some parts of the mesh will need to be reversed.
+     */
+    void reverseFan(VertexPtr aroundVertex,
+                    EdgePtr ccwExtent, EdgePtr cwExtent) {
+        EdgePtr currentEdge = ccwExtent, nextEdge;
+        do {
+            // Swap the CW & CCW edges
+            nextEdge = currentEdge->edgeCW(aroundVertex);
+            currentEdge->setEdgeCW(aroundVertex,
+                    currentEdge->edgeCCW(aroundVertex));
+            currentEdge->setEdgeCCW(aroundVertex, nextEdge);
+
+            currentEdge = nextEdge; // Go to the next one
+        } while (currentEdge != cwExtent);
+    }
+#endif
+
+
+/*---------------------------------------------------------------------------*
+ | Sub-object management functions
+ *---------------------------------------------------------------------------*/
+protected:
+    // Low-level single vertex creation
+    VertexPtr acquireVertex() {
+        VertexPtr v = vertexPool.acquire();
+        v->setMesh(this);
+        vertexList.push_back(v);
+        return v;
+    }
+
+    // Low-level single face creation
+    FacePtr acquireFace() {
+        FacePtr f = facePool.acquire();
+        f->setMesh(this);
+        faceList.push_back(f);
+        return f;
+    }
+
+    // Low-level single face creation
+    EdgePtr acquireEdge() {
+        EdgePtr e = edgePool.acquire();
+        e->setMesh(this);
+        edgeList.push_back(e);
+        return e;
+    }
+
+    // Low-level single faceVertex creation
+    FaceVertexPtr acquireFaceVertex() {
+        FaceVertexPtr fv = faceVertexPool.acquire();
+        fv->setMesh(this);
+        faceVertexList.push_back(fv);
+        return fv;
+    }
+
+    // Low-level single vertex disposal
+    void releaseVertex(VertexPtr v) {
+        typename VertexPtrList::iterator it = find(vertexList.begin(), vertexList.end(), v);
+        if (it == vertexList.end()) {       // We never owned this...
+            cerr << "Attempted to release non-acquired vertex "
+                 << v->id() << '\n';
+        } else {                            // Ok. We can clean up now
+            vertexList.erase(it);
+            vertexPool.release(v);
+        }
+    }
+
+    // Low-level single face disposal
+    void releaseFace(FacePtr f) {
+        typename FacePtrList::iterator it = find(faceList.begin(), faceList.end(), f);
+        if (it == faceList.end()) {         // We never owned this...
+            cerr << "Attempted to release non-acquired face "
+                 << f->id() << '\n';
+        } else {                            // Ok. We can clean up now
+            faceList.erase(it);
+            facePool.release(f);
+        }
+    }
+
+    // Low-level single edge disposal
+    void releaseEdge(EdgePtr e) {
+        typename EdgePtrList::iterator it = find(edgeList.begin(), edgeList.end(), e);
+        if (it == edgeList.end()) {       // We never owned this...
+            cerr << "Attempted to release non-acquired edge "
+                 << e->id() << '\n';
+        } else {                            // Ok. We can clean up now
+            edgeList.erase(it);
+            edgePool.release(e);
+        }
+    }
+
+    // Low-level single faceVertex disposal
+    void releaseFaceVertex(FaceVertexPtr fv) {
+        typename FaceVertexPtrList::iterator it = find(faceVertexList.begin(),
+                                              faceVertexList.end(), fv);
+        if (it == faceVertexList.end()) {         // We never owned this...
+            cerr << "Attempted to release non-acquired face-vertex "
+                 << fv->id() << '\n';
+        } else {                            // Ok. We can clean up now
+            faceVertexList.erase(it);
+            faceVertexPool.release(fv);
+        }
+    }
+};
+
+
+// Import implementation of mesh sub-objects and related operators
+#include "WingedEdgeMesh-iostream"
+#include "WingedEdgeMesh-iterator"
+#include "WingedEdgeMesh-MeshElement"
+#include "WingedEdgeMesh-Vertex"
+#include "WingedEdgeMesh-Face"
+#include "WingedEdgeMesh-Edge"
+#include "WingedEdgeMesh-FaceVertex"
+#include "WingedEdgeMesh-EdgeVertex"
+
+// Clean up the preprocessor namespace
+#undef MESH_TEMPLATE
+#undef MESH
+
+#endif

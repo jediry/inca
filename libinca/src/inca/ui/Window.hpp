@@ -18,12 +18,15 @@
 // This is part of the Inca interface layer
 namespace inca {
     namespace ui {
-        // Forward declarations
-        class Window;
+// These have been moved to WidgetPart.hpp, in order to resolve a circular
+// dependency issue. Too bad.
 
-        // Pointer typedefs
-        typedef shared_ptr<Window>       WindowPtr;
-        typedef shared_ptr<Window const> WindowConstPtr;
+//        // Forward declarations
+//        class Window;
+//
+//        // Pointer typedefs
+//        typedef shared_ptr<Window>       WindowPtr;
+//        typedef shared_ptr<Window const> WindowConstPtr;
     };
 };
 
@@ -79,6 +82,11 @@ public:
     
     // My sub-widget has same dimensions as me
     Dimension getSize(WidgetPartConstPtr w) const { return getSize(); }
+
+    // Return self as the containing Window
+    WindowPtr getContainingWindow() const {
+        return const_cast<Window *>(this)->self();
+    }
 
 
 /*---------------------------------------------------------------------------*

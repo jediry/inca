@@ -62,7 +62,12 @@ public:
     void redisplay(WidgetPartConstPtr w) const { requestRedisplay(); }
 
     // My sub-widget has same dimensions as me
-    Dimension getSize(WidgetPartConstPtr wp) const { return BasicView::size; }
+    Dimension getSize(WidgetPartConstPtr wp) const { return PassThruView::size; }
+
+    // Defer to one of the subclasses' implementations
+    WindowPtr getContainingWindow() const {
+        return PassThruView::getContainingWindow();
+    }
 
 
 /*---------------------------------------------------------------------------*

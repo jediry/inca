@@ -53,7 +53,7 @@ private:
     PROPERTY_OWNING_OBJECT(Application);
 
 public:
-    // XXX HACK! HACK! uh-WOO-guh!
+    // XXX HACK! HACK! WHEEZE!
     // Typedef for the timer we'll use to drive animation
     typedef Timer<double, true> Timer;  // double resolution, generate events
 
@@ -128,8 +128,8 @@ protected:
  | Utility functions
  *---------------------------------------------------------------------------*/
 public:
-    // Print out a usage message, giving available command-line options
-    virtual void printUsage(ostream &o) { }
+    // Pull off the first command-line argument and remove it from the list
+    static string shift(int &argc, char **&argv);
 };
 
 

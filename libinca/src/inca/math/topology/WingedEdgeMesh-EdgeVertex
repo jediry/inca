@@ -1,0 +1,151 @@
+/* -*- C++ -*-
+ *
+ * File: WingedEdgeMesh-EdgeVertex
+ * 
+ * Author: Ryan L. Saunders
+ *
+ * Copyright 2004, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ *      This file implements the EdgeVertex inner class belonging to the
+ *      WingedEdgeMesh structure. An EdgeVertex represents one end of an
+ *      Edge in the winged-edge scheme, holding pointers to the Vertex it's
+ *      touching, and the FaceVertices and Edges reached by orbiting the
+ *      Vertex in either direction. Additionally, in this implementation,
+ *      arbitrary user data may be associated with an EdgeVertex via the
+ *      EVData template parameter to the parent mesh (see the main
+ *      WingedEdgeMesh documentation for more information).
+ *
+ *      Instances of EdgeVertex are generally not created on their own.
+ *      Rather, they are sub-parts of an Edge and almost always retrieved
+ *      from an Edge.
+ *
+ *      This file is not meant to be used directly, but is included by
+ *      the main WingedEdgeMesh header file.
+ */
+
+#ifndef INCA_MATH_TOPOLOGY_WINGED_EDGE_MESH_EDGE_VERTEX
+#define INCA_MATH_TOPOLOGY_WINGED_EDGE_MESH_EDGE_VERTEX
+
+
+MESH_TEMPLATE class inca::math::MESH::EdgeVertex
+    : public EVData, public MeshElement {
+/*---------------------------------------------------------------------------*
+ | Friend declarations
+ *---------------------------------------------------------------------------*/
+public:
+    // The mesh & friends need access to protected (modification) functions
+    friend Mesh;
+    friend Vertex;
+    friend Face;
+    friend Edge;
+    friend FaceVertex;
+    friend EdgeVertex;
+
+
+/*---------------------------------------------------------------------------*
+ | Initialization & data
+ *---------------------------------------------------------------------------*/
+public:
+    // Constructor (normally called from Edge's constructor)
+    EdgeVertex(EdgePtr parent = NULL) : _edge(parent) { }
+
+    // Reset this edge endpoint to be unconnected (still keeps edge(), though)
+    void clear() {
+        _vertex = NULL;
+        _edgeVertexCW = _edgeVertexCCW = NULL;
+        _faceVertexCW = _faceVertexCCW = NULL;
+    }
+
+    // Copy user-data into this element
+    void setData(const EVData &evd) {
+        *static_cast<EVData *>(this) = evd;
+    }
+
+protected:
+    EdgePtr _edge;                              // The E we belong to
+    VertexPtr _vertex;                          // The V we're touching
+    EdgeVertexPtr _edgeVertexCW, _edgeVertexCCW;// EV's CW & CCW around the V
+    FaceVertexPtr _faceVertexCW, _faceVertexCCW;// FV's CW & CCW around the V
+
+
+/*---------------------------------------------------------------------------*
+ | Accessor functions
+ *---------------------------------------------------------------------------*/
+// Vertex accessor functions
+public:
+    VertexPtr vertex() const { return _vertex; }
+    bool touchesVertex(VertexConstPtr v) const { return _vertex == v; }
+
+protected:
+    void setVertex(VertexPtr v) {
+        if (vertex() != NULL)   vertex()->decrementEdgeCount();
+        _vertex = v;
+        if (vertex() != NULL)   vertex()->incrementEdgeCount();
+    }
+
+
+// Face accessor functions
+public:
+    FacePtr faceCCW() const { return edge()->faceCCW(vertex()); }
+    FacePtr faceCW()  const { return edge()->faceCCW(vertex()); }
+    bool touchesFace(FaceConstPtr f) const {
+        return (f == faceCCW() || f == faceCW());
+    }
+
+
+// Edge accessor functions
+public:
+    EdgePtr edge() const { return _edge; }
+    EdgePtr edgeCCW() const { return edgeVertexCCW()->edge(); }
+    EdgePtr edgeCW()  const { return edgeVertexCW()->edge(); }
+//    bool touchesEdge(EdgeConstPtr e) const {
+//        return _edgeCCW == e || _edgeCW == e;
+//    }
+
+protected:
+    void setEdge(EdgePtr e) { _edge = e; }
+
+
+// FaceVertex accessor functions
+public:
+    FaceVertexPtr faceVertexCCW() const { return _faceVertexCCW; }
+    FaceVertexPtr faceVertexCW()  const { return _faceVertexCW; }
+    bool touchesFaceVertex(FaceVertexConstPtr e) const {
+        return _faceVertexCCW == e || _faceVertexCW == e;
+    }
+
+protected:
+    void setFaceVertexCCW(FaceVertexPtr fv) { _faceVertexCCW = fv; }
+    void setFaceVertexCW(FaceVertexPtr fv)  { _faceVertexCW = fv; }
+
+
+// EdgeVertex accessor functions
+public:
+    EdgeVertexPtr edgeVertexCCW() const { return _edgeVertexCCW; }
+    EdgeVertexPtr edgeVertexCW()  const { return _edgeVertexCW; }
+    EdgeVertexPtr otherEdgeVertex() const {
+        if (edge() != NULL) return edge()->otherEdgeVertex(this);
+        else                return NULL;
+    }
+    bool touchesEdgeVertex(EdgeVertexPtr ev) const {
+        return _edgeVertexCCW == ev || _edgeVertexCW == ev;
+    }
+
+protected:
+    void setEdgeVertexCCW(EdgeVertexPtr ev) { _edgeVertexCCW = ev; }
+    void setEdgeVertexCW(EdgeVertexPtr ev)  { _edgeVertexCW = ev; }
+
+
+/*---------------------------------------------------------------------------*
+ | Mesh modification functions
+ *---------------------------------------------------------------------------*/
+protected:
+    // Swap this EdgeVertex for another, interchanging all connections
+    // (except for the parent Edge, of course)
+    void swap(EdgeVertexPtr ev) {
+        mesh()->swap(this, this, ev, ev); // Delegate to the mesh's fan-swap
+    }
+};
+
+#endif

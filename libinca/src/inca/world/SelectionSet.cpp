@@ -64,8 +64,12 @@ void SelectionSet::symmetricDifferenceWith(const SelectionSet &s) {
                                   tmp.begin());
     items.swap(tmp);
 }
-void SelectionSet::complement() {
+void SelectionSet::complement() {   // XXX throw unsupported
     cerr << "The set complement operation is not defined for class "
+            "'inca::world::SelectionSet: please implement in your subclass";
+}
+void SelectionSet::selectAll() {    // XXX throw unsupported
+    cerr << "The select all operation is not defined for class "
             "'inca::world::SelectionSet: please implement in your subclass";
 }
 

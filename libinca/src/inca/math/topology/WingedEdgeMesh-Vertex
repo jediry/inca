@@ -1,0 +1,160 @@
+/* -*- C++ -*-
+ *
+ * File: WingedEdgeMesh-Vertex
+ * 
+ * Author: Ryan L. Saunders
+ *
+ * Copyright 2004, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ *      This file implements the Vertex inner class belonging to the
+ *      WingedEdgeMesh structure. A Vertex in the winged-edge scheme has
+ *      a pointer to a single edge connected to it. Additionally, in this
+ *      implementation, arbitrary user data may be associated with a vertex
+ *      via the VData template parameter to the parent mesh (see the main
+ *      WingedEdgeMesh documentation for more information).
+ *
+ *      This file is not meant to be used directly, but is included by
+ *      the main WingedEdgeMesh header file.
+ */
+
+#ifndef INCA_MATH_TOPOLOGY_WINGED_EDGE_MESH_VERTEX
+#define INCA_MATH_TOPOLOGY_WINGED_EDGE_MESH_VERTEX
+
+
+MESH_TEMPLATE class inca::math::MESH::Vertex : public VData, public MeshElement {
+/*---------------------------------------------------------------------------*
+ | Friend declarations
+ *---------------------------------------------------------------------------*/
+public:
+    // The mesh & friends need access to protected (modification) functions
+    friend Mesh;
+    friend Vertex;
+    friend Face;
+    friend Edge;
+    friend FaceVertex;
+    friend EdgeVertex;
+
+
+/*---------------------------------------------------------------------------*
+ | Type definitions
+ *---------------------------------------------------------------------------*/
+public:
+    // Iterator definitions
+    typedef basic_mesh_iterator< OrbitCCW<Face, Vertex> >       ccw_face_iterator;
+    typedef basic_mesh_iterator< OrbitCW<Face, Vertex> >        cw_face_iterator;
+    typedef basic_mesh_iterator< OrbitCCW<Edge, Vertex> >       ccw_edge_iterator;
+    typedef basic_mesh_iterator< OrbitCW<Edge, Vertex> >        cw_edge_iterator;
+    typedef basic_mesh_iterator< OrbitCCW<FaceVertex, Vertex> > ccw_face_vertex_iterator;
+    typedef basic_mesh_iterator< OrbitCW<FaceVertex, Vertex> >  cw_face_vertex_iterator;
+    typedef basic_mesh_iterator< OrbitCCW<EdgeVertex, Vertex> > ccw_edge_vertex_iterator;
+    typedef basic_mesh_iterator< OrbitCW<EdgeVertex, Vertex> >  cw_edge_vertex_iterator;
+
+
+/*---------------------------------------------------------------------------*
+ | Initialization & data
+ *---------------------------------------------------------------------------*/
+public:
+    // Reset this Vertex to be unconnected
+    void clear() {
+        _faceVertex = NULL;
+        _edgeCount = 0;
+    }
+
+    // Copy user-data into this element
+    void setData(const VData &vd) {
+        *static_cast<VData *>(this) = vd;
+    }
+
+protected:
+    FaceVertexPtr _faceVertex;  // Our first, most beloved FV
+    size_t _edgeCount;  // The number of edges that touch us
+
+
+/*---------------------------------------------------------------------------*
+ | Topology accessor functions
+ *---------------------------------------------------------------------------*/
+// Direct accessors
+public:
+    // Number of edges
+    size_t edgeCount() const { return _edgeCount; }
+
+    // An edge that touches us
+    EdgePtr edge() const { return faceVertex()->edgeCCW(); }
+
+    // The face-vertex we use to link into the mesh
+    FaceVertexPtr faceVertex() const { return _faceVertex; }
+
+protected:
+    void incrementEdgeCount() { _edgeCount++; }
+    void decrementEdgeCount() { _edgeCount--; }
+    void setFaceVertex(FaceVertexPtr fv) { _faceVertex = fv; }
+
+
+// Iterators for orbiting across faces
+public:
+    ccw_face_iterator facesCCW() const {
+        return ccw_face_iterator(faceVertex()->face(), edge(), this);
+    }
+    cw_face_iterator facesCW() const {
+        return cw_face_iterator(faceVertex()->face(), edge(), this);
+    }
+
+
+// Iterators for orbiting across edges
+public:
+    ccw_edge_iterator edgesCCW() const {
+        return ccw_edge_iterator(edge(), edge(), this);
+    }
+    cw_edge_iterator edgesCW() const {
+        return cw_edge_iterator(edge(), edge(), this);
+    }
+
+
+// Iterators for orbiting across face-vertices
+public:
+    ccw_face_vertex_iterator faceVerticesCCW() const {
+        return ccw_face_vertex_iterator(faceVertex(), edge(), this);
+    }
+    cw_face_vertex_iterator faceVerticesCW() const {
+        return cw_face_vertex_iterator(faceVertex(), edge(), this);
+    }
+
+// Iterators for orbiting across edge-vertices
+public:
+    ccw_edge_vertex_iterator edgeVerticesCCW() const {
+        return ccw_edge_vertex_iterator(faceVertex()->edgeVertexCCW(),
+                                        edge(), this);
+    }
+    cw_edge_vertex_iterator edgeVerticesCW() const {
+        return cw_edge_vertex_iterator(faceVertex()->edgeVertexCW(),
+                                       edge(), this);
+    }
+
+
+/*---------------------------------------------------------------------------*
+ | Mesh search functions
+ *---------------------------------------------------------------------------*/
+public:
+    EdgePtr edgeCCW(FaceConstPtr face) const {
+        // Search for an edge who has the specified face CW from it
+        ccw_edge_iterator i, end;
+        for (i = edgesCCW(); i != end; ++i)
+            if (i->faceCW(this) == face)
+                return *i;                  // Found it
+
+        return EdgePtr(NULL);               // Doesn't exist!
+    }
+
+    EdgePtr edgeCW(FaceConstPtr face) const {
+        // Search for an edge who has the specified face CCW from it
+        cw_edge_iterator i, end;
+        for (i = edgesCW(); i != end; ++i)
+            if (i->faceCCW(this) == face)
+                return *i;                  // Found it
+
+        return EdgePtr(NULL);               // Doesn't exist!
+    }
+};
+
+#endif

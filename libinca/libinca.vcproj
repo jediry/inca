@@ -13,21 +13,23 @@
 	<Configurations>
 		<Configuration
 			Name="Debug|Win32"
-			OutputDirectory="$(SolutionDir)\lib"
+			OutputDirectory="C:\temp"
 			IntermediateDirectory="C:\Temp"
 			ConfigurationType="4"
 			CharacterSet="2"
 			ManagedExtensions="FALSE"
-			WholeProgramOptimization="TRUE">
+			WholeProgramOptimization="FALSE">
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="H:\include;.\src"
+				AdditionalIncludeDirectories=".\src"
 				PreprocessorDefinitions="WIN32;_DEBUG"
 				MinimalRebuild="FALSE"
 				BasicRuntimeChecks="0"
 				RuntimeLibrary="1"
 				RuntimeTypeInfo="TRUE"
+				UsePrecompiledHeader="2"
+				PrecompiledHeaderThrough="inca-common.h"
 				WarningLevel="3"
 				DebugInformationFormat="3"/>
 			<Tool
@@ -35,7 +37,7 @@
 			<Tool
 				Name="VCLibrarianTool"
 				AdditionalOptions="/LTCG"
-				AdditionalLibraryDirectories="H:\lib"/>
+				AdditionalLibraryDirectories=""/>
 			<Tool
 				Name="VCMIDLTool"/>
 			<Tool
@@ -57,7 +59,7 @@
 		</Configuration>
 		<Configuration
 			Name="Release|Win32"
-			OutputDirectory="$(SolutionDir)\lib"
+			OutputDirectory="C:\temp"
 			IntermediateDirectory="C:\Temp"
 			ConfigurationType="4"
 			CharacterSet="2"
@@ -65,18 +67,23 @@
 			WholeProgramOptimization="TRUE">
 			<Tool
 				Name="VCCLCompilerTool"
-				AdditionalIncludeDirectories=".\src;.\3rd_party"
+				GlobalOptimizations="TRUE"
+				OptimizeForProcessor="2"
+				AdditionalIncludeDirectories=".\src"
 				PreprocessorDefinitions="WIN32;NDEBUG"
 				MinimalRebuild="FALSE"
 				RuntimeLibrary="0"
 				RuntimeTypeInfo="TRUE"
+				UsePrecompiledHeader="0"
+				PrecompiledHeaderThrough=""
 				WarningLevel="3"
 				DebugInformationFormat="3"/>
 			<Tool
 				Name="VCCustomBuildTool"/>
 			<Tool
 				Name="VCLibrarianTool"
-				AdditionalLibraryDirectories="H:\lib"/>
+				AdditionalOptions="/LTCG"
+				AdditionalLibraryDirectories=""/>
 			<Tool
 				Name="VCMIDLTool"/>
 			<Tool
@@ -167,6 +174,9 @@
 		<Filter
 			Name="io"
 			Filter="">
+			<File
+				RelativePath=".\src\inca\io\FileExceptions.hpp">
+			</File>
 		</Filter>
 		<Filter
 			Name="math"
@@ -193,6 +203,12 @@
 			<Filter
 				Name="generator"
 				Filter="">
+				<File
+					RelativePath=".\src\inca\math\generator\RandomGaussian">
+				</File>
+				<File
+					RelativePath=".\src\inca\math\generator\RandomUniform">
+				</File>
 			</Filter>
 			<Filter
 				Name="solid"
@@ -215,19 +231,31 @@
 					RelativePath=".\src\inca\math\topology\PolygonMesh-algorithms">
 				</File>
 				<File
-					RelativePath=".\src\inca\math\topology\WingedEdge-Edge">
+					RelativePath=".\src\inca\math\topology\WingedEdgeMesh">
 				</File>
 				<File
-					RelativePath=".\src\inca\math\topology\WingedEdge-Face">
+					RelativePath=".\src\inca\math\topology\WingedEdgeMesh-Edge">
 				</File>
 				<File
-					RelativePath=".\src\inca\math\topology\WingedEdge-FaceVertex">
+					RelativePath=".\src\inca\math\topology\WingedEdgeMesh-EdgeVertex">
 				</File>
 				<File
-					RelativePath=".\src\inca\math\topology\WingedEdge-PolygonMesh">
+					RelativePath=".\src\inca\math\topology\WingedEdgeMesh-Face">
 				</File>
 				<File
-					RelativePath=".\src\inca\math\topology\WingedEdge-Vertex">
+					RelativePath=".\src\inca\math\topology\WingedEdgeMesh-FaceVertex">
+				</File>
+				<File
+					RelativePath=".\src\inca\math\topology\WingedEdgeMesh-iostream">
+				</File>
+				<File
+					RelativePath=".\src\inca\math\topology\WingedEdgeMesh-iterator">
+				</File>
+				<File
+					RelativePath=".\src\inca\math\topology\WingedEdgeMesh-MeshElement">
+				</File>
+				<File
+					RelativePath=".\src\inca\math\topology\WingedEdgeMesh-Vertex">
 				</File>
 			</Filter>
 		</Filter>
@@ -273,6 +301,9 @@
 			</File>
 			<File
 				RelativePath=".\src\inca\ui\CameraControl.hpp">
+			</File>
+			<File
+				RelativePath=".\src\inca\ui\CameraNavigationWidget.hpp">
 			</File>
 			<File
 				RelativePath=".\src\inca\ui\CompositeWidget.hpp">
@@ -324,16 +355,19 @@
 			Name="util"
 			Filter="">
 			<File
-				RelativePath=".\src\inca\util\hash_container">
+				RelativePath=".\src\inca\util\combination_iterator">
 			</File>
 			<File
-				RelativePath=".\src\inca\util\IncaException.hpp">
+				RelativePath=".\src\inca\util\hash_container">
 			</File>
 			<File
 				RelativePath=".\src\inca\util\Logger.hpp">
 			</File>
 			<File
 				RelativePath=".\src\inca\util\metaprogramming">
+			</File>
+			<File
+				RelativePath=".\src\inca\util\new_property.h">
 			</File>
 			<File
 				RelativePath=".\src\inca\util\object_pool">
@@ -343,6 +377,9 @@
 			</File>
 			<File
 				RelativePath=".\src\inca\util\random_access_list">
+			</File>
+			<File
+				RelativePath=".\src\inca\util\stream_exception.hpp">
 			</File>
 			<File
 				RelativePath=".\src\inca\util\StreamTokenizer.cpp">

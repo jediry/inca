@@ -28,14 +28,9 @@ private:
  | Test configuration
  *---------------------------------------------------------------------------*/
 public:
-    void setUp() {
-//        intPropRO.init(this);
-//        strPropRW.init(this);
-    }
+    void setUp() { }
 
-    void tearDown() {
-
-    }
+    void tearDown() { }
 
     // Constructor -- needed for property initialization
     UtilPropertyTest() : intPropRO(this), strPropRW(this, "stop"),

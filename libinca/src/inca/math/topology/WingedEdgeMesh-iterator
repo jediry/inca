@@ -1,0 +1,595 @@
+/* -*- C++ -*-
+ *
+ * File: WingedEdgeMesh-iterators
+ * 
+ * Author: Ryan L. Saunders
+ *
+ * Copyright 2004, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ *      This file implements the template class iterator used to implement
+ *      all of the mesh-traversal iterators in the WingedEdgeMesh structure.
+ *      It is possible to efficiently traverse any aspect of the mesh using
+ *      these iterators.
+ *
+ *      The basic_mesh_iterator does most of the work of implementing the
+ *      iterator interface, but delegates the specifics of incrementing and
+ *      decrementing the iterator to the class passed in as its template
+ *      parameter, which is expected to expose a set of typedefs and
+ *      forward(...) and backward(...) functions that return the new state of
+ *      the iterator.
+ *
+ *      The iteration delegates needed by WingedEdgeMesh are protected inner
+ *      classes of WingedEdgeMesh, and are implemented at the end of this
+ *      file.
+ *
+ *      This file is not meant to be used directly, but is included by
+ *      the main WingedEdgeMesh header file.
+ *
+ * XXX Should the fixed-count iterators (around Edge) be returning NULLs?
+ */
+
+#ifndef INCA_MATH_TOPOLOGY_WINGED_EDGE_MESH_ITERATOR
+#define INCA_MATH_TOPOLOGY_WINGED_EDGE_MESH_ITERATOR
+
+// This is part of the Inca math library
+namespace inca {
+    namespace math {
+        // Iterator forward declaration
+        template <class Iterate> class basic_mesh_iterator;
+    };
+};
+
+
+// Import the STL's iterator implementation
+#include <iterator>
+
+
+template <class Iterate>
+class inca::math::basic_mesh_iterator {
+/*---------------------------------------------------------------------------*
+ | Type definitions
+ *---------------------------------------------------------------------------*/
+public:
+    // Import mesh object types from the increment/decrement functors
+    typedef basic_mesh_iterator<Iterate>        iterator_type;
+    typedef typename Iterate::value_type        value_type;
+    typedef typename Iterate::reference         reference;
+    typedef typename Iterate::pointer           pointer;
+    typedef typename Iterate::orbit_pointer     orbit_pointer;
+    typedef typename Iterate::edge_pointer      edge_pointer;
+
+    // Specify iterator characteristics (non-random-access)
+    typedef std::bidirectional_iterator_tag     iterator_category;
+
+
+/*---------------------------------------------------------------------------*
+ | Constructors & data
+ *---------------------------------------------------------------------------*/
+public:
+    // Default constructor
+    basic_mesh_iterator()
+        : _start(NULL), _current(NULL), _edge(NULL), _orbit(NULL) { }
+
+    // Constructor taking a start point and an orbit object
+    basic_mesh_iterator(pointer st, edge_pointer e, orbit_pointer orb)
+        : _start(st), _current(st), _edge(e), _orbit(orb) { }
+
+    // Normal copy constructor
+    basic_mesh_iterator(const iterator_type &it)
+        : _start(it.start()), _current(it.current()),
+          _edge(it.edge()), _orbit(it.orbit()) { }
+
+    // Copy constructor from related type (e.g., CCW vs. CW iterator
+    template <class Iterate2>
+    basic_mesh_iterator(const basic_mesh_iterator<Iterate2> &it)
+        : _start(it.start()), _current(it.current()),
+          _edge(it.edge()), _orbit(it.orbit()) { }
+
+protected:
+    Iterate iterate;
+    pointer _start, _current;
+    edge_pointer _edge;
+    orbit_pointer _orbit;
+
+
+/*---------------------------------------------------------------------------*
+ | Accessors & operators
+ *---------------------------------------------------------------------------*/
+public:
+    // Access to internal pointers
+    pointer start()       const { return _start; }
+    pointer current()     const { return _current; }
+    edge_pointer edge()   const { return _edge; }
+    orbit_pointer orbit() const { return _orbit; }
+
+    // Return the pointer (to the current element) wrapped by this iterator
+    pointer operator*()  { cerr << ":-)\n"; return current(); }
+    pointer operator->() { cerr << ":-(\n"; return current(); }
+
+    // Prefix increment operator
+    iterator_type & operator++() {
+        Iterate::result_type result = iterate.forward(start(), current(),
+                                                      edge(), orbit());
+        _current = result.first;
+        _edge = result.second;
+        return *this;
+    }
+
+    // Postfix increment operator
+    iterator_type operator++(int) {
+        iterator_type temp = *this;     // Create a copy
+        ++(*this);                      // Increment the "real" one
+        return temp;                    // Return the copy
+    }
+
+    // Prefix decrement operator
+    iterator_type & operator--() {
+        Iterate::result_type result = iterate.backward(start(), current(),
+                                                       edge(), orbit());
+        _current = result.first;
+        _edge = result.second;
+        return *this;
+    }
+
+    // Postfix decrement operator
+    iterator_type operator--(int) {
+        iterator_type temp = *this;     // Create a copy
+        --(*this);                      // Decrement the "real" one
+        return temp;                    // Return the copy
+    }
+
+
+/*---------------------------------------------------------------------------*
+ | Iterator comparison operators
+ *---------------------------------------------------------------------------*/
+public:
+    // Iterator equality comparison:
+    //      Two mesh iterators are equal if they have the same
+    //      current value, or if both are done iterating.
+    template <class Iterate2>
+    bool operator==(const basic_mesh_iterator<Iterate2> &it) {
+        if (current() == it.current() && orbit() == it.orbit())
+            return true;
+        else if (current() == NULL && it.current() == NULL)
+            return true;
+        else
+            return false;
+    }
+
+    // Iterator non-equality comparison
+    template <class Iterate2>
+    bool operator!=(const basic_mesh_iterator<Iterate2> &it) {
+        return ! (*this == it);
+    }
+};
+
+
+/*---------------------------------------------------------------------------*
+ | Specialization of mesh orbit iteration delegates
+ *---------------------------------------------------------------------------*/
+namespace inca {
+    namespace math {
+
+        // OrbitCCW specialization for Vertex
+        MESH_TEMPLATE template <class OrbitT>
+        struct MESH::OrbitCCW<typename MESH::Vertex, OrbitT> {
+            typedef Vertex                              value_type;
+            typedef value_type *                        pointer; 
+            typedef value_type &                        reference; 
+            typedef OrbitT const *                      orbit_pointer;
+            typedef Edge const *                        edge_pointer;
+            typedef std::pair<pointer, edge_pointer>    result_type;
+
+            // Take one step forward
+            result_type forward(pointer start, pointer current,
+                                edge_pointer edge, orbit_pointer orbit) {
+                // Advance, then see if we've hit the end
+                edge_pointer nextE = edge->edgeCCW(orbit);
+                     pointer nextV = edge->vertexCCW(orbit);
+                if (nextV == start) return result_type(NULL, NULL);
+                else                return result_type(nextV, nextE);
+            }
+
+            // Take one step backward
+            result_type backward(pointer start, pointer current,
+                                 edge_pointer edge, orbit_pointer orbit) {
+                // Advance, then see if we've hit the end
+                edge_pointer nextE = edge->edgeCW(orbit);
+                     pointer nextV = edge->vertexCW(orbit);
+                if (nextV == start) return result_type(NULL, NULL);
+                else                return result_type(nextV, nextE);
+            }
+        };
+
+
+        // OrbitCCW specialization for Face
+        MESH_TEMPLATE template <class OrbitT>
+        struct MESH::OrbitCCW<typename MESH::Face, OrbitT> {
+            typedef Face                                value_type;
+            typedef value_type *                        pointer; 
+            typedef value_type &                        reference; 
+            typedef OrbitT const *                      orbit_pointer;
+            typedef Edge const *                        edge_pointer;
+            typedef std::pair<pointer, edge_pointer>    result_type;
+
+            // Take one step forward
+            result_type forward(pointer start, pointer current,
+                                edge_pointer edge, orbit_pointer orbit) {
+                // Advance, then see if we've hit the end
+                edge_pointer nextE = edge->edgeCCW(orbit);
+                     pointer nextF = edge->faceCCW(orbit);
+                if (nextF == start) return result_type(NULL, NULL);
+                else                return result_type(nextF, nextE);
+            }
+
+            // Take one step backward
+            result_type backward(pointer start, pointer current,
+                                 edge_pointer edge, orbit_pointer orbit) {
+                // Advance, then see if we've hit the end
+                edge_pointer nextE = edge->edgeCW(orbit);
+                     pointer nextF = edge->faceCW(orbit);
+                if (nextF == start) return result_type(NULL, NULL);
+                else                return result_type(nextF, nextE);
+            }
+        };
+
+
+        // OrbitCCW specialization for Edge
+        MESH_TEMPLATE template <class OrbitT>
+        struct MESH::OrbitCCW<typename MESH::Edge, OrbitT> {
+            typedef Edge                                value_type;
+            typedef value_type *                        pointer; 
+            typedef value_type &                        reference; 
+            typedef OrbitT const *                      orbit_pointer;
+            typedef Edge const *                        edge_pointer;
+            typedef std::pair<pointer, edge_pointer>    result_type;
+
+            // Take one step forward
+            result_type forward(pointer start, pointer current,
+                                edge_pointer edge, orbit_pointer orbit) {
+                // Advance, then see if we've hit the end
+                pointer nextE  = edge->edgeCCW(orbit);
+                if (nextE == start)  return result_type(NULL, NULL);
+                else                 return result_type(nextE, nextE);
+            }
+
+            // Take one step backward
+            result_type backward(pointer start, pointer current,
+                                 edge_pointer edge, orbit_pointer orbit) {
+                // Advance, then see if we've hit the end
+                pointer nextE  = edge->edgeCW(orbit);
+                if (nextE == start)  return result_type(NULL, NULL);
+                else                 return result_type(nextE, nextE);
+            }
+        };
+
+
+        // OrbitCCW specialization for FaceVertex
+        MESH_TEMPLATE template <class OrbitT>
+        struct MESH::OrbitCCW<typename MESH::FaceVertex, OrbitT> {
+            typedef FaceVertex                          value_type;
+            typedef value_type *                        pointer; 
+            typedef value_type &                        reference; 
+            typedef OrbitT const *                      orbit_pointer;
+            typedef Edge const *                        edge_pointer;
+            typedef std::pair<pointer, edge_pointer>    result_type;
+
+            // Take one step forward
+            result_type forward(pointer start, pointer current,
+                                edge_pointer edge, orbit_pointer orbit) {
+                // Advance, then see if we've hit the end
+                edge_pointer nextE  = edge->edgeCCW(orbit);
+                     pointer nextFV = edge->faceVertexCCW(orbit);
+                if (nextFV == start) return result_type(NULL, NULL);
+                else                 return result_type(nextFV, nextE);
+            }
+
+            // Take one step backward
+            result_type backward(pointer start, pointer current,
+                                 edge_pointer edge, orbit_pointer orbit) {
+                // Advance, then see if we've hit the end
+                edge_pointer nextE  = edge->edgeCW(orbit);
+                     pointer nextFV = edge->faceVertexCW(orbit);
+                if (nextFV == start) return result_type(NULL, NULL);
+                else                 return result_type(nextFV, nextE);
+            }
+        };
+
+
+        // OrbitCCW specialization for EdgeVertex
+        MESH_TEMPLATE template <class OrbitT>
+        struct MESH::OrbitCCW<typename MESH::EdgeVertex, OrbitT> {
+            typedef EdgeVertex                          value_type;
+            typedef value_type *                        pointer; 
+            typedef value_type &                        reference; 
+            typedef OrbitT const *                      orbit_pointer;
+            typedef Edge const *                        edge_pointer;
+            typedef std::pair<pointer, edge_pointer>    result_type;
+
+            // Take one step forward
+            result_type forward(pointer start, pointer current,
+                                edge_pointer edge, orbit_pointer orbit) {
+                // Advance, then see if we've hit the end
+                edge_pointer nextE  = edge->edgeCCW(orbit);
+                     pointer nextFV = edge->edgeVertexCCW(orbit);
+                if (nextFV == start) return result_type(NULL, NULL);
+                else                 return result_type(nextFV, nextE);
+            }
+
+            // Take one step backward
+            result_type backward(pointer start, pointer current,
+                                 edge_pointer edge, orbit_pointer orbit) {
+                // Advance, then see if we've hit the end
+                edge_pointer nextE  = edge->edgeCW(orbit);
+                     pointer nextFV = edge->edgeVertexCW(orbit);
+                if (nextFV == start) return result_type(NULL, NULL);
+                else                 return result_type(nextFV, nextE);
+            }
+        };
+
+#if 0
+        // OrbitCCW specialization for Vertices around an Edge
+        MESH_TEMPLATE template <>
+        struct MESH::OrbitCCW<typename MESH::Vertex, typename MESH::Edge> {
+            typedef Vertex                              value_type;
+            typedef value_type *                        pointer; 
+            typedef value_type &                        reference; 
+            typedef Edge const *                        orbit_pointer;
+            typedef Edge const *                        edge_pointer;
+            typedef std::pair<pointer, edge_pointer>    result_type;
+            // Default constructor
+            OrbitCCW() : start(0), current(0) { }
+
+            // Take one step forward
+            result_type forward(pointer, pointer,
+                                edge_pointer edge, orbit_pointer) {
+                // Advance, then see if we've hit the end
+                current = (current + 1) % 2;    // Modular increment
+                if (current == start)   return result_type(NULL, NULL);
+                else                    return result_type(at(current), edge);
+            }
+
+            // Take one step backward
+            result_type backward(pointer, pointer,
+                                 edge_pointer edge, orbit_pointer) {
+                // Advance, then see if we've hit the end
+                current = (current + 1) % 2;    // Modular decrement
+                if (current == start)   return result_type(NULL, NULL);
+                else                    return result_type(at(current), edge);
+            }
+
+        protected:
+            // Lookup the object at the specified slot
+            pointer at(index_t index) const {
+                switch (index) {
+                    case 0:     return startVertex();
+                    case 1:     return endVertex();
+                    default:    return NULL;
+                }
+            }
+
+            index_t start,      // Where did we start?
+                    current;    // Which slot we are in right now?
+        };
+
+
+        // OrbitCCW specialization for Faces around an Edge
+        MESH_TEMPLATE template <>
+        struct MESH::OrbitCCW<typename MESH::Face, typename MESH::Edge> {
+            typedef Face                                value_type;
+            typedef value_type *                        pointer; 
+            typedef value_type &                        reference; 
+            typedef Edge const *                        orbit_pointer;
+            typedef Edge const *                        edge_pointer;
+            typedef std::pair<pointer, edge_pointer>    result_type;
+
+            // Default constructor
+            OrbitCCW() : start(0), current(0) { }
+
+            // Take one step forward
+            result_type forward(pointer, pointer,
+                                edge_pointer edge, orbit_pointer) {
+                // Advance, then see if we've hit the end
+                current = (current + 1) % 2;    // Modular increment
+                if (current == start)   return result_type(NULL, NULL);
+                else                    return result_type(at(current), edge);
+            }
+
+            // Take one step backward
+            result_type backward(pointer, pointer,
+                                 edge_pointer edge, orbit_pointer) {
+                // Advance, then see if we've hit the end
+                current = (current + 1) % 2;    // Modular decrement
+                if (current == start)   return result_type(NULL, NULL);
+                else                    return result_type(at(current), edge);
+            }
+
+        protected:
+            // Lookup the object at the specified slot
+            pointer at(index_t index) const {
+                switch (index) {
+                    case 0:     return positiveFace();
+                    case 1:     return negativeFace();
+                    default:    return NULL;
+                }
+            }
+
+            index_t start,      // Where did we start?
+                    current;    // Which slot we are in right now?
+        };
+
+
+        // OrbitCCW specialization for Edges around an Edge
+        MESH_TEMPLATE template <>
+        struct MESH::OrbitCCW<typename MESH::Edge, typename MESH::Edge> {
+            typedef Edge                                value_type;
+            typedef value_type *                        pointer; 
+            typedef value_type &                        reference; 
+            typedef Edge const *                        orbit_pointer;
+            typedef Edge const *                        edge_pointer;
+            typedef std::pair<pointer, edge_pointer>    result_type;
+
+            // Default constructor
+            OrbitCCW() : start(0), current(0) { }
+
+            // Take one step forward
+            result_type forward(pointer, pointer,
+                                edge_pointer edge, orbit_pointer) {
+                // Advance, then see if we've hit the end
+                current = (current + 1) % 4;    // Modular increment
+                if (current == start)   return result_type(NULL, NULL);
+                else                    return result_type(at(current), edge);
+            }
+
+            // Take one step backward
+            result_type backward(pointer, pointer,
+                                 edge_pointer edge, orbit_pointer) {
+                // Advance, then see if we've hit the end
+                current = (current + 3) % 4;    // Modular decrement
+                if (current == start)   return result_type(NULL, NULL);
+                else                    return result_type(at(current), edge);
+            }
+
+        protected:
+            // Lookup the object at the specified slot
+            pointer at(index_t index) const {
+                switch (index) {
+                    case 0:     return startEdgeCCW();
+                    case 1:     return startEdgeCW();
+                    case 2:     return endEdgeCCW();
+                    case 3:     return endEdgeCW();
+                    default:    return NULL;
+                }
+            }
+
+            index_t start,      // Where did we start?
+                    current;    // Which slot we are in right now?
+        };
+
+
+        // OrbitCCW specialization for FaceVertices around an Edge
+        MESH_TEMPLATE template <>
+        struct MESH::OrbitCCW<typename MESH::FaceVertex, typename MESH::Edge> {
+            typedef FaceVertex                          value_type;
+            typedef value_type *                        pointer; 
+            typedef value_type &                        reference; 
+            typedef Edge const *                        orbit_pointer;
+            typedef Edge const *                        edge_pointer;
+            typedef std::pair<pointer, edge_pointer>    result_type;
+
+            // Default constructor
+            OrbitCCW() : start(0), current(0) { }
+
+            // Take one step forward
+            result_type forward(pointer, pointer,
+                                edge_pointer edge, orbit_pointer) {
+                // Advance, then see if we've hit the end
+                current = (current + 1) % 4;    // Modular increment
+                if (current == start)   return result_type(NULL, NULL);
+                else                    return result_type(at(current), edge);
+            }
+
+            // Take one step backward
+            result_type backward(pointer, pointer,
+                                 edge_pointer edge, orbit_pointer) {
+                // Advance, then see if we've hit the end
+                current = (current + 3) % 4;    // Modular decrement
+                if (current == start)   return result_type(NULL, NULL);
+                else                    return result_type(at(current), edge);
+            }
+
+        protected:
+            // Lookup the object at the specified slot
+            pointer at(index_t index) const {
+                switch (index) {
+                    case 0:     return startFaceVertexCCW();
+                    case 1:     return startFaceVertexCW();
+                    case 2:     return endFaceVertexCCW();
+                    case 3:     return endFaceVertexCW();
+                    default:    return NULL;
+                }
+            }
+
+            index_t start,      // Where did we start?
+                    current;    // Which slot we are in right now?
+        };
+
+
+        // OrbitCCW specialization for EdgeVertices around an Edge
+        MESH_TEMPLATE template <>
+        struct MESH::OrbitCCW<typename MESH::EdgeVertex, typename MESH::Edge> {
+            typedef EdgeVertex                          value_type;
+            typedef value_type *                        pointer; 
+            typedef value_type &                        reference; 
+            typedef Edge const *                        orbit_pointer;
+            typedef Edge const *                        edge_pointer;
+            typedef std::pair<pointer, edge_pointer>    result_type;
+
+            // Default constructor
+            OrbitCCW() : start(0), current(0) { }
+
+            // Take one step forward
+            result_type forward(pointer, pointer,
+                                edge_pointer edge, orbit_pointer) {
+                // Advance, then see if we've hit the end
+                current = (current + 1) % 4;    // Modular increment
+                if (current == start)   return result_type(NULL, NULL);
+                else                    return result_type(at(current), edge);
+            }
+
+            // Take one step backward
+            result_type backward(pointer, pointer,
+                                 edge_pointer edge, orbit_pointer) {
+                // Advance, then see if we've hit the end
+                current = (current + 3) % 4;    // Modular decrement
+                if (current == start)   return result_type(NULL, NULL);
+                else                    return result_type(at(current), edge);
+            }
+
+        protected:
+            // Lookup the object at the specified slot
+            pointer at(index_t index) const {
+                switch (index) {
+                    case 0:     return startEdgeVertexCCW();
+                    case 1:     return startEdgeVertexCW();
+                    case 2:     return endEdgeVertexCCW();
+                    case 3:     return endEdgeVertexCW();
+                    default:    return NULL;
+                }
+            }
+
+            index_t start,      // Where did we start?
+                    current;    // Which slot we are in right now?
+        };
+#endif
+
+        // This just does the opposite of whatever the CCW version does
+        MESH_TEMPLATE template <class T, class OrbitT>
+        struct MESH::OrbitCW : public MESH::OrbitCCW<T, OrbitT> {
+            // Import types from superclass
+            typedef typename OrbitCCW<T, OrbitT>::value_type    value_type;
+            typedef typename OrbitCCW<T, OrbitT>::pointer       pointer; 
+            typedef typename OrbitCCW<T, OrbitT>::reference     reference; 
+            typedef typename OrbitCCW<T, OrbitT>::orbit_pointer orbit_pointer;
+            typedef typename OrbitCCW<T, OrbitT>::edge_pointer  edge_pointer;
+            typedef typename OrbitCCW<T, OrbitT>::result_type   result_type;
+
+            // Take one step forward
+            result_type forward(pointer start, pointer current,
+                                edge_pointer edge, orbit_pointer orbit) {
+                return OrbitCCW<T, OrbitT>::backward(start, current,
+                                                     edge, orbit);
+            }
+
+            // Take one step backward
+            result_type backward(pointer start, pointer current,
+                                 edge_pointer edge, orbit_pointer orbit) {
+                return OrbitCCW<T, OrbitT>::forward(start, current,
+                                                    edge, orbit);
+            }
+        };
+    };
+};
+
+#endif

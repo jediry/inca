@@ -25,16 +25,16 @@
  *      or because the file does not exist or is locked by another program.
  */
 
-#ifndef INCA_FILE_EXCEPTIONS
-#define INCA_FILE_EXCEPTIONS
+#ifndef INCA_IO_FILE_EXCEPTIONS
+#define INCA_IO_FILE_EXCEPTIONS
 
 // Include superclass definition
-#include <util/IncaException.hpp>
+#include <inca/util/stream_exception.hpp>
 
 
 // This is part of the Inca I/O subsystem
-namespace Inca {
-    namespace IO {
+namespace inca {
+    namespace io {
         // Forward declarations
         class FileException;
         class InvalidReferenceException;
@@ -45,85 +45,72 @@ namespace Inca {
 };
 
 
-class Inca::IO::FileException : public IncaException {
+class inca::io::FileException : public stream_exception {
 public:
     // Constructors
-    FileException(const FileException &e)
-        : IncaException(e), filename(e.filename) { }
-    FileException(const string &file)
-            : IncaException(), filename(file) { }
-    FileException(const string &msg, const string &file)
-            : IncaException(msg), filename(file) { }
+    explicit FileException(const string &file, const string &msg = "")
+        : stream_exception(msg), _filename(file) { }
 
     // Accessors
-    const string & getFilename() const { return filename; }
+    const string & filename() const { return _filename; }
 
 protected:
-    string filename;
+    string _filename;
 };
 
 
-class Inca::IO::InvalidReferenceException : public FileException {
+class inca::io::InvalidReferenceException : public FileException {
 public:
     // Constructors
-    InvalidReferenceException(const InvalidReferenceException &e)
-        : FileException(e), id(e.id), reference(e.reference) { }
-    InvalidReferenceException(const string &msg,
-                              const string &file = "",
-                              const string &ID = "")
-                        : FileException(msg, file), id(ID) {
-        reference = filename + '#' + id;
+    explicit InvalidReferenceException(const string &file,
+                                       const string &ID,
+                                       const string &msg = "")
+                        : FileException(file, msg), _id(ID) {
+        _reference = filename() + '#' + id();
 //        *this << reference << ": " << message;
     }
 
     // Accessors
-    const string & getReference() const { return reference; }
-    const string & getID() const { return id; }
+    const string & reference() const { return _reference; }
+    const string & id() const { return _id; }
 
 protected:
-    string id, reference;
+    string _id, _reference;
 };
 
 
-class Inca::IO::FileFormatException : public FileException {
+class inca::io::FileFormatException : public FileException {
 public:
     // Constructors
-    FileFormatException(const FileFormatException &e)
-        : FileException(e), line(e.line) { }
-    FileFormatException(const string &file, int lineNo = 0)
-        : FileException(file), line(lineNo) { }
-    FileFormatException(const string &msg, const string &file, int lineNo)
-        : FileException(msg, file), line(lineNo) { }
+    explicit FileFormatException(const string &file, int lNo = 1, int cNo = 1,
+                                 const string &msg = "")
+        : FileException(file, msg), _line(lNo), _column(cNo) { }
 
     // Accessors
-    int getLineNumber() { return line; }
+    int line()   const { return _line; }
+    int column() const { return _column; }
+    void setLine(int ln)   { _line = ln; }
+    void setColumn(int cl) { _column = cl; }
 
 protected:
-    int line;
+    int _line, _column;
 };
 
 
-class Inca::IO::InvalidFileTypeException : public FileException {
+class inca::io::InvalidFileTypeException : public FileException {
 public:
     // Constructors
-    InvalidFileTypeException(const InvalidFileTypeException &e)
-        : FileException(e) { }
-    InvalidFileTypeException(const string &file)
-        : FileException(file) { }
-    InvalidFileTypeException(const string &msg, const string &file)
-        : FileException(msg, file) { }
+    explicit InvalidFileTypeException(const string &file,
+                                      const string &msg = "")
+        : FileException(file, msg) { }
 };
 
 
-class Inca::IO::FileAccessException : public FileException {
+class inca::io::FileAccessException : public FileException {
 public:
     // Constructors
-    FileAccessException(const FileAccessException &e)
-        : FileException(e) { }
-    FileAccessException(const string &file)
-        : FileException(file) { }
-    FileAccessException(const string &msg, const string &file)
-        : FileException(msg, file) { }
+    explicit FileAccessException(const string &file, const string &msg = "")
+        : FileException(file, msg) { }
 };
 
 #endif

@@ -91,9 +91,13 @@ public:
         RenderStatistics;
 
     // Geometric type definitions
-    typedef typename api::Point2D    Point2D;
-    typedef typename api::Vector2D   Vector2D;
-    typedef typename api::Matrix     Matrix;
+    typedef typename api::Point2D   Point2D;
+    typedef typename api::Vector2D  Vector2D;
+
+    typedef typename api::Point3D   Point3D;
+    typedef typename api::Vector3D  Vector3D;
+
+    typedef typename api::Matrix    Matrix;
 
 
 /*---------------------------------------------------------------------------*

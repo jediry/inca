@@ -131,6 +131,15 @@ Color<scalar, cs, hasAlpha> operator%(const Color<scalar, cs, hasAlpha> &c1,
         struct inca::imaging::colorspace_traits<sRGB, true> {
             static const size_t components = 4;
         };
+
+        template <typename s, ColorSpace cs, bool alpha>
+        ostream & operator<<(ostream &os, const Color<s, cs, alpha> &c) {
+            os << '<';
+            for (index_t i = 0; i < index_t(c.size) - 1; ++i)
+                os << c[i] << ", ";
+            os << c[c.size - 1] << '>';
+            return os;
+        }
     };
 };
 

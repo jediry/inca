@@ -29,7 +29,15 @@
 #endif
 
 
-// Include C++ stdlib's and Boost's smart(er) pointers
+// Declare special primitive types
+namespace inca {
+    typedef int             index_t;    // An index into a list
+    typedef unsigned int    id_t;       // A unique, numeric identifier
+    typedef unsigned short  uchar;      // Unicode character
+};
+
+
+// We take the C++ stdlib & Boost smart(er) pointers as "core" components
 #include <memory>
 #include <boost/scoped_ptr.hpp>
 #include <boost/scoped_array.hpp>
@@ -63,6 +71,7 @@ namespace inca {
     using std::ostream;
 };
 
+
 #include <fstream>
 namespace inca {
     using std::ifstream;
@@ -94,12 +103,6 @@ namespace inca {
     using stl_ext::hash_set;
 };
 
-
-// Declare special primitive types
-namespace inca {
-    typedef int index_t;                // Index into a list
-    typedef unsigned short  uchar;      // Unicode character
-};
 
 // Everything in the system should have access to the Logger instance
 #include <inca/util/Logger.hpp>

@@ -58,40 +58,44 @@ public:
 
     // Constructor accepting three underlying iterators:
     //      current:where we begin/end our iteratin' reign of terror
-    //      first:  where to reset to when end is reached
-    //      last:   where to jump back to start
+    //      begin:  where to reset to when end is reached
+    //      end:   where to jump back to start
     wraparound_iterator(iterator_type start,
-                        iterator_type first,
-                        iterator_type last)
+                        iterator_type begin,
+                        iterator_type end)
         : _start(start),
           _current(start),
-          _first(first),
-          _last(last),
+          _begin(begin),
+          _end(end),
           _done(false) { }
 
     // Constructor accepting two underlying iterators and a count
-    //      count:  how many forward from first to start from
-    //      first:  where to reset to when last is reached
-    //      last:   where to jump back to first
+    //      count:  how many forward from begin to start from (this wraps too)
+    //      begin:  where to reset to when end is reached
+    //      end:   where to jump back to begin
     wraparound_iterator(size_t count,
-                        iterator_type first,
-                        iterator_type last)
-        : _start(first),
-          _current(first),
-          _first(first),
-          _last(last),
-          _done(false) {
+                        iterator_type begin,
+                        iterator_type end)
+            : _start(begin),
+              _current(begin),
+              _begin(begin),
+              _end(end),
+              _done(false) {
 
-        for (size_t i = 0; i < count; i++)  // Walk forward "count" steps
-            operator++();
+        // Walk forward "count" steps
+        for (size_t i = 0; i < count; i++)
+            _current = next();
+
+        // This is our new 'start'
+        _start = _current;
     }
 
     // Normal copy constructor
     wraparound_iterator(const wraparound_iterator &iter)
         : _start(iter.start()),
           _current(iter.current()),
-          _first(iter.first()),
-          _last(iter.last()),
+          _begin(iter.begin()),
+          _end(iter.end()),
           _done(false) { }
 
     // A wraparound iterator can be copied from a similar type (?)
@@ -99,8 +103,8 @@ public:
     wraparound_iterator(const wraparound_iterator<_It> &iter)
         : _start(iter.start()),
           _current(iter.current()),
-          _first(iter.first()),
-          _last(iter.last()),
+          _begin(iter.begin()),
+          _end(iter.end()),
           _done(false) { }
 
 
@@ -111,8 +115,8 @@ public:
     // Access to the underlying iterators that do all the work
     iterator_type current() const { return _current; }
     iterator_type start()   const { return _start; }
-    iterator_type first()   const { return _first; }
-    iterator_type last()    const { return _last; }
+    iterator_type begin()   const { return _begin; }
+    iterator_type end()    const { return _end; }
 
     bool done() const { return _done; }
 
@@ -153,15 +157,15 @@ protected:
     iterator_type next() const {
         iterator_type nx = current();
         ++nx;
-        if (nx == _last)
-            nx = _first;        // Wrap around to the beginning
+        if (nx == end())
+            nx = begin();        // Wrap around to the beginning
         return nx;
     }
 
     iterator_type _current; // Our current location in the container
     iterator_type _start;   // Where we start/end from
-    iterator_type _first;   // The lower end of our domain
-    iterator_type _last;    // The upper end of our domain
+    iterator_type _begin;   // The lower end of our domain
+    iterator_type _end;    // The upper end of our domain
 
     bool _done;             // Have we completed the loop
 };
@@ -197,7 +201,7 @@ namespace inca {
     template <typename _Iterator>
     inline bool operator==(const wraparound_iterator<_Iterator> &x,
                            const _Iterator &y) {
-        if (x.done() && y == _Iterator())
+        if (x.done() && y == x.end())
             return true;                // Both represent "end" in some way
         else
             return x.current() == y;    // They might point the same place
