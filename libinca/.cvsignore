@@ -1,12 +1,14 @@
+# Autoconf/Automake-generated files
 Makefile
 Makefile.in
-src_catalog
+configure
 aclocal.m4
 autom4te.cache
-config
 config.log
 config.status
-configure
+config
+
+# Visual Studio-generated files
 [Dd]ebug
 [Rr]elease
 *.pcs

@@ -1,10 +1,11 @@
+# Autoconf/Automake-generated files
 Makefile
 Makefile.in
-
 config-ac.h*
 stamp*
-
 .deps
-.xvpics
+src_catalog
+
+# Non-current source directories
 old
 new
