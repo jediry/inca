@@ -21,16 +21,22 @@
 #include <boost/array.hpp>
 
 // Import the Boost preprocessor metaprogramming library
-#include <boost/preprocessor/arithmetic/inc.hpp>
-#include <boost/preprocessor/arithmetic/mul.hpp>
+//#include <boost/preprocessor/arithmetic/inc.hpp>
+//#include <boost/preprocessor/arithmetic/mul.hpp>
 
 // Import template metaprogramming constraints
-#include <boost/type_traits.hpp>
-#include <inca/util/metaprogramming>
+//#include <boost/type_traits.hpp>
+//#include <inca/util/metaprogramming>
 
 // Import scalar_traits definition
-#include "scalar_types"
+//#include "scalar_types"
 
+namespace inca {
+    namespace math {
+        template <typename scalar, inca::size_t dim>
+        class Array : public boost::array<scalar, dim> { };
+    }
+}
 #if 0
     /**
      * Creates a string representation of elements in this list.

@@ -160,10 +160,10 @@
 
 
 // Array base class type
-#define A(n)        boost::array<scalar, n>
+#define A(n)        Array<scalar, n>
 
 // Color type
-#define L(cs)        Color<scalar, cs>
+#define L(cs)       Color<scalar, cs>
 
 // Scalar and complex types
 #define S           typename scalar_traits<scalar>::value_type
