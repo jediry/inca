@@ -1,72 +1,37 @@
 ## Makefile.am -- Process this file with automake to generate Makefile.in
 
-# Incorporate additional Makefile rules
-include Makefile.rules
+## Incorporate automatic source file tracking mechanism
+include $(top_srcdir)/ac_tools/automake/src-catalog.rules
+
+## Incorporate manually-invoked rules for regenerating and cleaning things
+include $(top_srcdir)/ac_tools/automake/manual.rules
 
 
-###############################################################################
-##
-## Build configuration variables
-##
-###############################################################################
-# Final output binaries go here
-distdir=$(top_srcdir)/dist
+# Import the auto-generated source catalog
+include $(top_srcdir)/config/src-catalog
 
-# Intermediate generated source files go here (and make sure we 'clean' them)
-gen_srcdir = $(top_srcdir)/src/generated
-CLEANFILES = $(gen_srcdir)/*
-
-
-###############################################################################
-##
-## Source file definitions
-##
-###############################################################################
-dist_LIBRARIES = libinca.a
-
-libinca_a_SOURCES = $(src_inca_util) $(src_inca_math) $(src_inca_imaging)   \
-		    $(src_inca_world) $(src_inca_rendering)		    \
-                    $(src_inca_ui)					    \
-		    $(src_inca_dynamics)				    \
-		    $(src_inca_integration_hardware_math)		    \
-		    $(src_inca_integration_glut)			    \
-		    $(src_inca_integration_opengl)			    \
-		    $(src_inca_integration_posix)			    \
+# Library definitions
+lib_LIBRARIES = libinca.a
+libinca_a_SOURCES = $(inca_util_src) $(inca_math_src) $(inca_imaging_src)   \
+		    $(inca_world_src) $(inca_rendering_src)	    	    \
+		    $(inca_ui_src)					    \
+		    $(inca_dynamics_src)				    \
+		    $(inca_integration_hardware_math_src)		    \
+		    $(inca_integration_glut_src)			    \
+		    $(inca_integration_opengl_src)			    \
+		    $(inca_integration_fftw_src)				    \
+		    $(inca_integration_posix_src)			    \
 		    inca/globals.cpp
 #libinca_la_LDFLAGS    = -version-info $(PACKAGE_VERSION)
 
+# Distributed include files
+nobase_include_HEADERS = $(inca_tpl) $(inca_hdr) inca/config-ac.h
+
 
 ## Unit tests
-check_PROGRAMS = run_unit_tests
-run_unit_tests_SOURCES = inca/test/unit_test_main.cpp
-run_unit_tests_LDADD    = -L. -lcppunit
-#run_unit_tests_LDADD    = -L. -lcppunit -linca
-
-
-###############################################################################
-##
-## Special build target definitions
-##
-###############################################################################
-
-# Generate serialization code from XML
-XSLT = java org.apache.xalan.xslt.Process
-xslt_src = io/normalize-schema.xsl io/schema-to-c++.xsl
-$(gen_srcdir)/SceneIdentifiers.h++ : io/scene/scene-schema.xsd $(xslt_src)
-	$(XSLT) -IN io/scene/scene-schema.xsd                \
-		-XSL io/normalize-schema.xsl                \
-		-OUT $(gen_srcdir)/scene-normalized.xsd &&        \
-	$(XSLT) -IN $(gen_srcdir)/scene-normalized.xsd            \
-		-XSL io/schema-to-c++.xsl                \
-		-OUT $(gen_srcdir)/dummy.xml                \
-		-PARAM source        io/scene/scene-schema.xsd        \
-		-PARAM ident-decl   SceneIdentifiers.h++        \
-		-PARAM ident-impl   SceneIdentifiers.c++        \
-		-PARAM ser-decl        SceneSerialization.h++        \
-		-PARAM ser-impl        SceneSerialization.c++ &&        \
-	echo >> $(gen_srcdir)/SceneIdentifiers.h++ &&            \
-	echo >> $(gen_srcdir)/SceneIdentifiers.c++ &&            \
-	echo >> $(gen_srcdir)/SceneSerialization.h++ &&            \
-	echo >> $(gen_srcdir)/SceneSerialization.c++
-#	rm -f $(gen_srcdir)/dummy.xml $(gen_srcdir)/normalized.xsd
-
+#check_PROGRAMS = run_unit_tests
+check_PROGRAMS = simple_raster_op_test run_unit_tests
+simple_raster_op_test_SOURCES = test/simple_raster_op_test.cpp
+simple_raster_op_test_LDADD   = -L. -linca
+run_unit_tests_SOURCES = test/unit_test_main.cpp
+run_unit_tests_LDADD   = -L. -lcppunit -linca

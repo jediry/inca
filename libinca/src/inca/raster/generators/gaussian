@@ -1,0 +1,115 @@
+/** -*- C++ -*-
+ *
+ * File: gaussian
+ *
+ * Author: Ryan L. Saunders
+ *
+ * Copyright 2004, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ *      This file implements a raster generator function for an n-dimensional
+ *      Gaussian shape, centered at a point with a certain width in each
+ *      direction.
+ */
+
+#ifndef INCA_RASTER_GENERATOR_GAUSSIAN
+#define INCA_RASTER_GENERATOR_GAUSSIAN
+
+// Import system configuration
+#include <inca/inca-common.h>
+
+// This is part of the Inca raster processing library
+namespace inca {
+    namespace raster {
+        // Forward declarations
+        template <typename T, inca::SizeType dim> class GaussianGeneratorRaster;
+
+    };
+};
+
+// Import generator base class
+#include "GeneratorRasterBase"
+
+// Import math functions
+#include <cmath>
+
+
+// This is part of the Inca raster processing library
+namespace inca {
+    namespace raster {
+
+        template <typename T, inca::SizeType dim>
+        class GaussianGeneratorRaster
+                : public GeneratorRasterBase<GaussianGeneratorRaster<T, dim>, T, dim> {
+        public:
+            // Type definitions
+            typedef GaussianGeneratorRaster<T, dim> ThisType;
+            typedef typename ThisType::Types        Types;
+
+            // Imported types
+            typedef typename Types::ElementType     ElementType;
+            typedef typename Types::ConstReference  ConstReference;
+            typedef typename Types::SizeType        SizeType;
+
+            // How many dimensions do we have
+            static const SizeType dimensionality = dim;
+
+            // Array of T
+            typedef inca::Array<ElementType, dim>   ElementArray;
+
+        public:
+            // Constructor
+            template <class ElementList1, class ElementList2>
+            GaussianGeneratorRaster(const ElementList1 & s,
+                                    const ElementList2 & m)
+                    : mu(m), sigma(s) {
+                // Precalculate some constants
+                ElementType sqrt2PI = ElementType(std::sqrt(2 * M_PI));
+                scalingConstant = 1;
+                for (IndexType d = 0; d < dimensionality; ++d) {
+                    scalingConstant /= sigma[d] * sqrt2PI;
+                    exponentDivisors[d] = ElementType(0.5) / (sigma[d] * sigma[d]);
+                }
+            }
+
+
+        protected:
+            friend class RasterCoreAccess;
+
+            // Element evaluator
+            template <class IndexList, typename ReturnType>
+            ReturnType getElement(const IndexList & indices) const {
+                typename IndexList::const_iterator it = indices.begin();
+                ElementType exponent = 0;
+                for (IndexType d = 0; d < dimensionality; ++d, ++it) {
+                    ElementType dx = (*it - mu[d]);
+                    exponent += dx * dx * exponentDivisors[d];
+                }
+                return scalingConstant * std::exp(-exponent);
+            }
+
+        protected:
+            ElementArray mu, sigma, exponentDivisors;
+            ElementType  scalingConstant;
+        };
+
+        // Factory function
+        template <typename T, inca::SizeType dim>
+        GaussianGeneratorRaster<T, dim> gaussian(const T & sigma) {
+            typedef typename GaussianGeneratorRaster<T, dim>::ElementArray ElementArray;
+            return GaussianGeneratorRaster<T, dim>(ElementArray(sigma),
+                                                   ElementArray(0));
+        }
+
+        // Factory function
+        template <typename T, inca::SizeType dim>
+        GaussianGeneratorRaster<T, dim> gaussian(
+                    const inca::Array<T, dim> & sigma = inca::Array<T, dim>(T(1)),
+                    const inca::Array<T, dim> & mu    = inca::Array<T, dim>(T(0))) {
+            return GaussianGeneratorRaster<T, dim>(sigma, mu);
+        }
+
+    }
+}
+
+#endif

@@ -68,30 +68,30 @@ public:
      */
     template <typename scalar2>
     Point(const Point<scalar2, dimensionality> &p) {
-        std::copy(p.begin(), p.end(), begin());
+        std::copy(p.begin(), p.end(), this->begin());
     }
 
     /**
      * Initialization from an Array (or subclass).
      */
     explicit Point(const Array<scalar_t, dimensionality> &arr) {
-        std::copy(arr.begin(), arr.end(), begin());
+        std::copy(arr.begin(), arr.end(), this->begin());
     }
 
     /**
      * Constant element initialization constructor.
      */
     explicit Point(scalar_arg_t e) {
-        std::fill(begin(), end(), e);
+        std::fill(this->begin(), this->end(), e);
     }
- 
+
     /**
      * C-style array constructor. The element type must be convertible to
      * scalar_t.
      */
     template <typename scalar2>
     explicit Point(scalar2 * arr) {
-        std::copy(arr, arr + static_size, begin());
+        std::copy(arr, arr + dimensionality, this->begin());
     }
 
     /**
@@ -113,7 +113,7 @@ public:
     template <typename scalar2>
     explicit Point(const Quaternion<scalar2> &q) {
         BOOST_STATIC_ASSERT(dimensionality == 3);  // Only works for 3D Points
-        std::copy(q.begin() + 1, q.end(), begin());
+        std::copy(q.begin() + 1, q.end(), this->begin());
     }
 
 
@@ -126,7 +126,7 @@ public:
      * \returns a string like "(1.4, 3.5)"
      */
     operator std::string() const {
-        return '(' + stringifyElements() + ')';
+        return '(' + this->stringifyElements() + ')';
     }
 };
 

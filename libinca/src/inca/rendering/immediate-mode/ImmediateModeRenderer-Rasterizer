@@ -1,7 +1,7 @@
 /** -*- C++ -*-
  *
  * File: ImmediateModeRenderer-Rasterizer
- * 
+ *
  * Author: Ryan L. Saunders
  *
  * Copyright 2004, Ryan L. Saunders. All rights reserved.
@@ -13,257 +13,123 @@
  *
  *      This file is not meant to be used directly, but is included by
  *      the main ImmediateModeRenderer header file.
+ *
+ * FIXME: Should be able to turn on/off vertex/primitive counting with a template parameter
  */
 
 #ifndef INCA_RENDERING_IMMEDIATE_MODE_RENDERER_RASTERIZER
 #define INCA_RENDERING_IMMEDIATE_MODE_RENDERER_RASTERIZER
 
-#define SYNC_CACHE(PROPERTY, CACHE)                                         \
-    if (! isCacheValid<PROPERTY>()) {                                       \
-        getHardwareState<PROPERTY>(CACHE);                                  \
-        validateCache<PROPERTY>();                                          \
-    }
-#define SYNC_CACHE_AND_RETURN(PROPERTY, CACHE)                              \
-    SYNC_CACHE(PROPERTY, CACHE);                                            \
-    return CACHE;
+// Import rendering primitive data structure
+#include "PrimitiveArray"
 
-#define WRITE_THRU_CACHE(PROPERTY, CACHE, VALUE) {                          \
-    CACHE = VALUE;                                                          \
-    setHardwareState<PROPERTY>(CACHE);                                      \
-    validateCache<PROPERTY>();                                              \
-}
-
-#define RASTERIZER_CACHE_SIZE 10
 
 RENDERER_TEMPLATE
 class RENDERER::Rasterizer
     : public RENDERER::Component,
-      protected CachePolicy<RASTERIZER_CACHE_SIZE> {
+      protected CachePolicy<API::FirstRasterizerProperty,
+                            API::LastRasterizerProperty> {
 /*---------------------------------------------------------------------------*
- | Constructors & Destructor
+ | Constructor & destructor
  *---------------------------------------------------------------------------*/
 public:
     // Constructor
-    Rasterizer(RENDERER &r, IDType myID);
+    Rasterizer(RENDERER &r) : Component(r, 0) { }
 
     // Destructor
-    ~Rasterizer();
+    virtual ~Rasterizer() { }
 
 
 /*---------------------------------------------------------------------------*
  | Rasterization mode/feature toggles
  *---------------------------------------------------------------------------*/
 public:
-    // Depth buffering
-    bool isDepthBufferingEnabled() const {
-        SYNC_CACHE_AND_RETURN(DepthBuffering, _isDepthBufferingEnabled);
-    }
-    void enableDepthBuffering(bool enabled) {
-        WRITE_THRU_CACHE(DepthBuffering, _isDepthBufferingEnabled, enabled);
-    }
-
-    // Alpha blending
-    bool isAlphaBlendingEnabled() const {
-        SYNC_CACHE_AND_RETURN(AlphaBlending, _isAlphaBlendingEnabled);
-    }
-    void enableAlphaBlending(bool enabled) {
-        WRITE_THRU_CACHE(AlphaBlending, _isAlphaBlendingEnabled, enabled);
-    }
-
-    // Backface (or frontface) culling
-    bool isFaceCullingEnabled() const {
-        SYNC_CACHE_AND_RETURN(FaceCulling, _isFaceCullingEnabled);
-    }
-    void enableFaceCulling(bool enabled) {
-        WRITE_THRU_CACHE(FaceCulling, _isFaceCullingEnabled, enabled);
-    }
-
-    // Illumination
-    bool isLightingEnabled() const {
-        SYNC_CACHE_AND_RETURN(Lighting, _isLightingEnabled);
-    }
-    void enableLighting(bool enabled) {
-        WRITE_THRU_CACHE(Lighting, _isLightingEnabled, enabled);
-    }
-
-    // Point antialiasing
-    bool isPointSmoothingEnabled() const {
-        SYNC_CACHE_AND_RETURN(PointSmoothing, _isPointSmoothingEnabled);
-    }
-    void enablePointSmoothing(bool enabled) {
-        WRITE_THRU_CACHE(PointSmoothing, _isPointSmoothingEnabled, enabled);
-    }
-
-    // Line antialiasing
-    bool isLineSmoothingEnabled() const {
-        SYNC_CACHE_AND_RETURN(LineSmoothing, _isLineSmoothingEnabled);
-    }
-    void enableLineSmoothing(bool enabled) {
-        WRITE_THRU_CACHE(LineSmoothing, _isLineSmoothingEnabled, enabled);
-    }
-
-    // Polygon antialiasing
-    bool isPolygonSmoothingEnabled() const {
-        SYNC_CACHE_AND_RETURN(PolygonSmoothing, _isPolygonSmoothingEnabled);
-    }
-    void enablePolygonSmoothing(bool enabled) {
-        WRITE_THRU_CACHE(PolygonSmoothing, _isPolygonSmoothingEnabled, enabled);
-    }
-
-protected:
-    bool _isDepthBufferingEnabled,
-         _isAlphaBlendingEnabled,
-         _isFaceCullingEnabled,
-         _isLightingEnabled,
-         _isPointSmoothingEnabled,
-         _isLineSmoothingEnabled,
-         _isPolygonSmoothingEnabled;
+    TOGGLE_PROPERTY(DepthBuffering)
+    TOGGLE_PROPERTY(AlphaBlending)
+    TOGGLE_PROPERTY(Lighting)
+    TOGGLE_PROPERTY(PointSmoothing)
+    TOGGLE_PROPERTY(LineSmoothing)
+    TOGGLE_PROPERTY(PolygonSmoothing)
 
 
 /*---------------------------------------------------------------------------*
  | Rasterization parameter functions
  *---------------------------------------------------------------------------*/
 public:
-    // Current background color
-    Color backgroundColor() const {
-        SYNC_CACHE_AND_RETURN(BackgroundColor, _backgroundColor);
-    }
-    void setBackgroundColor(const Color & c) {
-        WRITE_THRU_CACHE(BackgroundColor, _backgroundColor, c);
-    }
+    VALUE_PROPERTY(Color,           BackgroundColor,    backgroundColor)
+    VALUE_PROPERTY(ShadingModel,    ShadingModel,       shadingModel)
+    VALUE_PROPERTY(geometry_t,      PointDiameter,      pointDiameter)
+    VALUE_PROPERTY(geometry_t,      LineWidth,          lineWidth)
+    VALUE_PROPERTY(Color,           CurrentColor,       currentColor)
+    VALUE_PROPERTY(Normal,          CurrentNormal,      currentNormal)
+    VALUE_PROPERTY(TexCoord,        CurrentTexCoord,    currentTexCoords)
+    VALUE_PROPERTY(bool,            CurrentEdgeFlag,    currentEdgeFlag)
 
-
-/*---------------------------------------------------------------------------*
- | Rasterization parameter functions
- *---------------------------------------------------------------------------*/
-public:
-    // Shading mode
-    ShadingModel shadingModel() const {
-        SYNC_CACHE_AND_RETURN(CurrentShadingModel, _currentShadingModel);
-    }
-    void setShadingModel(ShadingModel model) {
-        WRITE_THRU_CACHE(CurrentShadingModel, _currentShadingModel, model);
-    }
-
-    // Current point diameter
-    geometry_t pointDiameter() const {
-        SYNC_CACHE_AND_RETURN(CurrentPointDiameter, _pointDiameter);
-    }
-    void setPointDiameter(geometry_t diameter) {
-        WRITE_THRU_CACHE(CurrentPointDiameter, _pointDiameter, diameter);
-    }
-
-    // Current line width
-    geometry_t lineWidth() const {
-        SYNC_CACHE_AND_RETURN(CurrentLineWidth, _lineWidth);
-    }
-    void setLineWidth(geometry_t width) {
-        WRITE_THRU_CACHE(CurrentLineWidth, _lineWidth, width);
-    }
-
-    // Current drawing color
-    Color color() const {
-        SYNC_CACHE_AND_RETURN(CurrentColor, _currentColor);
-    }
-    void setColor(const Color & c) {
-        WRITE_THRU_CACHE(CurrentColor, _currentColor, c);
-    }
-//    template <typename scalar, class colorspace>
-//        void setColor(const math::Color<scalar, colorspace> &c);
-
-    // Current vertex normal
-    Normal normal() const {
-        SYNC_CACHE_AND_RETURN(CurrentNormal, _currentNormal);
-    }
-    void setNormal(const Normal & n) {
-        WRITE_THRU_CACHE(CurrentNormal, _currentNormal, n);
-    }
-//    template <typename scalar, SizeType dim>
-//        void setNormal(const math::Vector<scalar, dim> &n);
-
-    // Current texture coordinates
-    TexCoord texCoord() const {
-        SYNC_CACHE_AND_RETURN(CurrentTexCoord, _currentTexCoord);
-    }
-    void setTexCoord(const TexCoord & t) {
-        WRITE_THRU_CACHE(CurrentTexCoord, _currentTexCoord, t);
-    }
-//    template <typename scalar, SizeType dim>
-//        void setTexCoords(const math::Point<scalar, dim> &t);
-
-    // Current edge-of-primitive flag
-    bool edgeFlag() const {
-        SYNC_CACHE_AND_RETURN(CurrentEdgeFlag, _currentEdgeFlag);
-    }
-    void setEdgeFlag(bool enabled) {
-        WRITE_THRU_CACHE(CurrentEdgeFlag, _currentEdgeFlag, isEdge);
-    }
+    // Scalar-list versions
+    // FIXME: scalar versions of setNormal, etc.
 
 
 /*---------------------------------------------------------------------------*
  | Vertex-array functions
  *---------------------------------------------------------------------------*/
 public:
-    // Vertex array data
-    template <typename vertex_t>
-        void setVertexArray(const VertexArray<vertex_t> &va);
-    template <typename vertex_t>
-        void setVertexArray(vertex_t const *va, SizeType stride = 0);
+    // Multi-type primitive array data
+    template <typename v, typename n, typename t, typename c, typename e>
+    void setPrimitiveArray(const PrimitiveArray<v, n, t, c, e> & p) {
+        // Set up the vertex arrays
+        setVertexArray(p.vertices());
+        setNormalArray(p.normals());
+        setTexCoordArray(p.texCoords());
+        setColorArray(p.colors());
+        setEdgeFlagArray(p.edgeFlags());
+    }
 
-    // Normal array data
-    template <typename normal_t>
-        void setNormalArray(const NormalArray<normal_t> &na);
-    template <typename normal_t>
-        void setNormalArray(normal_t const *na, SizeType stride = 0);
-
-    // Texture coordinate array data
-    template <typename tex_coord_t>
-        void setTexCoordArray(const TexCoordArray<tex_coord_t> &tca);
-    template <typename tex_coord_t>
-        void setTexCoordArray(tex_coord_t const *tca, SizeType stride = 0);
-
-    // Color array data
-    template <typename color_t>
-        void setColorArray(const ColorArray<color_t> &ca);
-    template <typename color_t>
-        void setColorArray(color_t const *ca, SizeType stride = 0);
-
-    // Edge flag array data
-    template <typename edge_flag_t>
-        void setEdgeFlagArray(const EdgeFlagArray<edge_flag_t> &efa);
-    void setEdgeFlagArray(bool const *efa, SizeType stride = 0);
+    ARRAY_PROPERTY(VertexArray,   vertexArray)
+    ARRAY_PROPERTY(NormalArray,   normalArray)
+    ARRAY_PROPERTY(TexCoordArray, texCoordArray)
+    ARRAY_PROPERTY(ColorArray,    colorArray)
+    ARRAY_PROPERTY(EdgeFlagArray, edgeFlagArray)
 
 
 /*---------------------------------------------------------------------------*
  | Primitive rendering functions
  *---------------------------------------------------------------------------*/
 public:
-    // Render a pre-built, batch primitive
-    template <typename vertex_t, typename normal_t, typename tex_coord_t,
-              typename color_t, typename edge_flag_t>
-    void renderPrimitive(const Primitive<vertex_t, normal_t, tex_coord_t,
-                                         color_t, edge_flag_t> &p) {
-        // Set up the vertex arrays
-        setVertexArray(p);
-        setNormalArray(p);
-        setTexCoordArray(p);
-        setColorArray(p);
-        setEdgeFlagArray(p);
-
-        // Render the primitive
-        // FIXME: Implement
-    }
-
     // Start/end rendering a geometric primitive
-    void beginPrimitive(PrimitiveType type);
-    void endPrimitive();
+    void beginPrimitive(PrimitiveType type) {
+        _vertexCount = 0;
+        API::beginPrimitive(type);
+    }
+    void endPrimitive() {
+        API::endPrimitive();
+    }
 
     // Create a vertex at a point
     template <typename scalar, SizeType dim>
-        void vertexAt(const math::Point<scalar, dim> &p);
+    void vertexAt(const math::Point<scalar, dim> & p) {
+        ++_vertexCount;
+        API::renderVertex(p);
+    }
 
     // Create a vertex using the data in the currently enabled arrays
-    void vertexAt(IndexType index);
+    void vertexIndex(IndexType index) {
+        ++_vertexCount;
+        API::renderVertexIndex(index);
+    }
+
+    // Render a range of vertices from the current primitive arrays
+    void renderPrimitive(PrimitiveType type, IndexType from, SizeType count) {
+        _vertexCount += count;
+        API::renderArrayRange(type, from, count);
+    }
+//     void vertexRange(IndexType from, IndexType to) {
+//         _vertexCount += to - from + 1;
+//         API::renderVertexIndexRange(from, to);
+//     }
+
+protected:
+    // How many vertices have we rendered in the current begin/end pair?
+    int _vertexCount;
 };
 
 #endif

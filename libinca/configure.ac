@@ -13,8 +13,8 @@ AC_INIT(libinca, 0.5.0, rls@tamu.edu, libinca)
 AC_CONFIG_SRCDIR(src/inca/inca-common.h)
 AC_CONFIG_AUX_DIR(config)
 AC_CONFIG_MACRO_DIR(config)
-AC_CONFIG_FILES(Makefile src/Makefile test_raster/Makefile)
-AC_CONFIG_HEADERS(src/inca/config-ac.h)
+AC_CONFIG_FILES(Makefile src/Makefile)
+AC_CONFIG_HEADERS(config-ac.h)
 AM_INIT_AUTOMAKE($PACKAGE_NAME, $PACKAGE_VERSION)
 AC_CANONICAL_HOST
 
@@ -28,6 +28,9 @@ AC_PROG_RANLIB      # Tool for building static libraries
 # Compiler configuration
 AC_LANG(C++)
 
+# A little-bitty hack to make Automake and Autoconf get along
+MK='' ; AC_SUBST(MK)
+
 
 ###############################################################################
 ##
@@ -39,7 +42,7 @@ AC_LANG(C++)
 
 AC_HEADER_STDC
 AC_HEADER_TIME
-AC_CHECK_HEADERS(math.h sys/time.h sys/types.h sys/stat.h unistd.h)
+AC_CHECK_HEADERS([math.h sys/time.h sys/types.h sys/stat.h unistd.h])
 ACT_REQUIRE_HEADER(vector,                  [C++ Standard Template Library])
 #ACT_REQUIRE_HEADER(hash_map,                [C++ STL hash container extensions])
 ACT_REQUIRE_HEADER(ext/hash_map,            [C++ STL hash container extensions])
@@ -79,7 +82,8 @@ ACT_ENABLE_OPTION(pixel-shaders,  yes, per-pixel programmable rendering)
 AC_PATH_XTRA
 if test -z "$X_DISPLAY_MISSING"; then
     CXXFLAGS="$CXXFLAGS $X_CFLAGS"
-    LDFLAGS="$LDFLAGS $X_LIBS"
+    LDFLAGS="$LDFLAGS $X_LIBS -Xlinker -rpath -Xlinker $ac_x_libraries"
+    LIBS="$LIBS $X_PRE_LIBS -lX11 $X_EXTRA_LIBS"
 fi
 
 
@@ -108,6 +112,23 @@ ACT_CHOOSE_PACKAGE(xml-parser, [libxml xerces], [none], [XML parser], yes, yes, 
     ACT_CHOICE_VERIFY(libxml, [
         echo "Just kidding...libxml isn't supported"
         act_package_verified=no
+    ])
+])
+
+
+#------------------------------------------------------------------------------
+# Which (if any) FFT library should we use?
+#------------------------------------------------------------------------------
+ACT_CHOOSE_PACKAGE(fft-library, [fftw3], [fftw3], [FFT library], yes, yes, [
+    ACT_CHOICE_VERIFY(fftw3, [
+        AC_CHECK_HEADERS(fftw3.h,
+                         [], [act_package_verified="no"])
+        ACT_CHECK_LIB(fftw3f, fftwf_free, [],
+                         [], [act_package_verified="no"])
+        ACT_CHECK_LIB(fftw3, fftw_free, [],
+                         [], [act_package_verified="no"])
+#        ACT_CHECK_LIB(fftw3l, fftwl_free, [],
+#                         [], [act_package_verified="no"])
     ])
 ])
 
@@ -156,6 +177,18 @@ ACT_WITH_PACKAGE(win32, no,  [Microsoft's Win32 GUI as a user interface])
 # Output resulting files
 AC_OUTPUT
 
+# Symlink to the source directory so that Make can find the files
+sources="inca"
+if ! test -e "${sources}"; then
+    echo "Creating symlink `pwd`/${sources} => ${srcdir}/src/${sources}"
+    ln -s "${srcdir}/src/${sources}" 2>&1
+fi
+
+# Copy the configure-generated header so it gets installed
+if ! test -e "${sources}/config-ac.h" || diff -q "config-ac.h" "${sources}/config-ac.h" > /dev/null; then
+    cp -a "config-ac.h" "${sources}/config-ac.h" 2>&1
+fi
+
 
 # Print out a description of our current configuration
 echo
@@ -169,6 +202,9 @@ echo "        Vertex shaders...........$enable_vertex_shaders"
 echo "        Pixel shaders............$enable_pixel_shaders"
 echo "      Raytracing.................$enable_raytracing"
 echo "      Radiosity..................$enable_radiosity"
+echo
+echo "    Other libraries"
+echo "      FFT library................$with_fft_library"
 echo
 echo "    I/O support"
 echo "      Scene file I/O.............$enable_scene_io"

@@ -60,14 +60,14 @@ public:
      */
     template <typename scalar2>
     explicit Quaternion(const Quaternion<scalar2> &q) {
-        std::copy(q.begin(), q.end(), begin());
+        std::copy(q.begin(), q.end(), this->begin());
     }
 
     /**
      * Initialization from an Array (or subclass).
      */
     explicit Quaternion(const Array<scalar_t, 4> &arr) {
-        std::copy(arr.begin(), arr.end(), begin());
+        std::copy(arr.begin(), arr.end(), this->begin());
     }
 
     /**
@@ -80,8 +80,8 @@ public:
      */
     template <typename scalar2>
     explicit Quaternion(const Array<scalar2, 3> &arr) {
-        *begin() = scalar_t(0.0);
-        std::copy(arr.begin(), arr.end(), begin() + 1);
+        *this->begin() = scalar_t(0);
+        std::copy(arr.begin(), arr.end(), this->begin() + 1);
     }
 
     /**
@@ -94,8 +94,8 @@ public:
      */
     template <typename scalar2>
     explicit Quaternion(scalar_arg_t s, const Array<scalar2, 3> &arr) {
-        *begin() = s;
-        std::copy(arr.begin(), arr.end(), begin() + 1);
+        *this->begin() = s;
+        std::copy(arr.begin(), arr.end(), this->begin() + 1);
     }
 
     /**
@@ -104,14 +104,14 @@ public:
      */
     template <typename scalar2>
     explicit Quaternion(scalar2 * arr) {
-        std::copy(arr, arr + 3, begin());
+        std::copy(arr, arr + 3, this->begin());
     }
 
     /**
      * Constant element initialization constructor
      */
     explicit Quaternion(scalar_arg_t e) {
-        std::fill(begin(), end(), e);
+        std::fill(this->begin(), this->end(), e);
     }
 
     /**
@@ -130,8 +130,8 @@ public:
      * Cast to string representation.
      * \returns a string like "(1.4, 3.5)"
      */
-    operator string() const {
-        return string("[") + elements[0] + " (" + stringifyElements() + ")]";
+    operator std::string() const {
+        return std::string("[") + *this[0] + " (" + this->stringifyElements() + ")]";
     }
 };
 

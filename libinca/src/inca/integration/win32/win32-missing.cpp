@@ -15,7 +15,7 @@
 #if __MS_WINDOZE__  // Ensure we're compiling for the right platform
 
 // Import standard math functions
-#include <math.h>
+#include <cmath>
 
 // Windows doesn't have the appropriate round function for floats
 float roundf(float x) {

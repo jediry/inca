@@ -1,0 +1,198 @@
+/* -*- C++ -*-
+ *
+ * File: MultiArrayViewRaster
+ *
+ * Author: Ryan L. Saunders
+ *
+ * Copyright 2004, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ *      The ConstMultiArrayViewRaster and MultiArrayViewRaster template classes
+ *      implement the Raster interface for the inca::ConstMultiArrayView and
+ *      inca::MultiArrayView multi-dimensional containers, respectively. The only
+ *      difference is that MultiArrayView allows its contents to be modified.
+ *      <sarcasm> Just thought I'd tell you in case you've never seen the word
+ *      "const" before </sarcasm>.
+ *
+ *      This is useful for treating a viewing an externally managed chunk of raw
+ *      memory as a Raster. These classes will not attempt to deallocate any
+ *      memory when destroyed, nor will they allocate any memory when copied
+ *      (all copies will be views into the same chunk of memory).
+ *
+ * Related:
+ *      See inca/util/MultiArray for the implementation of the underlying
+ *      multi-dimensional data structures.
+ *
+ *      See inca/raster/MultiArrayRaster for a version that manages its own
+ *      memory.
+ * TODO: This should not have the ReadWrite tag for const elements type
+ */
+
+#ifndef INCA_RASTER_MULTI_ARRAY_VIEW_RASTER
+#define INCA_RASTER_MULTI_ARRAY_VIEW_RASTER
+
+// Import system configuration
+#include <inca/inca-common.h>
+
+
+// This is part of the Inca raster processing library
+namespace inca {
+    namespace raster {
+        // Forward declarations
+        template <typename T, inca::SizeType dim> class MultiArrayViewRaster;
+    };
+};
+
+
+// Import container definition
+#include <inca/util/MultiArray>
+
+// Import RasterFacade
+#include "RasterFacade"
+
+// Import metaprogramming tools
+#include <inca/util/metaprogramming/is_collection.hpp>
+
+#include <inca/util/multi-dimensional-macros.hpp>
+#include <inca/util/metaprogramming/macros.hpp>
+
+
+template <typename T, inca::SizeType dim>
+class inca::raster::MultiArrayViewRaster
+            : public RasterFacade<MultiArrayViewRaster<T, dim>,
+                                  RasterTags<FixedSizeRasterTag,
+                                             MovableRasterTag,
+                                             ReadWriteRasterTag>,
+                                  RasterTypes<T, dim> > {
+/*---------------------------------------------------------------------------*
+ | Type & constant declarations
+ *---------------------------------------------------------------------------*/
+public:
+    // Type definitions
+    typedef MultiArrayViewRaster<T, dim>            ThisType;
+    typedef RasterTypes<T, dim>                     Types;
+    typedef MultiArrayView<T, dim>                  MultiArrayType;
+    typedef typename MultiArrayType::StorageOrder   StorageOrder;
+
+    // Imported types
+    typedef typename Types::ElementType     ElementType;
+    typedef typename Types::ConstReference  ConstReference;
+    typedef typename Types::ConstPointer    ConstPointer;
+    typedef typename Types::Pointer         Pointer;
+    typedef typename Types::Region          Region;
+
+    typedef typename MultiArrayType::QualifiedPointer QualifiedPointer;
+
+
+/*---------------------------------------------------------------------------*
+ | Constructors
+ *---------------------------------------------------------------------------*/
+public:
+    // Default (no initialization) constructor
+    explicit MultiArrayViewRaster(const StorageOrder & so = FortranStorageOrder())
+        : _array(MultiArrayType(so)) { }
+
+    // Using default generated copy constructor
+    // MultiArrayViewRaster(const ThisType &r)
+
+    // Pointer constructor
+/*    // Raster conversion constructor
+    template <typename SrcRaster>
+    explicit MultiArrayRaster(const SrcRaster & r,
+                              const StorageOrder & so = FortranStorageOrder(),
+                              ENABLE_FUNCTION_IF(is_raster<SrcRaster>))
+            : _array(so) {
+        array().resize(r.bases(), r.extents());
+        copy(*this, r);                 // Copy all the elements
+    }*/
+
+    // MultiArrayView constructor
+    explicit MultiArrayViewRaster(const MultiArrayType & ma)
+        : _array(ma) { }
+
+    // Arbitrary-dimensional pointer constructor
+    template <class SizeList>
+    explicit MultiArrayViewRaster(QualifiedPointer p, const SizeList & sz,
+                                  const StorageOrder & so = FortranStorageOrder(),
+                                  ENABLE_FUNCTION_IF(is_collection<SizeList>))
+        : _array(p, sz, so) { }
+
+    /**
+     * Parameter list constructors giving the size along each dimension.
+     * Each of these is intended to be used only with instances of the
+     * appropriate rank (calling a constructor of the wrong rank will cause
+     * a compile-time assert).
+     */
+    #define CREATE_DIMENSIONAL_CONSTRUCTOR(DIM)                             \
+        explicit MultiArrayViewRaster(QualifiedPointer p,                   \
+                        PARAMS(DIM, SizeType s),                            \
+                        const StorageOrder & so = FortranStorageOrder())    \
+                : _array(MultiArrayType(p, PARAMS(DIM, s), so)) {           \
+            BOOST_STATIC_ASSERT(ThisType::dimensionality == DIM);           \
+        }
+    FOR_ALL_DIMS(CREATE_DIMENSIONAL_CONSTRUCTOR);
+    #undef CREATE_DIMENSIONAL_CONSTRUCTOR
+
+protected:
+    MultiArrayType      _array;     // The MultiArrayView
+    mutable ElementType _dummy;     // Used when we go out of bounds
+
+
+/*---------------------------------------------------------------------------*
+ | Assignment operator overloads
+ *---------------------------------------------------------------------------*/
+public:
+    INCA_RASTER_ASSIGNMENT_OPERATORS
+
+
+/*---------------------------------------------------------------------------*
+ | Utility functions (not required by any Raster concept)
+ *---------------------------------------------------------------------------*/
+public:
+    // Public access to the underlying MultiArray object (const only)
+    const MultiArrayType & array() const { return _array; }
+    ConstPointer elements() const { return array().elements(); }
+
+//    MultiArrayType & array() { return *_array; }
+//    Pointer elements() { return array().elements(); }
+
+
+/*---------------------------------------------------------------------------*
+ | Core functions required by RasterFacade
+ *---------------------------------------------------------------------------*/
+protected:
+    // Allow RasterFacade to call these protected functions
+    friend class RasterCoreAccess;
+
+    // Functions required by RasterBoundsFacet
+    const Region & getRasterBounds() const { return this->array().bounds(); }
+
+    template <class IndexList>
+    void setRasterBases(const IndexList & bs) {
+        this->_array.setBases(bs);
+    }
+    template <class IndexList>
+    void setRasterExtents(const IndexList & ex) {
+        this->_array.setExtents(ex);
+    }
+
+    // Functions required by RasterAccessFacet
+    template <class IndexList, typename ReturnType>
+    ReturnType getElement(const IndexList & indices) const {
+        return ReturnType(_array(indices));
+    }
+    template <typename ReturnType>
+    ReturnType getDummyElement(ConstReference value) const {
+        _dummy = value;     // Copy over the value
+        return _dummy;      // Return the dummy element
+    }
+};
+
+
+// Clean up the preprocessor's namespace
+#define UNDEFINE_INCA_MULTI_DIM_MACROS
+#include <inca/util/multi-dimensional-macros.hpp>
+#define UNDEFINE_INCA_METAPROGRAMMING_MACROS
+#include <inca/util/metaprogramming/macros.hpp>
+
+#endif

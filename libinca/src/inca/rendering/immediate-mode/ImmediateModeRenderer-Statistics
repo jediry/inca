@@ -1,7 +1,7 @@
 /** -*- C++ -*-
  *
  * File: ImmediateModeRenderer-Statistics
- * 
+ *
  * Author: Ryan L. Saunders
  *
  * Copyright 2004, Ryan L. Saunders. All rights reserved.
@@ -21,6 +21,18 @@
 
 // Import Timer definition
 #include <inca/util/Timer>
+
+
+// These macros do bounds checking on the parameters to these functions.
+// Note that these bounds checks are disabled if INCA_DO_BOUNDS_CHECKS
+// is zero or undefined. See inca/util/OutOfBoundsException for more info.
+#define CHECK_VALID_PRIMITIVE_TYPE(TYPE)                                    \
+    INCA_BOUNDS_CHECK(0, PRIMITIVE_TYPE_COUNT - 1, TYPE, -1,                \
+                      "invalid primitive type " << TYPE)
+
+#define CHECK_VALID_RENDER_PASS(PASS)                                       \
+    INCA_BOUNDS_CHECK(0, RENDER_PASS_COUNT - 1, PASS, -1,                   \
+                      "invalid render pass " << PASS)
 
 
 RENDERER_TEMPLATE
@@ -67,44 +79,20 @@ public:
     }
 
     void beginRenderPass(IndexType pass) {
-        if (boundsCheck) {
-            if (pass < 0 || pass >= RENDER_PASS_COUNT) {
-                cerr << "RenderStatistics::beginRenderPass(" << pass
-                     << "): render pass " << pass << " out of range\n";
-                return;
-            }
-        }
+        CHECK_VALID_RENDER_PASS(pass)
         _renderPassTimes[pass].start();
     }
     void endRenderPass(IndexType pass) {
-        if (boundsCheck) {
-            if (pass < 0 || pass >= RENDER_PASS_COUNT) {
-                cerr << "RenderStatistics::endRenderPass(" << pass
-                     << "): render pass " << pass << " out of range\n";
-                return;
-            }
-        }
+        CHECK_VALID_RENDER_PASS(pass)
         _renderPassTimes[pass].stop();
     }
 
-    void vertexRendered(IndexType type, IndexType pass) {
-        if (boundsCheck) {
-            if (type < 0 || type >= PRIMITIVE_TYPE_COUNT) {
-                cerr << "RenderStatistics::vertexRendered("
-                     << type << ", " << pass
-                     << "): primitive type " << type << " out of range\n";
-                return;
-            }
-            if (pass < 0 || pass >= RENDER_PASS_COUNT) {
-                cerr << "RenderStatistics::vertexRendered("
-                     << type << ", " << pass
-                     << "): render pass " << pass << " out of range\n";
-                return;
-            }
-        }
-        _vertexTypeCounts[type]++;
-        _vertexTypePassCounts[type][pass]++;
-        _vertexCount++;
+    void vertexRendered(IndexType type, IndexType pass, int count = 1) {
+        CHECK_VALID_PRIMITIVE_TYPE(type)
+        CHECK_VALID_RENDER_PASS(pass)
+        _vertexTypeCounts[type] += count;
+        _vertexTypePassCounts[type][pass] += count;
+        _vertexCount += count;
     }
 
 
@@ -120,46 +108,20 @@ public:
     }
 
     SizeType primitiveCount(IndexType type) const {
-        if (boundsCheck) {
-            if (type < 0 || type >= PRIMITIVE_TYPE_COUNT) {
-                cerr << "RenderStatistics::primitiveCount(" << type
-                     << "): primitive type " << type << " out of range\n";
-                return 0;
-            }
-        } else {
-            return _vertexTypeCounts[p];
-        }
+        CHECK_VALID_PRIMITIVE_TYPE(type)
+        return _vertexTypeCounts[type];
     }
 
     SizeType primitiveCount(IndexType type, IndexType pass) const {
-        if (boundsCheck) {
-            if (type < 0 || type >= PRIMITIVE_TYPE_COUNT) {
-                cerr << "RenderStatistics::primitiveCount("
-                     << type << ", " << pass
-                     << "): primitive type " << type << " out of range\n";
-                return 0;
-            }
-            if (pass < 0 || pass >= RENDER_PASS_COUNT) {
-                cerr << "RenderStatistics::primitiveCount("
-                     << type << ", " << pass
-                     << "): render pass " << pass << " out of range\n";
-                return 0;
-            }
-        } else {
-            return _vertexTypePassCounts[type][pass];
-        }
+        CHECK_VALID_PRIMITIVE_TYPE(type)
+        CHECK_VALID_RENDER_PASS(pass)
+        return _vertexTypePassCounts[type][pass];
     }
 
     timer_t realTime() const { return _realTime.getTime(); }
     timer_t renderTime() const { return _renderTime.getTime(); }
     timer_t renderTime(IndexType pass) const {
-        if (boundsCheck) {
-            if (pass < 0 || pass >= RENDER_PASS_COUNT) {
-                cerr << "RenderStatistics::renderTime(" << pass
-                     << "): render pass " << pass << " out of range\n";
-                return timer_t(0.0);
-            }
-        }
+        CHECK_VALID_RENDER_PASS(pass)
         return _renderPassTimes[pass].getTime();
     }
 

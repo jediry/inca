@@ -1,7 +1,7 @@
 /* -*- C++ -*-
  *
  * File: WingedEdgeMesh
- * 
+ *
  * Author: Ryan L. Saunders
  *
  * Copyright 2004, Ryan L. Saunders. All rights reserved.
@@ -129,25 +129,6 @@ public:
     typedef typename FaceVertexPtrList::iterator         face_vertex_iterator;
     typedef typename FaceVertexPtrList::const_iterator   face_vertex_const_iterator;
 
-protected:
-    // Iteration delegate objects used to iterate through part of the mesh:
-    // see the documentation in WingedEdgeMesh-iterator for an explanation of
-    // what these functor-like objects are supposed to do.
-        // This one needs to be specialized for each type of thing
-        template <class T, class OrbitT> struct OrbitCCW;
-        template <class OrbitT> struct OrbitCCW<Vertex, OrbitT>;
-        template <class OrbitT> struct OrbitCCW<Face, OrbitT>;
-        template <class OrbitT> struct OrbitCCW<Edge, OrbitT>;
-        template <class OrbitT> struct OrbitCCW<FaceVertex, OrbitT>;
-        template <>             struct OrbitCCW<Vertex, Edge>;
-//        template <>             struct OrbitCCW<Face, Edge>;
-//        template <>             struct OrbitCCW<Edge, Edge>;
-//        template <>             struct OrbitCCW<FaceVertex, Edge>;
-//        template <>             struct OrbitCCW<EdgeVertex, Edge>;
-
-        // This just does the opposite of whatever the CCW version does
-        template <class T, class OrbitT> struct OrbitCW;
-
 
 /*---------------------------------------------------------------------------*
  | Sub-object management
@@ -159,7 +140,7 @@ protected:
     struct reset_clear {
         void operator() (T *ptr) const { ptr->clear(); }
     };
-    
+
     // A 'create()' functor that calls 'setID(...)' on the target object after
     // creating it
     template <class T>
@@ -234,16 +215,16 @@ protected:
 public:
     // Search for an edge connecting the two vertices
     EdgePtr edgeConnecting(VertexConstPtr v1, VertexConstPtr v2) const {
-        cerr << "Searching for the edge connecting V-" << v1->id() << " & V-" << v2->id() << "...";
-        Vertex::ccw_edge_iterator ei, end;
+//        cerr << "Searching for the edge connecting V-" << v1->id() << " & V-" << v2->id() << "...";
+        typename Vertex::ccw_edge_iterator ei, end;
         for (ei = v1->edgesCCW(); ei != end; ++ei) {
             EdgePtr e = *ei;
             if (e->otherVertex(v1) == v2) {
-                cerr << "E-" << e->id() << endl;
+//                cerr << "E-" << e->id() << endl;
                 return e;   // Yay! We found it! Let's go home!
             }
         }
-        cerr << "none\n";
+//        cerr << "none\n";
         // Rats! There isn't one. I'm sorry, master.
         return NULL;
     }
@@ -325,9 +306,9 @@ public:
                        const EData &ed = EData()) {
         // Make sure they are part of the same face...
         if (fv1->face() != fv2->face()) {
-//            throw InvalidModificationException
-            cerr << "Ack new edges can't span multiple faces!!\n";
-            return NULL;
+            InvalidTopologyException e;
+            e << "Ack new edges can't span multiple faces!!\n";
+            throw e;
         }
 
         // Make a new edge
@@ -344,8 +325,8 @@ public:
 
             cerr << "Repair face not implemented!!!\n";
         }
-        cerr << "Created an edge from V-" << fv1->vertex()->id()
-             << " to V-" << fv2->vertex()->id() << endl;
+//        cerr << "Created an edge from V-" << fv1->vertex()->id()
+//             << " to V-" << fv2->vertex()->id() << endl;
 
         return e;       // That's our boy!
     }
@@ -354,7 +335,7 @@ public:
     // vertices in a CCW rotation. The 'select' argument is a functor
     // taking two VertexPtrs (v1, v2) and returning the FaceVertexPtr around
     // v1 that should be used for an edge between v1 and v2. This allows
-    // 
+    //
     template <class iterator, class FVSelector>
     FaceVertexPtr createLoopCCW(iterator begin, iterator end,
                                 FVSelector select) {
@@ -394,7 +375,7 @@ public:
 
                 current = createEdge(fv1, fv2);
 
-                dump();
+//                dump();
             }
 
             ++from; ++to;   // Next, please!
@@ -409,7 +390,7 @@ public:
         // Tell everyone to forget about me
         e->extractFrom(e->startVertex());
         e->extractFrom(e->endVertex());
-        
+
         // Finally, go rejoin the cosmic life force :-)
         releaseEdge(e);
     }
@@ -434,7 +415,7 @@ public:
         // Create a face on this FaceVertex
         FacePtr f = acquireFace();
         f->setData(fd);
-        
+
         return f;
     }
 
@@ -462,16 +443,16 @@ protected:
     // Verify that the two EdgeVertices actually delimit a valid fan.
     // The fan need not be attached to a vertex, but it must be possible to
     // get from 'ccw' to 'cw by traversing EdgeVertices. If a loop is made
-    // before finding the other side of the fan, an InvalidGeometryException
+    // before finding the other side of the fan, an InvalidTopologyException
     // will be thrown.
     void validateFan(EdgeVertex ccw, EdgeVertex cw) const {
         EdgeVertexPtr ev = ccw;
         while (ev != cw) {      // Go until we find the other end
             ev = ev->edgeVertexCW();    // Advance
             if (ev == ccw) {            // Oops! This shouldn't happen!
-                InvalidGeometryException e;
-                e.os() << "[EV-" << ccw->id() << ", EV-" << cw->id()
-                       << "] is not a valid fan";
+                InvalidTopologyException e;
+                e << "[EV-" << ccw->id() << ", EV-" << cw->id()
+                  << "] is not a valid fan";
                 throw e;
             }
         }
@@ -509,7 +490,7 @@ protected:
         }
     }
 
-    // Completely interchange two fans, 
+    // Completely interchange two fans,
     // This is more efficient than the corresponding sequence of 'insert's
     // and 'extract's, since it doesn't involve deleting and allocating any
     // objects. Each EdgeVertex remains a part of its original Edge and
@@ -607,7 +588,7 @@ protected:
                    << e1->id() << '.';
             throw e;
         }
-        
+
 //        cerr << "fanExtent: (reverse? " << fanIsReversed << ") " << fanExtent;
 //        only needed for non CCW faces
 //        if (fanIsReversed)
@@ -626,7 +607,7 @@ protected:
         e1->setEdgeCW(aroundVertex, e2);
         e2->setEdgeCCW(aroundVertex, e1);
     }
-    
+
 
     /* Run through the fan centered at a vertex, between the two
      * edges and switch the CW/CCW orientation of edges. This
@@ -741,7 +722,7 @@ protected:
 
 // Import implementation of mesh sub-objects and related operators
 #include "WingedEdgeMesh-iostream"
-#include "WingedEdgeMesh-iterator"
+#include "WingedEdgeMesh-iterator"        // Must be included before mesh components
 #include "WingedEdgeMesh-MeshElement"
 #include "WingedEdgeMesh-Vertex"
 #include "WingedEdgeMesh-Face"

@@ -66,30 +66,30 @@ public:
      */
     template <typename Scalar2>
     Color(const Color<Scalar2, ColorSpace> &c) {
-        std::copy(c.begin(), c.end(), begin());
+        std::copy(c.begin(), c.end(), this->begin());
     }
 
     /**
      * Initialization from an Array (or subclass).
      */
     explicit Color(const Array<scalar_t, ColorSpace::channels> &arr) {
-        std::copy(arr.begin(), arr.end(), begin());
+        std::copy(arr.begin(), arr.end(), this->begin());
     }
 
     /**
      * Constant element initialization constructor
      */
     explicit Color(scalar_arg_t e) {
-        std::fill(begin(), end(), e);
+        std::fill(this->begin(), this->end(), e);
     }
- 
+
     /**
      * C-style array constructor. The element type must be convertible to
      * scalar_t.
      */
     template <typename Scalar2>
     explicit Color(Scalar2 * arr) {
-        std::copy(arr, arr + ColorSpace::channels, begin());
+        std::copy(arr, arr + ColorSpace::channels, this->begin());
     }
 
     /**
@@ -105,7 +105,7 @@ public:
     #undef CREATE_DIMENSIONAL_CONSTRUCTOR
 
     Color<Scalar, ColorSpace> & operator=(const Color<Scalar, ColorSpace> & c) {
-        std::copy(c.begin(), c.end(), begin());
+        std::copy(c.begin(), c.end(), this->begin());
         return *this;
     }
 
@@ -117,7 +117,8 @@ public:
     // to-string Cast
     operator string() const {
         std::ostringstream str;
-        str << "Color[" << ColorSpace::name() << "]: (" << stringifyElements() << ')';
+        str << "Color[" << ColorSpace::name() << "]: ("
+            << this->stringifyElements() << ')';
         return str.str();
     }
 };

@@ -119,7 +119,7 @@ GLUTWindow::GLUTWindow(const string &title)
 
     // Get a new window, with this title
     windowID = glutCreateWindow(title.c_str());
-    
+
     // Register to receive events
     registerCallbacks();
 }
@@ -134,7 +134,7 @@ GLUTWindow::GLUTWindow(WidgetPtr w, const string &title)
 
     // Get a new window, with this title
     windowID = glutCreateWindow(title.c_str());
-          
+
     // Set our shiny new widget in its place
     widget = w;
 

@@ -1,7 +1,7 @@
 /* -*- C++ -*-
  *
  * File: WingedEdgeMesh-iostream
- * 
+ *
  * Author: Ryan L. Saunders
  *
  * Copyright 2004, Ryan L. Saunders. All rights reserved.
@@ -20,7 +20,7 @@
 namespace inca {
     namespace math {
 
-// These are broken in Visual Studio    
+// These are broken in Visual Studio
         MESH_TEMPLATE
         std::ostream & operator<<(std::ostream &os,
                                   const typename MESH::Vertex &v) {
@@ -76,7 +76,7 @@ namespace inca {
         }
 
         MESH_TEMPLATE
-        std::ostream & writeEV(std::ostream &os, const typename MESH::EdgeVertex &fv) {
+        std::ostream & writeEV(std::ostream &os, const typename MESH::EdgeVertex &ev) {
             return os << "EdgeVertex(" << ev->id() << ')';
         }
 

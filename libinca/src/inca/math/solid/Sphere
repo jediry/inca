@@ -70,7 +70,7 @@ namespace inca {
         template <typename scalar1, typename scalar2, SizeType dim>
         bool inside(const Sphere<scalar1, dim> & s,
                     const Point<scalar2, dim> & p) {
-            Vector & d = p - s.center();
+            Vector<scalar2, dim> & d = p - s.center();
             return (s.radius() * s.radius() - dot(d, d) >= 0);
         }
 

@@ -50,6 +50,9 @@ class inca::math::Matrix : public inca::Array<scalar, _major * _minor> {
  | Type/constant declarations
  *---------------------------------------------------------------------------*/
 public:
+    static const SizeType dimensionality
+        = Array<scalar, _major * _minor>::dimensionality;
+
     // Scalar typedefs
     INCA_MATH_SCALAR_TYPES(scalar, IS_WITHIN_TEMPLATE);
 
@@ -80,15 +83,14 @@ public:
      */
     template <typename scalar2, bool rowAccess2, bool rowStorage2>
     Matrix(const Matrix<scalar2, major, minor, rowAccess2, rowStorage2> &p) {
-        BOOST_STATIC_ASSERT(1 == -1);
-        std::copy(p.begin(), p.end(), begin());
+        std::copy(p.begin(), p.end(), this->begin());
     }
 
     /**
      * Initialization from an Array (or subclass).
      */
     explicit Matrix(const Array<scalar_t, dimensionality> &arr) {
-        std::copy(arr.begin(), arr.end(), begin());
+        std::copy(arr.begin(), arr.end(), this->begin());
     }
 
     /**
@@ -97,7 +99,7 @@ public:
      */
     template <typename scalar2>
     explicit Matrix(scalar2 * arr) {
-        std::copy(arr, arr + static_size, begin());
+        std::copy(arr, arr + this->dimensionality, this->begin());
         // FIXME: this doesn't respect storage order
     }
 
@@ -117,9 +119,9 @@ public:
      * Constant element initialization constructor
      */
     explicit Matrix(scalar_arg_t e) {
-        std::fill_n(begin(), static_size, e);
+        std::fill_n(this->begin(), this->dimensionality, e);
     }
- 
+
     /**
      * scalar_arg_t argument list constructors. Each of these is intended to
      * be used only with instances of the same dimensionality as there are
@@ -135,20 +137,20 @@ public:
      * 2D matrix-subscript element accessor.
      */
     const scalar_t & operator()(IndexType maj, IndexType min) const {
-        return at(indexOf(maj, min));
+        return this->at(indexOf(maj, min));
     }
     scalar_t & operator()(IndexType maj, IndexType min) {
-        return at(indexOf(maj, min));
+        return this->at(indexOf(maj, min));
     }
 
     /**
      * 2D, storage-order-independent element accessor.
      */
     const scalar_t & rowCol(IndexType r, IndexType c) const {
-        return at(rowMajorStorage ? r * cols + c : c * rows + r);
+        return this->at(rowMajorStorage ? r * cols + c : c * rows + r);
     }
     scalar_t & rowCol(IndexType r, IndexType c) {
-        return at(rowMajorStorage ? r * cols + c : c * rows + r);
+        return this->at(rowMajorStorage ? r * cols + c : c * rows + r);
     }
 
     /**
@@ -187,9 +189,9 @@ public:
             // Stringify a single row in the matrix. This has to be done
             // differently, depending on the storage scheme
             if (colMajorStorage)
-                ss << '[' << stringifyElements(row, cols, rows) << "]\n";
+                ss << '[' << this->stringifyElements(row, cols, rows) << "]\n";
             else
-                ss << '[' << stringifyElements(row * cols, cols, 1) << "]\n";
+                ss << '[' << this->stringifyElements(row * cols, cols, 1) << "]\n";
         return ss.str();
     }
 };

@@ -1,6 +1,6 @@
 /*
  * File: GL.hpp
- * 
+ *
  * Author: Ryan L. Saunders
  *
  * Copyright 2004, Ryan L. Saunders. All rights reserved.
@@ -20,6 +20,7 @@
 #   include <inca/util/Array>
 #   include <inca/math/linalg.hpp>
 #   include <inca/math/color.hpp>
+#   define IM ::inca::math
 #endif
 
 // Import OS-specific headers
@@ -45,12 +46,6 @@ namespace GL {
     #   include <GL/glui.h>
     #endif
 
-    // If we're also handling Inca types, import the namespaces
-    #ifdef GL_HPP_IMPORT_INCA
-        using namespace inca;
-        using namespace inca::math;
-    #endif    
-
 
     // glVertex* overloads
     inline void glVertex(GLshort x, GLshort y)                           { glVertex2s(x, y); }
@@ -67,7 +62,7 @@ namespace GL {
     inline void glVertex(GLdouble x, GLdouble y, GLdouble z, GLdouble w) { glVertex4d(x, y, z, w); }
     #ifdef GL_HPP_IMPORT_INCA
         template <inca::SizeType size>
-        void glVertex(const Point<GLshort, size> & v) {
+        void glVertex(const IM::Point<GLshort, size> & v) {
             switch (size) {
                 case 2: glVertex2sv(v.begin()); break;
                 case 3: glVertex3sv(v.begin()); break;
@@ -75,7 +70,7 @@ namespace GL {
             }
         }
         template <inca::SizeType size>
-        void glVertex(const Point<GLint, size> & v) {
+        void glVertex(const IM::Point<GLint, size> & v) {
             switch (size) {
                 case 2: glVertex2iv(v.begin()); break;
                 case 3: glVertex3iv(v.begin()); break;
@@ -83,7 +78,7 @@ namespace GL {
             }
         }
         template <inca::SizeType size>
-        void glVertex(const Point<GLfloat, size> & v) {
+        void glVertex(const IM::Point<GLfloat, size> & v) {
             switch (size) {
                 case 2: glVertex2fv(v.begin()); break;
                 case 3: glVertex3fv(v.begin()); break;
@@ -91,14 +86,14 @@ namespace GL {
             }
         }
         template <inca::SizeType size>
-        void glVertex(const Point<GLdouble, size> & v) {
+        void glVertex(const IM::Point<GLdouble, size> & v) {
             switch (size) {
                 case 2: glVertex2dv(v.begin()); break;
                 case 3: glVertex3dv(v.begin()); break;
                 case 4: glVertex4dv(v.begin()); break;
             }
         }
-    #endif    
+    #endif
 
     // glNormal* overloads
     inline void glNormal(GLbyte x, GLbyte y, GLbyte z)       { glNormal3b(x, y, z); }
@@ -107,12 +102,12 @@ namespace GL {
     inline void glNormal(GLfloat x, GLfloat y, GLfloat z)    { glNormal3f(x, y, z); }
     inline void glNormal(GLdouble x, GLdouble y, GLdouble z) { glNormal3d(x, y, z); }
     #ifdef GL_HPP_IMPORT_INCA
-        inline void glNormal(const Vector<GLbyte, 3> & n)   { glNormal3bv(n.begin()); }
-        inline void glNormal(const Vector<GLshort, 3> & n)  { glNormal3sv(n.begin()); }
-        inline void glNormal(const Vector<GLint, 3> & n)    { glNormal3iv(n.begin()); }
-        inline void glNormal(const Vector<GLfloat, 3> & n)  { glNormal3fv(n.begin()); }
-        inline void glNormal(const Vector<GLdouble, 3> & n) { glNormal3dv(n.begin()); }
-    #endif    
+        inline void glNormal(const IM::Vector<GLbyte, 3> & n)   { glNormal3bv(n.begin()); }
+        inline void glNormal(const IM::Vector<GLshort, 3> & n)  { glNormal3sv(n.begin()); }
+        inline void glNormal(const IM::Vector<GLint, 3> & n)    { glNormal3iv(n.begin()); }
+        inline void glNormal(const IM::Vector<GLfloat, 3> & n)  { glNormal3fv(n.begin()); }
+        inline void glNormal(const IM::Vector<GLdouble, 3> & n) { glNormal3dv(n.begin()); }
+    #endif
 
     // glColor* overloads
     inline void glColor(GLbyte r, GLbyte g, GLbyte b)                   { glColor3b(r, g, b); }
@@ -132,22 +127,22 @@ namespace GL {
     inline void glColor(GLdouble r, GLdouble g, GLdouble b)             { glColor3d(r, g, b); }
     inline void glColor(GLdouble r, GLdouble g, GLdouble b, GLdouble a) { glColor4d(r, g, b, a); }
     #ifdef GL_HPP_IMPORT_INCA
-        inline void glColor(const Color<GLbyte, sRGB<false> > &c)   { glColor3bv(c.begin()); }
-        inline void glColor(const Color<GLbyte, sRGB<true> > &c)    { glColor4bv(c.begin()); }
-        inline void glColor(const Color<GLubyte, sRGB<false> > &c)  { glColor3ubv(c.begin()); }
-        inline void glColor(const Color<GLubyte, sRGB<true> > &c)   { glColor4ubv(c.begin()); }
-        inline void glColor(const Color<GLshort, sRGB<false> > &c)  { glColor3sv(c.begin()); }
-        inline void glColor(const Color<GLshort, sRGB<true> > &c)   { glColor4sv(c.begin()); }
-        inline void glColor(const Color<GLushort, sRGB<false> > &c) { glColor3usv(c.begin()); }
-        inline void glColor(const Color<GLushort, sRGB<true> > &c)  { glColor4usv(c.begin()); }
-        inline void glColor(const Color<GLint, sRGB<false> > &c)    { glColor3iv(c.begin()); }
-        inline void glColor(const Color<GLint, sRGB<true> > &c)     { glColor4iv(c.begin()); }
-        inline void glColor(const Color<GLuint, sRGB<false> > &c)   { glColor3uiv(c.begin()); }
-        inline void glColor(const Color<GLuint, sRGB<true> > &c)    { glColor4uiv(c.begin()); }
-        inline void glColor(const Color<GLfloat, sRGB<false> > &c)  { glColor3fv(c.begin()); }
-        inline void glColor(const Color<GLfloat, sRGB<true> > &c)   { glColor4fv(c.begin()); }
-        inline void glColor(const Color<GLdouble, sRGB<false> > &c) { glColor3dv(c.begin()); }
-        inline void glColor(const Color<GLdouble, sRGB<true> > &c)  { glColor4dv(c.begin()); }
+        inline void glColor(const IM::Color<GLbyte, IM::sRGB<false> > &c)   { glColor3bv(c.begin()); }
+        inline void glColor(const IM::Color<GLbyte, IM::sRGB<true> > &c)    { glColor4bv(c.begin()); }
+        inline void glColor(const IM::Color<GLubyte, IM::sRGB<false> > &c)  { glColor3ubv(c.begin()); }
+        inline void glColor(const IM::Color<GLubyte, IM::sRGB<true> > &c)   { glColor4ubv(c.begin()); }
+        inline void glColor(const IM::Color<GLshort, IM::sRGB<false> > &c)  { glColor3sv(c.begin()); }
+        inline void glColor(const IM::Color<GLshort, IM::sRGB<true> > &c)   { glColor4sv(c.begin()); }
+        inline void glColor(const IM::Color<GLushort, IM::sRGB<false> > &c) { glColor3usv(c.begin()); }
+        inline void glColor(const IM::Color<GLushort, IM::sRGB<true> > &c)  { glColor4usv(c.begin()); }
+        inline void glColor(const IM::Color<GLint, IM::sRGB<false> > &c)    { glColor3iv(c.begin()); }
+        inline void glColor(const IM::Color<GLint, IM::sRGB<true> > &c)     { glColor4iv(c.begin()); }
+        inline void glColor(const IM::Color<GLuint, IM::sRGB<false> > &c)   { glColor3uiv(c.begin()); }
+        inline void glColor(const IM::Color<GLuint, IM::sRGB<true> > &c)    { glColor4uiv(c.begin()); }
+        inline void glColor(const IM::Color<GLfloat, IM::sRGB<false> > &c)  { glColor3fv(c.begin()); }
+        inline void glColor(const IM::Color<GLfloat, IM::sRGB<true> > &c)   { glColor4fv(c.begin()); }
+        inline void glColor(const IM::Color<GLdouble, IM::sRGB<false> > &c) { glColor3dv(c.begin()); }
+        inline void glColor(const IM::Color<GLdouble, IM::sRGB<true> > &c)  { glColor4dv(c.begin()); }
     #endif
 
     // glIndex* overloads
@@ -170,60 +165,99 @@ namespace GL {
     inline void glTexCoord(GLdouble u, GLdouble v, GLdouble w)             { glTexCoord3d(u, v, w); }
     inline void glTexCoord(GLdouble u, GLdouble v, GLdouble w, GLdouble q) { glTexCoord4d(u, v, w, q); }
     #ifdef GL_HPP_IMPORT_INCA
-        inline void glTexCoord(const Point<GLshort, 1> & t) { glTexCoord1sv(t.begin()); }
-        inline void glTexCoord(const Point<GLshort, 2> & t) { glTexCoord2sv(t.begin()); }
-        inline void glTexCoord(const Point<GLshort, 3> & t) { glTexCoord3sv(t.begin()); }
-        inline void glTexCoord(const Point<GLshort, 4> & t) { glTexCoord4sv(t.begin()); }
-        inline void glTexCoord(const Point<GLint, 1> & t) { glTexCoord1iv(t.begin()); }
-        inline void glTexCoord(const Point<GLint, 2> & t) { glTexCoord2iv(t.begin()); }
-        inline void glTexCoord(const Point<GLint, 3> & t) { glTexCoord3iv(t.begin()); }
-        inline void glTexCoord(const Point<GLint, 4> & t) { glTexCoord4iv(t.begin()); }
-        inline void glTexCoord(const Point<GLfloat, 1> & t) { glTexCoord1fv(t.begin()); }
-        inline void glTexCoord(const Point<GLfloat, 2> & t) { glTexCoord2fv(t.begin()); }
-        inline void glTexCoord(const Point<GLfloat, 3> & t) { glTexCoord3fv(t.begin()); }
-        inline void glTexCoord(const Point<GLfloat, 4> & t) { glTexCoord4fv(t.begin()); }
-        inline void glTexCoord(const Point<GLdouble, 1> & t) { glTexCoord1dv(t.begin()); }
-        inline void glTexCoord(const Point<GLdouble, 2> & t) { glTexCoord2dv(t.begin()); }
-        inline void glTexCoord(const Point<GLdouble, 3> & t) { glTexCoord3dv(t.begin()); }
-        inline void glTexCoord(const Point<GLdouble, 4> & t) { glTexCoord4dv(t.begin()); }
+        inline void glTexCoord(const IM::Point<GLshort, 1> & t) { glTexCoord1sv(t.begin()); }
+        inline void glTexCoord(const IM::Point<GLshort, 2> & t) { glTexCoord2sv(t.begin()); }
+        inline void glTexCoord(const IM::Point<GLshort, 3> & t) { glTexCoord3sv(t.begin()); }
+        inline void glTexCoord(const IM::Point<GLshort, 4> & t) { glTexCoord4sv(t.begin()); }
+        inline void glTexCoord(const IM::Point<GLint, 1> & t) { glTexCoord1iv(t.begin()); }
+        inline void glTexCoord(const IM::Point<GLint, 2> & t) { glTexCoord2iv(t.begin()); }
+        inline void glTexCoord(const IM::Point<GLint, 3> & t) { glTexCoord3iv(t.begin()); }
+        inline void glTexCoord(const IM::Point<GLint, 4> & t) { glTexCoord4iv(t.begin()); }
+        inline void glTexCoord(const IM::Point<GLfloat, 1> & t) { glTexCoord1fv(t.begin()); }
+        inline void glTexCoord(const IM::Point<GLfloat, 2> & t) { glTexCoord2fv(t.begin()); }
+        inline void glTexCoord(const IM::Point<GLfloat, 3> & t) { glTexCoord3fv(t.begin()); }
+        inline void glTexCoord(const IM::Point<GLfloat, 4> & t) { glTexCoord4fv(t.begin()); }
+        inline void glTexCoord(const IM::Point<GLdouble, 1> & t) { glTexCoord1dv(t.begin()); }
+        inline void glTexCoord(const IM::Point<GLdouble, 2> & t) { glTexCoord2dv(t.begin()); }
+        inline void glTexCoord(const IM::Point<GLdouble, 3> & t) { glTexCoord3dv(t.begin()); }
+        inline void glTexCoord(const IM::Point<GLdouble, 4> & t) { glTexCoord4dv(t.begin()); }
     #endif
 
     // glTranslate* overloads
     inline void glTranslate(GLfloat x, GLfloat y, GLfloat z)    { glTranslatef(x, y, z); }
     inline void glTranslate(GLdouble x, GLdouble y, GLdouble z) { glTranslated(x, y, z); }
+    #ifdef GL_HPP_IMPORT_INCA
+        template <typename Scalar>
+        inline void glTranslate(const IM::Vector<Scalar, 3> & dx) { glTranslate(dx[0], dx[1], dx[2]); }
+    #endif
 
     // glRotate* overloads
     inline void glRotate(GLfloat a,  GLfloat x,  GLfloat y,  GLfloat z)  { glRotatef(a, x, y, z); }
     inline void glRotate(GLdouble a, GLdouble x, GLdouble y, GLdouble z) { glRotated(a, x, y, z); }
+    #ifdef GL_HPP_IMPORT_INCA
+        template <typename Scalar>
+        inline void glRotate(Scalar an, const IM::Vector<Scalar, 3> & ax) { glRotate(an, ax[0], ax[1], ax[2]); }
+    #endif
 
     // glScale* overloads
     inline void glScale(GLfloat s)  { glScalef(s, s, s); }
     inline void glScale(GLdouble s) { glScaled(s, s, s); }
     inline void glScale(GLfloat x, GLfloat y, GLfloat z)    { glScalef(x, y, z); }
     inline void glScale(GLdouble x, GLdouble y, GLdouble z) { glScaled(x, y, z); }
+    #ifdef GL_HPP_IMPORT_INCA
+        template <typename Scalar>
+        inline void glScale(const IM::Vector<Scalar, 3> & s) { glScale(s[0], s[1], s[2]); }
+    #endif
 
     // glLoadMatrix* overloads
     inline void glLoadMatrix(GLfloat const * m)  { glLoadMatrixf(m); }
     inline void glLoadMatrix(GLdouble const * m) { glLoadMatrixd(m); }
+    #ifdef GL_HPP_IMPORT_INCA
+        template <typename Scalar, bool rowMajAccess>
+        inline void glLoadMatrix(const IM::Matrix<Scalar, 4, 4, rowMajAccess, false> & m) { glLoadMatrix(m.begin()); }
+    #endif
 
     // glMultMatrix* overloads
     inline void glMultMatrix(GLfloat const * m)  { glMultMatrixf(m); }
     inline void glMultMatrix(GLdouble const * m) { glMultMatrixd(m); }
+    #ifdef GL_HPP_IMPORT_INCA
+        template <typename Scalar, bool rowMajAccess>
+        inline void glMultMatrix(const IM::Matrix<Scalar, 4, 4, rowMajAccess, false> & m) { glMultMatrix(m.begin()); }
+    #endif
 
     // glClearColor overloads
     #ifdef GL_HPP_IMPORT_INCA
-        inline void glClearColor(const Color<float, sRGB<false> > & c)  { glClearColor(c[0], c[1], c[2], 1.0f); }
-        inline void glClearColor(const Color<float, sRGB<true> > & c)   { glClearColor(c[0], c[1], c[2], c[3]); }
-        inline void glClearColor(const Color<double, sRGB<false> > & c) { glClearColor(float(c[0]), float(c[1]), float(c[2]), 1.0f); }
-        inline void glClearColor(const Color<double, sRGB<true> > & c)  { glClearColor(float(c[0]), float(c[1]), float(c[2]), float(c[3])); }
+        inline void glClearColor(const IM::Color<float, IM::sRGB<false> > & c)  { glClearColor(c[0], c[1], c[2], 1.0f); }
+        inline void glClearColor(const IM::Color<float, IM::sRGB<true> > & c)   { glClearColor(c[0], c[1], c[2], c[3]); }
+        inline void glClearColor(const IM::Color<double, IM::sRGB<false> > & c) { glClearColor(float(c[0]), float(c[1]), float(c[2]), 1.0f); }
+        inline void glClearColor(const IM::Color<double, IM::sRGB<true> > & c)  { glClearColor(float(c[0]), float(c[1]), float(c[2]), float(c[3])); }
     #endif
 
     // glGet*v overloads
     #ifdef GL_HPP_IMPORT_INCA
-        template <int size> void glGetArray(GLenum property, Array<int, size> & array)      { glGetIntegerv(property, array.begin()); }
-        template <int size> void glGetArray(GLenum property, Array<float, size> & array)    { glGetFloatv(property, array.begin()); }
-        template <int size> void glGetArray(GLenum property, Array<double, size> & array)   { glGetDoublev(property, array.begin()); }
+        template <int size> void glGetArray(GLenum property, ::inca::Array<int, size> & array)      { glGetIntegerv(property, array.begin()); }
+        template <int size> void glGetArray(GLenum property, ::inca::Array<float, size> & array)    { glGetFloatv(property, array.begin()); }
+        template <int size> void glGetArray(GLenum property, ::inca::Array<double, size> & array)   { glGetDoublev(property, array.begin()); }
+    #endif
+
+    // glLight* overloads
+    inline void glLight(GLenum light, GLenum param, GLint value)   { glLighti(light, param, value); }
+    inline void glLight(GLenum light, GLenum param, GLfloat value) { glLightf(light, param, value); }
+    inline void glLight(GLenum light, GLenum param, GLint const * values)    { glLightiv(light, param, values); }
+    inline void glLight(GLenum light, GLenum param, GLfloat const * values) { glLightfv(light, param, values); }
+    #ifdef GL_HPP_IMPORT_INCA
+        template <typename Scalar, inca::SizeType dim>
+        inline void glLight(GLenum light, GLenum param, const IM::Point<Scalar, dim> & p) { glLight(light, param, p.begin()); }
+        template <typename Scalar, inca::SizeType dim>
+        inline void glLight(GLenum light, GLenum param, const IM::Vector<Scalar, dim> & v) { glLight(light, param, v.begin()); }
+        template <typename Scalar>
+        inline void glLight(GLenum light, GLenum param, const IM::Color<Scalar, IM::sRGB<true> > & c) { glLight(light, param, c.begin()); }
     #endif
 };
+
+// Clean up the preprocessor namespace
+#ifdef IM
+#   undef IM
+#endif
 
 #endif

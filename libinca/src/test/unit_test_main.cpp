@@ -23,11 +23,11 @@ using namespace inca;
 #include <cppunit/extensions/HelperMacros.h>
 
 
-// Comment out these symbol definitions to exclude specific test sets
+// Set this flags to include/exclude specific test sets
 #define TEST_INCA_UTIL_PROPERTY         0
 #define TEST_INCA_UTIL_CONTAINERS       0
 #define TEST_INCA_MATH                  0
-
+#define TEST_INCA_RASTER                1
 
 // Inca implementation of C#-like properties
 #if TEST_INCA_UTIL_PROPERTY
@@ -46,6 +46,12 @@ using namespace inca;
 #   include "MathScalarTest"
 #   include "MathVectorTypesTest"
 #   include "MathVectorOpsTest"
+#endif
+
+// inca::raster library
+#if TEST_INCA_RASTER
+#   include <inca/raster.hpp>
+#   include "RasterMetafunctionTest.hpp"
 #endif
 
 
@@ -68,6 +74,7 @@ int main(int argc, char **argv) {
     runner.addTest(UtilMultiArrayTest<double, 6>::suite());
     runner.addTest(UtilMultiArrayTest<char, 9>::suite());
 #endif
+
 
 /*---------------------------------------------------------------------------*
  | inca::math library tests
@@ -105,6 +112,14 @@ int main(int argc, char **argv) {
     runner.addTest(MathVectorOpsTest<double, 5>::suite());
     runner.addTest(MathVectorOpsTest<long double, 6>::suite());
 //    runner.addTest(MathVectorOpsTest<long long, 7>::suite());
+#endif
+
+
+/*---------------------------------------------------------------------------*
+ | Inca raster library tests
+ *---------------------------------------------------------------------------*/
+#if TEST_INCA_RASTER
+    runner.addTest(RasterMetafunctionTest::suite());
 #endif
 
 

@@ -1,0 +1,73 @@
+/*
+ * File: angle
+ *
+ * Author: Ryan L. Saunders
+ *
+ * Copyright 2004, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ */
+
+#ifndef INCA_RASTER_OPERATOR_ANGLE
+#define INCA_RASTER_OPERATOR_ANGLE
+
+
+// Import operator base class and macros
+#include "OperatorRasterBase"
+
+// Import the Vector class
+#include <inca/math/linalg.hpp>
+
+// Import metaprogramming tools
+#include <inca/util/multi-dimensional-macros.hpp>
+#include <inca/util/metaprogramming/macros.hpp>
+
+
+// This is part of the Inca raster processing library
+namespace inca {
+    namespace raster {
+
+        // Vector magnitude operator
+        INCA_RASTER_OPERATOR_CLASS_HEADER(AngleOperatorRaster,
+                                          1, EMPTY, EMPTY,
+                                          typename R0::ElementType::scalar_t ) {
+        public:
+            // Get types from the superclass
+            INCA_RASTER_OPERATOR_IMPORT_TYPES(AngleOperatorRaster<R0>)
+
+            // Constructor
+            template <class ElementList>
+            explicit AngleOperatorRaster(const R0 & r)
+                    : OperatorBaseType(r),
+                      referenceVector(typename R0::ElementType::scalar_t(0)) {
+                referenceVector[0] = typename R0::ElementType::scalar_t(1);
+            }
+
+            // Element evaluator function
+            INCA_RASTER_OPERATOR_GET_ELEMENT_HEADER(indices) {
+                return ::inca::math::canonicalAngle(referenceVector,
+                                                    operand0(indices));
+            }
+
+        protected:
+            typename R0::ElementType referenceVector;
+        };
+
+        // Factory function
+        template <typename R0>
+        ENABLE_IF_T( is_raster<R0>,
+        AngleOperatorRaster<R0> ) angle(const R0 & r) {
+            return AngleOperatorRaster<R0>(r);
+        }
+
+    }
+}
+
+
+// Clean up the preprocessor's namespace
+#define UNDEFINE_INCA_MULTI_DIM_MACROS
+#include <inca/util/multi-dimensional-macros.hpp>
+#define UNDEFINE_INCA_METAPROGRAMMING_MACROS
+#include <inca/util/metaprogramming/macros.hpp>
+
+#endif

@@ -17,8 +17,8 @@
   </general>
   <kdevautoproject>
     <general>
-      <activetarget>src/run_unit_tests</activetarget>
-      <useconfiguration>debug</useconfiguration>
+      <activetarget>src/libinca.a</activetarget>
+      <useconfiguration>optimized</useconfiguration>
     </general>
     <run>
       <mainprogram/>
@@ -31,15 +31,24 @@
     </run>
     <configurations>
       <optimized>
-        <builddir>optimized</builddir>
-        <ccompiler>GccOptions</ccompiler>
-        <cxxcompiler>GppOptions</cxxcompiler>
-        <f77compiler>G77Options</f77compiler>
+        <builddir>build/optimized</builddir>
+        <ccompiler>kdevgccoptions</ccompiler>
+        <cxxcompiler>kdevgppoptions</cxxcompiler>
+        <f77compiler>kdevpgf77options</f77compiler>
         <cxxflags>-O2 -g0</cxxflags>
+        <configargs/>
+        <topsourcedir/>
+        <cppflags/>
+        <ldflags/>
+        <ccompilerbinary/>
+        <cxxcompilerbinary/>
+        <f77compilerbinary/>
+        <cflags/>
+        <f77flags/>
       </optimized>
       <debug>
         <configargs>--enable-debug=full</configargs>
-        <builddir>debug</builddir>
+        <builddir>build/debug</builddir>
         <ccompiler>kdevgccoptions</ccompiler>
         <cxxcompiler>kdevgppoptions</cxxcompiler>
         <f77compiler>kdevpgf77options</f77compiler>
@@ -52,7 +61,24 @@
         <f77compilerbinary/>
         <cflags/>
         <f77flags/>
+        <envvars/>
       </debug>
+      <pedantic>
+        <configargs/>
+        <builddir>build/pedantic</builddir>
+        <topsourcedir/>
+        <cppflags/>
+        <ldflags/>
+        <ccompiler>kdevgccoptions</ccompiler>
+        <cxxcompiler>kdevgppoptions</cxxcompiler>
+        <f77compiler>kdevpgf77options</f77compiler>
+        <ccompilerbinary/>
+        <cxxcompilerbinary/>
+        <f77compilerbinary/>
+        <cflags/>
+        <cxxflags>-O0 -pedantic</cxxflags>
+        <f77flags/>
+      </pedantic>
     </configurations>
     <make>
       <envvars>
@@ -80,6 +106,7 @@
     <display>
       <staticmembers>false</staticmembers>
       <demanglenames>true</demanglenames>
+      <outputradix>10</outputradix>
     </display>
   </kdevdebugger>
   <kdevfilecreate>
@@ -150,6 +177,7 @@
       <toc>sdl</toc>
       <toc>sw</toc>
       <toc>w3c-uaag10</toc>
+      <toc>wxwindows_bugs</toc>
     </ignoretocs>
     <ignoredevhelp>
       <toc>atk</toc>
@@ -187,9 +215,10 @@
       <group pattern="src/config*" name="Configuration" />
       <group pattern="*" name="Source" />
       <hidenonprojectfiles>false</hidenonprojectfiles>
+      <hidenonlocation>false</hidenonlocation>
     </groups>
     <tree>
-      <hidepatterns>*.o,*.lo,CVS</hidepatterns>
+      <hidepatterns></hidepatterns>
       <hidenonprojectfiles>false</hidenonprojectfiles>
       <showvcsfields>false</showvcsfields>
     </tree>

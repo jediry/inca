@@ -9,6 +9,7 @@
  * Description:
  *      XXX The element type must support assignment and the == operator, and
  *      assignment/comparison to integer. And default constructor.
+ *      We should have separate tests for the View classes.
  *
  * Implementation note:
  *      This file is designed to be included by IncaTestMain.cpp, and may not
@@ -42,7 +43,7 @@ private:
 protected:
     // We use this to ASSERT a little more verbosely for tests we haven't
     // gotten around to implementing yet.
-    static const bool not_implemented = false;
+    static const bool not_implemented = true;
 
 
 /*---------------------------------------------------------------------------*
@@ -53,13 +54,13 @@ public:
     void setUp() {
         // Initialize all of the extent variables
         for (int i = 0; i < dimensionality; ++i)
-            extents[i] = 3 + i % 3;             // Store either 3, 4, or 5
-        #define COPY_EXTENT(DIM) if (DIM <= dimensionality) e ## DIM = extents[DIM];
-        FOR_EACH(9, COPY_EXTENT);
-        #undef COPY_EXTENT
+            sizes[i] = 3 + i % 3;             // Store either 3, 4, or 5
+        #define COPY_SIZES(DIM) if (DIM <= dimensionality) e ## DIM = sizes[DIM];
+        FOR_EACH(9, COPY_SIZES);
+        #undef COPY_SIZES
 
         // Figure out how big we expect an array of this dimensionality to be
-        expectedSize = std::accumulate(extents.begin(), extents.end(), 1,
+        expectedSize = std::accumulate(sizes.begin(), sizes.end(), 1,
                             std::multiplies<typename MultiArray::SizeType>());
 
         // Initialize the index variables
@@ -99,6 +100,11 @@ public:
         // Resizing & swapping tests
         CPPUNIT_TEST(testResize);
         CPPUNIT_TEST(testSwap);
+
+        // Slicing, swizzling & subbing tests
+        CPPUNIT_TEST(testSlice);
+        CPPUNIT_TEST(testSwizzle);
+        CPPUNIT_TEST(testSub);
 
         // Storage order/index base configuration tests
         CPPUNIT_TEST(testIndexBases);
@@ -140,8 +146,8 @@ protected:
         else                            return 0;
     }
 
-    // Ready-made extents for testing constructors and accessors
-    typename MultiArray::ExtentArray extents;
+    // Ready-made sizes for testing constructors and accessors
+    typename MultiArray::SizeArray sizes;
     typename MultiArray::SizeType e0, e1, e2, e3, e4, e5, e6, e7, e8, e9;
     typename MultiArray::IndexArray origin, another;
     typename MultiArray::IndexType a0, a1, a2, a3, a4, a5, a6, a7, a8, a9;
@@ -172,18 +178,18 @@ public:
         CPPUNIT_ASSERT(ma.size() == 0);                 // Zero elements
 
         for (IndexType i = 0; i < dimensionality; i++)  // Zero extent
-            CPPUNIT_ASSERT(ma.extent(i) == 0);
+            CPPUNIT_ASSERT(ma.size(i) == 0);
 
-        CPPUNIT_ASSERT(ma.data() == NULL);              // NULL data pointer
+        CPPUNIT_ASSERT(ma.elements() == NULL);          // NULL data pointer
 
-        // All other behavior is undefined...        
+        // All other behavior is undefined...
     }
 
     void testArbitraryDimensionalConstructor() {
-        MultiArray ma(extents);                         // Make an array
+        MultiArray ma(sizes);                         // Make an array
         CPPUNIT_ASSERT(ma.size() == expectedSize);      // Check size
-        for (IndexType i = 0; i < dimensionality; ++i)  // Check extents
-            CPPUNIT_ASSERT(ma.extent(i) == extents(i));
+        for (IndexType i = 0; i < dimensionality; ++i)  // Check sizes
+            CPPUNIT_ASSERT(ma.size(i) == sizes(i));
     }
 
     void testDimensionSpecificConstructor() {
@@ -200,8 +206,8 @@ public:
  *---------------------------------------------------------------------------*/
 public:
     void testLinearElementAccessors() {
-        MultiArray ma(extents);
-        MultiArray::IndexType last = ma.size() - 1;
+        MultiArray ma(sizes);
+        IndexType last = ma.size() - 1;
         ma[0]       = 0;                            // Set first/last to known
         ma[last]    = 0;                            // values
         CPPUNIT_ASSERT(ma[0] == 0);
@@ -211,12 +217,12 @@ public:
         CPPUNIT_ASSERT(ma[0] == 100);
         CPPUNIT_ASSERT(ma[last] == 50);
 
-        CPPUNIT_ASSERT(*ma.data() == 100);          // Make sure this matches
-        CPPUNIT_ASSERT(*(ma.data() + last) == 50);  // ptr arithmetic
+        CPPUNIT_ASSERT(*ma.elements() == 100);          // Make sure this matches
+        CPPUNIT_ASSERT(*(ma.elements() + last) == 50);  // ptr arithmetic
     }
 
     void testArbitraryDimensionalElementAccessors() {
-        MultiArray ma(extents);
+        MultiArray ma(sizes);
         ma(origin)  = 0;                            // Set origin and another
         ma(another) = 0;                            // location to known values
         CPPUNIT_ASSERT(ma(origin) == 0);
@@ -230,9 +236,10 @@ public:
 //        CPPUNIT_ASSERT(checkOrigin(ma) == 100);
 //        CPPUNIT_ASSERT(checkAnother(ma) == 50);
 
+        IndexType originIndex = ma.indexOf(origin);
         IndexType anotherIndex = ma.indexOf(another);
-        CPPUNIT_ASSERT(*ma.origin() == 100);        // Make sure this matches
-        CPPUNIT_ASSERT(*(ma.data() + anotherIndex) == 50);  // ptr arithmetic
+        CPPUNIT_ASSERT(*(ma.elements() + originIndex) == 100);  // Make sure this matches
+        CPPUNIT_ASSERT(*(ma.elements() + anotherIndex) == 50);  // ptr arithmetic
     }
 
     void testIndexLookup() {
@@ -245,8 +252,9 @@ public:
  *---------------------------------------------------------------------------*/
 public:
     void testIterator() {
-        MultiArray ma(extents);
-        MultiArray::Iterator i = ma.begin();
+        MultiArray ma(sizes);
+        DifferenceType stride0 = ma.memoryLayout().stride(0);
+        typename MultiArray::Iterator i = ma.begin();
         typename MultiArray::IndexArray indices(0);
         ma(indices) = 0;
         indices[dimensionality - 1]++;
@@ -259,24 +267,25 @@ public:
         CPPUNIT_ASSERT(*i == 1);
 
         indices[0]++;   ma(indices) = 15;
-        CPPUNIT_ASSERT(*(i + ma.stride(0)) == 15);  // Test add offset
-        i += ma.stride(0);
+        CPPUNIT_ASSERT(*(i + stride0) == 15);       // Test add offset
+        i += stride0;
         CPPUNIT_ASSERT(*i == 15);                   // Test jump-by-offset
 
         indices[0]++;   ma(indices) = 18;
-        CPPUNIT_ASSERT(*(++i[0]) == 18);            // Test axis increment
+        CPPUNIT_ASSERT(*(++i(0)) == 18);            // Test axis increment
         indices[1]++;   ma(indices) = 27;
-        CPPUNIT_ASSERT(*(++i[1]) == 27);
+        CPPUNIT_ASSERT(*(++i(1)) == 27);
         indices[dimensionality - 1]++;   ma(indices) = 34;
-        CPPUNIT_ASSERT(*(++i[dimensionality - 1]) == 34);
-        
+        CPPUNIT_ASSERT(*(++i(dimensionality - 1)) == 34);
+
         *i = 29;
         CPPUNIT_ASSERT(*i == 29);                   // Test assign via iterator
     }
 
     void testConstIterator() {
-        MultiArray ma(extents);
-        MultiArray::ConstIterator i = ma.begin();
+        MultiArray ma(sizes);
+        DifferenceType stride0 = ma.memoryLayout().stride(0);
+        typename MultiArray::ConstIterator i = ma.begin();
         typename MultiArray::IndexArray indices(0);
         ma(indices) = 0;
         indices[dimensionality - 1]++;
@@ -289,16 +298,16 @@ public:
         CPPUNIT_ASSERT(*i == 1);
 
         indices[0]++;   ma(indices) = 15;
-        CPPUNIT_ASSERT(*(i + ma.stride(0)) == 15);  // Test add offset
-        i += ma.stride(0);
+        CPPUNIT_ASSERT(*(i + stride0) == 15);       // Test add offset
+        i += stride0;
         CPPUNIT_ASSERT(*i == 15);                   // Test jump-by-offset
 
         indices[0]++;   ma(indices) = 18;
-        CPPUNIT_ASSERT(*(++i[0]) == 18);            // Test axis increment
+        CPPUNIT_ASSERT(*(++i(0)) == 18);            // Test axis increment
         indices[1]++;   ma(indices) = 27;
-        CPPUNIT_ASSERT(*(++i[1]) == 27);
+        CPPUNIT_ASSERT(*(++i(1)) == 27);
         indices[dimensionality - 1]++;   ma(indices) = 34;
-        CPPUNIT_ASSERT(*(++i[dimensionality - 1]) == 34);
+        CPPUNIT_ASSERT(*(++i(dimensionality - 1)) == 34);
     }
 
     void testReverseIterator() {
@@ -330,13 +339,31 @@ public:
     void testIndexBases() {
         CPPUNIT_ASSERT(not_implemented);
     }
-    
+
 
 /*---------------------------------------------------------------------------*
- | Slicing tests
+ | Slicing, swizzling & subbing tests
  *---------------------------------------------------------------------------*/
 public:
+    void testSlice() {
+        MultiArray ma(sizes);
+        inca::fill(ma, 0);                // Fill with zeros
+        inca::fill(ma.slice(0, 1), 1);    // Fill column 1 with ones
+        typename MultiArray::ConstIterator i = ma.begin();
+        while (i != ma.end()) {
+            if (i(0) == 1)  { CPPUNIT_ASSERT(*i == 1); }
+            else            { CPPUNIT_ASSERT(*i == 0); }
+            ++i;
+        }
+    }
 
+    void testSwizzle() {
+        CPPUNIT_ASSERT(not_implemented);
+    }
+
+    void testSub() {
+        CPPUNIT_ASSERT(not_implemented);
+    }
 };
 
 // Clean up the preprocessor's namespace

@@ -1,7 +1,7 @@
 /* -*- C++ -*-
  *
  * File: WingedEdgeMesh-FaceVertex
- * 
+ *
  * Author: Ryan L. Saunders
  *
  * Copyright 2004, Ryan L. Saunders. All rights reserved.
@@ -29,12 +29,12 @@ MESH_TEMPLATE class inca::math::MESH::FaceVertex : public FVData, public MeshEle
  *---------------------------------------------------------------------------*/
 public:
     // The mesh & friends need access to protected (modification) functions
-    friend Mesh;
-    friend Vertex;
-    friend Face;
-    friend Edge;
-    friend FaceVertex;
-    friend EdgeVertex;
+    friend class MESH;
+    friend class Vertex;
+    friend class Face;
+    friend class Edge;
+    //friend class FaceVertex;
+    friend class EdgeVertex;
 
 
 /*---------------------------------------------------------------------------*
@@ -144,7 +144,7 @@ protected:
 
         } else {
             // Make a new FV and clone the data from this one
-            FaceVertexPtr newFV = mesh()->acquireFaceVertex();
+            FaceVertexPtr newFV = this->mesh()->acquireFaceVertex();
             newFV->setVertex(vertex());
             newFV->setData(*this);
 
@@ -164,7 +164,7 @@ protected:
         }
 
         // Tell the fan about its new Vertex
-        mesh()->linkFanToVertex(vertex(), ccw, cw);
+        this->mesh()->linkFanToVertex(vertex(), ccw, cw);
     }
 
     // Inserts an EdgeVertex into this FaceVertex, splitting it if necessary.

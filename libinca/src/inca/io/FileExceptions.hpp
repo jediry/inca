@@ -1,8 +1,8 @@
 /*
  * File: FileExceptions.hpp
- * 
+ *
  * Author: Ryan L. Saunders
- * 
+ *
  * Copyright 2002, Ryan L. Saunders. All rights reserved.
  *
  * Description:
@@ -51,6 +51,9 @@ public:
     explicit FileException(const string &file, const string &msg = "")
         : StreamException(msg), _filename(file) { }
 
+    // Destructor
+    ~FileException() throw() { }
+
     // Accessors
     const string & filename() const { return _filename; }
 
@@ -70,6 +73,9 @@ public:
 //        *this << reference << ": " << message;
     }
 
+    // Destructor
+    ~InvalidReferenceException() throw() { }
+
     // Accessors
     const string & reference() const { return _reference; }
     const string & id() const { return _id; }
@@ -85,6 +91,9 @@ public:
     explicit FileFormatException(const string &file, int lNo = 1, int cNo = 1,
                                  const string &msg = "")
         : FileException(file, msg), _line(lNo), _column(cNo) { }
+
+    // Destructor
+    ~FileFormatException() throw() { }
 
     // Accessors
     int line()   const { return _line; }
@@ -103,6 +112,9 @@ public:
     explicit InvalidFileTypeException(const string &file,
                                       const string &msg = "")
         : FileException(file, msg) { }
+
+    // Destructor
+    ~InvalidFileTypeException() throw() { }
 };
 
 
@@ -111,6 +123,9 @@ public:
     // Constructors
     explicit FileAccessException(const string &file, const string &msg = "")
         : FileException(file, msg) { }
+
+    // Destructor
+    ~FileAccessException() throw() { }
 };
 
 #endif

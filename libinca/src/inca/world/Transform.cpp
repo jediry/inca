@@ -1,6 +1,6 @@
 /*
  * File: Transform.cpp
- * 
+ *
  * Author: Ryan L. Saunders
  *
  * Copyright 2003, Ryan L. Saunders. All rights reserved.
@@ -45,6 +45,35 @@ void Transform::lookAt(const Point &p, const Vector &up) {
 /*---------------------------------------------------------------------------*
  | Transformations relative to the current state
  *---------------------------------------------------------------------------*/
+// Axis-aligned transformations
+void Transform::translateX(scalar_arg_t dx) {
+    translate(Vector(dx, 0.0, 0.0));
+}
+void Transform::translateY(scalar_arg_t dy) {
+    translate(Vector(0.0, dy, 0.0));
+}
+void Transform::translateZ(scalar_arg_t dz) {
+    translate(Vector(0.0, 0.0, dz));
+}
+void Transform::rotateX(scalar_arg_t angle) {
+    rotate(angle, Vector(1.0, 0.0, 0.0));
+}
+void Transform::rotateY(scalar_arg_t angle) {
+    rotate(angle, Vector(0.0, 1.0, 0.0));
+}
+void Transform::rotateZ(scalar_arg_t angle) {
+    rotate(angle, Vector(0.0, 0.0, 1.0));
+}
+void Transform::scaleX(scalar_arg_t sx) {
+    scale(Vector(sx, 1.0, 1.0));
+}
+void Transform::scaleY(scalar_arg_t sy) {
+    scale(Vector(1.0, sy, 1.0));
+}
+void Transform::scaleZ(scalar_arg_t sz) {
+    scale(Vector(1.0, 1.0, sz));
+}
+
 // Standard transforms
 void Transform::translate(const Vector &d) {
     position = position() + d;
@@ -59,7 +88,7 @@ void Transform::scale(scalar_arg_t s) {
 }
 
 void Transform::scale(const Vector &s) {
-//XXX    scaling = scaling() * s;
+   scaling = scaling() * s;
 }
 
 void Transform::rotate(scalar_arg_t angle, const Vector &around) {
@@ -69,14 +98,11 @@ void Transform::rotate(scalar_arg_t angle, const Vector &around) {
     rotate(Quaternion(cos_a_2, sin_a_2 * normalize(around)));
 }
 
-void Transform::rotateX(scalar_arg_t angle) {
-    rotate(angle, Vector(1.0, 0.0, 0.0));
-}
-void Transform::rotateY(scalar_arg_t angle) {
-    rotate(angle, Vector(0.0, 1.0, 0.0));
-}
-void Transform::rotateZ(scalar_arg_t angle) {
-    rotate(angle, Vector(0.0, 0.0, 1.0));
+void Transform::orbit(scalar_arg_t angle,
+                      const Vector & axis,
+                      const Point & center) {
+    rotate(angle, axis);
+    position = math::rotate(position(), angle, axis, center);
 }
 
 
@@ -108,32 +134,10 @@ void Transform::dolly(scalar_arg_t fDist) {
 /*---------------------------------------------------------------------------*
  | Orthonormal basis vectors (derived from primary controls above)
  *---------------------------------------------------------------------------*/
-// Generate an orthonormal basis from our controls 
-void Transform::recalculateBasis() const {
-    // First, clean up our quaternion
-    Quaternion q = rotation;
-    Quaternion qInverse = inverse(q);
-
-    // Now, rotate the front and right vectors using these
-    Vector vFront = Vector(q % Quaternion(Vector(0.0, 0.0, -1.0)) % qInverse);
-    Vector vRight = Vector(q % Quaternion(Vector(1.0, 0.0, 0.0)) % qInverse);
-
-    // Make a nice, pretty basis outta this
+// Make basis from vectors. Ugh like vectors.
+void Transform::constructBasis(const Vector & vFront, const Vector & vRight) {
     buildBasis(vFront, vRight);
-}
-
-void Transform::buildBasis(const Vector &vFront, const Vector &vRight) const {
-    // These need to be unit vectors
-    basisFront = normalize(vFront);
-    basisRight = normalize(vRight);
-    basisUp    = basisRight % basisFront;   // Up is right x front
-
-    // These are just reflections
-    basisBack = -basisFront;
-    basisLeft = -basisRight;
-    basisDown = -basisUp;
-
-    basisInvalid = false;       // OK. Now we're done
+    recalculateQuaternion();
 }
 
 
@@ -164,6 +168,42 @@ const Transform::Vector & Transform::front() const {
 }
 
 
+/*---------------------------------------------------------------------------*
+ | Conversion between quaternion and basis vector representations
+ *---------------------------------------------------------------------------*/
+// Find the quaternion that corresponds to the current basis vectors
+void Transform::recalculateQuaternion() {
+    loadRotation3D(_rotation, basisFront, basisUp, basisRight);
+}
+
+// Regenerate the basis vectors from the quaternion
+void Transform::recalculateBasis() const {
+    // First, clean up our quaternion
+    Quaternion q = rotation;
+    Quaternion qInverse = inverse(q);
+
+    // Now, rotate the front and right vectors using these
+    Vector vFront = Vector(q % Quaternion(Vector(0.0, 0.0, -1.0)) % qInverse);
+    Vector vRight = Vector(q % Quaternion(Vector(1.0, 0.0, 0.0)) % qInverse);
+
+    // Make a nice, pretty basis outta this
+    buildBasis(vFront, vRight);
+}
+
+// Construct an orthonormal vector basis from a front/right vector pair
+void Transform::buildBasis(const Vector &vFront, const Vector &vRight) const {
+    // These need to be unit vectors
+    basisFront = normalize(vFront);
+    basisRight = normalize(vRight);
+    basisUp    = basisRight % basisFront;   // Up is right x front
+
+    // These are just reflections
+    basisBack = -basisFront;
+    basisLeft = -basisRight;
+    basisDown = -basisUp;
+
+    basisInvalid = false;       // OK. Now we're done
+}
 
 // Stuff that dates back to the loc/lookat/up days
 #if 0

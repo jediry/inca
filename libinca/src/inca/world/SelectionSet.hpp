@@ -32,7 +32,7 @@
  *          ==========  ========        ===============     ========
  *          Equality    s1 == s2        Inequality          s1 != s2
  *          Superset    s1 >= s2        Strict superset     s1 >  s2
- *          Subset      s1 <= s2        Strict subset       s1 <  s2 
+ *          Subset      s1 <= s2        Strict subset       s1 <  s2
  */
 
 #ifndef INCA_WORLD_SELECTION
@@ -134,15 +134,15 @@ public:
  *---------------------------------------------------------------------------*/
 
 // Import template metaprogramming constructs
-#include <inca/util/template-metaprogramming-macros.hpp>
+#include <inca/util/metaprogramming/macros.hpp>
 
 #define SEL_1_TEMPLATE  template <class _Sel2>
 #define SEL_2_TEMPLATE  template <class _Sel1, class _Sel2>
 #define SEL_LHS         _Sel1
 #define SEL_RHS         _Sel2
-#define SEL_1_RETURN    ENABLE_IF_T( DERIVED_FROM(SEL_RHS, inca::world::SelectionSet), SEL_RHS )
-#define SEL_2_RETURN    ENABLE_IF_T( AND2(DERIVED_FROM(SEL_LHS, inca::world::SelectionSet), IS_SAME(SEL_LHS, SEL_RHS)), SEL_RHS )
-#define BOOL_RETURN     ENABLE_IF_T( AND2(DERIVED_FROM(SEL_LHS, inca::world::SelectionSet), IS_SAME(SEL_LHS, SEL_RHS)), bool )
+#define SEL_1_RETURN    ENABLE_IF_T( IS_A( SEL_RHS, inca::world::SelectionSet), SEL_RHS )
+#define SEL_2_RETURN    ENABLE_IF_T( AND2( IS_A( SEL_LHS, inca::world::SelectionSet), IS_SAME(SEL_LHS, SEL_RHS)), SEL_RHS )
+#define BOOL_RETURN     ENABLE_IF_T( AND2( IS_A( SEL_LHS, inca::world::SelectionSet), IS_SAME(SEL_LHS, SEL_RHS)), bool )
 
 
 /*---------------------------------------------------------------------------*
@@ -253,6 +253,6 @@ SEL_2_TEMPLATE BOOL_RETURN operator<(const SEL_LHS & s1, const SEL_RHS & s2) {
 
 // Clean up the preprocessor's namespace
 #define UNDEFINE_INCA_METAPROGRAMMING_MACROS
-#include <inca/util/template-metaprogramming-macros.hpp>
+#include <inca/util/metaprogramming/macros.hpp>
 
 #endif

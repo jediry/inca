@@ -1,24 +1,26 @@
 /*
  * File: raster.hpp
- * 
+ *
  * Author: Ryan L. Saunders
  *
  * Copyright 2004, Ryan L. Saunders. All rights reserved.
  *
  * Description:
  *      This file serves as a convenience include file for including and
- *      configuring the world object model.
+ *      configuring the raster processing library.
  */
 
 #ifndef INCA_RASTER
 #define INCA_RASTER
 
-// Include raster and associated primitive class definitions
-#include "raster/concepts"
+// Include raster concepts, algorithms, and metafunctions
+#include "raster/concepts.hpp"
+//#include "raster/algorithms.hpp"
+
+// Import essential raster implementations
 #include "raster/MultiArrayRaster"
 
 // Algorithms working on Raster objects
-//#include "raster/algorithms"
 
 // Raster operator lambda-expression construction
 //#include "raster/operators/arithmetic"

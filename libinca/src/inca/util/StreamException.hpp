@@ -1,8 +1,8 @@
 /*
  * File: StreamException.hpp
- * 
+ *
  * Author: Ryan L. Saunders
- * 
+ *
  * Copyright 2004, Ryan L. Saunders. All rights reserved.
  *
  * Description:
@@ -31,9 +31,12 @@ namespace inca {
         StreamException(const StreamException &e) : ss(e.message()) { }
         StreamException(const std::string &msg) : ss(msg) { }
 
+        // Destructor
+        ~StreamException() throw() { }
+
         // Accessors
         string message() const { return ss.str(); }
-        const char * what() const { return message().c_str(); }
+        const char * what() const throw() { return message().c_str(); }
 
         // << operator implementations
         template <typename T>

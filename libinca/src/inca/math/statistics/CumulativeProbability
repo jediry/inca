@@ -1,0 +1,118 @@
+/** -*- C++ -*-
+ *
+ * \File CumulativeProbability
+ *
+ * \Author Ryan L. Saunders
+ *
+ * Copyright 2004, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ */
+
+#ifndef INCA_MATH_STATISTICS_CUMULATIVE_PROBABILITY
+#define INCA_MATH_STATISTICS_CUMULATIVE_PROBABILITY
+
+// Import system configuration
+#include <inca/inca-common.h>
+
+
+namespace inca {
+    namespace math {
+        // Forward declarations
+        template <typename T> class CumulativeProbability;
+    }
+}
+
+// Import container definitions
+#include <vector>
+
+// Import STL algorithms for working on vectors
+#include <algorithm>
+#include <functional>
+
+
+template <typename T>
+class inca::math::CumulativeProbability {
+public:
+    // Type definitions
+    typedef T                               ElementType;
+    typedef std::vector<ElementType>        ElementArray;
+
+    // Default (no-init) constructor
+    explicit CumulativeProbability() : _isValid(false) { }
+
+    // List-copy constructor
+    template <class ElementList>
+    explicit CumulativeProbability(const ElementList & el) : _isValid(false) {
+        // Make sure we don't have to repeatedly resize this
+        _elements.reserve(el.size());
+
+        // Add all the elements in the list
+        typename ElementList::const_iterator it = el.begin();
+        for (it = el.begin(); it != el.end(); ++it)
+            add(*it);
+    }
+
+    // Element accessors
+    SizeType size() const { return _elements.size(); }
+          ElementType & element(IndexType i)       { return _elements[i]; }
+    const ElementType & element(IndexType i) const { return _elements[i]; }
+    void add(const ElementType & e) {
+        _elements.push_back(e);     // Stick it into the list
+        _isValid = false;           // Mark our cumulative disto as invalid
+    }
+
+    // Cumulative probability value
+    const ElementType & cumulative(IndexType i) const {
+        ensureValid();
+        return _cumulative[i];
+    }
+
+    // Index of "bucket" corresponding to a value
+    IndexType indexFor(const ElementType & e) const {
+        // Make sure we have good data...
+        ensureValid();
+
+        // This is STL voodoo to do a search for the index
+        // of the smallest value in the cumulative probability
+        // distribution that is greater than the random value we
+        // generated. So, for example, if the cumulative probability
+        // distribution is ( 0.1, 0.5, 0.55, 1.0), and the random
+        // value is 0.51, then it will return index 2, corresponding
+        // to 0.55 (remember, C++ indexes starting from 0).
+        return (std::find_if(_cumulative.begin(), _cumulative.end(),
+                             std::bind1st(std::less_equal<ElementType>(), e))
+                - _cumulative.begin());
+    }
+
+protected:
+    // Calculate the cumulative distribution from the element array
+    void ensureValid() const {
+        if (! _isValid) {
+            _cumulative.resize(_elements.size());
+
+            // Go through and sum up the elements into _cumulative
+            ElementType sum = 0;
+            for (IndexType i = 0; i < size(); ++i) {
+                if (i == 0)
+                    _cumulative[i] = _elements[i];
+                else
+                    _cumulative[i] = _cumulative[i - 1] + _elements[i];
+                sum += _elements[i];
+            }
+
+            // Now go back and normalize them to 0..1
+            for (IndexType i = 0; i < size(); ++i)
+                _cumulative[i] /= sum;
+
+            // Results are valid, sir!
+            _isValid = true;
+        }
+    }
+
+            std::vector<ElementType> _elements;
+    mutable std::vector<ElementType> _cumulative;
+    mutable bool _isValid;
+};
+
+#endif

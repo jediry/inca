@@ -1,6 +1,6 @@
 /*
  * File: Application.hpp
- * 
+ *
  * Author: Ryan L. Saunders
  *
  * Copyright 2004, Ryan L. Saunders. All rights reserved.
@@ -11,7 +11,7 @@
  *      application startup procedure. Subclasses should implement the
  *      constructInterface() function.
  *
- *      Finally, 
+ *      Finally,
  */
 
 #ifndef INCA_UI_APPLICATION
@@ -121,7 +121,7 @@ public:
  *---------------------------------------------------------------------------*/
 public:
     void registerComponent(UIComponentPtr c);
-    
+
     virtual void registerWindow(WindowPtr w);
     WindowPtr getWindowForID(IDType id);
     virtual void destroyWindow(IDType id);
@@ -141,8 +141,8 @@ public:
 
 
 /**
- * The APPLICATION(TOOLKIT) macro expands to produce the class name of the
- * Application subclass implemented using the requested toolkit.
+ * The APPLICATION(TOOLKIT) macro expands to produce the fully-qualified class
+ * name of the Application subclass implemented using the requested toolkit.
  */
 #include <boost/preprocessor/cat.hpp>
 #define APPLICATION(TOOLKIT) inca::ui:: BOOST_PP_CAT(TOOLKIT, Application)

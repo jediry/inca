@@ -71,10 +71,23 @@ namespace inca {
     using std::ostream;
 };
 
-// Logging functions
-#define LOG_WARNING(STREAM_EXPR) std::cerr << "WARNING: " << STREAM_EXPR ;
-#define LOG_ERROR(STREAM_EXPR)   std::cerr << "ERROR:   " << STREAM_EXPR ;
 
+// If bounds checks weren't specifically requested or forbidden,
+// and we're in debug mode, we'll do 'em anyway
+#if ! defined(INCA_DO_BOUNDS_CHECKS)
+#   if defined(DEBUG)
+#       define INCA_DO_BOUNDS_CHECKS 1
+#   else
+#       define INCA_DO_BOUNDS_CHECKS 0
+#   endif
+#endif
+
+
+// Logging functions
+#define INCA_WARNING(STREAM_EXPR) std::cerr << "WARNING: " << STREAM_EXPR << std::endl;
+#define INCA_ERROR(STREAM_EXPR)   std::cerr << "ERROR:   " << STREAM_EXPR << std::endl;
+//#define INCA_WARNING(STREAM_EXPR)
+//#define INCA_ERROR(STREAM_EXPR)
 
 // Everything in the system should have access to the Logger instance
 #include <inca/util/Logger.hpp>

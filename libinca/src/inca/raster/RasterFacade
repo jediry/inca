@@ -1,0 +1,307 @@
+/* -*- C++ -*-
+ *
+ * File: RasterFacade
+ *
+ * Author: Ryan L. Saunders
+ *
+ * Copyright 2004, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ *      Classes implementing the Raster concepts are expected to expose a
+ *      fairly rich interface containing many redundant operations. The
+ *      RasterFacade template class greatly simplifies the creation of
+ *      such conforming classes, by defining this rich interface in terms of a
+ *      much-reduced set of non-redundant functions. The design for
+ *      RasterFacade was inspired by that of the Boost iterator_facade. Take
+ *      a look at the documentation for that library, located at
+ *      http://www.boost.org/libs/iterator/doc/iterator_facade.html
+ *      for a discussion of the rationale for such a design.
+ *
+ *      In order to handle the different interface requirements of the
+ *      different variants of the Raster concept, RasterFacade does not
+ *      directly implement any of the Raster interface. Instead, it inherits
+ *      from a set of "facets", which specialize based on a set of semantic
+ *      tags in the Derived class.
+ *
+ * TODO: talk briefly about how to use this (Derived and core access classes)
+ * TODO: talk more about semantic tags and somewhere define the set of concepts
+ * TODO: talk about how the multiple src files works
+ */
+
+#ifndef INCA_RASTER_FACADE
+#define INCA_RASTER_FACADE
+
+// Import system configuration
+#include <inca/inca-common.h>
+
+// This is part of the Inca raster processing library
+namespace inca {
+    namespace raster {
+        // Forward declarations
+        template <class Derived, class Tags, class Types> class RasterFacade;
+        class RasterCoreAccess;
+        template <typename S, typename B, typename A,
+                  bool AI, bool VC, bool CVC> class RasterTags;
+        template <typename T, inca::SizeType dim,
+                  typename RWE, typename RE, typename WE> class RasterTypes;
+
+        template <class D, class G, class T, typename E> class RasterBoundsFacet;
+        template <class D, class G, class T, typename E> class RasterIndexingFacet;
+        template <class D, class G, class T, typename E> class RasterAccessFacet;
+        template <class D, class G, class T, typename E> class RasterIterationFacet;
+        template <class D, class G, class T, typename E> class RasterSlicingFacet;
+        template <class D, class G, class T, typename E> class RasterAssignmentFacet;
+
+        template <class R, typename AT> class RasterSlice;
+    };
+};
+
+
+// Import related types
+#include <inca/util/Array>
+#include <inca/util/Region>
+
+// Import concept & tag definitions
+#include "concepts.hpp"
+
+
+// The RasterCoreAccess class is simply a collection of pass-thru static
+// functions. This exists as a convenience to the implementor of a derived
+// class: the core functions may be made protected or private and the derived
+// class only needs to grant friendship to this class in order for all the
+// facets to access them.
+//
+// Note that the Derived parameter to these functions may be either const or
+// non-const, depending on the context from which they're called.
+class inca::raster::RasterCoreAccess {
+protected:
+    // Grant friendship to each facet template so they can call these functions
+    template <class D, class G, class T, typename E> friend class RasterBoundsFacet;
+    template <class D, class G, class T, typename E> friend class RasterIndexingFacet;
+    template <class D, class G, class T, typename E> friend class RasterAccessFacet;
+    template <class D, class G, class T, typename E> friend class RasterIterationFacet;
+    template <class D, class G, class T, typename E> friend class RasterAssignmentFacet;
+    template <class R, typename AT> friend class RasterSlice;
+
+    // Functions used by RasterBoundsFacet
+    template <class Derived>
+    static typename Derived::Region const & getRasterBounds(Derived & d) {
+        return d.getRasterBounds();
+    }
+    template <class Derived, class SizeList>
+    static void setRasterSizes(Derived & d, const SizeList & sz) {
+        d.setRasterSizes(sz);
+    }
+    template <class Derived, class IndexList>
+    static void setRasterBases(Derived & d, const IndexList & bs) {
+        d.setRasterBases(bs);
+    }
+    template <class Derived, class IndexList>
+    static void setRasterExtents(Derived & d, const IndexList & ex) {
+        d.setRasterExtents(ex);
+    }
+    template <class Derived, class IndexList1, class IndexList2>
+    static void setRasterBounds(Derived & d, const IndexList1 & bs, const IndexList2 & ex) {
+        d.setRasterBounds(bs, ex);
+    }
+    template <class Derived>
+    static void setRasterBounds(Derived & d, const typename Derived::Region & b) {
+        d.setRasterBounds(b);
+    }
+
+    // Functions used by RasterAccessFacet
+    template <class Derived, class IndexList, class ReturnType>
+    static ReturnType getElement(Derived & d, const IndexList & indices) {
+        return d.getElement<IndexList, ReturnType>(indices);
+    }
+    template <class Derived, class ReturnType>
+    static ReturnType getDummyElement(Derived & d,
+                                      typename Derived::ConstReference value) {
+        return d.getDummyElement<ReturnType>(value);
+    }
+
+    // Functions used by RasterIndexingFacet
+    template <class Derived, class IndexList>
+    static bool checkIndexValidity(Derived & d, const IndexList & indices) {
+        return d.checkIndexValidity(indices);
+    }
+    template <class Derived, class IndexList>
+    static typename Derived::ElementType
+    getValueForInvalidIndices(Derived & d, const IndexList & indices) {
+        return d.getValueForInvalidIndices(indices);
+    }
+};
+
+
+// This macro creates a const/non-const pair of functions called 'derived' that
+// does a static_cast from 'this' to a const and non-const reference,
+// respectively, to the Derived class. It is provided as a convenience for the
+// facet implementations, which should place this macro in a 'private:' section.
+#define DERIVED_CLASS_ACCESSORS(CLASS)                                          \
+    CLASS       & derived()       { return static_cast<CLASS       &>(*this); } \
+    CLASS const & derived() const { return static_cast<CLASS const &>(*this); }
+
+
+// This macro should be called within the body of the derived class to create
+// the assignment operator overloads. This cannot be done in a facet, since
+// C++ does not allow the assignment operator to be inherited.
+// THIS IS BROKEN FIXME!!!
+#define INCA_RASTER_ASSIGNMENT_OPERATORS                                    \
+    /* This is unsupported until GCC gets its act together, or I see my mistake.*/ \
+    /* Fill-with-constant assignment operator * /                            \
+    template <typename AssnTp>                                              \
+    ENABLE_IF_T( NOT( is_raster<AssnTp> ),                                  \
+    ThisType & ) operator=(const AssnTp & value) {                          \
+        this->assignElement(value);                                         \
+        return *this;                                                       \
+    }*/                                                                       \
+                                                                            \
+    /* Copy raster assignment operator */                                   \
+    template <typename AssnTp>                                              \
+    ENABLE_IF_T( is_raster<AssnTp>,                                         \
+    ThisType & ) operator=(const AssnTp & src) {                            \
+        this->assignRaster(src);                                            \
+        return *this;                                                       \
+    }
+
+
+
+
+// Import facet implementations. These specialize according to the semantic
+// tags and boolean flags passed to the RasterFacade.
+#include "facets/RasterBoundsFacet"
+#include "facets/RasterIndexingFacet"
+#include "facets/RasterAccessFacet"
+#include "facets/RasterAssignmentFacet"
+
+
+// The RasterTags class is a container for the semantic tags and boolean flags
+// that control how the different facets of RasterFacade behave (and thus,
+// indirectly, what functions they expect the derived class to implement).
+template <typename Size,
+          typename Bounds,
+          typename Access,
+          bool useAbsoluteIndices = true,
+          bool validityChecks = true,
+          bool customValidityChecks = false>
+class inca::raster::RasterTags {
+public:
+    // Semantic tags
+    typedef Size    SizeTag;
+    typedef Bounds  BoundsTag;
+    typedef Access  AccessTag;
+
+    // Boolean flags
+    static const bool coreUsesAbsoluteIndices   = useAbsoluteIndices;
+    static const bool doValidityChecks          = validityChecks;
+    static const bool doCustomValidityChecks    = customValidityChecks;
+};
+
+
+// The RasterTypes class is simply a container for the usual case where
+// regular inca types (Array, IndexType, Region, etc.) are to be used by the
+// facets. Probably the only times you wouldn't want this is when wrapping
+// another library with different size/index types. If your Raster
+// implementation needs an unusual accessor return type (such as a proxy),
+// you will need to specify one or more of the last three parameters.
+template <typename T, inca::SizeType dim,
+          typename ReadWriteElement = T &,
+          typename ReadableElement = T const &,
+          typename WritableElement = ReadWriteElement>
+class inca::raster::RasterTypes {
+public:
+    // How many dimensions do I have?
+    static const ::inca::SizeType dimensionality = dim;
+
+    // Numeric types
+    typedef ::inca::SizeType                    SizeType;
+    typedef ::inca::IndexType                   IndexType;
+    typedef ::inca::DifferenceType              DifferenceType;
+
+    // Container types
+    typedef ::inca::Array<SizeType, dim>        SizeArray;
+    typedef ::inca::Array<IndexType, dim>       IndexArray;
+    typedef ::inca::Array<DifferenceType, dim>  DifferenceArray;
+    typedef ::inca::Region<dim>                 Region;
+
+    // What type of thing do I contain?
+    typedef T                                   ElementType;
+    typedef T &                                 Reference;
+    typedef T const &                           ConstReference;
+    typedef T *                                 Pointer;
+    typedef T const *                           ConstPointer;
+
+    // How do we access elements?
+    typedef ReadableElement                     ReadableElementType;
+    typedef WritableElement                     WritableElementType;
+    typedef ReadWriteElement                    ReadWriteElementType;
+};
+
+
+// The RasterFacade class is simply combines all of the facets, specialized
+// based on the collection of semantic Tags and the set of Types, and using the
+// core functions implemented in the Derived class.
+template <class Derived, class _Tags, class _Types>
+class inca::raster::RasterFacade
+    : public RasterTag,
+      public RasterBoundsFacet<Derived, _Tags, _Types>,
+      public RasterIndexingFacet<Derived, _Tags, _Types>,
+      public RasterAccessFacet<Derived, _Tags, _Types>,
+      public RasterAssignmentFacet<Derived, _Tags, _Types> {
+public:
+    // Template parameters
+    typedef _Types Types;
+    typedef _Tags  Tags;
+
+    // Semantic tags
+    typedef typename Tags::SizeTag          SizeTag;
+    typedef typename Tags::BoundsTag        BoundsTag;
+    typedef typename Tags::AccessTag        AccessTag;
+
+    // We have to reimport all common types, since they are typedef'd in
+    // multiple base classes and thus there is not a unique inherited typedef.
+    // We don't have to worry about things that get typedef'd in only one
+    // place, such as iterators.
+
+    // Numeric types
+    typedef typename Types::SizeType        SizeType;
+    typedef typename Types::IndexType       IndexType;
+    typedef typename Types::DifferenceType  DifferenceType;
+
+    // Container types
+    typedef typename Types::SizeArray       SizeArray;
+    typedef typename Types::IndexArray      IndexArray;
+    typedef typename Types::DifferenceArray DifferenceArray;
+    typedef typename Types::Region          Region;
+
+    // What type of thing do I contain?
+    typedef typename Types::ElementType     ElementType;
+    typedef typename Types::Reference       Reference;
+    typedef typename Types::ConstReference  ConstReference;
+    typedef typename Types::Pointer         Pointer;
+    typedef typename Types::ConstPointer    ConstPointer;
+
+    // How do we access elements?
+    typedef typename Types::ReadableElementType     ReadableElementType;
+    typedef typename Types::WritableElementType     WritableElementType;
+    typedef typename Types::ReadWriteElementType    ReadWriteElementType;
+
+    // How many dimensions do we have?
+    static const typename Types::SizeType dimensionality = Types::dimensionality;
+
+    // Additionally, we create STL-compatible typedefs to be more interop'l
+    typedef ElementType         value_type;
+    typedef Reference           reference;
+    typedef ConstReference      const_reference;
+    typedef Pointer             pointer;
+    typedef ConstPointer        const_pointer;
+    typedef SizeType            size_type;
+    typedef IndexType           index_type;
+    typedef DifferenceType      difference_type;
+};
+
+
+// Clean up the preprocessor namespace
+#undef DERIVED_CLASS_ACCESSORS
+
+#endif

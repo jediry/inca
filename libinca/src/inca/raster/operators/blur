@@ -1,6 +1,6 @@
 /*
  * File: blur
- * 
+ *
  * Author: Ryan L. Saunders
  *
  * Copyright 2004, Ryan L. Saunders. All rights reserved.
@@ -65,6 +65,7 @@ namespace inca {
                 return value;
             }
         };
+
 
         // Factory functions
         template <typename R1>

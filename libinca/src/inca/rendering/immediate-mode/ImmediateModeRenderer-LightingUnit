@@ -1,7 +1,7 @@
 /** -*- C++ -*-
  *
  * File: ImmediateModeRenderer-LightingUnit
- * 
+ *
  * Author: Ryan L. Saunders
  *
  * Copyright 2004, Ryan L. Saunders. All rights reserved.
@@ -20,10 +20,30 @@
 
 
 RENDERER_TEMPLATE
-class RENDERER::LightingUnit : public RENDERER::Component {
+class RENDERER::LightingUnit
+    : public RENDERER::Component,
+      protected CachePolicy<API::FirstLightingUnitProperty,
+                            API::LastLightingUnitProperty> {
 public:
     // Constructor
-    LightingUnit(RENDERER &r, IDType id);
+    LightingUnit(RENDERER & r, IDType id) : Component(r, id) { }
+
+    void setEnabled(bool enabled) {
+        API::template setHardwareState<API::LightingUnitEnabled>(this->id(), enabled);
+    }
+
+    void setPosition(const Point3D & p) {
+        API::template setHardwareState<API::LightingUnitPosition>(this->id(), p);
+    }
+    void setAmbientColor(const Color & c) {
+        API::template setHardwareState<API::LightingUnitAmbientColor>(this->id(), c);
+    }
+    void setDiffuseColor(const Color & c) {
+        API::template setHardwareState<API::LightingUnitDiffuseColor>(this->id(), c);
+    }
+    void setSpecularColor(const Color & c) {
+        API::template setHardwareState<API::LightingUnitSpecularColor>(this->id(), c);
+    }
 };
 
 #endif

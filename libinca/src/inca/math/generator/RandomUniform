@@ -1,7 +1,7 @@
 /* -*- C++ -*-
  *
  * File: RandomUniform
- * 
+ *
  * Author: Ryan L. Saunders
  *
  * Copyright 2003, Ryan L. Saunders. All rights reserved.
@@ -9,6 +9,9 @@
  * Description:
  *      The RandomGaussian template class generates random scalar numbers
  *      with an equal probability across a range.
+ *
+ * FIXME: This needs some reworking. Like a better way to split between
+ *        integral and float?
  */
 
 #ifndef INCA_MATH_GENERATOR_RANDOM_UNIFORM
@@ -17,23 +20,25 @@
 // Import system configuration
 #include <inca/inca-common.h>
 
-// This is part of the Inca math library
-namespace inca {
-    namespace math {
-        // Forward declaration
-        template <typename scalar> class RandomUniform;
-    };
-};
-
 // Import scalar math implementation
 #include "../scalar.hpp"
 
-// Import random number generator base class
-#include "RandomGeneratorBase.hpp"
+// Import metaprogramming tools
+#include <inca/util/metaprogramming/macros.hpp>
+
+// This is part of the Inca math library
+namespace inca {
+    namespace math {
+        // Forward declarations
+        template <typename scalar, typename Enabled = void> class RandomUniform;
+        template <typename scalar> class RandomUniform<scalar, ENABLE_IF( boost::is_integral<scalar> ) >;
+    };
+};
 
 
-template <typename scalar>
-class inca::math::RandomUniform : public RandomGeneratorBase {
+// This version is specialized for floating-point types
+template <typename scalar, typename Enabled>
+class inca::math::RandomUniform {
 private:
     // Convenience typedefs
     typedef RandomUniform<scalar>      ThisType;
@@ -54,12 +59,58 @@ public:
     rw_property(scalar_t, min, scalar_t(0));
     rw_property(scalar_t, max, scalar_t(1));
 
-    // Function-call operator (generator function)
+    // Generator function using the internally stored distribution parameters
     scalar_t operator()() const {
-        scalar_t range = max - min;
-        scalar_t result = this->randomInteger() * range / this->maximumInteger() + min;
-        return result;
+        return (*this)(min, max);
+    }
+
+    // Generator function taking explicit min and max paramaters.
+    scalar_t operator()(scalar_arg_t minimum, scalar_arg_t maximum) const {
+        return (rand() * (maximum - minimum)) / RAND_MAX + minimum;
     }
 };
+
+
+// This version is specialized for integral scalar types
+template <typename scalar>
+class inca::math::RandomUniform<scalar,
+        ENABLE_IF( boost::is_integral<scalar> ) > {
+private:
+    // Convenience typedefs
+    typedef RandomUniform<scalar>      ThisType;
+
+public:
+    // Import scalar typedefs
+    INCA_MATH_SCALAR_TYPES(scalar, IS_WITHIN_TEMPLATE);
+
+    // Constructors
+    RandomUniform()
+        : min(this), max(this) { }
+    RandomUniform(scalar_arg_t maxVal)
+        : min(this), max(this, maxVal) { }
+    RandomUniform(scalar_arg_t minVal, scalar_arg_t maxVal)
+        : min(this, minVal), max(this, maxVal) { }
+
+    // Distribution parameters
+    rw_property(scalar_t, min, scalar_t(0));
+    rw_property(scalar_t, max, scalar_t(1));
+
+    // Generator function using the internally stored distribution parameters
+    scalar_t operator()() const {
+        return (*this)(min, max);
+    }
+
+    // Generator function taking explicit min and max paramaters.
+    scalar_t operator()(scalar_arg_t minimum, scalar_arg_t maximum) const {
+        if (maximum <= minimum)
+            return minimum;
+        else
+            return rand() % (maximum - minimum) + minimum;
+    }
+};
+
+// Clean up the preprocessor namespace
+#define UNDEFINE_INCA_METAPROGRAMMING_MACROS
+#include <inca/util/metaprogramming/macros.hpp>
 
 #endif

@@ -1,6 +1,6 @@
 /*
  * File: arithmetic
- * 
+ *
  * Author: Ryan L. Saunders
  *
  * Copyright 2004, Ryan L. Saunders. All rights reserved.
@@ -14,84 +14,235 @@
 
 
 // Import operator base classes and macros
-#include "operator-bases"
+#include "OperatorRasterBase"
+
 
 #include <cmath>
+
+// Import metaprogramming tools
+#include <inca/util/multi-dimensional-macros.hpp>
+#include <inca/util/metaprogramming/macros.hpp>
+
+// FIXME: This is a bit ghetto. Redo, and move all reusable macros to OperatorRasterBase
+
+#define UNARY_RASTER_OPERATOR_GENERATOR(FUNCTION, CLASS)                    \
+    template <typename R0>                                                  \
+    ENABLE_IF_T( is_raster<R0>,                                             \
+    CLASS<R0> ) FUNCTION(const R0 & r0) {                                   \
+        return CLASS<R0>(r0);                                               \
+    }
+
+
+#define BINARY_RASTER_OPERATOR_GENERATOR(FUNCTION, CLASS)                   \
+    template <typename R0, typename R1>                                     \
+    ENABLE_IF_T( OR2( is_raster<R0>, is_raster<R1> ),                       \
+    CLASS<R0 COMMA R1> ) FUNCTION(const R0 & r0, const R1 & r1) {           \
+        return CLASS<R0, R1>(r0, r1);                                       \
+    }
+
+#define UNARY_RASTER_OPERATOR(OP, CLASS, EXPR)                              \
+    INCA_RASTER_OPERATOR_CLASS_HEADER(CLASS, 1, NIL, typename R0::ElementType) {  \
+    public:                                                                 \
+        /* Get types from the superclass */                                 \
+        INCA_RASTER_OPERATOR_IMPORT_TYPES(CLASS<R0>)                        \
+                                                                            \
+        /* Constructor */                                                   \
+        explicit CLASS(const R0 & r0)                                       \
+            : OperatorBaseType(r0) { }                                      \
+                                                                            \
+    protected:                                                              \
+        /* Grant RasterFacade access to protected functions */              \
+        friend class RasterCoreAccess;                                      \
+                                                                            \
+        /* Element getter function required by RasterAccessFacet */         \
+        template <class IndexList, typename ReturnType>                     \
+        ReturnType getElement(const IndexList & indices) const {            \
+            return ReturnType(EXPR);                                        \
+        }                                                                   \
+    };                                                                      \
+                                                                            \
+    UNARY_RASTER_OPERATOR_GENERATOR(operator OP, CLASS)
+
+
+#define UNARY_RASTER_FUNCTION(FUNC, CLASS, EXPR)                            \
+    INCA_RASTER_OPERATOR_CLASS_HEADER(CLASS, 1, NIL, typename R0::ElementType) { \
+    public:                                                                 \
+        /* Get types from the superclass */                                 \
+        INCA_RASTER_OPERATOR_IMPORT_TYPES(CLASS<R0>)                        \
+                                                                            \
+        /* Constructor */                                                   \
+        explicit CLASS(const R0 & r0)                                       \
+            : OperatorBaseType(r0) { }                                      \
+                                                                            \
+    protected:                                                              \
+        /* Grant RasterFacade access to protected functions */              \
+        friend class RasterCoreAccess;                                      \
+                                                                            \
+        /* Element getter function required by RasterAccessFacet */         \
+        template <class IndexList, typename ReturnType>                     \
+        ReturnType getElement(const IndexList & indices) const {            \
+            return ReturnType(EXPR);                                        \
+        }                                                                   \
+    };                                                                      \
+                                                                            \
+    UNARY_RASTER_OPERATOR_GENERATOR(FUNC, CLASS)
+
+
+#define BINARY_RASTER_OPERATOR(OP, CLASS, EXPR)                             \
+    INCA_RASTER_OPERATOR_CLASS_HEADER(CLASS, 2, NIL, typename R0::ElementType) { \
+    public:                                                                 \
+        /* Get types from the superclass */                                 \
+        INCA_RASTER_OPERATOR_IMPORT_TYPES(CLASS<R0 COMMA R1>)               \
+                                                                            \
+        /* Constructor */                                                   \
+        explicit CLASS(const R0 & r0, const R1 & r1)                        \
+            : OperatorBaseType(r0, r1) { }                                  \
+                                                                            \
+    protected:                                                              \
+        /* Grant RasterFacade access to protected functions */              \
+        friend class RasterCoreAccess;                                      \
+                                                                            \
+        /* Element getter function required by RasterAccessFacet */         \
+        template <class IndexList, typename ReturnType>                     \
+        ReturnType getElement(const IndexList & indices) const {            \
+            return ReturnType(EXPR);                                        \
+        }                                                                   \
+    };                                                                      \
+                                                                            \
+    BINARY_RASTER_OPERATOR_GENERATOR(operator OP, CLASS)
+
+
+#define BINARY_RASTER_FUNCTION(FUNC, CLASS, EXPR)                          \
+    INCA_RASTER_OPERATOR_CLASS_HEADER(CLASS, 2, NIL, typename R0::ElementType) { \
+    public:                                                                 \
+        /* Get types from the superclass */                                 \
+        INCA_RASTER_OPERATOR_IMPORT_TYPES(CLASS<R0 COMMA R1>)               \
+                                                                            \
+        /* Constructor */                                                   \
+        explicit CLASS(const R0 & r0, const R1 & r1)                        \
+            : OperatorBaseType(r0, r1) { }                                  \
+                                                                            \
+    protected:                                                              \
+        /* Grant RasterFacade access to protected functions */              \
+        friend class RasterCoreAccess;                                      \
+                                                                            \
+        /* Element getter function required by RasterAccessFacet */         \
+        template <class IndexList, typename ReturnType>                     \
+        ReturnType getElement(const IndexList & indices) const {            \
+            return ReturnType(EXPR);                                        \
+        }                                                                   \
+    };                                                                      \
+                                                                            \
+    BINARY_RASTER_OPERATOR_GENERATOR(FUNC, CLASS)
+
+
+#define COMPUTED_ASSIGNMENT_OPERATOR(OP, CLASS)                             \
+    /* Two-raster, per-element computed assignment functor */               \
+    template <typename T0, typename T1>                                     \
+    struct CLASS ##_Raster {                                                \
+        void operator()(T0 t0, T1 t1) { t0 OP ## = t1; }                    \
+    };                                                                      \
+                                                                            \
+    /* Two-raster operator overload */                                      \
+    template <typename R0, typename R1>                                     \
+    ENABLE_IF_T( AND2( is_writable_raster<R0>, is_raster<R1> ),             \
+    R0 & ) operator OP ## =(R0 r0, const R1 & r1) {                         \
+        apply(CLASS ##_Raster<typename R0::WritableElementType,             \
+                              typename R1::ReadableElementType>(), r0, r1); \
+        return r0;                                                          \
+    }                                                                       \
+                                                                            \
+    /* Two-raster, per-element computed assignment functor */               \
+    template <typename T0, typename T1>                                     \
+    struct CLASS ##_Element {                                               \
+        CLASS ## _Element(const T1 & v) : value(v) { }                      \
+        void operator()(T0 t0) { t0 OP ## = value; }                        \
+        T1 value;                                                           \
+    };                                                                      \
+                                                                            \
+    /* One-raster operator overload */                                      \
+    template <typename R0, typename T>                                      \
+    ENABLE_IF_T( AND2( is_writable_raster<R0>, NOT( is_raster<T> ) ),       \
+    R0 & ) operator OP ## =(R0 & r0, const T & t) {                         \
+        apply(CLASS ##_Element<typename R0::WritableElementType, T>(t), r0);\
+        return r0;                                                          \
+    }
+
 
 // This is part of the Inca raster processing library
 namespace inca {
     namespace raster {
+
         // Arithmetic operators
-        BINARY_OPERATOR(+, AddRasterOperator);
-        BINARY_OPERATOR(-, SubtractRasterOperator);
-        BINARY_OPERATOR(*, MultiplyRasterOperator);
-        BINARY_OPERATOR(/, DivideRasterOperator);
-        BINARY_OPERATOR(%, ModulateRasterOperator);
+        BINARY_RASTER_OPERATOR(+, AdditionOperatorRaster,       operand0(indices) + operand1(indices) );
+        BINARY_RASTER_OPERATOR(-, SubtractionOperatorRaster,    operand0(indices) - operand1(indices) );
+        BINARY_RASTER_OPERATOR(*, MultiplicationOperatorRaster, operand0(indices) * operand1(indices) );
+        BINARY_RASTER_OPERATOR(/, DivisionOperatorRaster,       operand0(indices) / operand1(indices) );
+        BINARY_RASTER_OPERATOR(%, ModulusOperatorRaster,        operand0(indices) % operand1(indices) );
+        UNARY_RASTER_OPERATOR(-,  NegationOperatorRaster,       - operand0(indices) );
+
+        COMPUTED_ASSIGNMENT_OPERATOR(+, AdditionAssignmentFunctor);
+        COMPUTED_ASSIGNMENT_OPERATOR(-, SubtractionAssignmentFunctor);
+        COMPUTED_ASSIGNMENT_OPERATOR(*, MultiplicationAssignmentFunctor);
+        COMPUTED_ASSIGNMENT_OPERATOR(/, DivisionAssignmentFunctor);
+        COMPUTED_ASSIGNMENT_OPERATOR(%, ModulusAssignmentFunctor);
+
+        // Logical operators
+        BINARY_RASTER_OPERATOR(||, LogicalOrOperatorRaster,     operand0(indices) || operand1(indices) );
+        BINARY_RASTER_OPERATOR(&&, LogicalAndOperatorRaster,    operand0(indices) && operand1(indices) );
+        UNARY_RASTER_OPERATOR(!,   LogicalNotOperatorRaster,    ! operand0(indices) );
+
+        // Bitwise operators
+        BINARY_RASTER_OPERATOR(|, BitwiseOrOperatorRaster,      operand0(indices) | operand1(indices) );
+        BINARY_RASTER_OPERATOR(&, BitwiseAndOperatorRaster,     operand0(indices) & operand1(indices) );
+        BINARY_RASTER_OPERATOR(^, BitwiseXorOperatorRaster,     operand0(indices) ^ operand1(indices) );
+        UNARY_RASTER_OPERATOR(~,  BitwiseNotOperatorRaster,     ~ operand0(indices) );
 
         // Arithmetic functions
-//        UNARY_FUNCTION(log, LogRasterFunction);
+        UNARY_RASTER_FUNCTION(log, LogarithmOperatorRaster,     std::log(operand0(indices)) );
+        UNARY_RASTER_FUNCTION(abs, AbsoluteValueOperatorRaster, std::abs(operand0(indices)) );
+        UNARY_RASTER_FUNCTION(exp, ExponentialOperatorRaster,   std::exp(operand0(indices)) );
+        BINARY_RASTER_FUNCTION(min, MinimumOperatorRaster,      std::min(operand0(indices) COMMA operand1(indices)) );
+        BINARY_RASTER_FUNCTION(max, MaximumOperatorRaster,      std::max(operand0(indices) COMMA operand1(indices)) );
+        BINARY_RASTER_FUNCTION(pow, PowerOperatorRaster,        std::pow(operand0(indices) COMMA operand1(indices)) );
+        UNARY_RASTER_FUNCTION(sign, SignOperatorRaster,         operand0(indices) < ElementType(0) ? -1 : 1 );
+        UNARY_RASTER_FUNCTION(sqrt, SquareRootOperatorRaster,   std::sqrt(operand0(indices)) );
+        UNARY_RASTER_FUNCTION(square, SquareOperatorRaster,     operand0(indices) * operand0(indices) );
 
-        template <typename R1>
-        class AbsoluteValueRasterFunction
-            : public UnaryRasterOperator<R1, typename R1::ElementType> {
-        public:
-            typedef typename R1::ElementType        ReturnType;
-            typedef UnaryRasterOperator<R1, ReturnType>         Superclass;
-            typedef typename Superclass::ElementType            ElementType;
-            typedef AbsoluteValueRasterFunction<R1>          OperatorType;
 
-            /* Constructor */
-            AbsoluteValueRasterFunction(R1 & r1) : Superclass(r1) { }
+        // Trigonometric functions
+        UNARY_RASTER_FUNCTION(sin, SineOperatorRaster,              std::sin(operand0(indices)) );
+        UNARY_RASTER_FUNCTION(cos, CosineOperatorRaster,            std::cos(operand0(indices)) );
+//        UNARY_RASTER_FUNCTION(sec, SecantOperatorRaster);
+//        UNARY_RASTER_FUNCTION(csc, CosecantOperatorRaster);
+        UNARY_RASTER_FUNCTION(tan, TangentOperatorRaster,           std::tan(operand0(indices)) );
+//        UNARY_RASTER_FUNCTION(cot, CotangentOperatorRaster);
+        UNARY_RASTER_FUNCTION(asin, InverseSineOperatorRaster,      std::asin(operand0(indices)) );
+        UNARY_RASTER_FUNCTION(acos, InverseCosineOperatorRaster,    std::acos(operand0(indices)) );
+//        UNARY_RASTER_FUNCTION(asec, InverseSecantOperatorRaster);
+//        UNARY_RASTER_FUNCTION(acsc, InverseCosecantOperatorRaster);
+        UNARY_RASTER_FUNCTION(atan, InverseTangentOperatorRaster,   std::atan(operand0(indices)) );
+//        UNARY_RASTER_FUNCTION(acot, InverseCotangentOperatorRaster);
 
-            /* Evaluator function */
-            template <class IndexList>
-            ReturnType operator()(const IndexList &indices) const {
-                return std::abs(first(indices));
-            }
-        };
-        template <typename R1>
-        AbsoluteValueRasterFunction<R1> abs(R1 &r) {
-            return AbsoluteValueRasterFunction<R1>(r);
-        }
-
-        template <typename R1>
-        class LogRasterFunction
-            : public UnaryRasterOperator<R1, typename R1::ElementType> {
-        public:
-            typedef typename R1::ElementType        ReturnType;
-            typedef UnaryRasterOperator<R1, ReturnType>         Superclass;
-            typedef typename Superclass::ElementType            ElementType;
-            typedef LogRasterFunction<R1>          OperatorType;
-
-            /* Constructor */
-            LogRasterFunction(R1 & r1) : Superclass(r1) { }
-
-            /* Evaluator function */
-            template <class IndexList>
-            ReturnType operator()(const IndexList &indices) const {
-                return std::log10(first(indices));
-            }
-        };
-        template <typename R1>
-        LogRasterFunction<R1> log(R1 &r) {
-            return LogRasterFunction<R1>(r);
-        }
+        // Extra aliases for some functions
+        UNARY_RASTER_OPERATOR_GENERATOR(arcsin, InverseSineOperatorRaster);
+        UNARY_RASTER_OPERATOR_GENERATOR(arccos, InverseCosineOperatorRaster);
+//        UNARY_RASTER_OPERATOR_GENERATOR(arcsec, InverseSecantOperatorRaster);
+//        UNARY_RASTER_OPERATOR_GENERATOR(arccsc, InverseCosecantOperatorRaster);
+        UNARY_RASTER_OPERATOR_GENERATOR(arctan, InverseTangentOperatorRaster);
+//        UNARY_RASTER_OPERATOR_GENERATOR(arccot, InverseCotangentOperatorRaster);
 
         // Complex arithmetic functions
 //        UNARY_FUNCTION(magnitude, ComplexMagnitudeRasterFunction);
 //        UNARY_FUNCTION(phase,     ComplexPhaseRasterFunction);
-
-        // Corresponding computed-assignment operators
-        COMPUTED_ASSIGNMENT_OPERATOR(+);    // +=
-        COMPUTED_ASSIGNMENT_OPERATOR(-);    // -=
-        COMPUTED_ASSIGNMENT_OPERATOR(*);    // *=
-        COMPUTED_ASSIGNMENT_OPERATOR(/);    // /=
-        COMPUTED_ASSIGNMENT_OPERATOR(%);    // %=
-    };
+    }
 };
 
+
 // Clean up the preprocessor's namespace
-#define UNDEFINE_INCA_RASTER_OPERATOR_MACROS
-#include "operator-bases"
+#define UNDEFINE_INCA_MULTI_DIM_MACROS
+#include <inca/util/multi-dimensional-macros.hpp>
+#define UNDEFINE_INCA_METAPROGRAMMING_MACROS
+#include <inca/util/metaprogramming/macros.hpp>
 
 #endif

@@ -1,0 +1,94 @@
+/*
+ * File: magnitude
+ *
+ * Author: Ryan L. Saunders
+ *
+ * Copyright 2004, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ * TODO: merge cmag and vmag generator functions. Probably should unify treatment of complex and vector at the math level too.
+ */
+
+#ifndef INCA_RASTER_OPERATOR_MAGNITUDE
+#define INCA_RASTER_OPERATOR_MAGNITUDE
+
+
+// Import operator base class and macros
+#include "OperatorRasterBase"
+
+// Import the Vector class
+#include <inca/math/linalg.hpp>
+#include <complex>
+
+// Import metaprogramming tools
+#include <inca/util/multi-dimensional-macros.hpp>
+#include <inca/util/metaprogramming/macros.hpp>
+
+
+// This is part of the Inca raster processing library
+namespace inca {
+    namespace raster {
+
+        // Vector magnitude operator
+        INCA_RASTER_OPERATOR_CLASS_HEADER(MagnitudeOperatorRaster,
+                                          1, NIL,
+                                          typename R0::ElementType::scalar_t ) {
+        public:
+            // Get types from the superclass
+            INCA_RASTER_OPERATOR_IMPORT_TYPES(MagnitudeOperatorRaster<R0>)
+
+            // Constructor
+            explicit MagnitudeOperatorRaster(const R0 & r)
+                : OperatorBaseType(r) { }
+
+        protected:
+            // Element evaluator function
+            INCA_RASTER_OPERATOR_GET_ELEMENT_HEADER(indices) {
+                return ::inca::math::magnitude(operand0(indices));
+            }
+        };
+
+
+        // Complex magnitude operator
+        INCA_RASTER_OPERATOR_CLASS_HEADER(ComplexMagnitudeOperatorRaster,
+                                          1, NIL,
+                                          typename R0::ElementType::value_type ) {
+        public:
+            // Get types from the superclass
+            INCA_RASTER_OPERATOR_IMPORT_TYPES(ComplexMagnitudeOperatorRaster<R0>)
+
+            // Constructor
+            explicit ComplexMagnitudeOperatorRaster(const R0 & r)
+                : OperatorBaseType(r) { }
+
+        protected:
+            // Element evaluator function
+            INCA_RASTER_OPERATOR_GET_ELEMENT_HEADER(indices) {
+                return std::abs(operand0(indices));
+            }
+        };
+
+
+        // Factory function
+        template <typename R0>
+        ENABLE_IF_T( is_raster<R0>,
+        MagnitudeOperatorRaster<R0> ) magnitude(const R0 & r) {
+            return MagnitudeOperatorRaster<R0>(r);
+        }
+        template <typename R0>
+        ENABLE_IF_T( is_raster<R0>,
+        ComplexMagnitudeOperatorRaster<R0> ) cmagnitude(const R0 & r) {
+            return ComplexMagnitudeOperatorRaster<R0>(r);
+        }
+
+    }
+}
+
+
+// Clean up the preprocessor's namespace
+#define UNDEFINE_INCA_MULTI_DIM_MACROS
+#include <inca/util/multi-dimensional-macros.hpp>
+#define UNDEFINE_INCA_METAPROGRAMMING_MACROS
+#include <inca/util/metaprogramming/macros.hpp>
+
+#endif

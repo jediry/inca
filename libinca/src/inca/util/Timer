@@ -24,7 +24,7 @@
  *      the actual precision of the Timer) is operating system dependent. Most
  *      public functions of Timer use the scalar type, though it is possible
  *      to directly manipulate the internal 'clocks' value.
- *      
+ *
  *      How much the timer advances in "virtual time" for any given amount of
  *      real time depends on the value of 'timeWarpFactor'. If this is 1.0,
  *      the timer runs in real-time. Values greater than 1.0 will cause the
@@ -124,6 +124,9 @@
 // Import system configuration
 #include <inca/inca-common.h>
 
+// Import augmented enumeration mechanism
+#include "Enumeration.hpp"
+
 // This is part of the Inca utilities collection
 namespace inca {
     // Forward declarations
@@ -137,18 +140,34 @@ namespace inca {
     clock_t getSystemClocks();
 
     // What do we do when we hit one end or the other?
-    enum BoundaryResponse { Stop, Bounce, Loop };
+    INCA_ENUM( BoundaryResponse,
+             ( Stop, ( Bounce, ( Loop, BOOST_PP_NIL ) ) ) );
+};
+
+namespace std {
+    // IOStream writer operator for the BoundaryResponse enumeration
+//     inline ostream & operator<<(ostream &o, inca::BoundaryResponse r) {
+//         switch (r) {
+//             case inca::Stop:   return o << "Stop";
+//             case inca::Bounce: return o << "Bounce";
+//             case inca::Loop:   return o << "Loop";
+//             default:           return o << "Invalid BoundaryReponse(" << int(r) << ')';
+//         }
+//     }
 
     // IOStream writer operator for the BoundaryResponse enumeration
-    inline std::ostream & operator<<(std::ostream &o, BoundaryResponse r) {
+    /*inline std::ostream & operator<<(std::ostream &o, inca::BoundaryResponse r) {
         switch (r) {
-            case Stop:  return o << "Stop";
-            case Bounce:return o << "Bounce";
-            case Loop:  return o << "Loop";
-            default:    return o << "Invalid BoundaryReponse(" << int(r) << ')';
+            case inca::Stop:   return o << "Stop";
+            case inca::Bounce: return o << "Bounce";
+            case inca::Loop:   return o << "Loop";
+            default:           return o << "Invalid BoundaryReponse(" << int(r) << ')';
         }
-    }
+    }*/
 };
+
+// Import numeric limits for primitive types
+#include <limits>
 
 // Import our collection of weakly-help shared pointers
 #include "weak_ptr_set"
@@ -307,13 +326,13 @@ public:
             _maximumTimeClocks = timeToClocks(scalar_t( 3.4e+38));
 //            _minimumTimeClocks = timeToClocks(scalar_traits::min());
 //            _maximumTimeClocks = timeToClocks(scalar_traits::max());
-            
+
             // Complain about it...
-            LOG_WARNING( "Timer(): requested bounds ["
-                         << minTime << ", " << maxTime
-                         <<  "] are invalid -- defaulting to ["
-                         << clocksToTime(_minimumTimeClocks) << ", "
-                         << clocksToTime(_maximumTimeClocks) << "]" )
+            INCA_WARNING( "Timer(): requested bounds ["
+                          << minTime << ", " << maxTime
+                          <<  "] are invalid -- defaulting to ["
+                          << clocksToTime(_minimumTimeClocks) << ", "
+                          << clocksToTime(_maximumTimeClocks) << "]" )
         }
 
         // Make sure our initial time is in the legal range
@@ -495,9 +514,9 @@ public:
     clock_t timeToClocks(scalar_arg_t time) const {
         // See if this exceeds clock_t's abilities
         if (time > _maxRepresentableTime)
-            return inca::math::scalar_traits<clock_t>::max();
+            return std::numeric_limits<clock_t>::max();
         else if (time < _minRepresentableTime)
-            return inca::math::scalar_traits<clock_t>::min();
+            return std::numeric_limits<clock_t>::min();
         else
             return clock_t(time * _systemClockFrequency / timeWarpFactor());
     }
@@ -553,7 +572,8 @@ protected:
                 break;
 
             default:
-                LOG_ERROR( "Timer::enforceBoundaryConstraints(): " << boundaryResponse );
+                INCA_ERROR( "Timer::enforceBoundaryConstraints(): "
+                            << boundaryResponse() );
             }
 
         // Now, see if we've overshot the lower limit
@@ -597,7 +617,8 @@ protected:
                 break;
 
             default:
-                LOG_ERROR( "Timer::enforceBoundaryConstraints(): " << boundaryResponse );
+                INCA_ERROR( "Timer::enforceBoundaryConstraints(): "
+                            << boundaryResponse() );
             }
         }
     }
@@ -651,19 +672,17 @@ public:
      * \return  true if the timer is now running as a result of this call
      */
     bool toggleRunning() {
-        if (running())
-            update();               // Catch up to "now"
-
-        _running = ! _running;  // Switch states
-
-        if (_running) {         // ...then we were just started
+        if (! _running) {       // ...then we were just started
             _lastSystemClocks = getSystemClocks();
             if (generateEvents)     // Do we tell anyone about this?
                 fireStarted(time());
         } else {                // ...then we were just stopped
+            update();               // Catch up to "now"
             if (generateEvents)     // Do we tell anyone about this?
                 fireStopped(time());
         }
+
+        _running = ! _running;  // Switch states
         return running();
     }
 
@@ -744,7 +763,7 @@ public:
     void setBoundaryResponse(BoundaryResponse r) { _boundaryResponse = r; }
     bool maySkipPulses() const { return _maySkipPulses; }
     void setMaySkipPulses(bool s) { _maySkipPulses = s; }
-    
+
 protected:
     // Timer state flags
     bool _running, _reversed, _maySkipPulses;
@@ -760,8 +779,8 @@ public:
     void setPulseInterval(scalar_arg_t interval) {
         // If this would be negative, throw a fit
         if (interval < scalar_t(0)) {
-            LOG_WARNING( "Timer::setPulseInterval(" << interval << "): "
-                         "Ignoring illegal negative pulse interval" );
+            INCA_WARNING( "Timer::setPulseInterval(" << interval << "): "
+                          "Ignoring illegal negative pulse interval" );
 
         // Otherwise, do it
         } else {
@@ -774,16 +793,16 @@ public:
     void setTimeWarpFactor(scalar_arg_t warp) {
         // If this would be non-positive, throw a fit
         if (warp <= scalar_t(0)) {
-            LOG_WARNING( "Timer::setTimeWarpFactor(" << warp << "): "
-                         "Ignoring illegal non-positive time warp factor" );
+            INCA_WARNING( "Timer::setTimeWarpFactor(" << warp << "): "
+                          "Ignoring illegal non-positive time warp factor" );
 
         // Otherwise, do it
         } else {
             _timeWarpFactor = warp;
 
             // The limits imposed by clock_t have now changed, so recalculate
-            _minRepresentableTime = clocksToTime(inca::math::scalar_traits<clock_t>::min());
-            _maxRepresentableTime = clocksToTime(inca::math::scalar_traits<clock_t>::max());
+            _minRepresentableTime = clocksToTime(std::numeric_limits<clock_t>::min());
+            _maxRepresentableTime = clocksToTime(std::numeric_limits<clock_t>::max());
         }
     }
 
@@ -794,10 +813,10 @@ public:
 
         // If this would cause an invalid range, throw a fit
         if (minClocks >= _maximumTimeClocks) {
-            LOG_WARNING( "Timer::setMinimumTime(" << min << "): Setting new "
-                         << "minimum would result in invalid bounds ["
-                         << min << ", " << clocksToTime(_maximumTimeClocks)
-                         << "] -- ignoring" );
+            INCA_WARNING( "Timer::setMinimumTime(" << min << "): Setting new "
+                          << "minimum would result in invalid bounds ["
+                          << min << ", " << clocksToTime(_maximumTimeClocks)
+                          << "] -- ignoring" );
 
         // Otherwise, do it, and fix the damage
         } else {

@@ -1,7 +1,7 @@
 /** -*- C++ -*-
  *
  * File: ImmediateModeRenderer-MatrixStack
- * 
+ *
  * Author: Ryan L. Saunders
  *
  * Copyright 2004, Ryan L. Saunders. All rights reserved.
@@ -20,64 +20,174 @@
 
 
 RENDERER_TEMPLATE
-class RENDERER::MatrixStack : public RENDERER::Component {
+class RENDERER::MatrixStack
+    : public RENDERER::Component,
+      protected CachePolicy<API::FirstMatrixStackProperty,
+                            API::LastMatrixStackProperty> {
+/*---------------------------------------------------------------------------*
+ | Constructor & destructor
+ *---------------------------------------------------------------------------*/
 public:
     // Constructor
-    MatrixStack(RENDERER &r, IDType id);
+    MatrixStack(RENDERER & r, IDType id) : Component(r, id) {
+        API::template getImplementationLimit<API::MatrixStackDepth>(this->id(), _maximumStackDepth);
+    }
 
-    // Stack depth functions
-    int stackDepth() const;         // How many matrices right now (min. 1)?
-    int maximumStackDepth() const;  // How many matrix levels possible?
-    bool isFull() const;            // Is the stack full?
-    bool isEmpty() const;           // Is the stack empty?
-    void push() const;              // Push a matrix onto the stack
-    void pop() const;               // Pop a matrix off the stack
+    // Destructor
+    virtual ~MatrixStack() { }
 
-    void reset() const;                         // Identity matrix
-    void load(const Matrix &m) const;           // Load a matrix
-    const Matrix & get() const;                 // Retrieve the current matrix
-    const Matrix & getInverse() const;          // Retrieve the inverse matrix
-    void preMultiply(const Matrix &m) const;    // Multiply m % MS
-    void postMultiply(const Matrix &m) const;   // Multiply MS % m
+
+/*---------------------------------------------------------------------------*
+ | Stack depth functions
+ *---------------------------------------------------------------------------*/
+public:
+    // How many matrices are there on the stack right now (at least 1)?
+    int stackDepth() const {
+//        return
+
+    }
+
+    // How many matrix levels are possible?
+    int maximumStackDepth() const {
+        return _maximumStackDepth;
+    }
+
+    // Is it possible to push any more matrices onto the stack?
+    bool isFull()  const { return stackDepth() == maximumStackDepth(); }
+
+    // Is it possible to pop any more matrices from the stack?
+    bool isEmpty() const { return stackDepth() == 1; }
+
+    // Push a matrix onto the stack
+    void push() {
+        this->renderer().ensureCurrent(*this);
+        API::pushMatrix(this->id());
+        ++_stackDepth;                  // The cache may or may not be valid...
+    }
+
+    // Pop a matrix off the stack
+    void pop() {
+        this->renderer().ensureCurrent(*this);
+        API::popMatrix(this->id());
+        --_stackDepth;                  // The cache may or may not be valid...
+    }
+
+protected:
+    int _maximumStackDepth;
+    mutable int _stackDepth;
+
+
+/*---------------------------------------------------------------------------*
+ | Matrix get/set/modify functions
+ *---------------------------------------------------------------------------*/
+public:
+    // Reset the current stack level to the identity matrix
+    void reset() {
+        this->renderer().ensureCurrent(*this);
+        API::resetMatrix(this->id());
+    }
+
+    // Load a matrix into the current stack level
+    void load(const Matrix & m) {
+        this->renderer().ensureCurrent(*this);
+        API::template setHardwareState<API::CurrentMatrix>(this->id(), m);
+    }
+
+    // Retrieve the contents of the current stack level
+    const Matrix & get() const {
+        API::template getHardwareState<API::CurrentMatrix>(this->id(), _currentMatrix);
+        return _currentMatrix;
+    }
+
+    // Retrieve the inverse of the current matrix
+    const Matrix & getInverse() const {
+        _currentInverse = inca::math::inverse(get());
+        return _currentInverse;
+    }
+
+    // Matrix multiplication
+    void premultiply(const Matrix & m) {
+        this->renderer().ensureCurrent(*this);
+        API::premultiplyMatrix(this->id(), m);
+    }
+    void postmultiply(const Matrix & m) {
+        this->renderer().ensureCurrent(*this);
+        API::postmultiplyMatrix(this->id(), m);
+    }
 
     // Specific transformations and their inverses
-    void scale(geometry_t s) const;
-    void scale(const Vector3D &s) const;
-    void unscale(geometry_t s) const;
-    void unscale(const Vector3D &s) const;
-    void rotate(const Quaternion &q) const;
-    void rotate(geometry_t angle, const Vector3D &axis) const;
-    void unrotate(const Quaternion &q) const;
-    void unrotate(geometry_t angle, const Vector3D &axis) const;
-    void translate(const Vector3D &v) const;
-    void untranslate(const Vector3D &v) const;
-    void transform(const Transform &t) const {
-        translate(t.position);      // Translate...
-        rotate(t.rotation);         // ...rotate...
-        scale(t.scaling);           // ...then scale
+    void scale(geometry_t s) {
+        this->renderer().ensureCurrent(*this);
+        API::scaleMatrix(this->id(), s);
     }
-    void untransform(const Transform &t) const {
-        unscale(t.scaling);         // Unscale...
-        unrotate(t.rotation);       // ...unrotate...
-        untranslate(t.position);    // ...then untranslate...
+    void scale(const Vector3D & s) {
+        this->renderer().ensureCurrent(*this);
+        API::scaleMatrix(this->id(), s);
+    }
+    void unscale(geometry_t s) {
+        this->renderer().ensureCurrent(*this);
+        API::scaleMatrix(this->id(), geometry_t(1) / s);
+    }
+    void unscale(const Vector3D & s) {
+        this->renderer().ensureCurrent(*this);
+        API::scaleMatrix(this->id(), geometry_t(1) / s);
+    }
+    void rotate(const Quaternion & q) {
+        this->renderer().ensureCurrent(*this);
+        API::rotateMatrix(this->id(), math::angle(q), math::axis(q));
+    }
+    void rotate(geometry_t angle, const Vector3D & axis) {
+        this->renderer().ensureCurrent(*this);
+        API::rotateMatrix(this->id(), angle, axis);
+    }
+    void unrotate(const Quaternion & q) {
+        this->renderer().ensureCurrent(*this);
+        API::rotateMatrix(this->id(), -math::angle(q), math::axis(q));
+    }
+    void unrotate(geometry_t angle, const Vector3D & axis) {
+        this->renderer().ensureCurrent(*this);
+        API::rotateMatrix(this->id(), -angle, axis);
+    }
+    void translate(const Vector3D & v) {
+        this->renderer().ensureCurrent(*this);
+        API::translateMatrix(this->id(), v);
+    }
+    void untranslate(const Vector3D & v) {
+        this->renderer().ensureCurrent(*this);
+        API::translateMatrix(this->id(), -v);
+    }
+    void transform(const Transform & t) {
+//        translate(t.position());    // Translate...
+//        rotate(t.rotation());       // ...rotate...
+//        scale(t.scaling());         // ...then scale
+        Point3D p(t.position());
+        Vector3D s(t.scaling());
+        Quaternion q(t.rotation());
+        translate(Vector3D(p[0], p[1], p[2]));
+        rotate(q);
+        scale(s);
+    }
+    void untransform(const Transform & t) {
+        Point3D p(t.position());
+        Vector3D s(t.scaling());
+        Quaternion q(t.rotation());
+        unscale(s);
+        unrotate(q);
+        untranslate(Vector3D(p[0], p[1], p[2]));
+//        unscale(t.scaling());       // Unscale...
+//        unrotate(t.rotation());     // ...unrotate...
+//        untranslate(Vector3D(t.position()));  // ...then untranslate...
     }
 
     // Transformation of primitive objects by the current matrix
-    Point3D  transform(const Point3D &p) const;
-    Vector3D transform(const Vector3D &v) const;
-    Point3D  untransform(const Point3D &p) const;
-    Vector3D untransform(const Vector3D &v) const;
+    Point3D  transform(const Point3D & p)    const { return get() % p; }
+    Vector3D transform(const Vector3D & v)   const { return get() % v; }
+    Point3D  untransform(const Point3D & p)  const { return getInverse() % p; }
+    Vector3D untransform(const Vector3D & v) const { return getInverse() % v; }
 
 protected:
-    void ensureActive() const;  // Make sure I'm the active matrix
-
-    const   IDType id;            // API's ID for this matrix stack
-    mutable int depth;          // How many matrices on the stack right now?
-            int maxDepth;       // How many can it hold?
-    mutable Matrix current;     // The current top of the stack
-    mutable Matrix inverse;     // The inverse of the top of the stack
-    mutable bool currentValid;  // Is 'current' current?
-    mutable bool inverseValid;  // Is 'inverse' current?
+    mutable Matrix _currentMatrix;  // The current top of the stack
+    mutable Matrix _currentInverse; // The inverse of the top of the stack
 };
 
 #endif

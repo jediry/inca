@@ -453,14 +453,15 @@ namespace inca {
         // Rotation of a vector around an axis vector
         A_TEMPLATE(1)
         V(D0) rotate(const V(D0) & v, S_ARG angle, const V(D0) & axis) {
-            if (D0 == 2)       // Call 2D-special case
-                return rotate(v, angle);
-            else {              // Haven't implemented this yet...
-                std::cerr << "rotate<scalar, " << D0 << "> -- not implemented\n";
-                return V(D0)(0);
-            }
+            S cos_a = cos(angle),
+              sin_a = sin(angle);
+            return cos_a * v + (1 - cos_a) * dot(v, axis) * axis + sin_a * (axis % v);
         }
         // Special case for 2D vectors (doesn't need an 'axis' vector).
+        S_TEMPLATE
+        V(2) rotate(const V(2) & v, S_ARG angle, const V(2) & axis) {
+            return rotate(v, angle);    // Pass off to the normal 2D version (below)
+        }
         S_TEMPLATE
         V(2) rotate(const V(2) & v, S_ARG angle) {
             S mag_v = magnitude(v);    // Length of v
@@ -477,7 +478,9 @@ namespace inca {
         P(D0) rotate(const P(D0) & p, S_ARG angle,
                      const V(D0) & axis, const P(D0) & center) {
             // Change this into a vector rotation problem
-            return center + rotate(p - center, angle, axis);
+            V(D0) diff = p - center;
+            S length = magnitude(diff);
+            return center + length * rotate(diff / length, angle, normalize(axis));
         }
 
 
@@ -587,7 +590,7 @@ namespace inca {
         M_TEMPLATE(1,1)
         S det(const M(D0,D0,AS0) &m) {
             S result = 0;
-            for (IndexType i = 0; i < D; i++)
+            for (IndexType i = 0; i < D0; i++)
                 if (i % 2 == 0)
                     result += m(i, 0) * det(sub(m, i, 0));
                 else

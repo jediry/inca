@@ -1,7 +1,7 @@
 /** -*- C++ -*-
  *
  * File: ImmediateModeRenderer
- * 
+ *
  * Author: Ryan L. Saunders
  *
  * Copyright 2004, Ryan L. Saunders. All rights reserved.
@@ -39,7 +39,7 @@
 namespace inca {
     namespace rendering {
         // Forward declarations
-        template <class APITraits, template <inca::SizeType> class CachePolicy>
+        template <class APITraits, template <inca::IDType, inca::IDType> class CachePolicy>
             class ImmediateModeRenderer;
     };
 };
@@ -51,25 +51,32 @@ namespace inca {
 
 // Import rendering type definitions
 #include "types.hpp"
-#include "Primitive"
 
 
 // Import container definitions
 #include <vector>
+#include <inca/util/FlagSet>
 
 
 // Make some REALLY long names shorter
-#define RENDERER_TEMPLATE template <class API, template <inca::SizeType> class CachePolicy>
+#define RENDERER_TEMPLATE template <class API, template <inca::IDType, inca::IDType> class CachePolicy>
 #define RENDERER inca::rendering::ImmediateModeRenderer<API, CachePolicy>
+
+// Import macros for renderer properties
+#include "macros.hpp"
 
 
 RENDERER_TEMPLATE
 class inca::rendering::ImmediateModeRenderer
-    : protected API, boost::noncopyable {
+    : boost::noncopyable,
+      protected CachePolicy<API::FirstRendererProperty,
+                            API::LastRendererProperty> {
 /*---------------------------------------------------------------------------*
  | Type definitions
  *---------------------------------------------------------------------------*/
 public:
+    static const int i = API::FirstRendererProperty;
+
     // Geometric type definitions
     typedef typename API::geometry_t    geometry_t;
     typedef typename API::Point3D       Point3D;
@@ -85,7 +92,7 @@ public:
     // Texture coordinate type definitions
     typedef typename API::tex_coord_t   tex_coord_t;
     typedef typename API::TexCoord      TexCoord;
-    
+
     // Screenspace type definitions
     typedef typename API::Pixel         Pixel;
     typedef typename API::Dimension     Dimension;
@@ -106,9 +113,9 @@ public:
     class Rasterizer;       // The rasterizing engine state
     class Viewport;         // The active screen-drawing region
     class MatrixStack;      // A hardware matrix stack
-    class TextureUnit;      // A hardware texture unit
     class LightingUnit;     // A hardware lighting unit
-    template <typename element_t> class Buffer;     // A framebuffer part
+    class TexturingUnit;    // A hardware texturing unit
+    template <typename ElementType> class Buffer;   // A framebuffer part
         typedef Buffer<Color>       ColorBuffer;
         typedef Buffer<geometry_t>  ScalarBuffer;
         typedef Buffer<Color>       AccumulationBuffer;
@@ -120,19 +127,16 @@ public:
     friend class Rasterizer;
     friend class Viewport;
     friend class MatrixStack;
-    friend class TextureUnit;
     friend class LightingUnit;
-    friend class ColorBuffer;
-    friend class ScalarBuffer;
-    friend class AccumulationBuffer;
-    friend class StencilBuffer;
+    friend class TexturingUnit;
+    template <typename ElementType> friend class Buffer;
     friend class Statistics;
 
 
     // Container type definitions
     typedef std::vector<MatrixStack>    MatrixStackList;
-    typedef std::vector<TextureUnit>    TextureUnitList;
     typedef std::vector<LightingUnit>   LightingUnitList;
+    typedef std::vector<TexturingUnit>  TexturingUnitList;
     typedef std::vector<ColorBuffer>    ColorBufferList;
     typedef std::vector<ScalarBuffer>   ScalarBufferList;
     typedef std::vector<Statistics>     StatisticsList;
@@ -143,41 +147,124 @@ public:
  *---------------------------------------------------------------------------*/
 public:
     // Constructor
-    ImmediateModeRenderer();
+    explicit ImmediateModeRenderer() : _rasterizer(*this), _viewport(*this) {
+
+        // Create the MatrixStack objects
+        for (int i = 0; i < API::matrixStackCount(); ++i)
+            _matrixStacks.push_back(MatrixStack(*this, API::matrixStackID(i)));
+
+        // Create the LightingUnit objects
+        for (int i = 0; i < API::lightingUnitCount(); ++i)
+            _lightingUnits.push_back(LightingUnit(*this, API::lightingUnitID(i)));
+
+        // Create the TexturingUnit objects
+        for (int i = 0; i < API::texturingUnitCount(); ++i)
+            _texturingUnits.push_back(TexturingUnit(*this, API::texturingUnitID(i)));
+
+        // Create the Buffer objects
+//        for (int i = 0; i < API::colorBufferCount(); ++i)
+    }
+
+    // Destructor
+    virtual ~ImmediateModeRenderer() { }
 
 
 /*---------------------------------------------------------------------------*
- | Renderer sub-objects
+ | Renderer sub-objects & accessors
  *---------------------------------------------------------------------------*/
 public:
     // Access to the rasterizer state
-    Rasterizer & rasterizer();
+          Rasterizer & rasterizer()       { return _rasterizer; }
+    const Rasterizer & rasterizer() const { return _rasterizer; }
 
     // Access to the drawable screen viewport
-    Viewport & viewport();
+          Viewport & viewport()       { return _viewport; }
+    const Viewport & viewport() const { return _viewport; }
 
     // Access to available hardware matrix stacks
-    MatrixStack & projectionMatrix();
-    MatrixStack & viewMatrix();
-    MatrixStack & worldMatrix();
-    MatrixStack & colorMatrix();
+    SizeType matrixCount() const { return _matrixStacks.size(); }
+    MatrixStack & matrix(IndexType i) {
+        INCA_BOUNDS_CHECK_LINEAR(_matrixStacks, i);
+        return _matrixStacks[i];
+    }
+    const MatrixStack & matrix(IndexType i) const {
+        INCA_BOUNDS_CHECK_LINEAR(_matrixStacks, i);
+        return _matrixStacks[i];
+    }
+          MatrixStack & projectionMatrix()       { return matrix(API::projectionMatrixIndex()); }
+    const MatrixStack & projectionMatrix() const { return matrix(API::projectionMatrixIndex()); }
+          MatrixStack & viewMatrix()             { return matrix(API::viewMatrixIndex()); }
+    const MatrixStack & viewMatrix() const       { return matrix(API::viewMatrixIndex()); }
+          MatrixStack & worldMatrix()            { return matrix(API::worldMatrixIndex()); }
+    const MatrixStack & worldMatrix() const      { return matrix(API::worldMatrixIndex()); }
+          MatrixStack & colorMatrix()            { return matrix(API::colorMatrixIndex()); }
+    const MatrixStack & colorMatrix() const      { return matrix(API::colorMatrixIndex()); }
+
+    // Access to available lighting units
+    SizeType lightingUnitCount() const { return _lightingUnits.size(); }
+    LightingUnit & lightingUnit(IndexType i) {
+        INCA_BOUNDS_CHECK_LINEAR(_lightingUnits, i);
+        return _lightingUnits[i];
+    }
+    const LightingUnit & lightingUnit(IndexType i) const {
+        INCA_BOUNDS_CHECK_LINEAR(_lightingUnits, i);
+        return _lightingUnits[i];
+    }
+
+    // Access to available texturing units
+    SizeType texturingUnitCount() const { return _texturingUnits.size(); }
+    TexturingUnit & texturingUnit(IndexType i) {
+        INCA_BOUNDS_CHECK_LINEAR(_texturingUnits, i);
+        return _texturingUnits[i];
+    }
+    const TexturingUnit & texturingUnit(IndexType i) const {
+        INCA_BOUNDS_CHECK_LINEAR(_texturingUnits, i);
+        return _texturingUnits[i];
+    }
 
     // Access to available hardware buffers
-    ColorBuffer & auxillaryBuffer(IndexType i);
-    ScalarBuffer & depthBuffer();
-    AccumulationBuffer & accumulationBuffer();
-    StencilBuffer & stencilBuffer();
+    SizeType colorBufferCount() const { return _colorBuffers.size(); }
+    ColorBuffer & colorBuffer(IndexType i) {
+        INCA_BOUNDS_CHECK_LINEAR(_colorBuffers, i);
+        return _colorBuffers[i];
+    }
+    const ColorBuffer & colorBuffer(IndexType i) const {
+        INCA_BOUNDS_CHECK_LINEAR(_colorBuffers, i);
+        return _colorBuffers[i];
+    }
+
+    // Access to available scalar-valued buffers
+//          ScalarBuffer & depthBuffer();
+//    const ScalarBuffer & depthBuffer() const;
+
+//           ColorBuffer & auxillaryBuffer(IndexType i);
+//     const ColorBuffer & auxillaryBuffer(IndexType i) const;
+//           AccumulationBuffer & accumulationBuffer();
+//     const AccumulationBuffer & accumulationBuffer() const;
+//           StencilBuffer & stencilBuffer();
+//     const StencilBuffer & stencilBuffer() const;
 
     // Performance & statistics
-    Statistics & frameStatistics();
-    Statistics & cumulativeStatistics();
+    SizeType statisticsCount() const { return _statistics.size(); }
+    Statistics & statistics(IndexType i) {
+        INCA_BOUNDS_CHECK_LINEAR(_statistics, i);
+        return _statistics[i];
+    }
+    const Statistics & statistics(IndexType i) const {
+        INCA_BOUNDS_CHECK_LINEAR(_statistics, i);
+        return _statistics[i];
+    }
+          Statistics & frameStatistics()       { return statistics(0); }
+    const Statistics & frameStatistics() const { return statistics(0); }
+          Statistics & cumulativeStatistics()       { return statistics(1); }
+    const Statistics & cumulativeStatistics() const { return statistics(1); }
 
 protected:
     // Renderer sub-objects
     Rasterizer          _rasterizer;
     Viewport            _viewport;
     MatrixStackList     _matrixStacks;
-    TextureUnitList     _textureUnits;
+    TexturingUnitList   _texturingUnits;
     LightingUnitList    _lightingUnits;
     ColorBufferList     _colorBuffers;
     ScalarBufferList    _scalarBuffers;
@@ -185,35 +272,84 @@ protected:
 
 
 /*---------------------------------------------------------------------------*
+ | Frame auto-action control
+ *---------------------------------------------------------------------------*/
+public:
+    // Do any frame-start actions
+    void beginFrame() {
+        if (autoClearBuffers())
+            API::clearBuffers(autoClearBuffers());
+    }
+
+    // Do any frame-end actions
+    void endFrame() { }
+
+    // Is a particular buffer set to be auto-cleared?
+    bool isAutoClearBuffer(IDType bufferID) const {
+        return _autoClearBufferIDs.allSet(bufferID);
+    }
+
+    // Get/set all auto-clear buffers
+    FlagSet<unsigned int> autoClearBuffers() const { return _autoClearBufferIDs; }
+    void setAutoClearBuffers(unsigned int flags) { _autoClearBufferIDs = flags; }
+
+    // Register a buffer to be auto-cleared
+    void addAutoClearBuffer(IDType bufferID) {
+        _autoClearBufferIDs.include(bufferID);
+    }
+
+    // Prevent a buffer from being auto-cleared
+    void removeAutoClearBuffer(IDType bufferID, bool autoClear) {
+        _autoClearBufferIDs.exclude(bufferID);
+    }
+
+protected:
+    // This keeps track of which buffers should be cleared at each frame-start
+    FlagSet<unsigned int> _autoClearBufferIDs;
+
+
+/*---------------------------------------------------------------------------*
+ | "Current" sub-object control
+ *---------------------------------------------------------------------------*/
+protected:
+    void ensureCurrent(const MatrixStack & ms) {
+        WRITE_THRU_CACHE(API::CurrentMatrixStack, IDType,
+                         _currentMatrixStack, ms.id())
+    }
+
+    IDType _currentMatrixStack;
+
+
+/*---------------------------------------------------------------------------*
  | Coordinate space transformation functions
  *---------------------------------------------------------------------------*/
 public:
     // Transform between world and local coordinate spaces
-    Point3D worldToLocal(const Point3D &world) const {
-        return viewTransformation.transform(world);
+    Point3D worldToLocal(const Point3D & world) const {
+        return viewMatrix().transform(world);
     }
-    Vector3D worldToLocal(const Vector3D &world) const {
-        return viewTransformation.transform(world);
+    Vector3D worldToLocal(const Vector3D & world) const {
+        return viewMatrix().transform(world);
     }
-    Point3D localToWorld(const Point3D &local) const {
-        return viewTransformation.untransform(local);
+    Point3D localToWorld(const Point3D & local) const {
+        return viewMatrix().untransform(local);
     }
-    Vector3D localToWorld(const Vector3D &local) const {
-        return viewTransformation.untransform(local);
+    Vector3D localToWorld(const Vector3D & local) const {
+        return viewMatrix().untransform(local);
     }
 
     // Transform between world and screen coordinate spaces
-    Point3D worldToScreen(const Point3D &world) const {
-        return  viewport.transform(
-                    projectionTransformation.transform(
-                        viewTransformation.transform(world)
+    Point3D worldToScreen(const Point3D & world) const {
+        return  viewport().transform(
+                    projectionMatrix().transform(
+                        viewMatrix().transform(world)
                     )
                 );
     }
-    Point3D screenToWorld(const Point3D &screen) const {
-        return  viewTransformation.untransform(
-                    projectionTransformation.untransform(
-                        viewport.untransform(screen)
+    Point3D screenToWorld(const Point3D & screen) const {
+        return  viewMatrix().untransform(
+                    projectionMatrix().untransform(
+                        viewport().untransform(screen)
                     )
                 );
     }
@@ -236,7 +372,7 @@ public:
 #include "ImmediateModeRenderer-Viewport"
 #include "ImmediateModeRenderer-MatrixStack"
 #include "ImmediateModeRenderer-LightingUnit"
-#include "ImmediateModeRenderer-TextureUnit"
+#include "ImmediateModeRenderer-TexturingUnit"
 #include "ImmediateModeRenderer-Buffer"
 #include "ImmediateModeRenderer-Statistics"
 

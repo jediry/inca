@@ -1,0 +1,81 @@
+/* -*- C++ -*-
+ *
+ * File: array
+ *
+ * Author: Ryan L. Saunders
+ *
+ * Copyright 2004, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ * FIXME: can we give this a better name??
+ */
+
+#ifndef INCA_RASTER_GENERATOR_ARRAY
+#define INCA_RASTER_GENERATOR_ARRAY
+
+// Import system configuration
+#include <inca/inca-common.h>
+
+// This is part of the Inca raster processing library
+namespace inca {
+    namespace raster {
+        // Forward declarations
+        template <typename T, inca::SizeType dim> class ArrayGeneratorRaster;
+
+        // Generator function
+        template <typename ArrayType, inca::SizeType dim>
+        ArrayGeneratorRaster<ArrayType, dim> array(const ArrayType & a,
+                                                   IndexType axis) {
+            return ArrayGeneratorRaster<ArrayType, dim>(a, axis);
+        }
+    };
+};
+
+// Import generator base class
+#include "GeneratorRasterBase"
+
+
+template <typename ArrayType, inca::SizeType dim>
+class inca::raster::ArrayGeneratorRaster
+        : public GeneratorRasterBase<ArrayGeneratorRaster<ArrayType, dim>,
+                                     typename ArrayType::value_type, dim> {
+public:
+    // Type definitions
+    typedef ArrayGeneratorRaster<ArrayType, dim>    ThisType;
+    typedef typename ThisType::Types                Types;
+
+    // Imported types
+    typedef typename Types::ElementType     ElementType;
+    typedef typename Types::ConstReference  ConstReference;
+    typedef typename Types::IndexType       IndexType;
+
+
+public:
+    // Constructor
+    template <class ElementList>
+    explicit ArrayGeneratorRaster(const ElementList & a, IndexType axis)
+        : _array(a), _arrayAxis(axis) { }
+
+
+/*---------------------------------------------------------------------------*
+ | Core functions needed by RasterFacade
+ *---------------------------------------------------------------------------*/
+protected:
+    friend class RasterCoreAccess;
+
+    // Element accessor
+    template <class IndexList, typename ReturnType>
+    ReturnType getElement(const IndexList & indices) const {
+        // Return the element keyed by the relevent index
+        IndexType idx = *(indices.begin() + _arrayAxis);
+        if (idx < 0)
+            idx -= (idx / _array.size()) * _array.size();
+        return _array[idx % _array.size()];
+    }
+
+protected:
+    ArrayType   _array;     // The array of values we're holding
+    IndexType   _arrayAxis; // Which dimensional axis it's oriented along
+};
+
+#endif

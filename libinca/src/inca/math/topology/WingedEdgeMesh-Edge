@@ -1,7 +1,7 @@
 /* -*- C++ -*-
  *
  * File: WingedEdgeMesh-Edge
- * 
+ *
  * Author: Ryan L. Saunders
  *
  * Copyright 2004, Ryan L. Saunders. All rights reserved.
@@ -47,12 +47,12 @@ MESH_TEMPLATE class inca::math::MESH::Edge : public EData, public MeshElement {
  *---------------------------------------------------------------------------*/
 public:
     // The mesh & friends need access to protected (modification) functions
-    friend Mesh;
-    friend Vertex;
-    friend Face;
-    friend Edge;
-    friend FaceVertex;
-    friend EdgeVertex;
+    friend class MESH;
+    friend class Vertex;
+    friend class Face;
+    //friend class Edge;
+    friend class FaceVertex;
+    friend class EdgeVertex;
 
 
 /*---------------------------------------------------------------------------*
@@ -60,13 +60,13 @@ public:
  *---------------------------------------------------------------------------*/
 public:
     // Iterator definitions
-    typedef basic_mesh_iterator< OrbitCCW<Vertex, Edge> >       vertex_iterator;
-    typedef basic_mesh_iterator< OrbitCCW<Face, Edge> >         face_iterator;
-    typedef basic_mesh_iterator< OrbitCCW<Edge, Edge> >         ccw_edge_iterator;
-    typedef basic_mesh_iterator< OrbitCW<Edge, Edge> >          cw_edge_iterator;
-    typedef basic_mesh_iterator< OrbitCCW<FaceVertex, Edge> >   ccw_face_vertex_iterator;
-    typedef basic_mesh_iterator< OrbitCW<FaceVertex, Edge> >    cw_face_vertex_iterator;
-    typedef basic_mesh_iterator< OrbitCCW<EdgeVertex, Edge> >   edge_vertex_iterator;
+    typedef basic_mesh_iterator< OrbitCCW<Mesh, Vertex, Edge> >       vertex_iterator;
+    typedef basic_mesh_iterator< OrbitCCW<Mesh, Face, Edge> >         face_iterator;
+    typedef basic_mesh_iterator< OrbitCCW<Mesh, Edge, Edge> >         ccw_edge_iterator;
+    typedef basic_mesh_iterator< OrbitCW<Mesh, Edge, Edge> >          cw_edge_iterator;
+    typedef basic_mesh_iterator< OrbitCCW<Mesh, FaceVertex, Edge> >   ccw_face_vertex_iterator;
+    typedef basic_mesh_iterator< OrbitCW<Mesh, FaceVertex, Edge> >    cw_face_vertex_iterator;
+    typedef basic_mesh_iterator< OrbitCCW<Mesh, EdgeVertex, Edge> >   edge_vertex_iterator;
 
 
 /*---------------------------------------------------------------------------*
@@ -115,7 +115,7 @@ public:
 
 protected:
     void setStartVertex(VertexPtr v) { _startEdgeVertex.setVertex(v); }
-    void setEndVertex(VertexPtr v)   { _endEdeVertex.setVertex(v); }
+    void setEndVertex(VertexPtr v)   { _endEdgeVertex.setVertex(v); }
 
 
 // Next vertex by orbiting around a particular face
@@ -511,7 +511,7 @@ public:
         else                                    return NULL;
     }
     FaceVertexPtr otherFaceVertexAcrossFace(FaceVertexConstPtr fv) const {
-        if (fv == positiveFaceVertexCCW())      return positveFaceVertexCW();
+        if (fv == positiveFaceVertexCCW())      return positiveFaceVertexCW();
         else if (fv == positiveFaceVertexCW())  return positiveFaceVertexCCW();
         else if (fv == negativeFaceVertexCCW()) return negativeFaceVertexCW();
         else if (fv == negativeFaceVertexCW())  return negativeFaceVertexCCW();
@@ -656,7 +656,7 @@ public:
 public:
     // Split this edge, creating a new vertex
     VertexPtr split(const VData &vd = VData()) {
-        return mesh()->createVertex(this, vd);
+        return this->mesh()->createVertex(this, vd);
     }
 };
 

@@ -1,0 +1,478 @@
+/* -*- C++ -*-
+ *
+ * File: OperatorRasterBase
+ *
+ * Author: Ryan L. Saunders
+ *
+ * Copyright 2004, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ *      This file implements a number of tools to simplify the creation of
+ *      operations on raster objects that are themselves rasters. This approach
+ *      has the advantage of being highly intuitive (e.g., adding together two
+ *      rasters produces another raster), but it can also be extremely
+ *      efficient, since the operations are (generally) not evaluated until a
+ *      particular element of the resulting function is requested. If you are
+ *      familiar with the Boost Lambda Library...this is sort of like a
+ *      raster-ified lambda system.
+ *
+ *      The OperatorRasterBase template class implements most of the functions
+ *      required by RasterFacade, allowing raster operators taking zero to four
+ *      arguments to be implemented easily.
+ *
+ *  FIXME: there may be some issues with const/non-const for writable operators
+ */
+
+#ifndef INCA_RASTER_OPERATOR_BASE
+#define INCA_RASTER_OPERATOR_BASE
+
+// Import system configuration
+#include <inca/inca-common.h>
+
+
+// This is part of the Inca raster processing library
+namespace inca {
+    namespace raster {
+        // Forward declarations
+        template <class Derived, class Tags, class Types,
+                  typename Op0, typename Op1, typename Op2, typename Op3>
+            class OperatorRasterBase;
+    }
+}
+
+
+// Import RasterFacade
+#include "../RasterFacade"
+
+// Import Raster wrapper for constant values
+#include "../generators/constant"
+
+// Import metaprogramming tools
+#include <inca/util/metaprogramming/Nothing.hpp>
+#include <inca/util/metaprogramming/macros.hpp>
+#include <boost/preprocessor/logical/and.hpp>
+
+
+// Metafunction promoting its argument to a raster.
+// If the argument is a non-raster type, a ConstantGeneratorRaster of the appropriate
+// dimensionality is returned. If the argument is a raster type, it is passed
+// through unmodified if it is of the correct dimensionality. If the argument
+// is the special value inca::Nothing, then inca::Nothing is returned.
+//
+// FIXME: What happens if a different dimensionality raster is used???
+namespace inca {
+    namespace raster {
+
+        // Specialization for non-raster types
+        template <typename T, inca::SizeType dim, typename Enabled = void>
+        struct make_raster {
+            typedef ConstantGeneratorRaster<T, dim> type;
+        };
+
+        // Specialization for Nothing
+        template <typename T, inca::SizeType dim>
+        struct make_raster<T, dim, ENABLE_IF( is_nothing<T> ) > {
+            typedef Nothing type;
+        };
+
+        // Specialization for correct-dimensionality raster
+        template <typename T, inca::SizeType dim>
+        struct make_raster<T, dim, ENABLE_IF( AND2( is_raster<T>,
+                                              EQUAL( raster_dimensionality<T>,
+                                                     INT(dim) ) ) ) > {
+            typedef T type;
+        };
+
+    }
+}
+
+
+// Metafunction combining two or more raster size tags based on a simple
+// precedence scheme. The result will be the tag of the highest precedence.
+//      Highest:    FixedSizeRaster
+//                  MutableSizeRaster
+//                  ArbitrarySizeRaster
+//      Lowest:     Nothing
+namespace inca {
+    namespace raster {
+
+        // Supporting metafunction determining tag precedence
+        // General form. Has the lowest value and a tag type of Nothing.
+        template <typename T, typename Enabled = void>
+        struct size_tag_value {
+            typedef ::boost::mpl::integral_c_tag tag;
+            typedef Nothing type;
+            static const int value = 0;
+        };
+
+        // Specialization for Raster (copies value from other specializations)
+        template <typename T>
+        struct size_tag_value<T, ENABLE_IF( is_raster<T> ) > {
+            typedef ::boost::mpl::integral_c_tag tag;
+            typedef typename T::SizeTag type;
+            static const int value = size_tag_value<type>::value;
+        };
+
+        // Specialization for ArbitrarySizeRaster
+        template <>
+        struct size_tag_value<ArbitrarySizeRasterTag, void> {
+            typedef ::boost::mpl::integral_c_tag tag;
+            typedef ArbitrarySizeRasterTag type;
+            static const int value = 1;
+        };
+
+        // Specialization for MutableSizeRaster
+        template <>
+        struct size_tag_value<MutableSizeRasterTag, void> {
+            typedef ::boost::mpl::integral_c_tag tag;
+            typedef MutableSizeRasterTag type;
+            static const int value = 2;
+        };
+
+        // Specialization for FixedSizeRaster
+        template <>
+        struct size_tag_value<FixedSizeRasterTag, void> {
+            typedef ::boost::mpl::integral_c_tag tag;
+            typedef FixedSizeRasterTag type;
+            static const int value = 3;
+        };
+
+
+        // Metafunction to combine tags
+        template <typename T0 = Nothing,
+                  typename T1 = Nothing,
+                  typename T2 = Nothing,
+                  typename T3 = Nothing>
+        struct combine_size_tags {
+            // Pick the largest-valued tag in the bunch
+            typedef typename MAX4( size_tag_value<T0>,
+                                   size_tag_value<T1>,
+                                   size_tag_value<T2>,
+                                   size_tag_value<T3> )::type type;
+        };
+
+    }
+}
+
+
+// Meta-functor for intersecting the bounds covered by four Region objects.
+// Any of the Region objects may be replaced by the Nothing type, in which
+// case they will not participate in the bounds calculation. If none of the
+// arguments is non-Nothing, then Nothing is the result of the calculation.
+namespace inca {
+    namespace raster {
+
+        // extract_bounds is a sub-functor that returns the Region object
+        // from a raster and passes through anything else (e.g., a Region
+        // object, or Nothing) unmodified.
+
+        // General form (Region or Nothing)
+        template <typename T, typename Enabled = void>
+        struct extract_bounds {
+            typedef T type;
+            const type & operator()(const T & t) { return t; }
+        };
+        // Specialization for Rasters that are not arbitrary-sized
+        template <typename T>
+        struct extract_bounds<T, ENABLE_IF( AND2( is_raster<T>,
+                                                  NOT( is_arbitrary_size_raster<T> ) ) ) > {
+            typedef typename T::Region type;
+            const type & operator()(const T & t) { return t.bounds(); }
+        };
+        // Specialization for Rasters that are arbitrary-sized
+        template <typename T>
+        struct extract_bounds<T, ENABLE_IF( AND2( is_raster<T>,
+                                                  is_arbitrary_size_raster<T> ) ) > {
+            typedef Nothing type;
+            const type & operator()(const T & t) { Nothing(); }
+        };
+
+        // intersect_pair is a sub-functor that handles all the possible
+        // combinations of Region/Nothing for a pair of types.
+
+        // Specialization for two non-Nothings
+        template <typename T0, typename T1>
+        struct intersect_pair {
+            typedef typename extract_bounds<T0>::type type;
+            type operator()(const T0 & t0, const T1 & t1) {
+                return intersectionOf(t0, t1);
+            }
+        };
+        // Specialization for first-arg Nothing
+        template <typename T>
+        struct intersect_pair<Nothing, T> {
+            typedef typename extract_bounds<T>::type type;
+            type operator()(Nothing, const T & t) {
+                return t;
+            }
+        };
+        // Specialization for second-arg Nothing
+        template <typename T>
+        struct intersect_pair<T, Nothing> {
+            typedef typename extract_bounds<T>::type type;
+            type operator()(const T & t, Nothing) {
+                return t;
+            }
+        };
+        // Specialization for double Nothing
+        template <>
+        struct intersect_pair<Nothing, Nothing> {
+            typedef Nothing type;
+            type operator()(Nothing, Nothing) { return Nothing(); }
+        };
+
+
+        // The actual meta-functor, which delegates to three specializations
+        // of intersect_pair to do all the work.
+        template <typename T0, typename T1, typename T2, typename T3>
+        struct intersect_bounds {
+            typedef typename extract_bounds<T0>::type R0;
+            typedef typename extract_bounds<T1>::type R1;
+            typedef typename extract_bounds<T2>::type R2;
+            typedef typename extract_bounds<T3>::type R3;
+            typedef typename intersect_pair<R0, R1>::type first_type;
+            typedef typename intersect_pair<R2, R3>::type second_type;
+            typedef typename intersect_pair<first_type, second_type>::type type;
+
+            type operator()(const T0 & t0, const T1 & t1,
+                            const T2 & t2, const T3 & t3) {
+                return intersect_pair<first_type, second_type>()(
+                            intersect_pair<R0, R1>()(extract_bounds<T0>()(t0),
+                                                     extract_bounds<T1>()(t1)),
+                            intersect_pair<R2, R3>()(extract_bounds<T2>()(t2),
+                                                     extract_bounds<T3>()(t3)));
+            }
+        };
+
+    }
+}
+
+
+template <class Derived, class Tags, class Types,
+          typename Op0 = inca::Nothing,
+          typename Op1 = inca::Nothing,
+          typename Op2 = inca::Nothing,
+          typename Op3 = inca::Nothing>
+class inca::raster::OperatorRasterBase
+        : public RasterFacade<Derived, Tags, Types> {
+/*---------------------------------------------------------------------------*
+ | Type & constant declarations
+ *---------------------------------------------------------------------------*/
+public:
+    // This type -- makes writing subclass constructors easier
+    typedef OperatorRasterBase<Derived, Tags, Types,
+                               Op0, Op1, Op2, Op3>      OperatorBaseType;
+
+    // Operand types
+    typedef Op0 Operand0Type;
+    typedef Op1 Operand1Type;
+    typedef Op2 Operand2Type;
+    typedef Op3 Operand3Type;
+
+    // Imported types
+    typedef typename Types::ElementType     ElementType;
+    typedef typename Types::ConstReference  ConstReference;
+    typedef typename Types::SizeType        SizeType;
+    typedef typename Types::SizeArray       SizeArray;
+    typedef typename Types::Region          Region;
+
+    // How many dimensions do we have?
+    static const SizeType dimensionality = Types::dimensionality;
+
+    // How many actual operands do we have (don't allow intervening "Nothing")?
+    static const SizeType arity = IS_SAME( Operand0Type, Nothing )::value ? 0
+                                : IS_SAME( Operand1Type, Nothing )::value ? 1
+                                : IS_SAME( Operand2Type, Nothing )::value ? 2
+                                : IS_SAME( Operand3Type, Nothing )::value ? 3
+                                :                                           4;
+
+    // Rasterified types (non-rasters are promoted to ConstantValueRaster)
+    typedef typename make_raster<Op0, dimensionality>::type Operand0RasterType;
+    typedef typename make_raster<Op1, dimensionality>::type Operand1RasterType;
+    typedef typename make_raster<Op2, dimensionality>::type Operand2RasterType;
+    typedef typename make_raster<Op3, dimensionality>::type Operand3RasterType;
+
+
+/*---------------------------------------------------------------------------*
+ | Constructors
+ *---------------------------------------------------------------------------*/
+protected:
+    // Zero-operand constructor
+    explicit OperatorRasterBase() {
+        BOOST_STATIC_ASSERT(arity == 0);
+    }
+
+    // One-operand constructor
+    explicit OperatorRasterBase(const Operand0Type & op0,
+                                bool doBoundsCalculation = true)
+            : operand0(op0) {
+        BOOST_STATIC_ASSERT(arity == 1);
+        if (doBoundsCalculation) calculateBounds();
+    }
+
+    // Two-operand constructor
+    explicit OperatorRasterBase(const Operand0Type & op0,
+                                const Operand1Type & op1,
+                                bool doBoundsCalculation = true)
+            : operand0(op0), operand1(op1) {
+        BOOST_STATIC_ASSERT(arity == 2);
+        if (doBoundsCalculation) calculateBounds();
+    }
+
+    // Three-operand constructor
+    explicit OperatorRasterBase(const Operand0Type & op0,
+                                const Operand1Type & op1,
+                                const Operand2Type & op2,
+                                bool doBoundsCalculation = true)
+            : operand0(op0), operand1(op1), operand2(op2) {
+        BOOST_STATIC_ASSERT(arity == 3);
+        if (doBoundsCalculation) calculateBounds();
+    }
+
+    // Four-operand constructor
+    explicit OperatorRasterBase(const Operand0Type & op0,
+                                const Operand1Type & op1,
+                                const Operand2Type & op2,
+                                const Operand3Type & op3,
+                                bool doBoundsCalculation = true)
+            : operand0(op0), operand1(op1), operand2(op2), operand3(op3) {
+        BOOST_STATIC_ASSERT(arity == 4);
+        if (doBoundsCalculation) calculateBounds();
+    }
+
+protected:
+    // The operands, in all their glory
+    Operand0RasterType operand0;
+    Operand1RasterType operand1;
+    Operand2RasterType operand2;
+    Operand3RasterType operand3;
+
+
+    void calculateBounds() {
+        _bounds = intersect_bounds<Operand0RasterType,
+                                   Operand1RasterType,
+                                   Operand2RasterType,
+                                   Operand3RasterType>()(operand0, operand1,
+                                                         operand2, operand3);
+    }
+
+
+/*---------------------------------------------------------------------------*
+ | Core functions needed by RasterFacade
+ *---------------------------------------------------------------------------*/
+protected:
+    friend class RasterCoreAccess;
+
+    // Functions required by RasterBoundsFacet
+    const Region & getRasterBounds() const { return _bounds; }
+
+    // Functions required by RasterAccessFacet
+    // ReturnType getElement(const IndexList & indices) should be implemented by
+    // derived class.
+    template <typename ReturnType>
+    ReturnType getDummyElement(ConstReference value) const {
+        _dummyElement = value;
+        return ReturnType(_dummyElement);
+    }
+
+    Region              _bounds;
+    mutable ElementType _dummyElement;
+};
+
+
+// FIXME: this really should be replaced by an extension to the Boost PP lib
+//#define SIZE_TAG(z, n, DATA) typename DATA ## n ::SizeTag
+
+// FIXME: I could clean up the EXTRA stuff with creative use of the ARRAY macros, maybe.
+
+// This macro creates a stock template class header (everything preceding the
+// first '{') extending OperatorRasterBase in the "normal" way. The class
+// name, number of template parameters, and the return type may be specified
+// in this way. The resulting operator will be:
+//      read-only
+//      immovable
+//      sized according to the combinatoric precedence rules above
+//      non-bounds-checked (relying on operands to do their own checking)
+//      absolute-indexed (not relative to bounds)
+//      of the maximum dimensionality of any operand
+#define INCA_RASTER_OPERATOR_CLASS_HEADER(CLASS, ARITY, EXTRA, RETURN)      \
+    template <PARAMS(ARITY, typename R)                                     \
+              COMMA_IF( BOOST_PP_AND(ARITY, LIST_SIZE(EXTRA)) )             \
+              FORMAL_PARAMS( EXTRA ) >                                      \
+    class CLASS                                                             \
+        : public OperatorRasterBase< CLASS<PARAMS(ARITY, R)                 \
+                                     COMMA_IF( BOOST_PP_AND(ARITY, LIST_SIZE(EXTRA)) ) \
+                                     ACTUAL_PARAMS( EXTRA ) >,              \
+            RasterTags<typename combine_size_tags<PARAMS(ARITY, R)>::type,  \
+                       StationaryRasterTag,                                 \
+                       ReadableRasterTag,                                   \
+                       true, false, false>,                                 \
+            RasterTypes<RETURN,                                             \
+                        maximum_dimensionality<PARAMS(ARITY, R)>::value,    \
+                        RETURN, RETURN, RETURN>                             \
+            COMMA_IF( ARITY ) PARAMS(ARITY, R) >                            \
+
+#define INCA_RASTER_OPERATOR_GET_ELEMENT_HEADER(VAR)                        \
+    /* Friendship grant so that this function can be accessed */            \
+    friend class ::inca::raster::RasterCoreAccess;                          \
+                                                                            \
+    /* Get function prototype */                                            \
+    template <class IndexList, typename ReturnType>                         \
+    ReturnType getElement(const IndexList & VAR) const
+
+#define INCA_RASTER_OPERATOR_IMPORT_TYPES(CLASS)                            \
+    /* First, we need ourselves and our superclass */                       \
+    typedef CLASS                               ThisType;                   \
+    typedef typename ThisType::OperatorBaseType OperatorBaseType;           \
+    typedef OperatorBaseType                Base;                           \
+                                                                            \
+    /* Numeric types */                                                     \
+    typedef typename Base::SizeType         SizeType;                       \
+    typedef typename Base::IndexType        IndexType;                      \
+    typedef typename Base::DifferenceType   DifferenceType;                 \
+                                                                            \
+    /* Container types */                                                   \
+    typedef typename Base::SizeArray        SizeArray;                      \
+    typedef typename Base::IndexArray       IndexArray;                     \
+    typedef typename Base::DifferenceArray  DifferenceArray;                \
+    typedef typename Base::Region           Region;                         \
+                                                                            \
+    /* What type of thing do I contain? */                                  \
+    typedef typename Base::ElementType      ElementType;                    \
+    typedef typename Base::Reference        Reference;                      \
+    typedef typename Base::ConstReference   ConstReference;                 \
+    typedef typename Base::Pointer          Pointer;                        \
+    typedef typename Base::ConstPointer     ConstPointer;                   \
+                                                                            \
+    /* What are my operands? */                                             \
+    typedef typename Base::Operand0RasterType       Operand0RasterType;     \
+    typedef typename Base::Operand1RasterType       Operand1RasterType;     \
+    typedef typename Base::Operand2RasterType       Operand2RasterType;     \
+    typedef typename Base::Operand3RasterType       Operand3RasterType;     \
+                                                                            \
+    /* How do we access elements? */                                        \
+    typedef typename Base::ReadableElementType     ReadableElementType;     \
+    typedef typename Base::WritableElementType     WritableElementType;     \
+    typedef typename Base::ReadWriteElementType    ReadWriteElementType;    \
+                                                                            \
+    /* How many dimensions do we have? */                                   \
+    static const SizeType dimensionality = Base::dimensionality;            \
+                                                                            \
+    /* How many operands to we have? */                                     \
+    static const SizeType arity = Base::arity;
+
+
+// This macro creates a stock template factory function for generating
+// raster operators. The factory function takes as many arguments as the
+// operator has operands.
+// FIXME: this needs something besides PARAMS to work
+#define INCA_RASTER_OPERATOR_FACTORY_FUNCTION(FUNC, CLASS, ARITY, EXTRA_T, EXTRA_A)\
+    template <PARAMS(ARITY, typename R)>                                    \
+    CLASS<PARAMS(ARITY, R) COMMA_IF(EXTRA_T) EXTRA_T > FUNC(PARAMS(ARITY, COMMA_IF(EXTRA_A) EXTRA_A
+
+
+// Clean up the preprocessor's namespace
+#define UNDEFINE_INCA_METAPROGRAMMING_MACROS
+#include <inca/util/metaprogramming/macros.hpp>
+
+#endif

@@ -1,7 +1,7 @@
 /* -*- C++ -*-
  *
  * File: MultiDimensionalIterator
- * 
+ *
  * Author: Ryan L. Saunders
  *
  * Copyright 2004, Ryan L. Saunders. All rights reserved.
@@ -31,13 +31,13 @@
  *          i[0]++      increment along the first axis
  *          i[n] += m   jump along the nth axis
  *
- *      The n-dimensional coordinates 
+ *      The n-dimensional coordinates
  */
 
 // Questions:
 //      Conflict between using [] for axes and traditional ptr-style meaning
 //      Good way to do n-D coordinates
-// TODO: 
+// TODO:
 
 
 #ifndef INCA_UTIL_MULTI_DIMENSIONAL_ITERATOR
@@ -249,7 +249,7 @@ namespace inca {
     template <class MA1, class MA2, typename RT1, typename RT2, bool rev>
     inline bool operator<(const MultiArrayIterator<MA1, RT1, rev> &x,
                           const MultiArrayIterator<MA2, RT2, rev> &y) {
-        if (! reversed)     return x.index() < y.index();
+        if (! rev)          return x.index() < y.index();
         else                return x.index() > y.index();
     }
 

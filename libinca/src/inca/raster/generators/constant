@@ -1,0 +1,69 @@
+/* -*- C++ -*-
+ *
+ * File: constant
+ *
+ * Author: Ryan L. Saunders
+ *
+ * Copyright 2004, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ */
+
+#ifndef INCA_RASTER_GENERATOR_CONSTANT
+#define INCA_RASTER_GENERATOR_CONSTANT
+
+// Import system configuration
+#include <inca/inca-common.h>
+
+// This is part of the Inca raster processing library
+namespace inca {
+    namespace raster {
+        // Forward declarations
+        template <typename T, inca::SizeType dim> class ConstantGeneratorRaster;
+
+        // Generator function
+        template <typename T, inca::SizeType dim>
+        ConstantGeneratorRaster<T, dim> constant(const T & t) {
+            return ConstantGeneratorRaster<T, dim>(t);
+        }
+    };
+};
+
+// Import generator base class
+#include "GeneratorRasterBase"
+
+
+template <typename T, inca::SizeType dim>
+class inca::raster::ConstantGeneratorRaster
+        : public GeneratorRasterBase<ConstantGeneratorRaster<T, dim>, T, dim> {
+public:
+    // Type definitions
+    typedef ConstantGeneratorRaster<T, dim> ThisType;
+    typedef typename ThisType::Types        Types;
+
+    // Imported types
+    typedef typename Types::ElementType     ElementType;
+    typedef typename Types::ConstReference  ConstReference;
+
+public:
+    // Constructor
+    ConstantGeneratorRaster(ConstReference t) : _value(t) { }
+
+
+/*---------------------------------------------------------------------------*
+ | Core functions needed by RasterFacade
+ *---------------------------------------------------------------------------*/
+protected:
+    friend class RasterCoreAccess;
+
+    // Element accessors
+    template <class IndexList, typename ReturnType>
+    ReturnType getElement(const IndexList & indices) const {
+        return _value;      // Return the constant value
+    }
+
+protected:
+    ElementType         _value;     // The value we're holding
+};
+
+#endif

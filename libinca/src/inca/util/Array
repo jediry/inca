@@ -27,8 +27,10 @@ namespace inca {
 // Import STL function definitions
 #include <algorithm>
 
-// Import multi-dimensional preprocessor metaprogramming macros
+// Import metaprogramming tools
+#include "metaprogramming/is_collection.hpp"
 #include "multi-dimensional-macros.hpp"
+#include "metaprogramming/macros.hpp"
 
 
 template <typename T, inca::SizeType dim>
@@ -37,8 +39,10 @@ class inca::Array {
  | Type & constant declarations
  *---------------------------------------------------------------------------*/
 public:
-    // How many dimensions do I have?
-    static const SizeType dimensionality = dim;
+    // Numeric types
+    typedef ::inca::SizeType            SizeType;
+    typedef ::inca::IndexType           IndexType;
+    typedef ::inca::DifferenceType      DifferenceType;
 
     // Contained types
     typedef T                           ElementType;
@@ -50,13 +54,24 @@ public:
     // Iterator types
     typedef Pointer                                 Iterator;
     typedef ConstPointer                            ConstIterator;
-    typedef ReverseIteratorAdapter<Iterator>        ReverseIterator;      
+    typedef ReverseIteratorAdapter<Iterator>        ReverseIterator;
     typedef ReverseIteratorAdapter<ConstIterator>   ConstReverseIterator;
-    
-    typedef Iterator iterator;
-    typedef ConstIterator const_iterator;
-    typedef ReverseIterator reverse_iterator;
-    typedef ConstReverseIterator const_reverse_iterator;
+
+    // How many dimensions do I have?
+    static const SizeType dimensionality = dim;
+
+    // STL-compatibility typedefs
+    typedef ElementType             value_type;
+    typedef Reference               reference;
+    typedef ConstReference          const_reference;
+    typedef Pointer                 pointer;
+    typedef ConstPointer            const_pointer;
+    typedef SizeType                size_type;
+    typedef DifferenceType          difference_type;
+    typedef Iterator                iterator;
+    typedef ConstIterator           const_iterator;
+    typedef ReverseIterator         reverse_iterator;
+    typedef ConstReverseIterator    const_reverse_iterator;
 
 
 /*---------------------------------------------------------------------------*
@@ -68,8 +83,11 @@ public:
 
     // Initialization from an arbitrary collection
     template <class Collection>
-    explicit Array(const Collection & c) {
-        std::copy(c.begin(), c.end(), begin());
+    explicit Array(const Collection & c,
+                   ENABLE_FUNCTION_IF( is_collection<Collection> )) {
+        typename Collection::const_iterator it = c.begin();
+        for (IndexType i = 0; i < this->size(); ++i, ++it)
+            _elements[i] = ElementType(*it);
     }
 
     // Constant value initialization constructor
@@ -155,18 +173,31 @@ public:
  *---------------------------------------------------------------------------*/
 public:
     /**
-     * Creates a string representation of elements in this list.
-     * This version
-     * \returns a string containing a comma-separated list of scalars
+     * Creates a string representation of the elements in this array.
+     *
+     * This version prints all the elements in the array.
+     *
+     * \param separator the string to print between consecutive elements.
+     *                  This defaults to a comma followed by a space.
+     * \param prefix    the string to print before the entire array.
+     *                  This defaults to the empty string.
+     * \param suffix    the string to print after the entire array.
+     *                  This defaults to the empty string.
+     * \returns a string representation of containing a list of scalars
      */
-    std::string stringifyElements() const {
-        return stringifyElements(0, dimensionality);
+    std::string stringifyElements(const std::string & separator = ", ",
+                                  const std::string & prefix    = "",
+                                  const std::string & suffix    = "") const {
+        return stringifyElements(0, dimensionality, 1,
+                                 separator, prefix, suffix);
     }
 
     /**
      * \overload stringifyElements()
+     * Creates a string representation of the elements in this array.
+     *
      * This version allows to specify the index range which should be
-     * stringified. If either \a start or \a (start + num * stride) are
+     * stringified. If either \a start or (\a start + \a num * \a stride) are
      * outside the range * [0, dimension - 1], they will be clamped to the nearest
      * valid index.
      *
@@ -175,28 +206,57 @@ public:
      * \param stride    the stride length to take through the list with each
      *                  element we print. If this is \c 1, all elements in
      *                  the range will be printed; if \c 2, every other, etc.
-     * \returns a string containing a comma-separated list of scalars
+     * \param separator the string to print between consecutive elements.
+     *                  This defaults to a comma followed by a space.
+     * \param prefix    the string to print before the entire array.
+     *                  This defaults to the empty string.
+     * \param suffix    the string to print after the entire array.
+     *                  This defaults to the empty string.
+     * \returns a string representation of the elements in this array
      */
-    string stringifyElements(IndexType start, IndexType num,
-                             SizeType stride = 1) const {
+    std::string stringifyElements(IndexType start, IndexType num,
+                                  SizeType stride = 1,
+                                  const std::string & separator = ", ",
+                                  const std::string & prefix    = "",
+                                  const std::string & suffix    = "") const {
         IndexType end = start + num * stride;
         if (start < 0)                      start = 0;
         else if (start >= dimensionality)   start = dimensionality;
         if (end < 0)                        end = 0;
         else if (end >= dimensionality)     end = dimensionality;
         std::ostringstream ss;
+        ss << prefix;
         for (IndexType i = start; i < end; i += stride) {
             ss << _elements[i];
-            if (IndexType(i + stride) < end)  ss << ", ";
+            if (IndexType(i + stride) < end)  ss << separator;
         }
+        ss << suffix;
         return ss.str();
     }
 };
 
-// std::ostream writer operator
+
+// FIXME: implement the rest of the arithmetic ops and replace unnecessary code throughout!!
+/*****************************************************************************
+ * Element-wise arithmetic operators & functions for numeric scalar types
+ *****************************************************************************/
 namespace inca {
+    template <typename Scalar1, typename Scalar2, inca::SizeType dim>
+    bool operator==(const Array<Scalar1, dim> & a1, const Array<Scalar2, dim> & a2) {
+        for (IndexType i = 0; i < dim; ++i)
+            if (a1[i] != a2[i])
+                return false;
+        return true;
+    }
+};
+
+
+/*****************************************************************************
+ * std::ostream writer operator
+ *****************************************************************************/
+namespace std {
     template <typename scalar, inca::SizeType dim>
-    std::ostream & operator<<(std::ostream & os, const Array<scalar, dim> & a) {
+    ostream & operator<<(ostream & os, const inca::Array<scalar, dim> & a) {
         return os << a.stringifyElements();
     }
 };
@@ -204,6 +264,8 @@ namespace inca {
 // Clean up the preprocessor's namespace
 #define UNDEFINE_INCA_MULTI_DIM_MACROS
 #include "multi-dimensional-macros.hpp"
+#define UNDEFINE_INCA_METAPROGRAMMING_MACROS
+#include "metaprogramming/macros.hpp"
 
 #endif
 

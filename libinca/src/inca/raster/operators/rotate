@@ -1,0 +1,109 @@
+/*
+ * File: rotate
+ *
+ * Author: Ryan L. Saunders
+ *
+ * Copyright 2004, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ */
+
+#ifndef INCA_RASTER_OPERATOR_ROTATE
+#define INCA_RASTER_OPERATOR_ROTATE
+
+
+// Import operator base classes and macros
+#include "OperatorRasterBase"
+
+// Import metaprogramming tools
+#include <inca/util/multi-dimensional-macros.hpp>
+#include <inca/util/metaprogramming/macros.hpp>
+
+
+// This is part of the Inca raster processing library
+namespace inca {
+    namespace raster {
+
+        // Rotate a raster around a point
+        INCA_RASTER_OPERATOR_CLASS_HEADER(RotateOperatorRaster,
+                                          1, ((typename, Scalar), NIL),
+                                          typename R0::ElementType ) {
+        public:
+            // Get types from the superclass
+            INCA_RASTER_OPERATOR_IMPORT_TYPES(RotateOperatorRaster<R0 COMMA Scalar>)
+            typedef math::Vector<Scalar, R0::dimensionality>    Vector;
+            typedef math::Point<Scalar,  R0::dimensionality>    Point;
+
+
+            // Constructor giving transform rotation amount and center point
+            template <class ScalarList1, class ScalarList2>
+            explicit RotateOperatorRaster(const R0 & r, Scalar angle,
+                                          const ScalarList1 & axis,
+                                          const ScalarList2 & center)
+                    : OperatorBaseType(r, false),
+                      rotationAngle(-angle),
+                      rotationAxis(axis),
+                      centerPoint(center) { }
+
+        protected:
+            // Element evaluator function
+            INCA_RASTER_OPERATOR_GET_ELEMENT_HEADER(indices) {
+                Point p;
+                for (IndexType d = 0; d < dimensionality; ++d)
+                    p[d] = Scalar(indices[d]);
+                IndexArray idx(math::rotate(p, rotationAngle, rotationAxis, centerPoint));
+                return operand0(idx);
+            }
+
+            // Transformation parameters
+            Scalar rotationAngle;
+            Vector rotationAxis;
+            Point  centerPoint;
+        };
+
+
+        // Factory function taking 2D raster and rotation angle, about (0, 0)
+        template <typename R0, typename Scalar>
+        ENABLE_IF_T( AND2( is_raster<R0>,
+                           EQUAL( raster_dimensionality<R0>, INT(2) ) ),
+        RotateOperatorRaster<R0 COMMA Scalar> ) rotate(const R0 & r,
+                                                       const Scalar & angle) {
+            typedef RotateOperatorRaster<R0, Scalar> Rotate;
+            return Rotate(r, angle, typename Rotate::Point(Scalar(0)),
+                                    typename Rotate::Vector(Scalar(0)));
+        }
+
+        // Factory function taking N-D raster, rotation angle and center
+        template <typename R0, typename Scalar, typename ScalarList>
+        ENABLE_IF_T( is_raster<R0>,
+        RotateOperatorRaster<R0 COMMA Scalar> ) rotate(const R0 & r,
+                                                       const Scalar & angle,
+                                                       const ScalarList & center) {
+            typedef RotateOperatorRaster<R0, Scalar> Rotate;
+            typename Rotate::Vector axis(Scalar(0));
+            axis[0] = Scalar(1);
+            return Rotate(r, angle, center, axis);
+        }
+
+        // Factory function taking N-D raster, rotation angle, axis and center
+        template <typename R0, typename Scalar, typename ScalarList>
+        ENABLE_IF_T( is_raster<R0>,
+        RotateOperatorRaster<R0 COMMA Scalar> ) rotate(const R0 & r,
+                                                       const Scalar & angle,
+                                                       const ScalarList & center,
+                                                       const ScalarList & axis) {
+            typedef RotateOperatorRaster<R0, Scalar> Rotate;
+            return Rotate(r, angle, center, axis);
+        }
+
+    };
+};
+
+
+// Clean up the preprocessor's namespace
+#define UNDEFINE_INCA_MULTI_DIM_MACROS
+#include <inca/util/multi-dimensional-macros.hpp>
+#define UNDEFINE_INCA_METAPROGRAMMING_MACROS
+#include <inca/util/metaprogramming/macros.hpp>
+
+#endif

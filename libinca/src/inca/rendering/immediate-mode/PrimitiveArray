@@ -1,0 +1,401 @@
+/*
+ * File: PrimitiveArray
+ *
+ * Author: Ryan L. Saunders
+ *
+ * Copyright 2004, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ *      The PrimitiveArray template class represents a ...
+ *
+ * TODO: What about Indexed-color mode? How do we multiplex this against the
+ *       ColorArray? Different specialization of the ColorArray? Or just
+ *       check to ensure that only one of them is non-Nothing?
+ */
+
+#ifndef INCA_RENDERING_PRIMITIVE_ARRAY
+#define INCA_RENDERING_PRIMITIVE_ARRAY
+
+// Import system configuration
+#include <inca/inca-common.h>
+
+// Import metaprogramming tools
+#include <inca/util/metaprogramming/Nothing.hpp>
+#include <inca/util/metaprogramming/macros.hpp>
+
+
+// This is part of the Inca rendering subsystem
+namespace inca {
+    namespace rendering {
+        // Forward declarations
+        template <typename ElementType>     class DataArray;
+        template <>                         class DataArray<Nothing>;
+
+        template <typename ArrayType, typename Enabled = void> class Primitive;
+        template <typename A> class Primitive<A, DISABLE_IF( IS_CONST(A) ) >;
+
+        template <typename VertexType,
+                  typename NormalType    = Nothing,
+                  typename TexCoordType  = Nothing,
+                  typename ColorType     = Nothing,
+                  typename EdgeFlagType  = Nothing>
+            class PrimitiveArray;
+    };
+};
+
+
+/*****************************************************************************
+ * The DataArray class is a semi-dynamically-sized array of elements. It is
+ * similar to the STL vector class, except that resizing the array may be a
+ * destructive operation (if memory has to be reallocated, the old values
+ * are not preserved. Because of this, there is no equivalent to std::vector's
+ * 'push_back' operation.
+ *****************************************************************************/
+template <typename T>
+class inca::rendering::DataArray {
+public:
+    // Type definitions
+    typedef T         ElementType;
+    typedef T       & Reference;
+    typedef T const & ConstReference;
+
+    // Default constructor
+    DataArray() : _size(0), _elements(NULL) { }
+
+    // Allocating constructor
+    explicit DataArray(SizeType n) : _size(0), _elements(NULL) {
+        resize(n);
+    }
+
+    // Destructor
+    virtual ~DataArray() {
+        if (_elements)
+            delete [] _elements;
+    }
+
+
+    // The number of elements in the array
+    SizeType size() const { return _size; }
+
+    // Set the array to be a new size
+    bool resize(SizeType n) {
+        if (n != size()) {
+            if (_elements)
+                delete [] _elements;
+            _elements = new ElementType[n];
+            _size = n;
+        }
+    }
+
+    // Bounds-checked access to individual elements
+    Reference operator[](IndexType i) {
+        INCA_BOUNDS_CHECK_LINEAR((*this), i)
+        return _elements[i];
+    }
+    ConstReference operator[](IndexType i) const {
+        INCA_BOUNDS_CHECK_LINEAR((*this), i)
+        return _elements[i];
+    }
+         Reference element(IndexType i)       { return (*this)[i]; }
+    ConstReference element(IndexType i) const { return (*this)[i]; }
+    void setElement(IndexType i, ConstReference e) { element(i) = e; }
+
+    // Access to the raw array
+    ElementType const * elements() const { return _elements; }
+    ElementType       * elements()       { return _elements; }
+
+protected:
+    SizeType _size;
+    ElementType * _elements;
+};
+
+
+// Null specialization of the DataArray template. This is used  by the
+// higher-level objects when a particular data array (e.g. 'normals')
+// is to be omitted. It implements the same interface as the "real"
+// specialization, but the functions are all no-ops, allowing it to be
+// (mostly) used in the same context as the "real" one.
+template <> class inca::rendering::DataArray<inca::Nothing> {
+public:
+    // Type definitions
+    typedef Nothing ElementType;
+    typedef Nothing Reference;
+    typedef Nothing ConstReference;
+
+    // No-op constructors
+    explicit DataArray() { }
+    explicit DataArray(SizeType) { }
+
+    // Zero size function
+    SizeType size() const { return 0; }
+
+    // No-op resize function
+    bool resize(SizeType) { return false; }
+
+    // Dummy element accessors
+    Nothing operator[](IndexType i) const { return Nothing(); }
+    Nothing element(IndexType i)    const { return Nothing(); }
+    void setElement(Nothing) { }
+
+    // Dummy array accessor
+    Nothing * elements() const { return reinterpret_cast<Nothing *>(NULL); }
+};
+
+
+/*****************************************************************************
+ * The Primitive class is a lightweight proxy object wrapping together all of
+ * the different properties that a vertex can have. The
+ * similar to the STL vector class, except that resizing the array may be a
+ * destructive operation (if memory has to be reallocated, the old values
+ * are not preserved. Because of this, there is no equivalent to std::vector's
+ * 'push_back' operation.
+ *****************************************************************************/
+
+// This general version is only used directly by const-qualified types, and so
+// only implements const getter accessors. It is also inherited by the
+// non-const specialization.
+template <typename _ArrayType, typename Enabled>
+class inca::rendering::Primitive {
+public:
+    // Type definitions
+    typedef _ArrayType              ArrayType;
+    typedef Primitive<ArrayType>    PrimitiveType;
+
+    // Constructor
+    explicit Primitive(ArrayType & pa, IndexType i)
+        : _array(pa), _index(i) { }
+
+    // Fundamental property accessors
+          ArrayType & array()       { return _array; }
+    const ArrayType & array() const { return _array; }
+    IndexType index() const { return _index; }
+
+protected:
+    ArrayType & _array;
+    IndexType   _index;
+
+public:
+    // This macro makes defining pass-thru functions to all the sub arrays
+    // of the proxied array much simpler. Specifically, it declares:
+    //      Typedefs of the element types, e.g.:
+    //          VertexType
+    //          VertexReference
+    //          VertexConstReference
+    //      Const getter accessor functions, e.g.:
+    //          VertexConstReference vertex(IndexType) const
+    #define SUB_ARRAY_PASS_THRU(TYPE, GETTER_NAME, SETTER_NAME)             \
+    public:                                                                 \
+        /* Type definitions */                                              \
+        typedef typename ArrayType::TYPE ## Type            TYPE ## Type;           \
+        typedef typename ArrayType::TYPE ## Reference       TYPE ## Reference;      \
+        typedef typename ArrayType::TYPE ## ConstReference  TYPE ## ConstReference; \
+                                                                            \
+        /* Const getter accessor */                                         \
+        TYPE ## ConstReference GETTER_NAME() const {                        \
+            return array().GETTER_NAME(index());                            \
+        }
+
+    SUB_ARRAY_PASS_THRU(Vertex,   vertex,   setVertex)
+    SUB_ARRAY_PASS_THRU(Normal,   normal,   setNormal)
+    SUB_ARRAY_PASS_THRU(TexCoord, texCoord, setTexCoord)
+    SUB_ARRAY_PASS_THRU(Color,    color,    setColor)
+    SUB_ARRAY_PASS_THRU(EdgeFlag, edgeFlag, setEdgeFlag)
+
+    #undef SUB_ARRAY_PASS_THRU
+};
+
+
+// This version is for non-const _ArrayTypes, and provides non-const getters and setters
+template <typename _ArrayType>
+class inca::rendering::Primitive<_ArrayType,
+          DISABLE_IF( IS_CONST(_ArrayType) ) >  // Disable for const types
+        : public Primitive<_ArrayType, int> {  // Inherit the general implementation
+private:
+    // Type definitions
+    typedef _ArrayType                  ArrayType;
+    typedef Primitive<ArrayType>        ThisType;
+    typedef Primitive<ArrayType const>  ConstType;
+    typedef Primitive<ArrayType, int>  Superclass;
+
+public:
+
+    // Constructor
+    explicit Primitive(ArrayType & pa, IndexType i)
+        : Superclass(pa, i) { }
+
+    // Make available functions from the superclass
+    using Superclass::array;
+    using Superclass::index;
+
+    // Assignment operator from same type: copies proxied values
+    ThisType & operator=(const ThisType & p) {
+        setVertex(p.vertex());
+        setNormal(p.normal());
+        setTexCoord(p.texCoord());
+        setColor(p.color());
+        setEdgeFlag(p.edgeFlag());
+    }
+
+    // Assignment operator from const version: copies proxied values
+    ThisType & operator=(const ConstType & p) {
+        setVertex(p.vertex());
+        setNormal(p.normal());
+        setTexCoord(p.texCoord());
+        setColor(p.color());
+        setEdgeFlag(p.edgeFlag());
+    }
+
+
+    // This macro makes defining pass-thru functions to all the sub arrays
+    // of the proxied array much simpler. Specifically, it declares:
+    //      Typedefs of the element types, e.g.:
+    //          VertexType
+    //          VertexReference
+    //          VertexConstReference
+    //      Const and non-const getter accessor functions, e.g.:
+    //          VertexReference      vertex(IndexType)
+    //          VertexConstReference vertex(IndexType) const
+    //      Non-const setter accessor functions, e.g.:
+    //          void setVertex(IndexType, VertexConstReference v)
+    #define SUB_ARRAY_PASS_THRU(TYPE, GETTER_NAME, SETTER_NAME)             \
+    public:                                                                 \
+        /* Type definitions */                                              \
+        typedef typename ArrayType::TYPE ## Type            TYPE ## Type;           \
+        typedef typename ArrayType::TYPE ## Reference       TYPE ## Reference;      \
+        typedef typename ArrayType::TYPE ## ConstReference  TYPE ## ConstReference; \
+                                                                            \
+        /* Const getter accessor */                                         \
+        TYPE ## ConstReference GETTER_NAME() const {                        \
+            return array().GETTER_NAME(index());                            \
+        }                                                                   \
+                                                                            \
+        /* Non-const getter accessor */                                     \
+        TYPE ## Reference GETTER_NAME() {                                   \
+            return array().GETTER_NAME(index());                            \
+        }                                                                   \
+                                                                            \
+        /* Non-const setter accessor */                                     \
+        void SETTER_NAME(TYPE ## ConstReference e) {                        \
+            array().SETTER_NAME(index(), e);                                \
+        }
+
+    SUB_ARRAY_PASS_THRU(Vertex,   vertex,   setVertex)
+    SUB_ARRAY_PASS_THRU(Normal,   normal,   setNormal)
+    SUB_ARRAY_PASS_THRU(TexCoord, texCoord, setTexCoord)
+    SUB_ARRAY_PASS_THRU(Color,    color,    setColor)
+    SUB_ARRAY_PASS_THRU(EdgeFlag, edgeFlag, setEdgeFlag)
+
+    #undef SUB_ARRAY_PASS_THRU
+};
+
+
+/*****************************************************************************
+ * The PrimitiveArray template class ties together a set of vertex properties
+ * stored in separate DataArrays as though they were stored together in a
+ * unified object. It does this by returning Primitive proxy classes, which
+ * call the individual getter/setter functions in this class.
+ *****************************************************************************/
+template <typename _VertexType,
+          typename _NormalType,
+          typename _TexCoordType,
+          typename _ColorType,
+          typename _EdgeFlagType>
+class inca::rendering::PrimitiveArray {
+public:
+    // Type definitions
+    typedef PrimitiveArray<_VertexType,   _NormalType,
+                           _TexCoordType, _ColorType,
+                           _EdgeFlagType>               ThisType;
+    typedef Primitive<ThisType const>   ConstPrimitive;
+    typedef Primitive<ThisType>         Primitive;
+
+    // No-initialization constructor
+    explicit PrimitiveArray() { }
+
+    // Memory-allocating constructor
+    explicit PrimitiveArray(SizeType n) { resize(n); }
+
+    // Access to the array size
+    SizeType size() const { return _vertices.size(); }
+
+    // Resize function
+    void resize(SizeType n) {
+        _vertices.resize(n);
+        _normals.resize(n);
+        _texCoords.resize(n);
+        _colors.resize(n);
+        _edgeFlags.resize(n);
+    }
+
+    // Primitive object accessors
+    ConstPrimitive operator[](IndexType i) const { return ConstPrimitive(this, i); }
+    ConstPrimitive primitive(IndexType i)  const { return (*this)[i]; }
+         Primitive operator[](IndexType i) { return Primitive(*this, i); }
+         Primitive primitive(IndexType i)  { return (*this)[i]; }
+    void setPrimitive(IndexType i, const Primitive & p)      { primitive(i) = p; }
+    void setPrimitive(IndexType i, const ConstPrimitive & p) { primitive(i) = p; }
+
+
+    // This macro makes defining all the sub arrays with their accessor
+    // functions much simpler. Specifically, it declares:
+    //      Typedefs of and imported from the sub-array, e.g.:
+    //          VertexArrayType
+    //          VertexType
+    //          VertexReference
+    //          VertexConstReference
+    //      A member variable of the sub-array type, e.g.:
+    //          protected: VertexArrayType _vertices
+    //      Const and non-const getter accessor functions, e.g.:
+    //          VertexReference      vertex(IndexType)
+    //          VertexConstReference vertex(IndexType) const
+    //      Non-const setter accessor functions, e.g.:
+    //          void setVertex(IndexType, VertexConstReference v)
+    //      Const sub-array accessors, e.g.:
+    //          const VertexArrayType & vertices() const
+    #define SUB_ARRAY(TYPE, ARRAY_NAME, GETTER_NAME, SETTER_NAME)           \
+    public:                                                                 \
+        /* Type definitions */                                              \
+        typedef DataArray<_ ## TYPE ## Type> TYPE ## ArrayType;             \
+        typedef typename TYPE ## ArrayType::ElementType TYPE ## Type;       \
+        typedef typename TYPE ## ArrayType::Reference   TYPE ## Reference;  \
+        typedef typename TYPE ## ArrayType::ConstReference TYPE ## ConstReference;  \
+                                                                            \
+        /* Whole array accessor. Only const access is allowed in order      \
+         * to guarantee that sizes remain synchronized                  */  \
+        const TYPE ## ArrayType & ARRAY_NAME() const {                      \
+            return _ ## ARRAY_NAME;                                         \
+        }                                                                   \
+                                                                            \
+        /* Const getter accessor */                                         \
+        TYPE ## ConstReference GETTER_NAME(IndexType i) const {             \
+            return _ ## ARRAY_NAME[i];                                      \
+        }                                                                   \
+                                                                            \
+        /* Non-const getter accessor */                                     \
+        TYPE ## Reference GETTER_NAME(IndexType i) {                        \
+            return _ ## ARRAY_NAME[i];                                      \
+        }                                                                   \
+                                                                            \
+        /* Non-const setter accessor */                                     \
+        void SETTER_NAME(IndexType i, TYPE ## ConstReference e) {           \
+            _ ## ARRAY_NAME[i] = e;                                         \
+        }                                                                   \
+                                                                            \
+    protected:  /* The array itself */                                      \
+        TYPE ## ArrayType _ ## ARRAY_NAME;
+
+
+    SUB_ARRAY(Vertex,   vertices,  vertex,   setVertex)
+    SUB_ARRAY(Normal,   normals,   normal,   setNormal)
+    SUB_ARRAY(TexCoord, texCoords, texCoord, setTexCoord)
+    SUB_ARRAY(Color,    colors,    color,    setColor)
+    SUB_ARRAY(EdgeFlag, edgeFlags, edgeFlag, setEdgeFlag)
+
+    #undef SUB_ARRAY
+};
+
+// Clean up the preprocessor's namespace
+#define UNDEFINE_INCA_METAPROGRAMMING_MACROS
+#include <inca/util/metaprogramming/macros.hpp>
+
+#endif

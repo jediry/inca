@@ -1,0 +1,587 @@
+/** -*- C++ -*-
+ *
+ * \file Region
+ *
+ * \author Ryan L. Saunders
+ *
+ * Copyright 2004, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ * FIXME: Something needs to be decided about Bs/Ex vs Bs/Sz ambiguity.
+ */
+
+#ifndef INCA_UTIL_REGION
+#define INCA_UTIL_REGION
+
+// Import system configuration
+#include <inca/inca-common.h>
+
+// This is part of the Inca utilities collection
+namespace inca {
+    // Forward declarations
+    template <inca::SizeType dim,
+              typename Size       = inca::SizeType,
+              typename Index      = inca::IndexType,
+              typename Difference = inca::DifferenceType> class Region;
+};
+
+// Import statically-sized array class
+#include "Array"
+
+// Import STL numeric algorithms
+#include <numeric>
+
+// Import metaprogramming tools
+#include <inca/util/metaprogramming/Nothing.hpp>
+#include <inca/util/multi-dimensional-macros.hpp>
+
+
+template <inca::SizeType dim, typename Size, typename Index, typename Difference>
+class inca::Region {
+/*---------------------------------------------------------------------------*
+ | Type & constant declarations
+ *---------------------------------------------------------------------------*/
+public:
+    // Numeric types
+    typedef Size        SizeType;
+    typedef Index       IndexType;
+    typedef Difference  DifferenceType;
+
+    // Container types
+    typedef Array<SizeType, dim>        SizeArray;
+    typedef Array<IndexType, dim>       IndexArray;
+    typedef Array<DifferenceType, dim>  DifferenceArray;
+
+    // How many dimensions do I have
+    static const SizeType dimensionality = dim;
+
+
+/*---------------------------------------------------------------------------*
+ | Constructors & data
+ *---------------------------------------------------------------------------*/
+public:
+    // Default constructor (all dimensions default to [0, -1])
+    explicit Region() : _bases(0), _extents(-1), _sizes(0), _size(0) { }
+
+    // Implicit initialization from "Nothing". This is needed to support some
+    // of the ninja metaprogramming stuff that happens in the Raster library.
+    Region(Nothing) : _bases(0), _extents(-1), _sizes(0), _size(0) { }
+
+    // Zero-bases size constructor
+    template <class SizeList>
+    explicit Region(const SizeList & sz) : _bases(0), _sizes(sz) {
+        bool degenerate = false;
+        for (IndexType d = 0; d < dimensionality; ++d) {
+            if (size(d) > 0) {
+                _extents[d] = _sizes[d] - 1;
+            } else {
+                _sizes[d] = _size = 0;
+                _extents[d] = base(d);
+                degenerate = true;
+            }
+        }
+        if (! degenerate)
+            recalculateSize();
+    }
+
+    // Bases/extents constructor FIXME: can we make this handle all combos somehow?
+    template <class IndexList0, class IndexList1>
+    explicit Region(const IndexList0 & bs, const IndexList1 & ext)
+            : _bases(bs), _extents(ext) {
+        bool degenerate = false;
+        for (IndexType d = 0; d < dimensionality; ++d) {
+            if (base(d) < extent(d)) {
+                _sizes[d] = extent(d) - base(d) + 1;
+            } else {
+                _sizes[d] = _size = 0;
+                _extents[d] = base(d);
+                degenerate = true;
+            }
+        }
+        if (! degenerate)
+            recalculateSize();
+    }
+
+    // Initialization from a higher-dimensional Region object
+    template <typename S, typename I, typename D>
+    explicit Region(const Region<dim + 1, S, I, D> & r, IndexType sliceDimension) {
+        for (IndexType d = 0; d < sliceDimension; ++d) {
+            _bases[d]   = r.base(d);
+            _extents[d] = r.extent(d);
+            _sizes[d]   = r.size(d);
+        }
+        for (IndexType d = sliceDimension; d < dimensionality; ++d) {
+            _bases[d]   = r.base(d + 1);
+            _extents[d] = r.extent(d + 1);
+            _sizes[d]   = r.size(d + 1);
+        }
+        recalculateSize();
+    }
+
+protected:
+    IndexArray  _bases,     // The logical minimum bounds
+                _extents;   // The logical maximum bounds
+    SizeArray   _sizes;     // The logical size of the region
+    SizeType    _size;      // The total number of elements in the region
+
+
+/*---------------------------------------------------------------------------*
+ | Array-oriented accessors
+ *---------------------------------------------------------------------------*/
+public:
+    // Getters
+    const IndexArray & bases()   const { return _bases; }
+    const IndexArray & extents() const { return _extents; }
+    const SizeArray  & sizes()   const { return _sizes; }
+
+    // Set the minimum included indices for each dimension
+    template <class IndexList>
+    void setBases(const IndexList & indices) {
+        bool degenerate = false;
+        typename IndexList::const_iterator it = indices.begin();
+        for (IndexType d = 0; d < dimensionality; ++d, ++it) {
+            IndexType b(*it);
+            if (b < extent(d)) {
+                _bases[d] = b;
+                _sizes[d] = extent(d) - base(d) + 1;
+            } else {
+                _sizes[d] = _size = 0;
+                _extents[d] = base(d);
+                degenerate = true;
+            }
+        }
+        if (! degenerate)
+            recalculateSize();
+    }
+    #define CREATE_DIMENSIONAL_SET_BASES(DIM)                               \
+        void setBases(PARAMS(DIM, IndexType i)) {                           \
+            BOOST_STATIC_ASSERT(dimensionality == DIM);                     \
+            setBases(IndexArray(PARAMS(DIM, i)));                           \
+        }
+    FOR_ALL_DIMS(CREATE_DIMENSIONAL_SET_BASES)
+    #undef CREATE_DIMENSIONAL_SET_BASES
+
+    template <class IndexList>
+    void setExtents(const IndexList & indices) {
+        bool degenerate = false;
+        typename IndexList::const_iterator it = indices.begin();
+        for (IndexType d = 0; d < dimensionality; ++d, ++it) {
+            IndexType e(*it);
+            if (e > base(d)) {
+                _extents[d] = e;
+                _sizes[d] = extent(d) - base(d) + 1;
+            } else {
+                _sizes[d] = _size = 0;
+                _bases[d] = extent(d);
+                degenerate = true;
+            }
+        }
+        if (! degenerate)
+            recalculateSize();
+    }
+    #define CREATE_DIMENSIONAL_SET_EXTENTS(DIM)                             \
+        void setExtents(PARAMS(DIM, IndexType i)) {                         \
+            BOOST_STATIC_ASSERT(dimensionality == DIM);                     \
+            setExtents(IndexArray(PARAMS(DIM, i)));                         \
+        }
+    FOR_ALL_DIMS(CREATE_DIMENSIONAL_SET_EXTENTS)
+    #undef CREATE_DIMENSIONAL_SET_EXTENTS
+
+    template <class SizeList>
+    void setSizes(const SizeList & sz) {
+        bool degenerate = false;
+        typename SizeList::const_iterator it = sz.begin();
+        for (IndexType d = 0; d < dimensionality; ++d, ++it) {
+            SizeType s(*it);
+            if (s > 0) {
+                _sizes[d] = s;
+                _extents[d] = base(d) + size(d) - 1;
+            } else {
+                _sizes[d] = _size = 0;
+                _extents[d] = base(d);
+                degenerate = true;
+            }
+        }
+        if (! degenerate)
+            recalculateSize();
+    }
+    #define CREATE_DIMENSIONAL_SET_SIZES(DIM)                               \
+        void setSizes(PARAMS(DIM, SizeType s)) {                            \
+            BOOST_STATIC_ASSERT(dimensionality == DIM);                     \
+            setSizes(SizeArray(PARAMS(DIM, s)));                            \
+        }
+    FOR_ALL_DIMS(CREATE_DIMENSIONAL_SET_SIZES)
+    #undef CREATE_DIMENSIONAL_SET_SIZES
+
+    template <class IndexList, class SizeList>
+    void setBasesAndSizes(const IndexList & bs, const SizeList & sz) {
+        bool degenerate = false;
+        typename IndexList::const_iterator bi = bs.begin();
+        typename SizeList::const_iterator  si = sz.begin();
+        for (IndexType d = 0; d < dimensionality; ++d, ++bi, ++si) {
+            IndexType b(*bi);
+            SizeType  s(*si);
+            if (s > 0) {
+                _bases[d] = b;
+                _sizes[d] = s;
+                _extents[d] = base(d) + size(d) - 1;
+            } else {
+                _sizes[d] = _size = 0;
+                _bases[d] = _extents[d] = b;
+                degenerate = true;
+            }
+        }
+        if (! degenerate)
+            recalculateSize();
+    }
+
+    template <class IndexList, class SizeList>
+    void setExtentsAndSizes(const IndexList & ex, const SizeList & sz) {
+        bool degenerate = false;
+        typename IndexList::const_iterator ei = ex.begin();
+        typename SizeList::const_iterator  si = sz.begin();
+        for (IndexType d = 0; d < dimensionality; ++d, ++ei, ++si) {
+            IndexType e(*ei);
+            SizeType  s(*si);
+            if (s > 0) {
+                _sizes[d] = s;
+                _extents[d] = e;
+                _bases[d] = extent(d) - size(d) + 1;
+            } else {
+                _sizes[d] = _size = 0;
+                _bases[d] = _extents[d] = e;
+                degenerate = true;
+            }
+        }
+        if (! degenerate)
+            recalculateSize();
+    }
+
+    template <class IndexList0, class IndexList1>
+    void setBasesAndExtents(const IndexList0 & bs, const IndexList1 & ex) {
+        bool degenerate = false;
+        typename IndexList0::const_iterator bi = bs.begin();
+        typename IndexList1::const_iterator ei = ex.begin();
+        for (IndexType d = 0; d < dimensionality; ++d, ++bi, ++ei) {
+            IndexType b(*bi), e(*ei);
+            if (b < e) {
+                _bases[d] = b;
+                _extents[d] = e;
+                _sizes[d] = extent(d) - base(d) + 1;
+            } else {
+                _sizes[d] = _size = 0;
+                _bases[d] = _extents[d] = b;
+                degenerate = true;
+            }
+        }
+        if (! degenerate)
+            recalculateSize();
+    }
+
+
+/*---------------------------------------------------------------------------*
+ | Single-value accessors
+ *---------------------------------------------------------------------------*/
+public:
+    // Getters
+    IndexType base(IndexType d)   const { return _bases[d]; }
+    IndexType extent(IndexType d) const { return _extents[d]; }
+    SizeType  size(IndexType d)   const { return _sizes[d]; }
+    SizeType  size()              const { return _size; }
+
+    // Setters
+    void setBase(IndexType d, IndexType b) {
+        _bases[d] = b;
+        if (base(d) < extent(d)) {
+            _sizes[d] = extent(d) - base(d) + 1;
+            recalculateSize();
+        } else {
+            _sizes[d] = _size = 0;
+            _extents[d] = base(d);
+        }
+    }
+    void setExtent(IndexType d, IndexType e) {
+        _extents[d] = e;
+        if (base(d) < extent(d)) {
+            _sizes[d] = extent(d) - base(d) + 1;
+            recalculateSize();
+        } else {
+            _sizes[d] = _size = 0;
+            _bases[d] = extent(d);
+        }
+    }
+    void setSize(IndexType d, SizeType s) {
+        if (s > 0) {
+            _sizes[d] = s;
+            _extents[d] = base(d) + size(d) - 1;
+            recalculateSize();
+        } else {
+            _sizes[d] = s = 0;
+            _extents[d] = base(d);
+        }
+    }
+    void setBaseAndSize(IndexType d, IndexType b, SizeType s) {
+        _bases[d] = b;
+        _sizes[d] = s;
+        if (size(d) > 0) {
+            _extents[d] = base(d) + size(d) - 1;
+            recalculateSize();
+        } else {
+            _sizes[d] = _size = 0;
+            _extents[d] = base(d);
+        }
+    }
+    void setExtentAndSize(IndexType d, IndexType e, SizeType s) {
+        _extents[d] = e;
+        _sizes[d] = s;
+        if (size(d) > 0) {
+            _bases[d] = extent(d) - size(d) + 1;
+            recalculateSize();
+        } else {
+            _sizes[d] = _size = 0;
+            _bases[d] = extent(d);
+        }
+    }
+    void setBaseAndExtent(IndexType d, IndexType b, IndexType e) {
+        _bases[d] = b;
+        _extents[d] = e;
+        if (base(d) <= extent(d)) {
+            _sizes[d] = extent(d) - base(d) + 1;
+            recalculateSize();
+        } else {
+            _sizes[d] = _size = 0;
+            _extents[d] = base(d);
+        }
+    }
+
+protected:
+    // Regenerate the value of _size from the _sizes array
+    void recalculateSize() {
+        _size = std::accumulate(_sizes.begin(), _sizes.end(),
+                                1, std::multiplies<SizeType>());
+    }
+
+
+/*---------------------------------------------------------------------------*
+ | Mutator functions
+ *---------------------------------------------------------------------------*/
+public:
+    template <class DifferenceList>
+    void translate(const DifferenceList & off) {
+        typename DifferenceList::const_iterator oi = off.begin();
+        for (IndexType d = 0; d < dimensionality; ++d, ++oi) {
+            IndexType o(*oi);
+            _bases[d]   += o;
+            _extents[d] += o;
+        }
+    }
+
+    void expand(DifferenceType amt) {
+        if (amt != 0) {
+            for (IndexType d = 0; d < dimensionality; ++d) {
+                _bases[d]   -= amt;
+                _extents[d] += amt;
+                _sizes[d]   += 2 * amt;
+            }
+            recalculateSize();
+        }
+    }
+
+    void contract(DifferenceType amt) {
+        expand(-amt);
+    }
+
+    template <typename S, typename I, typename D>
+    void clipAgainst(const Region<dimensionality, S, I, D> & r) {
+        bool changed = false;
+        for (IndexType d = 0; d < dimensionality; ++d) {
+            if (r.base(d) > this->base(d)) {
+                _bases[d] = r.base(d);
+                changed = true;
+            }
+            if (r.extent(d) < this->extent(d)) {
+                _extents[d] = r.extent(d);
+                changed = true;
+            }
+            _sizes[d] = extent(d) - base(d) + 1;
+        }
+        if (changed)
+            recalculateSize();
+    }
+
+
+/*---------------------------------------------------------------------------*
+ | Tests and index-mapping functions
+ *---------------------------------------------------------------------------*/
+public:
+    // Is at least one dimension degenerate (size <= 0)?
+    bool degenerate() const { return size() <= 0; }
+    bool empty()      const { return size() <= 0; }
+
+    // Is a particular dimension degenerate?
+    bool degenerate(IndexType d) const { return size(d) <= 0; }
+
+    // Are these indices completely within this region?
+    template <class IndexList>
+    bool contains(const IndexList & indices) const {
+        typename IndexList::const_iterator it = indices.begin();
+        for (IndexType d = 0; d < dimensionality; ++d, ++it) {
+            IndexType idx = IndexType(*it);
+            if (idx < base(d) || idx > extent(d))
+                return false;
+        }
+        return true;
+    }
+    #define CREATE_DIMENSIONAL_CONTAINS(DIM)                                \
+        bool contains(PARAMS(DIM, IndexType i)) const {                     \
+            BOOST_STATIC_ASSERT(dimensionality == DIM);                     \
+            return contains(IndexArray(PARAMS(DIM, i)));                    \
+        }
+    FOR_ALL_DIMS(CREATE_DIMENSIONAL_CONTAINS)
+    #undef CREATE_DIMENSIONAL_CONTAINS
+
+    // Find the difference between a set of indices and the base indices
+    template <class IndexList>
+    DifferenceArray offsetTo(const IndexList & indices) const {
+        DifferenceArray result;
+        typename IndexList::const_iterator it = indices.begin();
+        for (IndexType d = 0; d < dimensionality; ++d, ++it)
+            result[d] = IndexType(*it) - base(d);
+        return result;
+    }
+    #define CREATE_DIMENSIONAL_OFFSET_TO(DIM)                               \
+        DifferenceArray offsetTo(PARAMS(DIM, IndexType i)) const {          \
+            BOOST_STATIC_ASSERT(dimensionality == DIM);                     \
+            return offsetTo(IndexArray(PARAMS(DIM, i)));                    \
+        }
+    FOR_ALL_DIMS(CREATE_DIMENSIONAL_OFFSET_TO)
+    #undef CREATE_DIMENSIONAL_OFFSET_TO
+
+    // Find the nearest in-bounds indices
+    template <class IndexList>
+    IndexArray nearest(const IndexList & indices) const {
+        IndexArray result;
+        typename IndexList::const_iterator it = indices.begin();
+        for (IndexType d = 0; d < dimensionality; ++d, ++it) {
+            IndexType idx = IndexType(*it);
+            if (idx < base(d))          result[d] = base(d);
+            else if (idx > extent(d))   result[d] = extent(d);
+            else                        result[d] = idx;
+        }
+        return result;
+    }
+    #define CREATE_DIMENSIONAL_NEAREST(DIM)                                 \
+        bool nearest(PARAMS(DIM, IndexType i)) const {                      \
+            BOOST_STATIC_ASSERT(dimensionality == DIM);                     \
+            return nearest(IndexArray(PARAMS(DIM, i)));                     \
+        }
+    FOR_ALL_DIMS(CREATE_DIMENSIONAL_NEAREST)
+    #undef CREATE_DIMENSIONAL_NEAREST
+
+    // Wrap each index around until we have a set of in-bounds indices
+    template <class IndexList>
+    IndexArray wrap(const IndexList & indices) const {
+        IndexArray result;
+        typename IndexList::const_iterator it = indices.begin();
+        for (IndexType d = 0; d < dimensionality; ++d, ++it) {
+            IndexType idx = IndexType(*it);
+            if (idx < base(d))
+                result[d] = extent(d) - (base(d) - idx - 1) % size(d);
+            else if (idx > extent(d))
+                result[d] = base(d) + (idx - extent(d) - 1) % size(d);
+            else
+                result[d] = idx;
+        }
+        return result;
+    }
+
+    // Reflect OOB indices back and forth across boundaries until
+    // we have a set of in-bounds indices
+    template <class IndexList>
+    IndexArray mirror(const IndexList & indices) const {
+        IndexArray result;
+        typename IndexList::const_iterator it = indices.begin();
+        for (IndexType d = 0; d < dimensionality; ++d, ++it) {
+            IndexType idx = IndexType(*it);
+            if (idx < base(d)) {
+                DifferenceType diff = base(d) - idx - 1;
+                if ((diff / size(d)) % 2 != 0)  result[d] = extent(d) - diff % size(d);
+                else                            result[d] = base(d) + diff % size(d);
+            } else if (idx > extent(d)) {
+                DifferenceType diff = idx - extent(d) - 1;
+                if ((diff / size(d)) % 2 != 0)  result[d] = base(d) + diff % size(d);
+                else                            result[d] = extent(d) - diff % size(d);
+            } else {
+                result[d] = idx;
+            }
+        }
+        return result;
+    }
+};
+
+
+/*****************************************************************************
+ * Set operations
+ *****************************************************************************/
+namespace inca {
+    // Calculate the rectangular union of two Regions
+    template <inca::SizeType dim, typename S0, typename I0, typename S1, typename I1>
+    Region<dim, S0, I0> unionOf(const Region<dim, S0, I0> & r0,
+                                const Region<dim, S1, I1> & r1) {
+        // See if we can trivially answer this
+        if (r0.degenerate())    return r1;      // Return other one if degenerate
+        if (r1.degenerate())    return r0;
+
+        // Rats...we'll actually have to work at this...
+        Array<I0, dim> bases, extents;
+        for (IndexType d = 0; d < dim; ++d) {
+            if (r0.base(d) < r1.base(d))        bases[d] = r0.base(d);
+            else                                bases[d] = r1.base(d);
+
+            if (r0.extent(d) > r1.extent(d))    extents[d] = r0.extent(d);
+            else                                extents[d] = r1.extent(d);
+        }
+        return Region<dim, S0, I0>(bases, extents);
+    }
+
+    // Calculate the intersection of two Regions
+    template <inca::SizeType dim, typename S0, typename I0, typename S1, typename I1>
+    Region<dim, S0, I0> intersectionOf(const Region<dim, S0, I0> & r0,
+                                       const Region<dim, S1, I1> & r1) {
+        // See if we can trivially answer this
+        if (r0.degenerate())    return r0;      // Return this (empty) one if degenerate
+        if (r1.degenerate())    return r1;
+
+        // Rats...we'll actually have to work at this...
+        Array<I0, dim> bases, extents;
+        for (IndexType d = 0; d < dim; ++d) {
+            bases[d] = (r0.base(d) > r1.base(d))
+                        ? r0.base(d)
+                        : r1.base(d);
+            extents[d] = (r0.extent(d) < r1.extent(d))
+                        ? r0.extent(d)
+                        : r1.extent(d);
+        }
+        return Region<dim, S0, I0>(bases, extents);
+    }
+}
+
+
+/*****************************************************************************
+ * std::ostream writer operator
+ *****************************************************************************/
+namespace std {
+    template <inca::SizeType dim, typename S, typename I, typename D>
+    ostream & operator<<(ostream & os, const inca::Region<dim, S, I, D> & r) {
+        for (inca::IndexType d = 0; d < r.dimensionality; ++d)
+            os << '[' << r.base(d) << ", " << r.extent(d) << "] ";
+        return os;
+    }
+};
+
+
+// Clean up the preprocessor's namespace
+#define UNDEFINE_INCA_MULTI_DIM_MACROS
+#include <inca/util/multi-dimensional-macros.hpp>
+
+#endif

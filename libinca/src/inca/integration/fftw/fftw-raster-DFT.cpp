@@ -1,18 +1,18 @@
 /*
  * File: fftw-raster-DFT.cpp
- * 
+ *
  * Author: Ryan L. Saunders
  *
  * Copyright 2004, Ryan L. Saunders. All rights reserved.
  *
  * Description:
- *      This file implements the actual discrete Fourier transform algorithms
- *      used by the DFT raster operators defined in inca/raster/operators/DFT
- *      using the FFTW library.
+ *      This file implements the discrete Fourier transform algorithms
+ *      used by the DFT raster operators defined in
+ *      inca/raster/operators/fourier using the FFTW library.
  */
 
 // Import the class definitions
-#include <inca/raster/operators/DFT>
+#include <inca/raster/operators/fourier>
 using namespace inca;
 using namespace inca::raster;
 
@@ -20,6 +20,151 @@ using namespace inca::raster;
 #include <complex>
 #include <fftw3.h>
 
+
+namespace inca {
+    namespace raster {
+
+// Specializations for IEEE single-precision floating point numbers
+#ifdef HAVE_LIBFFTW3F
+
+    // Complex data type
+    typedef std::complex<float> cmplx_f;
+
+    // Memory allocation functions
+    template <>
+    float * dft_memory_allocate<float>(inca::SizeType n) {
+        return (float *) fftwf_malloc(sizeof(float) * n);
+    }
+    template <>
+    cmplx_f * dft_memory_allocate<cmplx_f>(inca::SizeType n) {
+        return (cmplx_f *) fftwf_malloc(sizeof(cmplx_f) * n);
+    }
+
+    // Memory deallocation functions
+    template <> void dft_memory_deallocate<cmplx_f>(cmplx_f * p) { fftwf_free(p); }
+    template <> void dft_memory_deallocate<float>(float * p) { fftwf_free(p); }
+
+    // Transformation functions
+    template <>
+    void dft_forward_transform<float, 2>(const Array<SizeType, 2> & sizes,
+                                         cmplx_f * out, float const * in) {
+        fftwf_plan p = fftwf_plan_dft_r2c_2d(sizes[0], sizes[1],
+                                            const_cast<float *>(in),
+                                            reinterpret_cast<fftwf_complex *>(out),
+                                            FFTW_ESTIMATE);
+        fftwf_execute(p);
+        fftwf_destroy_plan(p);
+    }
+    template <>
+    void dft_backward_transform<float, 2>(const Array<SizeType, 2> & sizes,
+                                          float * out, cmplx_f const * in) {
+        fftwf_plan p = fftwf_plan_dft_c2r_2d(sizes[0], sizes[1],
+                                            reinterpret_cast<fftwf_complex *>(
+                                                const_cast<cmplx_f *>(in)),
+                                            out,
+                                            FFTW_ESTIMATE);
+        fftwf_execute(p);
+        fftwf_destroy_plan(p);
+    }
+
+#endif
+
+
+// Specializations for IEEE double-precision floating point numbers
+#ifdef HAVE_LIBFFTW3
+
+    // Complex data type
+    typedef std::complex<double> cmplx_d;
+
+    // Memory allocation functions
+    template <>
+    double * dft_memory_allocate<double>(inca::SizeType n) {
+        return (double *) fftw_malloc(sizeof(double) * n);
+    }
+    template <>
+    cmplx_d * dft_memory_allocate<cmplx_d>(inca::SizeType n) {
+        return (cmplx_d *) fftw_malloc(sizeof(cmplx_d) * n);
+    }
+
+    // Memory deallocation functions
+    template <> void dft_memory_deallocate<double>(double * p) { fftw_free(p); }
+    template <> void dft_memory_deallocate<cmplx_d>(cmplx_d * p) { fftw_free(p); }
+
+    // Transformation functions
+    template <>
+    void dft_forward_transform<double, 2>(const Array<SizeType, 2> & sizes,
+                                          cmplx_d * out, double const * in) {
+        fftw_plan p = fftw_plan_dft_r2c_2d(sizes[0], sizes[1],
+                                            const_cast<double *>(in),
+                                            reinterpret_cast<fftw_complex *>(out),
+                                            FFTW_ESTIMATE);
+        fftw_execute(p);
+        fftw_destroy_plan(p);
+    }
+    template <>
+    void dft_backward_transform<double, 2>(const Array<SizeType, 2> & sizes,
+                                           double * out, cmplx_d const * in) {
+        fftw_plan p = fftw_plan_dft_c2r_2d(sizes[0], sizes[1],
+                                        reinterpret_cast<fftw_complex *>(
+                                            const_cast<cmplx_d *>(in)),
+                                        out,
+                                        FFTW_ESTIMATE);
+        fftw_execute(p);
+        fftw_destroy_plan(p);
+    }
+
+#endif
+
+
+// Specializations for IEEE long-double-precision floating point numbers
+#ifdef HAVE_LIBFFTW3L
+
+    // Complex data type
+    typedef std::complex<long double> cmplx_l;
+
+    // Memory allocation functions
+    template <>
+    long double * dft_memory_allocate<long double>(inca::SizeType n) {
+        return (long double *) fftwl_malloc(sizeof(long double) * n);
+    }
+    template <>
+    cmplx_l * dft_memory_allocate<cmplx_l>(inca::SizeType n) {
+        return (cmplx_l *) fftwl_malloc(sizeof(cmplx_l) * n);
+    }
+
+    // Memory deallocation functions
+    template <> void dft_memory_deallocate<long double>(long double * p) { fftwl_free(p); }
+    template <> void dft_memory_deallocate<cmplx_l>(cmplx_l * p) { fftwl_free(p); }
+
+    // Transformation functions
+    template <>
+    void dft_forward_transform<long double, 2>(const Array<SizeType, 2> & sizes,
+                                               cmplx_l * out, long double const * in) {
+        fftwl_plan p = fftwl_plan_dft_r2c_2d(sizes[0], sizes[1],
+                                            const_cast<long double *>(in),
+                                            reinterpret_cast<fftwl_complex *>(out),
+                                            FFTW_ESTIMATE);
+        fftwl_execute(p);
+        fftwl_destroy_plan(p);
+    }
+    template <>
+    void dft_backward_transform<long double, 2>(const Array<SizeType, 2> & sizes,
+                                                long double * out, cmplx_l const * in) {
+        fftwl_plan p = fftwl_plan_dft_c2r_2d(sizes[0], sizes[1],
+                                            reinterpret_cast<fftwl_complex *>(
+                                                const_cast<cmplx_l *>(in)),
+                                            out,
+                                            FFTW_ESTIMATE);
+        fftwl_execute(p);
+        fftwl_destroy_plan(p);
+    }
+
+#endif
+
+    }
+}
+
+#if 0
 
 // Locally-defined template functions for copying things around
 template <typename scalar>
@@ -29,19 +174,6 @@ inline void unpackRaster(scalar * arr, const MultiArrayRaster<scalar, 2> & r) {
     for (idx[0] = r.base(0); idx[0] <= r.extent(0); ++idx[0])
         for (idx[1] = r.base(1); idx[1] <= r.extent(1); ++idx[1])
             arr[k++] = r(idx);
-    cerr << "Unpacked " << k << " elements\n";
-}
-
-// Locally-defined template functions for copying things around
-template <typename scalar, typename scalar2>
-inline void repackRaster(MultiArrayRaster<scalar, 2> & r, const scalar * arr,
-                         scalar2 normalizationFactor) {
-    int k = 0;
-    Array<IndexType, 2> idx;
-    for (idx[0] = r.base(0); idx[0] <= r.extent(0); ++idx[0])
-        for (idx[1] = r.base(1); idx[1] <= r.extent(1); ++idx[1])
-            r(idx) = arr[k++] * normalizationFactor;
-    cerr << "Repacked " << k << " elements\n";
 }
 
 template <typename scalar>
@@ -173,115 +305,4 @@ inline void repackRaster(MultiArrayRaster<scalar, 2> & r,
     }
 }
 
-
-// DFT Specializations for float, double, and long double
-template <>
-void inca::raster::calculateDFT(MultiArrayRaster< std::complex<float>, 2> & dest,
-                                const MultiArrayRaster< float, 2 > & src) {
-    float *in;
-    std::complex<float> *out;
-    fftwf_plan p;
-    int inW = src.size(0),
-        inH = src.size(1),
-        outW = inW,
-        outH = (inH/2 + 1);
-    float normalizationFactor = 1.0f;// / std::sqrt((float)inW * inH);
-
-    in = (float*)fftwf_malloc(sizeof(float) * inW * inH);
-    out = (std::complex<float>*)fftwf_malloc(sizeof(std::complex<float>) * outW * outH);
-    p = fftwf_plan_dft_r2c_2d(inW, inH, in, (fftwf_complex*)out, FFTW_ESTIMATE);
-
-    unpackRaster(in, src);
-
-    fftwf_execute(p); /* repeat as needed */
-
-    dest.resize(outW, outH);
-    repackRaster(dest, out, normalizationFactor);
-
-    fftwf_destroy_plan(p);
-    fftwf_free(in); fftwf_free(out);
-}
-
-template <>
-void inca::raster::calculateDFT(MultiArrayRaster< std::complex<double>, 2> & dest,
-                                const MultiArrayRaster< double, 2 > & src) {
-    double *in;
-    std::complex<double> *out;
-    fftw_plan p;
-    int inW = src.size(0),
-        inH = src.size(1),
-        outW = inW,
-        outH = (inH/2 + 1);
-    double normalizationFactor = 1 / std::sqrt((double)inW * inH);
-
-    in = (double*)fftw_malloc(sizeof(double) * inW * inH);
-    out = (std::complex<double>*)fftw_malloc(sizeof(std::complex<double>) * outW * outH);
-    p = fftw_plan_dft_r2c_2d(inW, inH, in, (fftw_complex*)out, FFTW_ESTIMATE);
-
-    unpackRaster(in, src);
-
-    fftw_execute(p); /* repeat as needed */
-
-    dest.resize(outW, outH);
-    repackRaster(dest, out, normalizationFactor);
-
-    fftw_destroy_plan(p);
-    fftw_free(in); fftw_free(out);
-}
-
-template <>
-void inca::raster::calculateDFT(MultiArrayRaster< std::complex<long double>, 2> & dest,
-                                const MultiArrayRaster< long double, 2 > & src) {
-    long double *in;
-    std::complex<long double> *out;
-    fftwl_plan p;
-    int inW = src.size(0),
-        inH = src.size(1),
-        outW = inW,
-        outH = (inH/2 + 1);
-    long double normalizationFactor = 1 / std::sqrt((long double)inW * inH);
-
-    in = (long double*)fftwl_malloc(sizeof(long double) * inW * inH);
-    out = (std::complex<long double>*)fftwl_malloc(sizeof(std::complex<long double>) * outW * outH);
-    p = fftwl_plan_dft_r2c_2d(inW, inH, in, (fftwl_complex*)out, FFTW_ESTIMATE);
-
-    unpackRaster(in, src);
-
-    fftwl_execute(p); /* repeat as needed */
-
-    dest.resize(outW, outH);
-    repackRaster(dest, out, normalizationFactor);
-
-    fftwl_destroy_plan(p);
-    fftwl_free(in); fftwl_free(out);
-}
-
-
-// Inverse DFT Specializations for float, double, and long double
-template <>
-void inca::raster::calculateInverseDFT(MultiArrayRaster< float, 2> & dest,
-                                 const MultiArrayRaster< std::complex<float>, 2 > & src) {
-    std::complex<float> *in;
-    float *out;
-    fftwf_plan p;
-    int inW = src.size(0),
-        inH = src.size(1),
-        outW = inW,
-        outH = (inH - 1) * 2;
-    float normalizationFactor = 1 / ((float)outW * outH);
-
-    in = (std::complex<float>*)fftwf_malloc(sizeof(std::complex<float>) * inW * inH);
-    out = (float*)fftwf_malloc(sizeof(float) * outW * outH);
-    p = fftwf_plan_dft_c2r_2d(outW, outH, (fftwf_complex*)in, out, FFTW_ESTIMATE);
-
-    unpackRaster(in, src);
-
-    fftwf_execute(p); /* repeat as needed */
-
-    dest.resize(outW, outH);
-    repackRaster(dest, out, normalizationFactor);
-
-    fftwf_destroy_plan(p);
-    fftwf_free(in); fftwf_free(out);
-}
-
+#endif

@@ -1,0 +1,341 @@
+/* -*- C++ -*-
+ *
+ * File: RasterBoundsFacet
+ *
+ * Author: Ryan L. Saunders
+ *
+ * Copyright 2004, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ *      The bounds facet of a raster handles the logical bounds of the raster.
+ *      The minimum valid index along any given dimension is called the
+ *      "base", while the maximum valid index is called the "extent". Together,
+ *      The base and extent form the "bounds" along that dimension. The number
+ *      of elements in the range [base, extent] is called the "size" of that
+ *      dimension.
+ *
+ *      Since the underlying
+ *      on the indexing mode, the base may be adjustable, or it may be fixed at
+ *      zero. Indices may be remapped, or passed though unmodified. These
+ *      capabilities can be used to create a variety of effects. Several
+ *      examples of usage are presented below.
+ *
+ * Implementation:
+ *      Index bounds can be fixed at zero or arbitrarily adjusted. This is
+ *      controlled by the value of the BoundsTag:
+ *          * IrrelevantBoundsTag -- bounds are empty: bases are always zero
+ *            and extents are always -1. Furthermore, all "in bounds" tests
+ *            trivially succeed.
+ *          * ZeroBasedBoundsTag -- bases are always zero and extents are
+ *            always size - 1. "In bounds" tests are evaluated normally.
+ *          * ArbitrarilyBasedBoundsTag -- bases are arbitrarily adjustable
+ *            and extents move with them so that the invariant
+ *            (size == extent - base + 1) is preserved. "In bounds" tests
+ *            are evaluated normally.
+ *          * SpecializedBoundsTag -- bounds are managed by the core rather
+ *            than by the facet. The core is responsible to ensure that the
+ *            size/bounds invariants are maintained.
+ *
+ *      Indices passed to the public functions can either be passed through
+ *      unmodified, or can be remapped. This is controlled by the value of the
+ *      IndexMappingTag:
+ *          * NoIndexMappingTag -- indices are passed through to core functions
+ *            unmodified
+ *          * ZeroBasedIndexMappingTag -- indices are remapped as the offsets
+ *            from their respective bases. In other words, this mode makes the
+ *            current bases map to zero
+ *          * SpecializedIndexMappingTag -- indices are arbitrarily remapped
+ *            according to a special core function called remapIndices(IndexList)
+ *
+ * Examples:
+ *      All this is not as complicated as it may seem. While there are numerous
+ *      possible combinations of options, not all of them are useful. Here are
+ *      some of the more useful possibilities.
+ *
+ *      For Raster implementations based on the MultiArray containers, it is
+ *      more efficient to use SpecializedBoundsTag and NoIndexMappingTag,
+ *      to let the Derived class (rather than the facet) manage the
+ *      bounds, since MultiArray already has a built-in concept of adjustable
+ *      bases/extents.
+ *
+ *      Other imaging libraries are likely to be inherently zero-based
+ *      (e.g., ImageMagick, VIGRA). When implementing wrappers for these
+ *      libraries, it may be desirable to give them arbitrary-based indexing
+ *      capabilities even though the underlying image type does not support
+ *      them; in this case, ArbitrarilyBasedBoundsTag, ZeroBasedIndexMappingTag
+ *      are needed.
+ *
+ *      Some Raster operators may perform complex index remapping. One example
+ *      is the FFTW-based Fourier transform operator, which actually holds
+ *      only half of the FFT in memory (since the other half is redundant) and
+ *      maps requests for the missing cells to their corresponding mirror-image.
+ *      For this case, ArbitrarilyBasedBoundsTag, SpecializedIndexMappingTag
+ *      are needed, since the Derived class needs complete control over the
+ *      indexing to achieve this effect.
+ *
+ *      Raster implementations that are arbitrarily-sized may not care at all
+ *      what bounds they have or even what indices are used to index into them.
+ *      One example of this is the SingleValueRaster, which wraps a single
+ *      element with a Raster interface. In this case, IrrelevantBoundsTag and
+ *      NoIndexMappingTag should be used for the sake of efficiency, since
+ *      these modes do the least amount of index computation.
+ *
+ * Invariants:
+ *      Regardless of whether indexing is managed by this facet or by the
+ *      derived class, the following relationship between the bounds and the size
+ *      along each dimension must be maintained: (base - extent + 1 == size).
+ *
+ * FIXME: This is actually two facets...but I'm too tired to doc them both.
+ */
+
+#ifndef INCA_RASTER_FACET_BOUNDS
+#define INCA_RASTER_FACET_BOUNDS
+
+// Import multi-dimensional and template metaprogramming macros
+#include <inca/util/multi-dimensional-macros.hpp>
+#include <inca/util/metaprogramming/macros.hpp>
+
+// This is part of the Inca raster processing library
+namespace inca {
+    namespace raster {
+
+// Unspecialized version (does not compile)
+template <class Derived, class Tags, class Types, typename Enabled = void>
+class RasterBoundsFacet {
+    // Force a compile-time assertion. This is only evaluated if this
+    // specialization is instantiated.
+    static const bool RasterBoundsFacetDidNotSpecialize
+        = NOT( IS_SAME( Types, Types ) )::value;
+    BOOST_STATIC_ASSERT( RasterBoundsFacetDidNotSpecialize );
+};
+
+
+// This specialization of RasterBoundsFacet implements the simplest form
+// of indexing -- all base indicies are fixed at zero and all extents are
+// -1. Nothing is out of bounds.
+//
+// The Derived class is not required to implement any functions.
+template <class Derived, class Tags, class Types>
+class RasterBoundsFacet<Derived, Tags, Types,
+        ENABLE_IF( IS_A( typename Tags::SizeTag,
+                         ArbitrarySizeRasterTag ) ) > {
+/*---------------------------------------------------------------------------*
+ | Type & constant declarations
+ *---------------------------------------------------------------------------*/
+public:
+    // Imported types
+    typedef typename Types::SizeType    SizeType;
+    typedef typename Types::IndexType   IndexType;
+    typedef typename Types::SizeArray   SizeArray;
+    typedef typename Types::IndexArray  IndexArray;
+    typedef typename Types::Region      Region;
+
+
+/*---------------------------------------------------------------------------*
+ | Access to the derived class
+ *---------------------------------------------------------------------------*/
+private:
+    DERIVED_CLASS_ACCESSORS(Derived)
+
+
+/*---------------------------------------------------------------------------*
+ | Constructors
+ *---------------------------------------------------------------------------*/
+public:
+    // Default constructor
+    RasterBoundsFacet() : _bounds(IndexArray(0), IndexArray(-1)) { }
+
+protected:
+    Region _bounds;     // Our dummy bounds
+
+
+/*---------------------------------------------------------------------------*
+ | Bounds accessor functions
+ *---------------------------------------------------------------------------*/
+public:
+    // The combined bases and extents along each dimensional axis
+    const Region & bounds() const { return _bounds; }
+
+    // The total size (number of elements) in the raster
+    SizeType size() const { return 0; }
+
+    // The size (number of elements) along each dimensional axis
+    const SizeArray & sizes()  const { return this->bounds().sizes(); }
+    SizeType size(IndexType d) const { return 0; }
+
+    // The base (minimum index) along each dimensional axis
+    const IndexArray & bases()  const  { return this->bounds().bases(); }
+    IndexType base(IndexType d) const  { return 0; }
+
+    // Index extent (maximum index) along each dimensional axis
+    const IndexArray & extents()  const { return this->bounds().extents(); }
+    IndexType extent(IndexType d) const { return -1; }
+
+
+/*---------------------------------------------------------------------------*
+ | Bounds checking functions
+ *---------------------------------------------------------------------------*/
+public:
+    template <class IndexList>
+    bool indicesInBounds(const IndexList & indices) const { return true; }
+    bool indexInBounds(IndexType d, IndexType i)    const { return true; }
+};
+
+
+// This specialization of RasterBoundsFacet delegates all bounds management
+// to the Derived class's core functions. It is the responsibility of the
+// Derived class to maintain the relationship between the bounds and the
+// sizes.
+//
+// The Derived class is required to implement the following function(s):
+//      const Region & getRasterBounds() const
+//
+// and may be required to implement the following functions, depending on the
+// values of SizeTag and BoundsTag:
+//      template <class SizeList>                           MutableSizeRaster
+//          void setRasterSizes(const SizeList &)
+//      template <class IndexList>                          MovableRaster
+//          void setRasterBases(const IndexList &)
+//      template <class IndexList>                          MovableRaster
+//          void setRasterExtents(const IndexList &)
+//      template <class IndexList1, class IndexList2>       MovableRaster &&
+//          void setRasterBounds(const IndexList1 &,        MutableSizeRaster
+//                               const IndexList2 &)
+//      void setRasterBounds(const Region &)                MovableRaster &&
+//                                                          MutableSizeRaster
+template <class Derived, class Tags, class Types>
+class RasterBoundsFacet<Derived, Tags, Types,
+        ENABLE_IF( OR2( IS_A( typename Tags::SizeTag,
+                              FixedSizeRasterTag ),
+                        IS_A( typename Tags::SizeTag,
+                              MutableSizeRasterTag ) ) ) > {
+/*---------------------------------------------------------------------------*
+ | Type & constant declarations
+ *---------------------------------------------------------------------------*/
+public:
+    // Imported types
+    typedef typename Types::IndexType   IndexType;
+    typedef typename Types::IndexArray  IndexArray;
+    typedef typename Types::SizeArray   SizeArray;
+    typedef typename Types::Region      Region;
+
+    static const SizeType dimensionality = Types::dimensionality;
+
+
+/*---------------------------------------------------------------------------*
+ | Access to the derived class
+ *---------------------------------------------------------------------------*/
+private:
+    DERIVED_CLASS_ACCESSORS(Derived)
+
+
+/*---------------------------------------------------------------------------*
+ | Bounds accessor functions
+ *---------------------------------------------------------------------------*/
+public:
+    // Region object containing all bounds
+    const Region & bounds() const {
+        return RasterCoreAccess::getRasterBounds(this->derived());
+    }
+
+    // The total size (number of elements) in the raster
+    SizeType size() const { return this->bounds().size(); }
+
+    // The size (number of elements) along each dimensional axis
+    const SizeArray & sizes()  const { return this->bounds().sizes(); }
+    SizeType size(IndexType d) const { return this->sizes()[d]; }
+
+    // The base (minimum index) along each dimensional axis
+    const IndexArray & bases()  const { return this->bounds().bases(); }
+    IndexType base(IndexType d) const { return this->bases()[d]; }
+
+    // Index extent (maximum index) along each dimensional axis
+    const IndexArray & extents()  const { return this->bounds().extents(); }
+    IndexType extent(IndexType d) const { return this->extents()[d]; }
+
+
+/*---------------------------------------------------------------------------*
+ | Size & shape modification functions (which functions are available
+ | depends on the values of the semantic tags SizeTag and BoundsTag).
+ *---------------------------------------------------------------------------*/
+public:
+    // Resize the raster, keeping the same bases
+    template <class SizeList>
+    LAZY_ENABLE_IF_T( SizeList, IS_A( typename Tags::SizeTag,
+                                      MutableSizeRasterTag ),
+    void ) setSizes(const SizeList & sz) {
+        RasterCoreAccess::setRasterSizes(this->derived(), sz);
+    }
+    // Dimensionality-specific versions
+    #define CREATE_DIMENSIONAL_SET_SIZES(DIM)                                   \
+        void setSizes(PARAMS(DIM, SizeType s)) {                                \
+            BOOST_STATIC_ASSERT(dimensionality == DIM);                         \
+            setSizes(SizeArray(PARAMS(DIM, s)));                                \
+        }
+    FOR_ALL_DIMS(CREATE_DIMENSIONAL_SET_SIZES);
+    #undef CREATE_DIMENSIONAL_SET_SIZES
+
+    // Set new bases, keeping the same sizes and adjusting the extents
+    template <class IndexList>
+    LAZY_ENABLE_IF_T( IndexList, IS_A( typename Tags::BoundsTag,
+                                       MovableRasterTag ),
+    void ) setBases(const IndexList & bs) {
+        RasterCoreAccess::setRasterBases(this->derived(), bs);
+    }
+
+    // Set new extents, keeping the same sizes and adjusting the bases
+    template <class IndexList>
+    LAZY_ENABLE_IF_T( IndexList, IS_A( typename Tags::BoundsTag,
+                                       MovableRasterTag ),
+    void ) setExtents(const IndexList & ex) {
+        RasterCoreAccess::setRasterExtents(this->derived(), ex);
+    }
+
+    // Set new bases and extents for the raster, possibly resizing it
+    template <class IndexList1, class IndexList2>
+    LAZY_ENABLE_IF_T( IndexList1, AND2( IS_A( typename Tags::SizeTag,
+                                              MutableSizeRasterTag ),
+                                        IS_A( typename Tags::BoundsTag,
+                                              MovableRasterTag ) ),
+    void ) setBounds(const IndexList1 & bs, const IndexList2 & ex) {
+        RasterCoreAccess::setRasterBounds(this->derived(), bs, ex);
+    }
+
+    // Set an entirely new set of bounds for the raster
+    template <class RegionType>
+    LAZY_ENABLE_IF_T( RegionType, AND3( IS_SAME( RegionType, Region ),
+                                        IS_A( typename Tags::SizeTag,
+                                              MutableSizeRasterTag ),
+                                        IS_A( typename Tags::BoundsTag,
+                                              MovableRasterTag ) ),
+    void ) setBounds(const RegionType & b) {
+        RasterCoreAccess::setRasterBounds(this->derived(), b);
+    }
+
+
+/*---------------------------------------------------------------------------*
+ | Bounds checking functions
+ *---------------------------------------------------------------------------*/
+public:
+    // Bounds checking for a set of indices
+    template <class IndexList>
+    bool indicesInBounds(const IndexList & indices) const {
+        return this->bounds().contains(indices);
+    }
+
+    // Bounds checking for a single dimension
+    bool indexInBounds(IndexType d, IndexType i) const {
+        return (i >= base(d) && i <= extent(d));
+    }
+};
+
+    };    // End namespace raster
+};    // End namespace inca
+
+// Clean up the preprocessor namespace
+#define UNDEFINE_INCA_MULTI_DIM_MACROS
+#include <inca/util/multi-dimensional-macros.hpp>
+#define UNDEFINE_INCA_METAPROGRAMMING_MACROS
+#include <inca/util/metaprogramming/macros.hpp>
+
+#endif

@@ -1,0 +1,681 @@
+/* -*- C++ -*-
+ *
+ * File: RasterAccessFacet
+ *
+ * Author: Ryan L. Saunders
+ *
+ * Copyright 2004, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ *      The access facet of a raster encompasses reading and/or writing
+ *      individual elements of the raster. While raster objects will
+ *      normally be read-only or read-write, it is possible to have a
+ *      write-only raster, for which attempting to read values from it
+ *      may produce an undefined result. The types returned by the accessors
+ *      (overloads of the function call operator, () ) are specified in the
+ *      Core by the typedefs 'ReadableElementType' and 'WritableElementType',
+ *      which are generally const and non-const references, respectively, but
+ *      which can be any type assignable to and from (respectively) ElementType.
+ *      Among other things, this permits the use of "proxies" to the real data.
+ *
+ *      The Core base class must implement the following two functions:
+ *          template <class IndexList, typename ReturnType>
+ *              ReturnType getElement(const IndexList & indices) const;
+ *          template <typename ReturnType>
+ *              ReturnType getDummyElement(ConstReference value) const;
+ *      The first function should return the appropriate type of value for the
+ *      element indexed by 'indices', which is guaranteed to be in-bounds. The
+ *      second function should return a dummy element of the appropriate type,
+ *      initialized to 'value', and is used for handling out-of-bounds
+ *      situations. The possible types of the ReturnType parameter are related
+ *      to the specifed access model (e.g., if the AccessTag is
+ *      ReadableRasterTag, then only ReadableElementType must be supported).
+ *
+ */
+
+#ifndef INCA_RASTER_FACET_ACCESS
+#define INCA_RASTER_FACET_ACCESS
+
+// Import system configuration
+#include <inca/inca-common.h>
+
+// Import OutOfBoundsException definition
+#include <inca/util/OutOfBoundsException.hpp>
+
+// Import Multi-dimensional iterator wrapper
+#include <inca/util/multi_dimensional_iterator_facade.hpp>
+
+// Import metaprogramming tools
+#include <inca/util/metaprogramming/is_collection.hpp>
+#include <inca/util/multi-dimensional-macros.hpp>
+#include <inca/util/metaprogramming/macros.hpp>
+
+// This is part of the Inca raster processing library
+namespace inca {
+    namespace raster {
+
+// The iterator specialization for rasters. It has a (somewhat arbitrary)
+// order in which it will traverse the different dimensions of the raster.
+// In linear indexing mode it steps along the primary dimension until it
+// hits a boundary, at which point it wraps that dimension and increments the
+// next (and so on).
+template <class RasterType, typename Value, typename Reference = Value &, bool Reversed = false>
+class RasterIterator
+    : public multi_dimensional_iterator_facade<RasterIterator<RasterType, Value, Reference, Reversed>,
+                                               Value,
+                                               boost::random_access_traversal_tag,
+                                               Reference,
+                                               inca::DifferenceType,
+                                               inca::IndexType> {
+/*---------------------------------------------------------------------------*
+ | Type & constant definitions
+ *---------------------------------------------------------------------------*/
+public:
+    // We're friendly with all specializations of ourself
+    template <class R, typename V, typename F, bool Rv> friend class RasterIterator;
+
+    static const inca::SizeType dimensionality = RasterType::dimensionality;
+
+    typedef RasterIterator<RasterType, Value, Reference, Reversed> iterator_type;
+    typedef Value                                           value_type;
+    typedef Reference                                       reference;
+    typedef typename RasterType::DifferenceType             difference_type;
+    typedef typename RasterType::IndexType                  index_type;
+
+    typedef typename RasterType::IndexArray                 IndexArray;
+
+
+/*---------------------------------------------------------------------------*
+ | Constructors
+ *---------------------------------------------------------------------------*/
+public:
+    // Default constructor (no associated MultiArray)
+    RasterIterator() : _raster(NULL), _outOfBounds(true) { }
+
+    // Multi-dim indices constructor
+    template <class IndexList>
+    RasterIterator(RasterType & r, const IndexList & indices,
+                   ENABLE_FUNCTION_IF(is_collection<IndexList>))
+            : _raster(r), _indices(indices),
+              _outOfBounds(! r.indicesInBounds(_indices)) {
+        // Just traverse from smallest to largest
+        for (index_type o = 0; o < dimensionality; ++o)
+            _traversalOrder[o] = o;
+    }
+
+    // Copy constructor for same RasterType
+    template <typename V, typename R, bool Rv>
+    RasterIterator(const RasterIterator<RasterType, V, R, Rv> & i)
+        : _raster(i._raster), _indices(i.indices()),
+          _traversalOrder(i.traversalOrder()),
+          _outOfBounds(i.outOfBounds()) { }
+
+
+protected:
+    RasterType & raster() const { return _raster; }
+    bool outOfBounds() const { return _outOfBounds; }
+    const IndexArray & indices() const { return _indices; }
+    const IndexArray & traversalOrder() const { return _traversalOrder; }
+
+    mutable RasterType _raster;     // The raster we're iteratin'
+    bool       _outOfBounds;        // Is the iterator in bounds?
+    IndexArray _indices,            // The multi-dimensional indices
+               _traversalOrder;     // Which dimension to traverse first
+
+
+/*---------------------------------------------------------------------------*
+ | Core functions required by multi_dimensional_iterator_facade
+ *---------------------------------------------------------------------------*/
+protected:
+    // Give iterator_facade classes access to these core functions
+    friend class boost::iterator_core_access;
+    friend class inca::multi_dimensional_iterator_core_access;
+
+    // What's at this location?
+    reference dereference() const {
+        return raster()(_indices);
+    }
+
+    // Are two iterators equal?
+    template <typename VType, typename RType, bool Rv>
+    bool equal(const RasterIterator<RasterType, VType, RType, Rv> & i) const {
+        // Two iterators are equal if they have the same indices
+        return _indices == i._indices;
+    }
+
+    // How many elements away is this other iterator?
+    difference_type distance_to(const iterator_type & i) const {
+        difference_type diff = 0;
+        difference_type stride = 1;
+        for (index_type o = 0; o < dimensionality; ++o) {
+            index_type d = _traversalOrder[o];
+            diff += (i(d) - _indices[d]) * stride;
+            stride *= raster().size(d);
+        }
+        if (Reversed)   return -diff;
+        else            return  diff;
+    }
+
+    // Increment/decrement iterator in a linear fashion
+    void increment() { advance(1); }
+    void decrement() { advance(-1); }
+    void advance(difference_type n) {
+        // Advance along primary dim
+        if (Reversed)   _indices[_traversalOrder[0]] += n;
+        else            _indices[_traversalOrder[0]] -= n;
+
+        // If OOB, then we wrap around to the next index for the secondary
+        // dimension. Then the third, fourth, etc. if necessary. Sort of like
+        // "carrying" in addition.
+        for (IndexType o = 0; o < dimensionality - 1; ++o) {
+            IndexType d = _traversalOrder[o],
+                      base = raster().base(d),
+                      extent = raster().extent(d);
+            SizeType size = raster().size(d);
+            if (_indices[d] < base) {                           // Wrap down
+                DifferenceType diff = base - _indices[d];
+                _indices[d] = extent - diff % size;
+                _indices[_traversalOrder[o + 1]] -= diff / size;
+            } else if (_indices[d] > extent) {                  // Wrap up
+                DifferenceType diff = _indices[d] - extent;
+                _indices[d] = base + diff % size;
+                _indices[_traversalOrder[o + 1]] += diff / size;
+            } else {                        // Nothing to do...we're in bounds
+                break;  // Stop wrapping
+            }
+        }
+
+        // If we got to the last dimension and still need to wrap, we're OOB
+        IndexType finalDimension = _traversalOrder[dimensionality - 1];
+        IndexType finalIndex = _indices[_traversalOrder[finalDimension]];
+        _outOfBounds = finalIndex < raster().base(finalDimension)
+                    || finalIndex > raster().extent(finalDimension);
+    }
+
+    // Increment/decrement iterator in a multi-dimensional fashion
+    index_type index(index_type d) const {
+        return _indices[d];
+    }
+    void increment(index_type d) {
+        if (Reversed)   --_indices[d];
+        else            ++_indices[d];
+        _outOfBounds = ! raster().indicesInBounds(_indices);
+    }
+    void decrement(index_type d) {
+        if (Reversed)   ++_indices[d];
+        else            --_indices[d];
+        _outOfBounds = ! raster().indicesInBounds(_indices);
+    }
+    void advance(index_type d, difference_type n) {
+        if (Reversed)   _indices[d] -= n;
+        else            _indices[d] += n;
+        _outOfBounds = ! raster().indicesInBounds(_indices);
+    }
+};
+
+
+// This class implements an N-dimensional "slice" of an N+1-dimensional raster.
+// Of necessity, its bounds cannot be resized or moved, regardless of the
+// attributes of the "owner". Whether or not it can write to the owner's elements
+// is controlled by the AccessTag parameter.
+template <class R, typename AccessTag>
+class RasterSlice
+    : public RasterFacade<RasterSlice<R, AccessTag>,
+                          RasterTags<typename IF( IS_A(typename R::SizeTag,
+                                                       ArbitrarySizeRasterTag),
+                                                  ArbitrarySizeRasterTag,
+                                                  FixedSizeRasterTag),
+                                     StationaryRasterTag,
+                                     AccessTag,
+                                     true, false, false>,
+                          RasterTypes<typename R::ElementType,
+                                      ::boost::mpl::minus< INT(R::dimensionality),
+                                                           INT(1) >::type::value,
+                                      typename R::ReadWriteElementType,
+                                      typename R::ReadableElementType,
+                                      typename R::WritableElementType> > {
+/*---------------------------------------------------------------------------*
+ | Type & constant declarations
+ *---------------------------------------------------------------------------*/
+public:
+    typedef RasterSlice<R, AccessTag>   ThisType;
+    typedef typename ThisType::Types    Types;
+    typedef R                           HyperRaster;
+
+    // Imported types from the hyper-raster
+    typedef typename HyperRaster::IndexType  IndexType;
+    typedef typename HyperRaster::IndexArray HyperArray;
+    typedef typename HyperRaster::Region     HyperRegion;
+
+    // How many dimensions does my hyper raster have? (not me)
+    static const SizeType hyperDimensionality = R::dimensionality;
+
+    // Imported types
+    typedef typename Types::ConstReference  ConstReference;
+    typedef typename Types::Region          Region;
+
+
+/*---------------------------------------------------------------------------*
+ | Constructors
+ *---------------------------------------------------------------------------*/
+public:
+    // Constructor taking dimension and index to slice on
+    explicit RasterSlice(R * r, IndexType d, IndexType i)
+        : hyperRaster(r), sliceDimension(d), sliceIndex(i),
+          _bounds(r->bounds(), d) { }
+
+
+/*---------------------------------------------------------------------------*
+ | Assignment operator overloads
+ *---------------------------------------------------------------------------*/
+public:
+    INCA_RASTER_ASSIGNMENT_OPERATORS
+
+
+/*---------------------------------------------------------------------------*
+ | Core functions required by RasterFacade
+ *---------------------------------------------------------------------------*/
+protected:
+    // Allow RasterFacade to call these protected functions
+    friend class RasterCoreAccess;
+
+    // Functions required by RasterBoundsFacet
+    const Region & getRasterBounds() const { return this->_bounds; }
+
+    // Functions required by RasterAccessFacet
+    template <class IndexList, typename ReturnType>
+    ReturnType getElement(const IndexList & indices) const {
+        // Construct dimension N + 1 indices, inserting the sliced dimension
+        HyperArray idx;
+        typename IndexList::const_iterator it = indices.begin();
+        for (IndexType d = 0; d < sliceDimension; ++d, ++it)
+            idx[d] = *it;
+        idx[sliceDimension] = sliceIndex;
+        for (IndexType d = sliceDimension + 1; d < hyperDimensionality; ++d, ++it)
+            idx[d] = *it;
+
+        // Get the element from the hyper-dimensional raster
+        return ReturnType((*hyperRaster)(idx));
+    }
+    template <typename ReturnType>
+    ReturnType getDummyElement(ConstReference value) const {
+        return RasterCoreAccess::template
+            getDummyElement<HyperRaster const, ReturnType>(*hyperRaster, value);
+    }
+
+    R *         hyperRaster;        // Our owner N+1 dimensional raster
+    Region      _bounds;            // Our bounds
+    IndexType   sliceDimension,     // What dimension we slice him along
+                sliceIndex;         // ...and what index we slice at
+};
+
+
+// These macros are intended to be used as parameters for the following
+// macros, to specify whether to generate const or non-const variants of
+// the functions they create. They are #undef'd at the end of the file.
+#define CONST     const
+#define NON_CONST
+
+
+// This macro creates the begin() and end() iterator accessor functions, as
+// well as their reverse counterparts. It also creates iteratorAt(indices)
+// and reverseIteratorAt(indices) functions for getting iterators for
+// arbitrary indices. The CONST_TAG parameter should be either CONST or
+// NON_CONST (defined above). The FWD_ITERATOR and REV_ITERATOR parameters
+// are the typenames for the forward and reverse iterator types, respectively.
+#define RASTER_ITERATOR_ACCESSORS(CONST_TAG, FWD_ITERATOR, REV_ITERATOR)    \
+    /* Forward iterators */                                                 \
+    template <class IndexList>                                              \
+    FWD_ITERATOR iteratorAt(const IndexList & indices) CONST_TAG {          \
+        return FWD_ITERATOR(this->derived(), indices);                      \
+    }                                                                       \
+    FWD_ITERATOR begin() CONST_TAG {                                        \
+        return iteratorAt(this->derived().bases());                         \
+    }                                                                       \
+    FWD_ITERATOR end() CONST_TAG {                                          \
+        return ++(iteratorAt(this->derived().extents()));                   \
+    }                                                                       \
+                                                                            \
+    /* Const reverse iterators */                                           \
+    template <class IndexList>                                              \
+    REV_ITERATOR reverseIteratorAt(const IndexList & indices) CONST_TAG {   \
+        return REV_ITERATOR(this->derived(), indices);                      \
+    }                                                                       \
+    REV_ITERATOR rbegin() CONST_TAG {                                       \
+        return reverseIteratorAt(this->derived().extents());                \
+    }                                                                       \
+    REV_ITERATOR rend() CONST_TAG {                                         \
+        return ++(reverseIteratorAt(this->derived().bases()));              \
+    }
+
+
+// This macro creates the low-level elementAt and dummyElement functions,
+// which get an element from the core and return a dummy element with a
+// certain value, respectively. The CONST_TAG parameter should be either
+// CONST or NON_CONST, as in above.
+#define RASTER_LOW_LEVEL_ELEMENT_ACCESSORS(CONST_TAG)                       \
+    template <class IndexList, typename ReturnType>                         \
+    ReturnType elementAt(const IndexList & absolute) CONST_TAG {            \
+        if (Tags::coreUsesAbsoluteIndices) {                                \
+            return RasterCoreAccess::template                               \
+                    getElement<Derived CONST_TAG, IndexList, ReturnType>(   \
+                        this->derived(),                                    \
+                        absolute);                                          \
+        } else {                                                            \
+            return RasterCoreAccess::template                               \
+                    getElement<Derived CONST_TAG, IndexArray, ReturnType>(  \
+                        this->derived(),                                    \
+                        this->derived().bounds().offsetTo(absolute));       \
+        }                                                                   \
+    }                                                                       \
+    template <class IndexList, typename ReturnType>                         \
+    ReturnType dummyElement(const IndexList & indices) CONST_TAG {          \
+        return RasterCoreAccess::template                                   \
+                getDummyElement<Derived CONST_TAG, ReturnType>(             \
+                    this->derived(),                                        \
+                    this->derived().valueForInvalidIndices(indices));       \
+    }
+
+
+#define RASTER_SLICE_ACCESSORS(CONST_TAG, SLICE)                            \
+    SLICE slice(IndexType d, IndexType i) CONST_TAG {                       \
+        return SLICE(static_cast<Derived CONST_TAG *>(this), d, i);         \
+    }
+
+
+// Unspecialized version (does not compile)
+template <class Derived, class Tags, class Types, typename Enabled = void>
+class RasterAccessFacet {
+    // Force a compile-time assertion. This is only evaluated if this
+    // specialization is instantiated.
+    static const bool RasterAccessFacetDidNotSpecialize
+        = NOT( IS_SAME( Types, Types ) )::value;
+    BOOST_STATIC_ASSERT( RasterAccessFacetDidNotSpecialize );
+};
+
+
+// This specialization of RasterAccessFacet implements read-only accessors
+// and iterators. It does not implement a non-const iterator, since iterators
+// should not be permitted to modify the raster.
+//
+// The Derived class is required to implement the following function(s):
+template <class Derived, class Tags, class Types>
+class RasterAccessFacet <Derived, Tags, Types,
+        ENABLE_IF( AND2(      IS_A( typename Tags::AccessTag,
+                                    ReadableRasterTag ),
+                         NOT( IS_A( typename Tags::AccessTag,
+                                    WritableRasterTag ) ) ) ) > {
+/*---------------------------------------------------------------------------*
+ | Type & constant declarations
+ *---------------------------------------------------------------------------*/
+public:
+    // Imported types
+    typedef typename Types::IndexArray              IndexArray;
+    typedef typename Types::ElementType             ElementType;
+    typedef typename Types::ReadableElementType     ReadableElementType;
+
+    // Iterator types
+    typedef RasterIterator<Derived const, ElementType const,
+                           ReadableElementType, false>  ConstIterator;
+    typedef RasterIterator<Derived const, ElementType const,
+                           ReadableElementType, true>   ConstReverseIterator;
+
+    // Slice types
+    typedef RasterSlice<Derived const, ReadableRasterTag> ConstSlice;
+
+    // STL-compatible typedefs
+    typedef ConstIterator        const_iterator;
+    typedef ConstReverseIterator const_reverse_iterator;
+
+
+/*---------------------------------------------------------------------------*
+ | Access to the derived class
+ *---------------------------------------------------------------------------*/
+private:
+    DERIVED_CLASS_ACCESSORS(Derived)
+
+
+/*---------------------------------------------------------------------------*
+ | Element accessors
+ *---------------------------------------------------------------------------*/
+public:
+    // Arbitrary-dimensional element accessors
+    template <class IndexList>
+    ReadableElementType operator()(const IndexList &indices) const {
+        if (this->derived().indicesValid(indices))
+            return this->elementAt<IndexList, ReadableElementType>(indices);
+        else
+            return this->dummyElement<IndexList, ReadableElementType>(indices);
+    }
+
+    #define CREATE_DIMENSIONAL_ACCESSOR(DIM)                                \
+        ReadableElementType operator()(PARAMS(DIM, IndexType i)) const {    \
+            return this->operator()(IndexArray(PARAMS(DIM, i)));            \
+        }
+    FOR_ALL_DIMS(CREATE_DIMENSIONAL_ACCESSOR);
+    #undef CREATE_DIMENSIONAL_ACCESSOR
+
+protected:
+    // These functions get called by other facets, so we grant friendship
+    template <class D, class G, class T, typename E>
+        friend class RasterIndexingFacet;
+
+    RASTER_LOW_LEVEL_ELEMENT_ACCESSORS(CONST)
+
+
+/*---------------------------------------------------------------------------*
+ | Slice accessors
+ *---------------------------------------------------------------------------*/
+public:
+    RASTER_SLICE_ACCESSORS(CONST, ConstSlice)
+
+
+/*---------------------------------------------------------------------------*
+ | Iterator accessors
+ *---------------------------------------------------------------------------*/
+public:
+    RASTER_ITERATOR_ACCESSORS(CONST, ConstIterator, ConstReverseIterator)
+};
+
+
+// This specialization of RasterAccessFacet implements write-only accessors
+// and iterators. It does not implement const iterators because the idea of
+// a const, writable iterator does not make sense.
+//
+// The Derived class is required to implement the following function(s):
+template <class Derived, class Tags, class Types>
+class RasterAccessFacet <Derived, Tags, Types,
+        ENABLE_IF( AND2( NOT( IS_A( typename Tags::AccessTag,
+                                    ReadableRasterTag ) ),
+                              IS_A( typename Tags::AccessTag,
+                                    WritableRasterTag ) ) ) > {
+/*---------------------------------------------------------------------------*
+ | Type & constant declarations
+ *---------------------------------------------------------------------------*/
+public:
+    // Imported types
+    typedef typename Types::IndexArray              IndexArray;
+    typedef typename Types::ElementType             ElementType;
+    typedef typename Types::WritableElementType     WritableElementType;
+
+    // Iterator types
+    typedef RasterIterator<Derived, ElementType,
+                           WritableElementType, false>  Iterator;
+    typedef RasterIterator<Derived, ElementType,
+                           WritableElementType, true>   ReverseIterator;
+
+    // Slice types
+    typedef RasterSlice<Derived, WritableRasterTag> Slice;
+
+    // STL-compatible typedefs
+    typedef Iterator        iterator;
+    typedef ReverseIterator reverse_iterator;
+
+
+/*---------------------------------------------------------------------------*
+ | Access to the derived class
+ *---------------------------------------------------------------------------*/
+private:
+    DERIVED_CLASS_ACCESSORS(Derived)
+
+
+/*---------------------------------------------------------------------------*
+ | Element accessors
+ *---------------------------------------------------------------------------*/
+public:
+    // Arbitrary-dimensional element accessors
+    template <class IndexList>
+    WritableElementType operator()(const IndexList &indices) {
+        if (this->derived().indicesValid(indices))
+            return this->elementAt<IndexList, WritableElementType>(indices);
+        else
+            return this->dummyElement<IndexList, WritableElementType>(indices);
+    }
+
+    #define CREATE_DIMENSIONAL_ACCESSOR(DIM)                                \
+        WritableElementType operator()(PARAMS(DIM, IndexType i)) {          \
+            return this->operator()(IndexArray(PARAMS(DIM, i)));            \
+        }
+    FOR_ALL_DIMS(CREATE_DIMENSIONAL_ACCESSOR);
+    #undef CREATE_DIMENSIONAL_ACCESSOR
+
+protected:
+    // These functions get called by other facets, so we grant friendship
+    template <class D, class G, class T, typename E>
+        friend class RasterIndexingFacet;
+
+    RASTER_LOW_LEVEL_ELEMENT_ACCESSORS(NON_CONST)
+
+
+/*---------------------------------------------------------------------------*
+ | Slice accessors
+ *---------------------------------------------------------------------------*/
+public:
+    RASTER_SLICE_ACCESSORS(NON_CONST, Slice)
+
+
+/*---------------------------------------------------------------------------*
+ | Iterator accessors
+ *---------------------------------------------------------------------------*/
+public:
+    RASTER_ITERATOR_ACCESSORS(NON_CONST, Iterator, ReverseIterator)
+};
+
+
+// This specialization of RasterAccessFacet implements read/write accessors
+// and iterators.
+//
+// The Derived class is required to implement the following function(s):
+template <class Derived, class Tags, class Types>
+class RasterAccessFacet <Derived, Tags, Types,
+        ENABLE_IF( AND2( IS_A( typename Tags::AccessTag,
+                               ReadableRasterTag ),
+                         IS_A( typename Tags::AccessTag,
+                               WritableRasterTag ) ) ) > {
+/*---------------------------------------------------------------------------*
+ | Type & constant declarations
+ *---------------------------------------------------------------------------*/
+public:
+    // Imported types
+    typedef typename Types::IndexArray              IndexArray;
+    typedef typename Types::ElementType             ElementType;
+    typedef typename Types::ReadableElementType     ReadableElementType;
+    typedef typename Types::ReadWriteElementType    ReadWriteElementType;
+
+    // Iterator types
+    typedef RasterIterator<Derived const, ElementType const,
+                           ReadableElementType, false>  ConstIterator;
+    typedef RasterIterator<Derived const, ElementType const,
+                           ReadableElementType, true>   ConstReverseIterator;
+    typedef RasterIterator<Derived, ElementType,
+                           ReadWriteElementType, false> Iterator;
+    typedef RasterIterator<Derived, ElementType,
+                           ReadWriteElementType, true>  ReverseIterator;
+
+    // Slice types
+    typedef RasterSlice<Derived const, ReadableRasterTag>  ConstSlice;
+    typedef RasterSlice<Derived,       ReadWriteRasterTag>      Slice;
+
+    // STL-compatible typedefs
+    typedef ConstIterator           const_iterator;
+    typedef ConstReverseIterator    const_reverse_iterator;
+    typedef Iterator                iterator;
+    typedef ReverseIterator         reverse_iterator;
+
+
+/*---------------------------------------------------------------------------*
+ | Access to the derived class
+ *---------------------------------------------------------------------------*/
+private:
+    DERIVED_CLASS_ACCESSORS(Derived)
+
+
+/*---------------------------------------------------------------------------*
+ | Element accessors
+ *---------------------------------------------------------------------------*/
+public:
+    // Arbitrary-dimensional element accessors
+    template <class IndexList>
+    ReadableElementType operator()(const IndexList &indices) const {
+        if (this->derived().indicesValid(indices))
+            return this->elementAt<IndexList, ReadableElementType>(indices);
+        else
+            return this->dummyElement<IndexList, ReadableElementType>(indices);
+    }
+    template <class IndexList>
+    ReadWriteElementType operator()(const IndexList &indices) {
+        if (this->derived().indicesValid(indices))
+            return this->elementAt<IndexList, ReadWriteElementType>(indices);
+        else
+            return this->dummyElement<IndexList, ReadWriteElementType>(indices);
+    }
+
+    #define CREATE_DIMENSIONAL_ACCESSOR(DIM)                                \
+        ReadableElementType operator()(PARAMS(DIM, IndexType i)) const {    \
+            return this->operator()(IndexArray(PARAMS(DIM, i)));            \
+        }                                                                   \
+        ReadWriteElementType operator()(PARAMS(DIM, IndexType i)) {         \
+            return this->operator()(IndexArray(PARAMS(DIM, i)));            \
+        }
+    FOR_ALL_DIMS(CREATE_DIMENSIONAL_ACCESSOR);
+    #undef CREATE_DIMENSIONAL_ACCESSOR
+
+protected:
+    // These functions get called by other facets, so we grant friendship
+    template <class D, class G, class T, typename E>
+        friend class RasterIndexingFacet;
+
+    RASTER_LOW_LEVEL_ELEMENT_ACCESSORS(CONST)
+    RASTER_LOW_LEVEL_ELEMENT_ACCESSORS(NON_CONST)
+
+
+/*---------------------------------------------------------------------------*
+ | Slice accessors
+ *---------------------------------------------------------------------------*/
+public:
+    RASTER_SLICE_ACCESSORS(CONST,     ConstSlice)
+    RASTER_SLICE_ACCESSORS(NON_CONST,      Slice)
+
+
+/*---------------------------------------------------------------------------*
+ | Iterator accessors
+ *---------------------------------------------------------------------------*/
+public:
+    RASTER_ITERATOR_ACCESSORS(CONST,     ConstIterator, ConstReverseIterator)
+    RASTER_ITERATOR_ACCESSORS(NON_CONST,      Iterator,      ReverseIterator)
+};
+
+    };    // End namespace raster
+};    // End namespace inca
+
+// Clean up the preprocessor namespace
+#undef NON_CONST
+#undef CONST
+#undef RASTER_LOW_LEVEL_ELEMENT_ACCESSORS
+#undef RASTER_ITERATOR_ACCESSORS
+#define UNDEFINE_INCA_MULTI_DIM_MACROS
+#include <inca/util/multi-dimensional-macros.hpp>
+#define UNDEFINE_INCA_METAPROGRAMMING_MACROS
+#include <inca/util/metaprogramming/macros.hpp>
+
+#endif

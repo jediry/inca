@@ -1,0 +1,236 @@
+/* -*- C++ -*-
+ *
+ * File: RasterAssignmentFacet
+ *
+ * Author: Ryan L. Saunders
+ *
+ * Copyright 2004, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ *      The assignment facet of a raster involves the meaning of assigning to
+ *      a raster. What precisely happens when a raster is assigned to depends
+ *      on the type of raster. For read-only rasters, assignment is obviously
+ *      disalloed. If a raster is writable but not resizable, then assigning
+ *      to it will assign every element whose indices are valid in both the
+ *      source and destination (i.e., the intersection of the two). If the
+ *      raster is also resizable, then it will be sized to be the exact size
+ *      as the source.
+ *
+ *      Of course, since C++ doesn't allow assignment operators to be
+ *      inherited, these will have to be placed into the derived class
+ *      manually. There is a macro defined in RasterFacade to make this
+ *      easier.
+ */
+
+#ifndef INCA_RASTER_FACET_ASSIGNMENT
+#define INCA_RASTER_FACET_ASSIGNMENT
+
+// Import system configuration
+#include <inca/inca-common.h>
+
+// Import raster algorithms
+#include "../algorithms/fill"
+#include "../algorithms/copy"
+
+// Import template metaprogramming macros
+#include <inca/util/metaprogramming/macros.hpp>
+
+// This is part of the Inca raster processing library
+namespace inca {
+    namespace raster {
+
+// This (unspecialized) version of RasterAssignmentFacet does not permit
+// assignment, and will be used if none of the specializations apply.
+// The Core is not required to implement any functions.
+template <class Derived, class Tags, class Types, typename Enabled = void>
+class RasterAssignmentFacet {
+protected:
+
+    // These should never be called
+    template <typename T>
+    void assignElement(const T & value) {
+        const bool AssignmentNotSupportedForReadOnlyRaster = DEFERRED_FALSE(T)::value;
+        BOOST_STATIC_ASSERT(AssignmentNotSupportedForReadOnlyRaster);
+    }
+    template <class R>
+    void assignRaster(const R & src) {
+        const bool AssignmentNotSupportedForReadOnlyRaster = DEFERRED_FALSE(R)::value;
+        BOOST_STATIC_ASSERT(AssignmentNotSupportedForReadOnlyRaster);
+    }
+};
+
+
+// This specialization of RasterAssignmentFacet implements fill-with-value
+// assignment, as well as raster assignment that does not modify the size or
+// bounds of the target object.
+template <class Derived, class Tags, class Types>
+class RasterAssignmentFacet <Derived, Tags, Types,
+        ENABLE_IF( AND2( IS_A( typename Tags::SizeTag,
+                               FixedSizeRasterTag ),
+                         IS_A( typename Tags::AccessTag,
+                               WritableRasterTag) ) ) > {
+/*---------------------------------------------------------------------------*
+ | Type & constant declarations
+ *---------------------------------------------------------------------------*/
+public:
+    // Imported types
+    typedef typename Types::ElementType ElementType;
+    typedef typename Types::Region      Region;
+
+
+/*---------------------------------------------------------------------------*
+ | Access to the derived class
+ *---------------------------------------------------------------------------*/
+private:
+    DERIVED_CLASS_ACCESSORS(Derived)
+
+
+/*---------------------------------------------------------------------------*
+ | Assignment functions
+ *---------------------------------------------------------------------------*/
+//protected:
+public:
+    // Fill-with-constant assignment function
+    template <typename T>
+    void assignElement(const T & value) {
+        // Make sure this type is compatible with our element type
+//        boost::function_requires< boost::ConvertibleConcept<ElementType, T> >();
+
+        // Fill 'er up!
+        fill(this->derived(), value);
+    }
+
+    // Copy-raster assignment function (without resize)
+    template <class R>
+    void assignRaster(const R & src) {
+        // Make sure our arguments "fit the bill"
+//        boost::function_requires< ReadableRasterConcept<R> >();
+//        boost::function_requires< boost::ConvertibleConcept<ElementType,
+//                                                            typename R::ElementType> >();
+
+        // Find the region in common and copy it
+        Region region = intersectionOf(this->derived().bounds(), src.bounds());
+        copy(this->derived(), src, region.bases(), region.extents());
+    }
+};
+
+
+// This specialization of RasterAssignmentFacet implements fill-with-value
+// assignment, as well as raster assignment that resizes (but does not alter
+// the bounds of) the target object.
+template <class Derived, class Tags, class Types>
+class RasterAssignmentFacet <Derived, Tags, Types,
+        ENABLE_IF( AND3( IS_A( typename Tags::SizeTag,
+                               MutableSizeRasterTag ),
+                         IS_A( typename Tags::BoundsTag,
+                               StationaryRasterTag ),
+                         IS_A( typename Tags::AccessTag,
+                               WritableRasterTag) ) ) > {
+/*---------------------------------------------------------------------------*
+ | Type & constant declarations
+ *---------------------------------------------------------------------------*/
+public:
+    // Imported types
+    typedef typename Types::ElementType ElementType;
+
+
+/*---------------------------------------------------------------------------*
+ | Access to the derived class
+ *---------------------------------------------------------------------------*/
+private:
+    DERIVED_CLASS_ACCESSORS(Derived)
+
+
+/*---------------------------------------------------------------------------*
+ | Assignment functions
+ *---------------------------------------------------------------------------*/
+//protected:
+public:
+    // Fill-with-constant assignment function
+    template <typename T>
+    void assignElement(const T & value) {
+        // Make sure this type is compatible with our element type
+        boost::function_requires< boost::ConvertibleConcept<ElementType, T> >();
+
+        // Fill 'er up!
+        fill(this->derived(), value);
+    }
+
+    // Copy-raster assignment function (resizing destination)
+    template <class R>
+    void assignRaster(const R & src) {
+        // Make sure our arguments "fit the bill"
+        boost::function_requires< ReadableRasterConcept<R> >();
+        boost::function_requires< boost::ConvertibleConcept<ElementType,
+                                                            typename R::ElementType> >();
+
+        // Resize me to be the same size as 'src'
+        this->derived().setSizes(src.sizes());
+        copy(*this, src);
+    }
+};
+
+
+// This specialization of RasterAssignmentFacet implements fill-with-value
+// assignment, as well as raster assignment that resizes (but does not alter
+// the bounds of) the target object.
+template <class Derived, class Tags, class Types>
+class RasterAssignmentFacet <Derived, Tags, Types,
+        ENABLE_IF( AND3( IS_A( typename Tags::SizeTag,
+                               MutableSizeRasterTag ),
+                         IS_A( typename Tags::BoundsTag,
+                               MovableRasterTag ),
+                         IS_A( typename Tags::AccessTag,
+                               WritableRasterTag) ) ) > {
+/*---------------------------------------------------------------------------*
+ | Type & constant declarations
+ *---------------------------------------------------------------------------*/
+public:
+    // Imported types
+    typedef typename Types::ElementType ElementType;
+
+
+/*---------------------------------------------------------------------------*
+ | Access to the derived class
+ *---------------------------------------------------------------------------*/
+private:
+    DERIVED_CLASS_ACCESSORS(Derived)
+
+
+/*---------------------------------------------------------------------------*
+ | Assignment functions
+ *---------------------------------------------------------------------------*/
+//protected:
+public:
+    // Fill-with-constant assignment function
+    template <typename T>
+    void assignElement(const T & value) {
+        // Make sure this type is compatible with our element type
+//        boost::function_requires< boost::ConvertibleConcept<ElementType, T> >();
+
+        // Fill 'er up!
+        fill(this->derived(), value);
+    }
+
+    // Copy-raster assignment function (resizing destination)
+    template <class R>
+    void assignRaster(const R & src) {
+        // Make sure our arguments "fit the bill"
+//        boost::function_requires< ReadableRasterConcept<R> >();
+//        boost::function_requires< boost::ConvertibleConcept<ElementType,
+//                                                            typename R::ElementType> >();
+
+        // Resize me to be the same size/bounds as 'src'
+        this->derived().setBounds(src.bounds());
+        copy(this->derived(), src);
+    }
+};
+
+    };    // End namespace raster
+};    // End namespace inca
+
+// Clean up the preprocessor namespace
+#define UNDEFINE_INCA_METAPROGRAMMING_MACROS
+#include <inca/util/metaprogramming/macros.hpp>
+
+#endif

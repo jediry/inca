@@ -1,0 +1,322 @@
+/** -*- C++ -*-
+ *
+ * File: resample
+ *
+ * Author: Ryan L. Saunders
+ *
+ * Copyright 2004, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ *
+ * FIXME: This should allow customizable interp/filter policies
+ * FIXME: This should optimize for integer math when possible
+ * FIXME: This should choose the most efficient evaluation order for dimensions
+ * FIXME: This needs size and scale-array constructors. Probably bounds and bases too.
+ * XXX: Is it good to have only one mag/min policy each? Or should we allow per-dim?
+ */
+
+#ifndef INCA_RASTER_OPERATOR_RESAMPLE
+#define INCA_RASTER_OPERATOR_RESAMPLE
+
+
+// Import operator base class and macros
+#include "OperatorRasterBase"
+
+// Import augmented enum mechanism
+#include <inca/util/Enumeration.hpp>
+
+// Import metaprogramming tools
+#include <inca/util/metaprogramming/is_collection.hpp>
+#include <inca/util/multi-dimensional-macros.hpp>
+#include <inca/util/metaprogramming/macros.hpp>
+
+namespace std {
+    // FIXME: How should we handle the missing round function?
+    template <typename S>
+    S round(S s) {
+        S flr = floor(s);
+        if (flr - s < S(0.5))   return flr;
+        else                    return flr + S(1);
+    }
+}
+
+// This is part of the Inca raster processing library
+namespace inca {
+    namespace raster {
+
+        // FIXME: somewhat hacked in
+        template <typename ElementType, typename ScalarType>
+        struct Interpolator {
+            ScalarType t;
+            Array<ElementType, 2> _elements;
+
+            SizeType elementsBelow() const { return 1; }
+            SizeType elementsAbove() const { return 1; }
+            ElementType & operator[](IndexType i) { return _elements[i]; }
+
+            ElementType evaluate() const {
+                return ElementType(t * _elements[1] + (ScalarType(1) - t) * _elements[0]);
+            }
+        };
+        template <typename ScalarType>      // FIXME: Total hack to get NN working for now
+        struct Interpolator<IDType, ScalarType> {
+            ScalarType t;
+            Array<IDType, 2> _elements;
+
+            SizeType elementsBelow() const { return 1; }
+            SizeType elementsAbove() const { return 1; }
+            IDType & operator[](IndexType i) { return _elements[i]; }
+
+            IDType evaluate() const {
+                if (t < ScalarType(0.5))    return _elements[0];
+                else                        return _elements[1];
+            }
+        };
+
+        template <typename ElementType, typename ScalarType>
+        struct BoxFilter {
+            ScalarType t;
+            SizeType _elementsBelow, _elementsAbove;
+            std::vector<ElementType> _elements;
+
+            void resize(SizeType s) {
+                _elements.resize(s);
+                _elementsBelow = s / 2 + s % 2;
+                _elementsAbove = s / 2;
+
+            }
+
+            SizeType elementsBelow() const { return _elementsBelow; }
+            SizeType elementsAbove() const { return _elementsAbove; }
+            ElementType & operator[](IndexType i) { return _elements[i + elementsBelow() - 1]; }
+
+            ElementType evaluate() const {
+                ElementType tmp = _elements[0];
+                for (IndexType i = 1; i < _elements.size(); ++i)
+                    tmp += _elements[i];
+                return tmp / _elements.size();
+            }
+        };
+
+
+            // Symbolic constants representing the possible operations
+            INCA_ENUM( ResampleOperation,
+                       ( Minify,
+                       ( None,
+                       ( Magnify,
+                         NIL ))));
+
+        // Resample operator
+        INCA_RASTER_OPERATOR_CLASS_HEADER(ResampleOperatorRaster,
+                                          1, NIL,
+                                          typename R0::ElementType) {
+        public:
+            // Get types from the superclass
+            INCA_RASTER_OPERATOR_IMPORT_TYPES(ResampleOperatorRaster<R0>)
+
+            // What type do we use for scaling calculations?
+            typedef float                               Scalar;
+            typedef Array<Scalar, dimensionality>       ScalarArray;
+
+            // FIXME: These should be parameters somehow
+            typedef Interpolator<ElementType, Scalar>   Magnifier;
+            typedef BoxFilter<ElementType, Scalar>      Minifier;
+
+            // Constructor taking scale factors along each dimension
+            template <typename ScalarList>
+            ResampleOperatorRaster(const R0 & r, const ScalarList & s)
+                    : OperatorBaseType(r), scaleFactor(s) {
+
+                // Figure out what we have to do along each dimension
+                SizeArray newSizes;
+                for (IndexType d = 0; d < dimensionality; ++d) {
+                    if (math::effectivelyEqual(scaleFactor[d], Scalar(1))) {
+                        // Do nothing along this dimension
+                        operation[d] = None;
+                        newSizes[d]   = r.size(d);
+
+                    } else {
+                        // Resample along this dimension
+                        operation[d] = scaleFactor[d] > Scalar(1)
+                            ? Magnify
+                            : Minify;
+                        newSizes[d] = SizeType(std::round(r.size(d)
+                                                          * scaleFactor[d]));
+                        minifier[d].resize(SizeType(std::round(Scalar(1) / scaleFactor[d])));
+                    }
+                }
+                this->_bounds.setSizes(newSizes);
+
+                // Construct the plan
+                planSize = dimensionality;
+                for (IndexType i = 0; i < planSize; ++i) {
+                    planOrder[i] = i;
+                }
+            }
+
+        protected:
+            // Element evaluator function
+            INCA_RASTER_OPERATOR_GET_ELEMENT_HEADER(indices) {
+                if (planSize == 0) {
+                    // Hmmm...strange -- no resampling requested
+                    return operand0(indices);
+                } else {
+                    // Figure out the interpolation 't' and nearest set of
+                    // integer indices smaller than the scalar indices.
+                    IndexArray below;
+                    typename IndexList::const_iterator it = indices.begin();
+                    for (IndexType d = 0; d < dimensionality; ++d, ++it)
+                        switch (operation[d]) {
+                            case None: {
+                                below[d] = (*it);
+                                break;
+                            }
+                            case Minify: {
+                                Scalar coord = (*it) / scaleFactor[d];
+                                below[d] = IndexType(std::floor(coord));
+                                break;
+                            }
+                            case Magnify: {
+                                Scalar coord = (*it) / scaleFactor[d];
+                                below[d] = IndexType(std::floor(coord));
+                                magnifier[d].t = coord - below[d];
+                                break;
+                            }
+                        }
+                    return executePlan(0, below);
+                }
+            }
+
+            // This function is the workhorse of this operator, and is called
+            // recursively with successively higher values of 'step' and
+            // stopping when the current step is a no-op. Which 'step'
+            // in the PLAN is being executed is NOT, in general, the same as
+            // which DIMENSION is being processed.
+            ElementType executePlan(IndexType step,
+                                    const IndexArray indices) const {
+                // If we've exceeded the plan size, then this is just a
+                // plain element access, so return the element.
+                if (step >= planSize)
+                    return operand0(indices);
+
+                // Figure out which dimension we're processing
+                IndexType d = planOrder[step];
+
+                switch (operation[d]) {
+                    case None:      // We don't resample along this dimension
+                        return operand0(indices);
+
+                    case Minify: {  // We filter along this dimension
+                        IndexArray args(indices);
+
+                        // Do the elements below the sample point
+                        for (IndexType i = 0; i < minifier[d].elementsBelow(); ++i) {
+                            minifier[d][-i] = executePlan(step + 1, args);
+                            args[d]--;
+                        }
+
+                        // Reset this index to point to the next element along this dimension
+                        if (minifier[d].elementsBelow() > 0)
+                            args[d] = indices[d] + 1;
+                        else
+                            args[d] = indices[d];
+
+                        // Do the elements above the sample point
+                        for (IndexType i = 0; i < minifier[d].elementsAbove(); ++i) {
+                            minifier[d][i+1] = executePlan(step + 1, args);
+                            args[d]++;
+                        }
+
+                        return minifier[d].evaluate();
+                    }
+                    case Magnify: { // We interpolate along this dimension
+                        IndexArray args(indices);
+
+                        // Do the elements below the sample point
+                        for (IndexType i = 0; i < magnifier[d].elementsBelow(); ++i) {
+                            magnifier[d][-i] = executePlan(step + 1, args);
+                            args[d]--;
+                        }
+
+                        // Reset this index to point to the next element along this dimension
+                        if (magnifier[d].elementsBelow() > 0)
+                            args[d] = indices[d] + 1;
+                        else
+                            args[d] = indices[d];
+
+                        // Do the elements above the sample point
+                        for (IndexType i = 0; i < magnifier[d].elementsAbove(); ++i) {
+                            magnifier[d][i+1] = executePlan(step + 1, args);
+                            args[d]++;
+                        }
+
+                        return magnifier[d].evaluate();
+                    }
+                }
+            }
+
+
+            // Resampling algorithms
+            mutable Array<Magnifier, dimensionality>    magnifier;
+            mutable Array<Minifier, dimensionality>     minifier;
+
+            // Precomputed resampling plan
+            int                                         planSize;
+            Array<IndexType, dimensionality>            planOrder;
+            Array<ResampleOperation, dimensionality>    operation;
+            Array<Scalar, dimensionality>               scaleFactor;
+        };
+
+#if 0
+        // Factory function giving size to scale-to, and a boolean flag
+        // specifying whether the center or the bases remain constant
+        template <typename R0, class SizeList>
+        ENABLE_IF_T( is_collection<SizeList>,
+        ResampleOperatorRaster<R0> ) resample(const R0 & r,
+                                              const SizeList & newSz,
+                                              bool aroundCenter = false) {
+            typedef ResampleOperatorRaster<R0> Op;
+            typedef typename Op::SizeA
+            return Op(r, new);
+        }
+
+        // Factory function giving size to scale-to, and a boolean flag
+        // specifying whether the center or the bases remain constant
+        template <typename R0, class IndexList0, class IndexList1>
+        ENABLE_IF_T( AND2( is_collection<IndexList0>, is_collection<IndexList1> ),
+        ResampleOperatorRaster<R0> ) resample(const R0 & r,
+                                              const IndexList0 & newBs,
+                                              const IndexList1 & newEx
+                                              bool aroundCenter = false) {
+            typedef ResampleOperatorRaster<R0> Op;
+            typedef typename Op::SizeA
+            return Op(r, new);
+        }
+#endif
+        // Factory function giving a uniform scaling factor
+        template <typename R0, typename S>
+        DISABLE_IF_T( is_collection<S>,
+        ResampleOperatorRaster<R0> ) resample(const R0 & r, const S & s) {
+            typedef typename ResampleOperatorRaster<R0>::Scalar      Scalar;
+            typedef typename ResampleOperatorRaster<R0>::ScalarArray ScalarArray;
+            return ResampleOperatorRaster<R0>(r, ScalarArray(Scalar(s)));
+        }
+
+        // Factory function specifying scaling factors for each dimension
+        template <typename R0, class ScalarList>
+        ENABLE_IF_T( is_collection<ScalarList>,
+        ResampleOperatorRaster<R0> ) resample(const R0 & r, const ScalarList & s) {
+            return ResampleOperatorRaster<R0>(r, s);
+        }
+
+    };
+};
+
+
+// Clean up the preprocessor's namespace
+#define UNDEFINE_INCA_MULTI_DIM_MACROS
+#include <inca/util/multi-dimensional-macros.hpp>
+#define UNDEFINE_INCA_METAPROGRAMMING_MACROS
+#include <inca/util/metaprogramming/macros.hpp>
+
+#endif

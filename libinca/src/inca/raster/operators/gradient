@@ -1,6 +1,7 @@
-/*
+/** -*- C++ -*-
+ *
  * File: gradient
- * 
+ *
  * Author: Ryan L. Saunders
  *
  * Copyright 2004, Ryan L. Saunders. All rights reserved.
@@ -11,136 +12,106 @@
  *      of the input type.
  */
 
-#ifndef INCA_RASTER_OPERATORS_GRADIENT
-#define INCA_RASTER_OPERATORS_GRADIENT
+#ifndef INCA_RASTER_OPERATOR_GRADIENT
+#define INCA_RASTER_OPERATOR_GRADIENT
 
 
-// Import operator base classes and macros
-#include "operator-bases"
+// Import operator base class and macros
+#include "OperatorRasterBase"
 
 // Import the Vector class
 #include <inca/math/linalg.hpp>
+
+// Import metaprogramming tools
+#include <inca/util/metaprogramming/is_collection.hpp>
+#include <inca/util/multi-dimensional-macros.hpp>
+#include <inca/util/metaprogramming/macros.hpp>
+
 
 // This is part of the Inca raster processing library
 namespace inca {
     namespace raster {
 
         // Gradient operator
-        template <typename R1>
-        class GradientRasterOperator
-                    : public UnaryRasterOperator<R1, inca::math::Vector<typename R1::ElementType, R1::dimensionality> > {
+        INCA_RASTER_OPERATOR_CLASS_HEADER(GradientOperatorRaster,
+                                          1, NIL,
+                                          math::Vector<typename R0::ElementType COMMA
+                                                                R0::dimensionality> ) {
         public:
-            typedef inca::math::Vector<typename R1::ElementType, dimensionality> Vector;
-            typedef UnaryRasterOperator<R1, Vector> Superclass;
-            typedef GradientRasterOperator<R1>     OperatorType;
-            typedef typename Superclass::ElementType    ElementType;
-            typedef Array<typename R1::ElementType, dimensionality> ScalarArray;
-            
-            // Constructor
-            template <class ScalarList>
-            GradientRasterOperator(R1 & r, const ScalarList & d)
-                : Superclass(r), differentials(d) { }
+            // Get types from the superclass
+            INCA_RASTER_OPERATOR_IMPORT_TYPES(GradientOperatorRaster<R0>)
+            typedef float Scalar;
 
-            // Evaluator function
-            template <class IndexList>
-            ElementType operator()(const IndexList &indices) const {
-                typename Superclass::IndexArray idx(indices);
+            // Constructor taking differential distances along each dimension
+            template <class ElementList>
+            GradientOperatorRaster(const R0 & r, const ElementList & dx)
+                    : OperatorBaseType(r) {
+                // Calculate the scale factors along each dimension
+                typename ElementList::const_iterator it = dx.begin();
+                for (IndexType d = 0; d < dimensionality; ++d)
+                    scaleFactors[d] = Scalar(1) / (2 * (*it));
+            }
+
+
+        protected:
+            // Element evaluator function
+            INCA_RASTER_OPERATOR_GET_ELEMENT_HEADER(indices) {
+/*                IndexArray idx(indices);
                 ElementType result;
-                typename R1::ElementType center = first(idx);   // cell at idx                
+                typename R0::ElementType center = operand0(idx);   // cell at idx
                 for (IndexType d = 0; d < dimensionality; ++d) {
-                    idx[d]++;       // Point to adjacent element along this dim
-                    result[d] = (first(idx) - center) / differentials[d];
-                    idx[d]--;       // Return to center
+                    idx[d]++;       // Move to adjacent element along this dim
+                    result[d] = (operand0(idx) - center) * scaleFactors[d];
+                    idx[d]--;       // Return to center element
+                }*/
+                IndexArray idx(indices);
+                ElementType result;
+                for (IndexType d = 0; d < dimensionality; ++d) {
+                    ++idx[d];       // Move to up-adjacent element along this dim
+                    result[d] = operand0(idx);
+                    idx[d] -= 2;    // Move to down-adjacent element
+                    result[d] -= operand0(idx);
+                    result[d] *= scaleFactors[d];
+                    ++idx[d];       // Return to the center
                 }
                 return result;
             }
 
-        protected:
-            ScalarArray differentials;
+            // The world-space distance between elements
+            ElementType scaleFactors;
         };
 
 
         // Factory function for unity differentials
-        template <typename R1>
-        GradientRasterOperator<R1> gradient(R1 &r) {
-            typedef typename R1::ElementType T;
-            return GradientRasterOperator<R1>(r, Array<T, R1::dimensionality>(T(1)));
+        template <typename R0>
+        GradientOperatorRaster<R0> gradient(const R0 & r) {
+            typedef GradientOperatorRaster<R0> Op;
+            return Op(r, typename Op::ElementType(typename R0::ElementType(1)));
         }
 
         // Factory function for uniform differentials
-        template <typename R1, typename scalar>
-        GradientRasterOperator<R1> gradient(R1 &r, const scalar & d) {
-            typedef typename R1::ElementType T;
-            return GradientRasterOperator<R1>(r, Array<T, R1::dimensionality>(T(d)));
+        template <typename R0, typename Scalar>
+        DISABLE_IF_T( is_collection<Scalar>,
+        GradientOperatorRaster<R0> ) gradient(const R0 & r, const Scalar & dx) {
+            typedef GradientOperatorRaster<R0> Op;
+            return Op(r, typename Op::ElementType(typename R0::ElementType(dx)));
         }
 
-//        // Factory function specifying differentials for each dimension
-//        template <typename R1, class ScalarList>
-//        GradientRasterOperator<R1> gradient(R1 &r, const ScalarList & d) {
-//            return GradientRasterOperator<R1>(r, d);
-//        }
-
-        // Vector angle operator
-        template <typename R1>
-        class VectorMagnitudeRasterOperator
-                    : public UnaryRasterOperator<R1, typename R1::ElementType::scalar_t > {
-        public:
-            typedef UnaryRasterOperator<R1, typename R1::ElementType::scalar_t> Superclass;
-            typedef VectorMagnitudeRasterOperator<R1>     OperatorType;
-            typedef typename Superclass::ElementType    ElementType;
-            typedef Array<typename R1::ElementType, dimensionality> ScalarArray;
-            
-            // Constructor
-            VectorMagnitudeRasterOperator(R1 & r)
-                : Superclass(r) { }
-
-            // Evaluator function
-            template <class IndexList>
-            ElementType operator()(const IndexList &indices) const {
-                return magnitude(first(indices));
-            }
-        };
-
-        // Factory function XXX
-        template <typename R1>
-        ENABLE_IF_T( is_raster<R1>,
-        VectorMagnitudeRasterOperator<R1> ) vmag(R1 &r) {
-            return VectorMagnitudeRasterOperator<R1>(r);
+        // Factory function specifying differentials for each dimension
+        template <typename R0, class ElementList>
+        ENABLE_IF_T( is_collection<ElementList>,
+        GradientOperatorRaster<R0> ) gradient(const R0 & r, const ElementList & dx) {
+            return GradientOperatorRaster<R0>(r, dx);
         }
 
-        // Vector angle operator
-        template <typename R1>
-        class VectorCanonicalAngleRasterOperator
-                    : public UnaryRasterOperator<R1, typename R1::ElementType::scalar_t > {
-        public:
-            typedef UnaryRasterOperator<R1, typename R1::ElementType::scalar_t> Superclass;
-            typedef VectorCanonicalAngleRasterOperator<R1>     OperatorType;
-            typedef typename Superclass::ElementType    ElementType;
-            typedef Array<typename R1::ElementType, dimensionality> ScalarArray;
-            
-            // Constructor
-            VectorCanonicalAngleRasterOperator(R1 & r)
-                : Superclass(r) { }
-
-            // Evaluator function
-            template <class IndexList>
-            ElementType operator()(const IndexList &indices) const {
-                return canonicalAngle(typename R1::ElementType(1, 0),
-                                      first(indices));
-            }
-        };
-
-        // Factory function XXX
-        template <typename R1>
-        ENABLE_IF_T( is_raster<R1>,
-        VectorCanonicalAngleRasterOperator<R1> ) canonicalAngle(R1 &r) {
-            return VectorCanonicalAngleRasterOperator<R1>(r);
-        }
     };
 };
 
+
 // Clean up the preprocessor's namespace
-#define UNDEFINE_INCA_RASTER_OPERATOR_MACROS
-#include "operator-bases"
+#define UNDEFINE_INCA_MULTI_DIM_MACROS
+#include <inca/util/multi-dimensional-macros.hpp>
+#define UNDEFINE_INCA_METAPROGRAMMING_MACROS
+#include <inca/util/metaprogramming/macros.hpp>
 
 #endif

@@ -1,0 +1,74 @@
+/** -*- C++ -*-
+ *
+ * \File FlagSet
+ *
+ * Author: Ryan L. Saunders
+ *
+ * Copyright 2004, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ */
+
+#ifndef INCA_UTIL_FLAG_SET
+#define INCA_UTIL_FLAG_SET
+
+// Import system configuration
+#include <inca/inca-common.h>
+
+// This is part of the Inca utilities collection
+namespace inca {
+    // Forward declarations
+    template <typename T = unsigned int> class FlagSet;
+};
+
+
+template <typename T>
+class inca::FlagSet {
+/*---------------------------------------------------------------------------*
+ | Type & constant declarations
+ *---------------------------------------------------------------------------*/
+public:
+    typedef T BitVectorType;
+
+private:
+    typedef FlagSet<BitVectorType>  ThisType;
+
+public:
+    static const int bits = sizeof(T) * 8;
+
+
+/*---------------------------------------------------------------------------*
+ | Constructors & cast operators
+ *---------------------------------------------------------------------------*/
+public:
+    // Implicit initialization constructor
+    FlagSet(BitVectorType f = 0) : _flags(f) { }
+
+    // Cast-to-primitive-type operator
+    operator BitVectorType() const { return _flags; }
+
+protected:
+    BitVectorType _flags;
+
+
+/*---------------------------------------------------------------------------*
+ | Get/set individual flags and sets of flags
+ *---------------------------------------------------------------------------*/
+public:
+    void clear() { _flags = 0; }
+    void include(BitVectorType f)    { _flags |= f; }
+    void keepCommon(BitVectorType f) { _flags &= f; }
+    void exclude(BitVectorType f)    { _flags &= ~f; }
+    void set(IndexType i)   { _flags |=  (1 << i); }
+    void unset(IndexType i) { _flags &= ~(1 << i); }
+    void set(IndexType i, bool enabled) {
+        if (enabled)    set(i);
+        else            unset(i);
+    }
+
+    bool isSet(IndexType i) const { return _flags & (1 << i) != 0; }
+    bool anySet(BitVectorType f) const { return _flags & f != 0; }
+    bool allSet(BitVectorType f) const { return _flags & ~f == 0; }
+};
+
+#endif

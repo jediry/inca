@@ -1,0 +1,78 @@
+/*
+ * File: clamp
+ *
+ * Author: Ryan L. Saunders
+ *
+ * Copyright 2004, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ */
+
+#ifndef INCA_RASTER_OPERATOR_CLAMP
+#define INCA_RASTER_OPERATOR_CLAMP
+
+
+// Import operator base classes and macros
+#include "OperatorRasterBase"
+
+// Import metaprogramming tools
+#include <inca/util/multi-dimensional-macros.hpp>
+
+
+// This is part of the Inca raster processing library
+namespace inca {
+    namespace raster {
+
+        // Clamp the values in a raster to a certain range
+        INCA_RASTER_OPERATOR_CLASS_HEADER(ClampOperatorRaster,
+                                          1, NIL,
+                                          typename R0::ElementType ) {
+        public:
+            // Get types from the superclass
+            INCA_RASTER_OPERATOR_IMPORT_TYPES(ClampOperatorRaster<R0>)
+            typedef Array<ElementType, 2> ElementRange;
+
+            // Constructor giving clamp-to range
+            template <class ElementList>
+            explicit ClampOperatorRaster(const R0 & r,
+                                         const ElementList & cRange)
+                    : OperatorBaseType(r), clampRange(cRange) { }
+
+        protected:
+            // Element evaluator function
+            INCA_RASTER_OPERATOR_GET_ELEMENT_HEADER(indices) {
+                ElementType value = operand0(indices);
+                if      (value < clampRange[0]) value = clampRange[0];
+                else if (value > clampRange[1]) value = clampRange[1];
+                return value;
+            }
+
+            ElementRange clampRange;        // The range to clamp to
+        };
+
+
+        // Factory function taking clamp-to range
+        template <typename R0, class ElementList>
+        ClampOperatorRaster<R0> clamp(const R0 & r, const ElementList & cRange) {
+            return ClampOperatorRaster<R0>(r, cRange);
+        }
+
+        // Factory function taking separate clamp-to min and max
+        template <typename R0, typename Element0, typename Element1>
+        ClampOperatorRaster<R0> clamp(const R0 & r,
+                                      const Element0 & min,
+                                      const Element1 & max) {
+            typedef typename R0::ElementType E;
+            typedef typename ClampOperatorRaster<R0>::ElementRange EArray;
+            return ClampOperatorRaster<R0>(r, EArray(E(min), E(max)));
+        }
+
+    };
+};
+
+
+// Clean up the preprocessor's namespace
+#define UNDEFINE_INCA_MULTI_DIM_MACROS
+#include <inca/util/multi-dimensional-macros.hpp>
+
+#endif

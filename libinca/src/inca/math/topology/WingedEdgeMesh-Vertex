@@ -1,7 +1,7 @@
 /* -*- C++ -*-
  *
  * File: WingedEdgeMesh-Vertex
- * 
+ *
  * Author: Ryan L. Saunders
  *
  * Copyright 2004, Ryan L. Saunders. All rights reserved.
@@ -28,12 +28,12 @@ MESH_TEMPLATE class inca::math::MESH::Vertex : public VData, public MeshElement 
  *---------------------------------------------------------------------------*/
 public:
     // The mesh & friends need access to protected (modification) functions
-    friend Mesh;
-    friend Vertex;
-    friend Face;
-    friend Edge;
-    friend FaceVertex;
-    friend EdgeVertex;
+    friend class MESH;
+    //friend class Vertex;
+    friend class Face;
+    friend class Edge;
+    friend class FaceVertex;
+    friend class EdgeVertex;
 
 
 /*---------------------------------------------------------------------------*
@@ -41,14 +41,14 @@ public:
  *---------------------------------------------------------------------------*/
 public:
     // Iterator definitions
-    typedef basic_mesh_iterator< OrbitCCW<Face, Vertex> >       ccw_face_iterator;
-    typedef basic_mesh_iterator< OrbitCW<Face, Vertex> >        cw_face_iterator;
-    typedef basic_mesh_iterator< OrbitCCW<Edge, Vertex> >       ccw_edge_iterator;
-    typedef basic_mesh_iterator< OrbitCW<Edge, Vertex> >        cw_edge_iterator;
-    typedef basic_mesh_iterator< OrbitCCW<FaceVertex, Vertex> > ccw_face_vertex_iterator;
-    typedef basic_mesh_iterator< OrbitCW<FaceVertex, Vertex> >  cw_face_vertex_iterator;
-    typedef basic_mesh_iterator< OrbitCCW<EdgeVertex, Vertex> > ccw_edge_vertex_iterator;
-    typedef basic_mesh_iterator< OrbitCW<EdgeVertex, Vertex> >  cw_edge_vertex_iterator;
+    typedef basic_mesh_iterator< OrbitCCW<Mesh, Face, Vertex> >       ccw_face_iterator;
+    typedef basic_mesh_iterator< OrbitCW<Mesh, Face, Vertex> >        cw_face_iterator;
+    typedef basic_mesh_iterator< OrbitCCW<Mesh, Edge, Vertex> >       ccw_edge_iterator;
+    typedef basic_mesh_iterator< OrbitCW<Mesh, Edge, Vertex> >        cw_edge_iterator;
+    typedef basic_mesh_iterator< OrbitCCW<Mesh, FaceVertex, Vertex> > ccw_face_vertex_iterator;
+    typedef basic_mesh_iterator< OrbitCW<Mesh, FaceVertex, Vertex> >  cw_face_vertex_iterator;
+    typedef basic_mesh_iterator< OrbitCCW<Mesh, EdgeVertex, Vertex> > ccw_edge_vertex_iterator;
+    typedef basic_mesh_iterator< OrbitCW<Mesh, EdgeVertex, Vertex> >  cw_edge_vertex_iterator;
 
 
 /*---------------------------------------------------------------------------*

@@ -1,7 +1,7 @@
 /** -*- C++ -*-
  *
  * File: ImmediateModeRenderer-Viewport
- * 
+ *
  * Author: Ryan L. Saunders
  *
  * Copyright 2004, Ryan L. Saunders. All rights reserved.
@@ -19,8 +19,8 @@
 #define INCA_RENDERING_IMMEDIATE_MODE_RENDERER_VIEWPORT
 
 
-// Import the raster block definition
-#include <inca/math/solid/Block>
+// Import the Region definition
+#include <inca/util/Region>
 
 
 RENDERER_TEMPLATE
@@ -29,21 +29,20 @@ class RENDERER::Viewport : public RENDERER::Component {
  | Type definitions
  *---------------------------------------------------------------------------*/
 public:
-    typedef inca::math::Block<int, 2>     Rectangle;
+    typedef inca::Region<2> Region;
 
 
 /*---------------------------------------------------------------------------*
  | Constructors
  *---------------------------------------------------------------------------*/
 public:
-    Viewport(RENDERER &r, IDType myID);
+    Viewport(RENDERER & r) : Component(r, 0) { }
 
-    const Rectangle & bounds() const;
+    const Region & bounds() const;
 
 
 protected:
-    mutable Rectangle viewportBounds;
-    mutable bool boundsValid;
+    Region viewportBounds;
 };
 
 #endif

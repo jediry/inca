@@ -1,0 +1,215 @@
+/*
+ * File: PrimitiveGrid
+ *
+ * Author: Ryan L. Saunders
+ *
+ * Copyright 2004, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ *      The PrimitiveGrid implements a 2D abstraction atop a PrimitiveArray.
+ *
+ *      How should this handle shared vertices?
+ *      Mention storage order and over-allocation.
+ *      Should we be a little sloppier on re-allocation?
+ */
+
+#ifndef INCA_RENDERING_PRIMITIVE_GRID
+#define INCA_RENDERING_PRIMITIVE_GRID
+
+// Import system configuration
+#include <inca/inca-common.h>
+
+// Import superclass definition
+#include "PrimitiveArray"
+
+// Import container definitions
+#include <inca/util/Array>
+
+
+// This is part of the Inca rendering subsystem
+namespace inca {
+    namespace rendering {
+        // Forward declarations
+        template <typename VertexType,
+                  typename NormalType    = Nothing,
+                  typename TexCoordType  = Nothing,
+                  typename ColorType     = Nothing,
+                  typename EdgeFlagType  = Nothing>
+            class PrimitiveGrid;
+    };
+};
+
+
+template <typename _VertexType,
+          typename _NormalType,
+          typename _TexCoordType,
+          typename _ColorType,
+          typename _EdgeFlagType>
+class inca::rendering::PrimitiveGrid
+    : public PrimitiveArray<_VertexType,
+                            _NormalType,
+                            _TexCoordType,
+                            _ColorType,
+                            _EdgeFlagType> {
+private:
+    typedef PrimitiveArray<_VertexType,
+                           _NormalType,
+                           _TexCoordType,
+                           _ColorType,
+                           _EdgeFlagType> Superclass;
+    typedef PrimitiveGrid<_VertexType,
+                          _NormalType,
+                          _TexCoordType,
+                          _ColorType,
+                          _EdgeFlagType> ThisType;;
+public:
+    // Type definitions
+    typedef Array<SizeType, 2>                  SizeArray;
+    typedef typename Superclass::Primitive      Primitive;
+    typedef typename Superclass::ConstPrimitive ConstPrimitive;
+
+
+    // No-initialization constructor
+    explicit PrimitiveGrid() : _sizes(0) { }
+
+    // Memory-allocating constructors
+    template <class SizeList>
+    explicit PrimitiveGrid(const SizeList & sz) { resize(sz); }
+    explicit PrimitiveGrid(SizeType x, SizeType y) { resize(x, y); }
+
+    // Size functions
+    SizeType size()            const { return _effectiveSize; }
+    SizeType size(IndexType d) const { return _sizes[d]; }
+    const SizeArray & sizes()  const { return _sizes; }
+    bool isOverallocated() const { return _effectiveSize != Superclass::size(); }
+
+    // Resize functions
+    template <class SizeList>
+    void resize(const SizeList & sz) {
+        typename SizeList::const_iterator it = sz.begin();
+        resize(*it, *(++it));       // Call the other version
+    }
+    void resize(SizeType x, SizeType y) {
+        if (x != size(0) || y != size(1)) {
+            // Because we need an even number of rows, we may allocate a
+            // larger size than the rest of the world sees.
+            SizeType newEffectiveSize = x * y;
+            SizeType newActualSize = (y & 0x0001) ? x * (y + 1) : x * y;
+
+            // Reallocate the memory only if we need to
+            if (newActualSize != Superclass::size())
+                Superclass::resize(newActualSize);
+
+            // Set the new dimensions
+            _sizes = SizeArray(x, y);
+            _effectiveSize = newEffectiveSize;
+        }
+    }
+
+    // 2D to 1D index calculation. This cryptic formula decodes the rather
+    // odd storage order for the grid, described above. Bitwise operations are
+    // used for maximal efficiency.
+    //
+    // In plain(er) terms, the expression for converting X,Y to a linear index
+    // is width * 2 * (y / 2) + x * 2 + y % 1
+    // Note that the division is an integer division, so the 2 / 2 does not
+    // actually cancel out.
+    template <typename IndexList>
+    IndexType indexOf(const IndexList & idx) const {
+        typename IndexList::const_iterator it = idx.begin();
+        IndexType x = *it;
+        IndexType y = *(++it);
+        return indexOf(x, y);
+    }
+    IndexType indexOf(IndexType x, IndexType y) const {
+        return (size(0) << 1) * (y >> 1) + (x << 1) + (y & 0x0001);
+    }
+
+protected:
+    SizeArray _sizes;           // Our logical X and Y dimensions
+    SizeType  _effectiveSize;   // How big we tell the rest of the world we are
+
+public:
+    // 2D Primitive proxy object accessors -- (x, y) and (idx) function operators
+    template <typename IndexList> ConstPrimitive operator()(const IndexList & idx) const { return (*this)[indexOf(idx)]; }
+    template <typename IndexList>      Primitive operator()(const IndexList & idx)       { return (*this)[indexOf(idx)]; }
+    ConstPrimitive operator()(IndexType x, IndexType y) const { return (*this)[indexOf(x, y)]; }
+         Primitive operator()(IndexType x, IndexType y)       { return (*this)[indexOf(x, y)]; }
+
+    // 2D Primitive proxy object accessors -- primitive(x, y) and primitive(idx) functions
+    template <typename IndexList> ConstPrimitive primitive(const IndexList & idx) const { return (*this)(idx); }
+    template <typename IndexList>      Primitive primitive(const IndexList & idx)       { return (*this)(idx); }
+    ConstPrimitive primitive(IndexType x, IndexType y)  const { return (*this)(x, y); }
+         Primitive primitive(IndexType x, IndexType y)        { return (*this)(x, y); }
+    void setPrimitive(IndexType x, IndexType y, const Primitive & p)      { (*this)(x, y) = p; }
+    void setPrimitive(IndexType x, IndexType y, const ConstPrimitive & p) { (*this)(x, y) = p; }
+
+
+    // This macro makes defining all the sub arrays with their accessor
+    // functions much simpler. Specifically, it declares:
+    //      Typedefs of and imported from the sub-array, e.g.:
+    //          VertexArrayType
+    //          VertexType
+    //          VertexReference
+    //          VertexConstReference
+    //      Const and non-const getter accessor functions, e.g.:
+    //          VertexReference      vertex(IndexType x, IndexType y)
+    //          VertexConstReference vertex(IndexType x, IndexType y) const
+    //          template <typename IndexList>
+    //              VertexReference      vertex(const IndexList & idx)
+    //          template <typename IndexList>
+    //              VertexConstReference vertex(const IndexList & idx) const
+    //      Non-const setter accessor functions, e.g.:
+    //          void setVertex(IndexType x, IndexType y, VertexConstReference v)
+    //          template <typename IndexList>
+    //              void setVertex(const IndexList & idx, VertexConstReference v)
+    //
+    // Furthermore, this class inherits from its superclass the const
+    // sub-array getter functions, e.g.:
+    //          const VertexArrayType & vertices() const
+    #define SUB_ARRAY(TYPE, ARRAY_NAME, GETTER_NAME, SETTER_NAME)           \
+    public:                                                                 \
+        /* Type definitions */                                              \
+        typedef typename Superclass::TYPE ## ArrayType TYPE ## ArrayType;   \
+        typedef typename TYPE ## ArrayType::ElementType TYPE ## Type;       \
+        typedef typename TYPE ## ArrayType::Reference   TYPE ## Reference;  \
+        typedef typename TYPE ## ArrayType::ConstReference TYPE ## ConstReference;  \
+                                                                            \
+        /* Const getter accessor */                                         \
+        TYPE ## ConstReference GETTER_NAME(IndexType x, IndexType y) const {\
+            return Superclass::GETTER_NAME(indexOf(x, y));                  \
+        }                                                                   \
+        template <typename IndexList>                                       \
+        TYPE ## ConstReference GETTER_NAME(const IndexList & idx) const {   \
+            return Superclass::GETTER_NAME(indexOf(idx));                   \
+        }                                                                   \
+                                                                            \
+        /* Non-const getter accessor */                                     \
+        TYPE ## Reference GETTER_NAME(IndexType x, IndexType y) {           \
+            return Superclass::GETTER_NAME(indexOf(x, y));                  \
+        }                                                                   \
+        template <typename IndexList>                                       \
+        TYPE ## Reference GETTER_NAME(const IndexList & idx) {              \
+            return Superclass::GETTER_NAME(indexOf(idx));                   \
+        }                                                                   \
+                                                                            \
+        /* Non-const setter accessor */                                     \
+        void SETTER_NAME(IndexType x, IndexType y, TYPE ## ConstReference e) { \
+            Superclass::SETTER_NAME(indexOf(x, y), e);                      \
+        }                                                                   \
+        template <typename IndexList>                                       \
+        void SETTER_NAME(const IndexList & idx, TYPE ## ConstReference e) { \
+            Superclass::SETTER_NAME(indexOf(idx), e);                       \
+        }
+
+
+    SUB_ARRAY(Vertex,   vertices,  vertex,   setVertex)
+    SUB_ARRAY(Normal,   normal,    normal,   setNormal)
+    SUB_ARRAY(TexCoord, texCoors,  texCoord, setTexCoord)
+    SUB_ARRAY(Color,    colors,    color,    setColor)
+    SUB_ARRAY(EdgeFlag, edgeFlags, edgeFlag, setEdgeFlag)
+
+    #undef SUB_ARRAY
+};
+
+#endif

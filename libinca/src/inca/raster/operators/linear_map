@@ -1,0 +1,134 @@
+/*
+ * File: linear_map
+ *
+ * Author: Ryan L. Saunders
+ *
+ * Copyright 2004, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ */
+
+#ifndef INCA_RASTER_OPERATOR_LINEAR_MAP
+#define INCA_RASTER_OPERATOR_LINEAR_MAP
+
+
+// Import operator base classes and macros
+#include "OperatorRasterBase"
+
+// Import statistical functors
+#include "statistic"
+
+// Import metaprogramming tools
+#include <inca/util/multi-dimensional-macros.hpp>
+#include <inca/util/metaprogramming/macros.hpp>
+
+
+// This is part of the Inca raster processing library
+namespace inca {
+    namespace raster {
+
+        // Linearly map (scale + offset) an input range to an output range
+        INCA_RASTER_OPERATOR_CLASS_HEADER(LinearMapOperatorRaster,
+                                          1, NIL,
+                                          typename R0::ElementType ) {
+        public:
+            // Get types from the superclass
+            INCA_RASTER_OPERATOR_IMPORT_TYPES(LinearMapOperatorRaster<R0>)
+
+            // Constructor giving input range and output range
+            template <class ElementList0, class ElementList1>
+            explicit LinearMapOperatorRaster(const R0 & r,
+                                             const ElementList0 & iRange,
+                                             const ElementList1 & oRange,
+                    ENABLE_FUNCTION_IF( AND2( is_collection<ElementList0>,
+                                              is_collection<ElementList1> ) ) )
+                    : OperatorBaseType(r) {
+
+                ElementType iDiff = iRange[1] - iRange[0];
+                if (! math::effectivelyZero(iDiff)) {
+                    scale  = (oRange[1] - oRange[0]) / iDiff;
+                    offset = oRange[0] - iRange[0] * scale;
+                } else {
+                    // Avoid division by zero
+                    scale  = ElementType(0);
+                    offset = iRange[0];
+                }
+                cerr << "Scale: " << scale << "   offset: " << offset << endl;
+            }
+
+            // Constructor giving transform parameters
+            explicit LinearMapOperatorRaster(const R0 & r,
+                                             const ElementType & sc,
+                                             const ElementType & off)
+                    : OperatorBaseType(r), scale(sc), offset(off) { }
+
+        protected:
+            // Element evaluator function
+            INCA_RASTER_OPERATOR_GET_ELEMENT_HEADER(indices) {
+                return operand0(indices) * scale + offset;
+            }
+
+            // Linear transform parameters
+            ElementType scale, offset;
+        };
+
+
+        // Factory function taking raster and both source and target ranges separately
+        template <typename R0, typename Element0, typename Element1,
+                               typename Element2, typename Element3>
+        LinearMapOperatorRaster<R0> linear_map(const R0 & r,
+                                               const Element0 & iMin,
+                                               const Element1 & iMax,
+                                               const Element2 & oMin,
+                                               const Element3 & oMax) {
+            typedef typename R0::ElementType    E;
+            typedef inca::Array<E, 2>           EArray;
+            return LinearMapOperatorRaster<R0>(r, EArray(E(iMin), E(iMax)),
+                                                  EArray(E(oMin), E(oMax)));
+        }
+
+        // Factory function taking raster and both source and target ranges
+        template <typename R0, class ElementList0, class ElementList1>
+        ENABLE_IF_T ( AND2( is_collection<ElementList0>,
+                            is_collection<ElementList1> ),
+        LinearMapOperatorRaster<R0> ) linear_map(const R0 & r,
+                                                 const ElementList0 & iRange,
+                                                 const ElementList1 & oRange) {
+            return LinearMapOperatorRaster<R0>(r, iRange, oRange);
+        }
+
+        // Factory function taking raster and target range.
+        // The input range is implicitly the range of the raster
+        template <typename R0, class ElementList>
+        LinearMapOperatorRaster<R0> linear_map(const R0 & r,
+                                               const ElementList & oRange) {
+            Array<typename R0::ElementType, 2> inRange, outRange;
+            inRange = range(r);
+            outRange = oRange;
+            cerr << "Trying to map [" << inRange[0] << "," << inRange[1] << "] to [" << outRange[0] << "," << outRange[1] << "]\n";
+            return LinearMapOperatorRaster<R0>(r, inRange, outRange);
+        }
+
+        // Factory function taking raster, source range and scale/offset amounts
+        template <typename R0, typename Scalar1, typename Scalar2>
+        ENABLE_IF_T ( AND3( is_raster<R0>,
+                            ::boost::is_scalar<Scalar1>,
+                            ::boost::is_scalar<Scalar2> ),
+        LinearMapOperatorRaster<R0> ) linear_map(const R0 & r,
+                                                 const Scalar1 & scale,
+                                                 const Scalar2 & offset) {
+            typedef typename LinearMapOperatorRaster<R0>::ElementType T;
+            return LinearMapOperatorRaster<R0>(r, T(scale), T(offset));
+        }
+
+    };
+};
+
+
+// Clean up the preprocessor's namespace
+#define UNDEFINE_INCA_MULTI_DIM_MACROS
+#include <inca/util/multi-dimensional-macros.hpp>
+#define UNDEFINE_INCA_METAPROGRAMMING_MACROS
+#include <inca/util/metaprogramming/macros.hpp>
+
+#endif

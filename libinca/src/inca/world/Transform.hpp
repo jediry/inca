@@ -101,15 +101,24 @@ public:
  | Transformations relative to the current state
  *---------------------------------------------------------------------------*/
 public:
-    // World-coordinate relative controls
-    void translate(const Vector &v);
-    void scale(scalar_arg_t s);                         // Scale uniformly
-    void scale(const Vector &s);                        // Scale non-uniformly
-    void rotate(const Quaternion &q);
-    void rotate(scalar_arg_t angle, const Vector &v);   // Rotate about a vector
+    // Axis-aligned relative controls
+    void translateX(scalar_arg_t dx);                   // Translate in X
+    void translateY(scalar_arg_t dy);                   // Translate in Y
+    void translateZ(scalar_arg_t dz);                   // Translate in Z
     void rotateX(scalar_arg_t angle);                   // Rotate around X
     void rotateY(scalar_arg_t angle);                   // Rotate around Y
     void rotateZ(scalar_arg_t angle);                   // Rotate around Z
+    void scaleX(scalar_arg_t sx);                       // Scale along X
+    void scaleY(scalar_arg_t sy);                       // Scale along Y
+    void scaleZ(scalar_arg_t sz);                       // Scale along Z
+
+    // World-coordinate relative controls
+    void translate(const Vector &v);
+    void rotate(const Quaternion &q);
+    void rotate(scalar_arg_t angle, const Vector &v);   // Rotate about a vector
+    void orbit(scalar_arg_t angle, const Vector & v, const Point & p);
+    void scale(scalar_arg_t s);                         // Scale uniformly
+    void scale(const Vector &s);                        // Scale non-uniformly
 
 
     // Local-coordinate relative controls
@@ -125,9 +134,7 @@ public:
  | Orthonormal basis vectors (derived from primary controls above)
  *---------------------------------------------------------------------------*/
  public:
-    void recalculateBasis() const;  // Rebuild Vs from Q
-    void recalculateQuaternion();   // Make our Q resemble our Vs
-    void buildBasis(const Vector &vFront, const Vector &vRight) const;
+    void constructBasis(const Vector & vFront, const Vector & vRight);
     const Vector & up() const;
     const Vector & down() const;
     const Vector & left() const;
@@ -136,6 +143,10 @@ public:
     const Vector & back() const;
 
 protected:
+    void recalculateBasis() const;  // Rebuild Vs from Q
+    void recalculateQuaternion();   // Make our Q resemble our Vs
+    void buildBasis(const Vector &vFront, const Vector &vRight) const;
+
     // Orthonormal basis vectors (not directly modifiable)
     mutable bool basisInvalid;
     mutable Vector basisUp, basisDown, basisLeft,

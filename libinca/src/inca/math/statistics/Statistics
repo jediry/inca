@@ -1,0 +1,212 @@
+/** -*- C++ -*-
+ *
+ * \File Statistics
+ *
+ * \Author Ryan L. Saunders
+ *
+ * Copyright 2004, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ */
+
+#ifndef INCA_MATH_STATISTICS
+#define INCA_MATH_STATISTICS
+
+// Import system configuration
+#include <inca/inca-common.h>
+
+
+namespace inca {
+    namespace math {
+        // Forward declarations
+        template <typename Derived, typename T> class StatisticsBase;
+        template <typename T, bool cacheValues = false> class Statistics;
+        template <typename T> class Statistics<T, true>;
+    }
+}
+
+// Import container definitions
+#include <inca/util/Array>
+#include <vector>
+
+
+// This class implements the common functionality between the variants of
+// the Statistics class. It expects the derived class to implement the
+// 'processElement(ElementType)' function.
+template <typename Derived, typename T>
+class inca::math::StatisticsBase : public inca::Array<T, 5> {
+public:
+    // Type definitions
+    typedef T                               ElementType;
+    typedef inca::Array<ElementType, 5>     ElementArray;
+
+    // Constructor
+    explicit StatisticsBase()
+            : ElementArray(ElementType(0)), _count(0) {
+        min() = ElementType(1e38);
+        max() = ElementType(-1e38);
+    }
+
+    // Add in a new value
+    void operator()(const ElementType & e) {
+        static_cast<Derived *>(this)->processElement(e);
+    }
+
+    // Access to statistics
+    ElementType & sum()      { return (*this)[0]; }
+    ElementType & min()      { return (*this)[1]; }
+    ElementType & max()      { return (*this)[2]; }
+    ElementType & mean()     { return (*this)[3]; }
+    ElementType & variance() { return (*this)[4]; }
+    int & count()            { return _count; }
+    const ElementType & sum()      const { return (*this)[0]; }
+    const ElementType & min()      const { return (*this)[1]; }
+    const ElementType & max()      const { return (*this)[2]; }
+    const ElementType & mean()     const { return (*this)[3]; }
+    const ElementType & variance() const { return (*this)[4]; }
+    const int         & count()    const { return _count; }
+
+protected:
+    int _count;
+};
+
+
+// This 'general' implementation does no internal caching of the values
+// it receives. As a result, it is small and light, but in order to calculate
+// the variance of the sample, it must see all of the values a second
+// time. This is most useful when the sample size is large and/or the
+// distribution is already stored elsewhere.
+template <typename T, bool cacheValues>
+class inca::math::Statistics
+    : public inca::math::StatisticsBase< Statistics<T, cacheValues>, T> {
+public:
+    // Type definitions
+    typedef T                                               ElementType;
+    typedef StatisticsBase< Statistics<T, cacheValues>, T > Base;
+
+    // Import functions from base class
+    using Base::sum;
+    using Base::min;
+    using Base::max;
+    using Base::mean;
+    using Base::variance;
+    using Base::count;
+
+    // Constructor
+    explicit Statistics()
+        : varSum(0), meanValid(false), varianceValid(false) { }
+
+
+    // If we've not yet calculated the mean, add this element into our running
+    // sum of elements. If we have, then accumulate it towards calculating
+    // the variance.
+    void processElement(const ElementType & e) {
+        if (! meanValid) {
+            sum() += e;
+            if (e < min())  min() = e;
+            if (e > max())  max() = e;
+        } else {
+            ElementType diff = mean() - e;
+            varSum += diff * diff;
+        }
+        ++count();
+    }
+
+    // Finish the mean or variance calculation
+    void done() {
+        if (! meanValid) {
+            if (count() > 0) {
+                mean() = sum() / count();
+                count() = 0;
+            } else {
+                max() = 0;
+                min() = 0;
+            }
+            meanValid = true;
+        } else if (! varianceValid) {
+            variance() = varSum / count();
+            varianceValid = true;
+        }
+    }
+
+protected:
+    ElementType varSum;
+    bool meanValid, varianceValid;
+};
+
+
+// This 'specialized' implementation caches the values it receives so
+// that it can calculate the higher order moments (e.g., variance) without
+// needing all the values to be passed to it a second time. It does this at
+// the cost of dynamically allocating memory to hold all the elements, and
+// frees that memory once its 'done()' function is called. This is most useful
+// when the sample size is small and/or the values are being calculated
+// on-the-fly and are not stored elsewhere.
+//
+// A typical use of this class might look like:
+//      Statistics<int, true> s;        // Create an empty object
+//      while (...)
+//          s(someValue);               // Pass it each sample element
+//      s.done();                       // Compute mean, variance, etc.
+template <typename T>
+class inca::math::Statistics<T, true>
+    : public inca::math::StatisticsBase<Statistics<T, true>, T> {
+public:
+    // Type definitions
+    typedef T                                               ElementType;
+    typedef StatisticsBase< Statistics<T, true>, T>         Base;
+
+    // Import functions from base class
+    using Base::sum;
+    using Base::min;
+    using Base::max;
+    using Base::mean;
+    using Base::variance;
+    using Base::count;
+
+
+    // Constructor taking a guess as to the final size of the sample.
+    // If this guess is accurate, then no additional memory will need
+    // to be allocated after construction time.
+    explicit Statistics(int sizeGuess = 10) {
+        // Get ready to handle that many elements
+        valueCache.reserve(sizeGuess);
+    }
+
+    // Handle an element and stick it into the vector
+    void processElement(const ElementType & e) {
+        sum() += e;
+        if (e < min())  min() = e;
+        if (e > max())  max() = e;
+        valueCache.push_back(e);
+        ++count();
+    }
+
+    // Calculate statistics of the distribution, then dump the cache
+    void done() {
+        if (count() > 0) {
+            // Calculate the mean
+            mean() = sum() / count();
+
+            // Calculate the variance
+            ElementType varSum(0);
+            for (int i = 0; i < count(); ++i) {
+                ElementType diff = mean() - valueCache[i];
+                varSum += diff * diff;
+            }
+            variance() = varSum / count();
+
+            // Clean up the cache, since we don't need it anymore
+            valueCache = std::vector<ElementType>(0);
+
+        } else {        // Crud. No elements. We need to zero out the min/max.
+            max() = 0;
+            min() = 0;
+        }
+    }
+
+protected:
+    std::vector<ElementType> valueCache;
+};
+
+#endif

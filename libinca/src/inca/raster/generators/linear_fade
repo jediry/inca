@@ -1,0 +1,118 @@
+/*
+ * File: linear_fade
+ *
+ * Author: Ryan L. Saunders
+ *
+ * Copyright 2004, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ */
+
+#ifndef INCA_RASTER_GENERATOR_LINEAR_FADE
+#define INCA_RASTER_GENERATOR_LINEAR_FADE
+
+// Import system configuration
+#include <inca/inca-common.h>
+
+// This is part of the Inca raster processing library
+namespace inca {
+    namespace raster {
+        // Forward declarations
+        template <typename T, inca::SizeType dim, typename S>
+            class LinearFadeGeneratorRaster;
+
+    };
+};
+
+// Import generator base class
+#include "GeneratorRasterBase"
+
+// Import math functions
+#include <inca/math/linalg.hpp>
+
+
+// This is part of the Inca raster processing library
+namespace inca {
+    namespace raster {
+
+        template <typename T, inca::SizeType dim, typename S = float>
+        class LinearFadeGeneratorRaster
+                : public GeneratorRasterBase<LinearFadeGeneratorRaster<T, dim, S>, T, dim> {
+        public:
+            // Type definitions
+            typedef LinearFadeGeneratorRaster<T, dim, S> ThisType;
+            typedef typename ThisType::Types        Types;
+
+            // Imported types
+            typedef typename Types::ElementType     ElementType;
+            typedef typename Types::ConstReference  ConstReference;
+            typedef typename Types::SizeType        SizeType;
+
+            // Geometric types
+            typedef S                       Scalar;
+            typedef math::Point<S, dim>     Point;
+            typedef math::Vector<S, dim>    Vector;
+
+            // How many dimensions do we have
+            static const SizeType dimensionality = dim;
+
+        public:
+            // Constructor
+            template <class Point1, class Point2>
+            LinearFadeGeneratorRaster(ConstReference startVal,
+                                      const Point1 & startAt,
+                                      ConstReference endVal,
+                                      const Point2 & endAt)
+                    : startPoint(startAt),  endPoint(endAt),
+                      startValue(startVal), endValue(endVal) {
+                // Calculate the 'anti-normalized' vector to project onto
+                // in order to get parameter t in [0, 1]
+                projectOntoMe = endPoint - startPoint;
+                projectOntoMe /= math::dot(projectOntoMe, projectOntoMe);
+            }
+
+        protected:
+            friend class RasterCoreAccess;
+
+            // Element evaluator
+            template <class IndexList, typename ReturnType>
+            ReturnType getElement(const IndexList & indices) const {
+                // FIXME: this needs to be replaced by another constructor in Vector
+                Vector v;
+                typename IndexList::const_iterator it = indices.begin();
+                for (IndexType d = 0; d < dimensionality; ++d, ++it)
+                    v[d] = Scalar(*it);
+                Scalar t = math::dot(v, projectOntoMe);
+                if (t < Scalar(0))      t = Scalar(0);
+                else if (t > Scalar(1)) t = Scalar(1);
+                return t * endValue + (Scalar(1) - t) * startValue;
+            }
+
+        protected:
+            ElementType startValue, endValue;
+            Point       startPoint, endPoint;
+            Vector projectOntoMe;
+        };
+
+
+        // Factory function for statically-sized array types (Array, Point, etc.)
+        template <typename T, inca::SizeType dim,
+                  template <typename, inca::SizeType> class Array1, typename Scalar1,
+                  template <typename, inca::SizeType> class Array2, typename Scalar2>
+        LinearFadeGeneratorRaster<T, dim> linear_fade(
+                        const T & startVal, const Array1<Scalar1, dim> & startAt,
+                        const T & endVal,   const Array2<Scalar2, dim> & endAt) {
+            return LinearFadeGeneratorRaster<T, dim>(startVal, startAt, endVal, endAt);
+        }
+
+        // Factory function for general containers (parameters must be explicit)
+        template <typename T, inca::SizeType dim, class Point1, class Point2>
+        LinearFadeGeneratorRaster<T, dim> linear_fade(
+                        const T & startVal, const Point1 & startAt,
+                        const T & endVal,   const Point2 & endAt) {
+            return LinearFadeGeneratorRaster<T, dim>(startVal, startAt, endVal, endAt);
+        }
+    }
+}
+
+#endif

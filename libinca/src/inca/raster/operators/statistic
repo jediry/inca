@@ -1,6 +1,6 @@
 /*
  * File: statistic
- * 
+ *
  * Author: Ryan L. Saunders
  *
  * Copyright 2004, Ryan L. Saunders. All rights reserved.
@@ -13,16 +13,46 @@
 #define INCA_RASTER_OPERATORS_STATISTIC
 
 
-// Import raster algorithms
-#include "../algorithms"
+// Import apply-functor raster algorithm
+#include "../algorithms/apply"
 
-// Import metaprogramming tools and simplifying macros
-#include <inca/util/template-metaprogramming-macros.hpp>
+// Import metaprogramming tools
+#include <inca/util/metaprogramming/macros.hpp>
 
 
 // This is part of the Inca raster processing library
 namespace inca {
     namespace raster {
+
+        // Sum of all elements
+        template <typename T>
+        class Sum {
+        public:
+            typedef T                       ElementType;
+
+            // Default constructor
+            Sum() : _sum(ElementType(0)) { }
+
+            // Function call operator
+            void operator()(const ElementType & t) {
+                _sum += t;
+            }
+
+            // Result accessor functions
+            const ElementType & sum() const { return _sum; }
+
+        protected:
+            ElementType _sum;      // Our running total
+        };
+
+        template <class R0>
+        ENABLE_IF_T( is_raster<R0>,
+        typename R0::ElementType ) sum(const R0 & r) {
+            typedef typename R0::ElementType T;
+            Sum<T> s;               // Create the summation functor
+            s = apply(s, r);        // Apply it to the raster
+            return s.sum();         // Return its output
+        }
 
         // Min/max range measurement
         template <typename T>
@@ -46,7 +76,7 @@ namespace inca {
                 }
             }
 
-            // Result accessor functions            
+            // Result accessor functions
             const ElementType & min() const { return _minMax[0]; }
             const ElementType & max() const { return _minMax[1]; }
             const Array<ElementType, 2> & range() const { return _minMax; }
@@ -56,12 +86,12 @@ namespace inca {
             ElementArray _minMax;   // Our current min and max
         };
 
-        template <class R1>
-        ENABLE_IF_T( is_raster<R1>,
-        Array<typename R1::ElementType COMMA 2> ) range(const R1 & r) {
-            typedef typename R1::ElementType T;
+        template <class R0>
+        ENABLE_IF_T( is_raster<R0>,
+        Array<typename R0::ElementType COMMA 2> ) range(const R0 & r) {
+            typedef typename R0::ElementType T;
             Range<T> minmax;    // Create the range-measurement functor
-            apply(minmax, r);   // Apply it to the raster
+            minmax = apply(minmax, r);   // Apply it to the raster
             return minmax.range();   // Return its output (cast to array)
         }
 
@@ -87,7 +117,7 @@ namespace inca {
                 ++count;
             }
 
-            // Result accessor functions            
+            // Result accessor functions
             const ElementArray & means() const {
                 evaluate();
                 return _means;
@@ -106,7 +136,7 @@ namespace inca {
                                                         T(1) / T(i));
                     evaluated = true;
                 }
-            }                
+            }
             mutable bool evaluated;         // Have we solved it already?
             mutable ElementArray _means;    // The answer
             ElementArray sums;              // Running sums of powers
@@ -115,28 +145,28 @@ namespace inca {
 
         // Simplifying macro
         #define MEAN(POWER) {                                               \
-            Mean<typename R1::ElementType, POWER> M;       /* Create mean-measurement functor  */  \
+            Mean<typename R0::ElementType, POWER> M;       /* Create mean-measurement functor  */  \
             apply(M, r);            /* Apply it to the raster           */  \
             return M.mean(POWER);   /* Return output (cast to T)        */  \
         }
-        template <class R1>
-        ENABLE_IF_T( is_raster<R1>,
-        typename R1::ElementType ) mean(const R1 & r) {
-            typedef typename R1::ElementType T;
+        template <class R0>
+        ENABLE_IF_T( is_raster<R0>,
+        typename R0::ElementType ) mean(const R0 & r) {
+            typedef typename R0::ElementType T;
             MEAN(1);
         }
 
-        template <class R1>
-        ENABLE_IF_T( is_raster<R1>,
-        typename R1::ElementType ) rms(const R1 & r) {
-            typedef typename R1::ElementType T;
+        template <class R0>
+        ENABLE_IF_T( is_raster<R0>,
+        typename R0::ElementType ) rms(const R0 & r) {
+            typedef typename R0::ElementType T;
             MEAN(2);
         }
 
-        template <class R1>
-        ENABLE_IF_T( is_raster<R1>,
-        typename R1::ElementType ) mean(const R1 & r, int power) {
-            typedef typename R1::ElementType T;
+        template <class R0>
+        ENABLE_IF_T( is_raster<R0>,
+        typename R0::ElementType ) mean(const R0 & r, int power) {
+            typedef typename R0::ElementType T;
             switch (power) {
                 case 1: MEAN(1);
                 case 2: MEAN(2);
@@ -153,11 +183,11 @@ namespace inca {
         }
 
 
-        template <class R1, int power>
-        ENABLE_IF_T( is_raster<R1>,
-        typename Mean<typename R1::ElementType COMMA power>::ElementArray )
-        means(const R1 & r) {
-            typedef typename R1::ElementType T;
+        template <class R0, int power>
+        ENABLE_IF_T( is_raster<R0>,
+        typename Mean<typename R0::ElementType COMMA power>::ElementArray )
+        means(const R0 & r) {
+            typedef typename R0::ElementType T;
             Mean<T, power> M;
             apply(M, r);
             return M.means();
@@ -190,7 +220,7 @@ namespace inca {
                 ++count;
             }
 
-            // Result accessor functions            
+            // Result accessor functions
             const ElementArray & moments() const {
                 evaluate();
                 return _moments;
@@ -223,30 +253,30 @@ namespace inca {
             apply(M, r);            /* Apply it to the raster           */  \
             return M.moment(POWER); /* Return output (cast to T)        */  \
         }
-        template <class R1>
-        ENABLE_IF_T( is_raster<R1>,
-        typename R1::ElementType ) moment(const R1 & r) {
-            typedef typename R1::ElementType T;
+        template <class R0>
+        ENABLE_IF_T( is_raster<R0>,
+        typename R0::ElementType ) moment(const R0 & r) {
+            typedef typename R0::ElementType T;
             MOMENT(1);
         }
 
-        template <class R1>
-        ENABLE_IF_T( is_raster<R1>,
-        typename R1::ElementType ) variance(const R1 & r) {
-            typedef typename R1::ElementType T;
+        template <class R0>
+        ENABLE_IF_T( is_raster<R0>,
+        typename R0::ElementType ) variance(const R0 & r) {
+            typedef typename R0::ElementType T;
             MOMENT(2);
         }
 
-        template <class R1>
-        ENABLE_IF_T( is_raster<R1>,
-        typename R1::ElementType ) stddev(const R1 & r) {
+        template <class R0>
+        ENABLE_IF_T( is_raster<R0>,
+        typename R0::ElementType ) stddev(const R0 & r) {
             return sqrt(variance(r));
         }
 
-        template <class R1>
-        ENABLE_IF_T( is_raster<R1>,
-        typename R1::ElementType ) moment(const R1 & r, int power) {
-            typedef typename R1::ElementType T;
+        template <class R0>
+        ENABLE_IF_T( is_raster<R0>,
+        typename R0::ElementType ) moment(const R0 & r, int power) {
+            typedef typename R0::ElementType T;
             switch (power) {
                 case 1: MOMENT(1);
                 case 2: MOMENT(2);
@@ -262,11 +292,11 @@ namespace inca {
             }
         }
 
-        template <class R1, int power>
-        ENABLE_IF_T( is_raster<R1>,
-        typename Moment<typename R1::ElementType COMMA power>::ElementArray )
-        moments(const R1 & r, const typename R1::ElementType & center) {
-            typedef typename R1::ElementType T;
+        template <class R0, int power>
+        ENABLE_IF_T( is_raster<R0>,
+        typename Moment<typename R0::ElementType COMMA power>::ElementArray )
+        moments(const R0 & r, const typename R0::ElementType & center) {
+            typedef typename R0::ElementType T;
             Moment<T, power> M(center);
             apply(M, r);
             return M.moments();
@@ -280,6 +310,6 @@ namespace inca {
 
 // Clean up the preprocessor's namespace
 #define UNDEFINE_INCA_METAPROGRAMMING_MACROS
-#include <inca/util/template-metaprogramming-macros.hpp>
+#include <inca/util/metaprogramming/macros.hpp>
 
 #endif

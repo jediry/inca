@@ -1,0 +1,70 @@
+/*
+ * File: GeneratorRasterBase
+ *
+ * Author: Ryan L. Saunders
+ *
+ * Copyright 2004, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ */
+
+#ifndef INCA_RASTER_GENERATOR_BASE
+#define INCA_RASTER_GENERATOR_BASE
+
+
+// Import system configuration
+#include <inca/inca-common.h>
+
+
+// This is part of the Inca raster processing library
+namespace inca {
+    namespace raster {
+        // Forward declarations
+        template <class Derived, typename T, inca::SizeType dim>
+            class GeneratorRasterBase;
+    }
+}
+
+
+// Import RasterFacade
+#include "../RasterFacade"
+
+
+template <class Derived, typename T, inca::SizeType dim>
+class inca::raster::GeneratorRasterBase
+        : public RasterFacade<Derived,
+                              RasterTags<ArbitrarySizeRasterTag,
+                                         MovableRasterTag,
+                                         ReadableRasterTag,
+                                         true, false, false>,
+                              RasterTypes<T const, dim,
+                                          T const,
+                                          T const,
+                                          T const> > {
+public:
+    // The types object
+    typedef RasterTypes<T, dim, T, T, T> Types;
+
+    // Imported types
+    typedef typename Types::ConstReference  ConstReference;
+
+
+/*---------------------------------------------------------------------------*
+ | Core functions needed by RasterFacade
+ *---------------------------------------------------------------------------*/
+protected:
+    friend class RasterCoreAccess;
+
+    // Functions required by RasterAccessFacet
+    // ReturnType getElement(const IndexList & indices) should be implemented by
+    // derived class.
+    template <typename ReturnType>
+    ReturnType getDummyElement(ConstReference value) const {
+        // We can just return this by value, since we're guaranteeing that no
+        // pass-by-reference will ever happen by specifying all value types in
+        // the instantiation of RasterTypes above.
+        return value;
+    }
+};
+
+#endif

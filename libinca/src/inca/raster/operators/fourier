@@ -1,0 +1,299 @@
+/*
+ * File: fourier
+ *
+ * Author: Ryan L. Saunders
+ *
+ * Copyright 2004, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ *      This file implements a discrete Fourier transform (DFT) of the input
+ *      raster as well as the corresponding inverse Fourier transform (iDFT).
+ *
+ * Usage:
+ *      The input raster CANNOT be an ArbitrarySizeRaster, since the domain
+ *      over which to calculate the transform is not known. If you want to
+ *      take the DFT of an ArbitrarySizeRaster, first pick a region to
+ *      be transformed using the 'select' operator.
+ *
+ * Implementation:
+ *      Unlike many of the operators in the Inca raster library, this
+ *      operator evaluates its input over the entire domain when it is
+ *      constructed and simply returns elements from the transform when
+ *      accessed.
+ *
+ *      Right now, this implementation is heavily FFTW-centric, mostly because
+ *      it's what I've been using, but also because they seem to know their
+ *      stuff. As a result, the internal DFT is stored in their half-result
+ *      memory layout.
+ *
+ * TODO: This needs change tracking to know when to regenerate the transform.
+ * TODO: We could support other kinds of transforms...
+ * TODO: I think this could be further compacted, since the code for fwd and inv
+ *       transform operators is virtually identical, but for the ElementType and
+ *       the number of elements and the dft_XXX_transform call.
+ */
+
+#ifndef INCA_RASTER_OPERATOR_FOURIER
+#define INCA_RASTER_OPERATOR_FOURIER
+
+
+// Import operator base class and macros
+#include "OperatorRasterBase"
+
+// Import MultiArrayView definition
+#include "../MultiArrayViewRaster"
+
+// Import complex number definition
+#include <complex>
+
+// Import metaprogramming tools
+#include <inca/util/multi-dimensional-macros.hpp>
+
+
+// This is part of the Inca raster processing library
+namespace inca {
+    namespace raster {
+
+        /*********************************************************************
+         * DFT library interface functions
+         *********************************************************************/
+        // Memory allocation function for getting a chunk of DFT library memory
+        // in the prescribed manner. DFT libraries (FFTW in particular) may
+        // have data alignment requirements in order to make use of SIMD
+        // optimizations and thus may want to do their own allocation and
+        // deletion.
+        template <typename T>
+        T * dft_memory_allocate(SizeType n);
+
+        // Corresponding memory cleanup function for freeing DFT library memory
+        // in the prescribed manner. This is passed to the shared_ptr and called
+        // when the reference count hits zero.
+        template <typename T>
+        void dft_memory_deallocate(T * mem);
+
+        // Function to perform the forward (normal) DFT.
+        template <typename T, SizeType dim>
+        void dft_forward_transform(const Array<SizeType, dim> & sizes,
+                                   std::complex<T> * out, T const * in);
+
+        // Function to perform the backward (inverse) DFT.
+        template <typename T, SizeType dim>
+        void dft_backward_transform(const Array<SizeType, dim> & sizes,
+                                    T * out, std::complex<T> const * in);
+
+
+        /*********************************************************************
+         * Raster operators
+         *********************************************************************/
+
+        // Time/space domain => frequency domain transformation operator
+        INCA_RASTER_OPERATOR_CLASS_HEADER(DFTOperatorRaster,
+                                          1, NIL,
+                                          std::complex<typename R0::ElementType> ) {
+        public:
+            // We do NOT know how to work with an ArbitrarySizeRaster, so
+            // scream "bloody murder" if we're instantiated with one.
+            BOOST_STATIC_ASSERT( ! is_arbitrary_size_raster<R0>::value );
+
+            // Get types from the superclass
+            INCA_RASTER_OPERATOR_IMPORT_TYPES(DFTOperatorRaster<R0>)
+
+            // Constructor (precalculates the DFT)
+            explicit DFTOperatorRaster(const R0 & r) : OperatorBaseType(r, false) {
+                typedef typename Operand0RasterType::ElementType InputType;
+                typedef typename Operand0RasterType::Pointer     InputPointer;
+
+                // Figure out how many input & output elements we'll need
+                // Right now, this is FFTW-specific
+                SizeArray inputSizes(r.sizes()),
+                          outputSizes(inputSizes);
+                outputSizes[dimensionality - 1] = inputSizes[dimensionality - 1] / 2 + 1;
+                SizeType inputElements = std::accumulate(inputSizes.begin(),
+                                                         inputSizes.end(), 1,
+                                                         std::multiplies<SizeType>());
+                SizeType outputElements = std::accumulate(outputSizes.begin(),
+                                                          outputSizes.end(), 1,
+                                                          std::multiplies<SizeType>());
+
+                // Allocate DFT library memory for the input and output
+                InputPointer inputMemory = dft_memory_allocate<InputType>(inputElements);
+                outputMemory.reset(dft_memory_allocate<ElementType>(outputElements),
+                                   dft_memory_deallocate<ElementType>);
+
+                // Do the transformation and put a MultiArrayView face on it
+                MultiArrayViewRaster<InputType, dimensionality>(inputMemory,
+                                                                inputSizes) = r;
+                dft_forward_transform(inputSizes, outputMemory.get(), inputMemory);
+                transform = MultiArrayView<ElementType, dimensionality>(outputMemory.get(),
+                                                                        outputSizes,
+                                                                        CStorageOrder());
+
+                // Delete the input memory, since we don't need it anymore
+                dft_memory_deallocate(inputMemory);
+            }
+
+        protected:
+            // Our bounds are those of the MultiArray on our output
+            const Region & getRasterBounds() const { return transform.bounds(); }
+
+            // Lookup an element from the precomputed DFT
+            INCA_RASTER_OPERATOR_GET_ELEMENT_HEADER(indices) {
+                return transform(indices);
+            }
+
+            // Reference-counted DFT library memory and a MA interface to it
+            MultiArrayView<ElementType, dimensionality> transform;
+            shared_ptr<ElementType>                     outputMemory;
+        };
+
+
+        // Frequency domain => time/space domain inverse transformation operator
+        INCA_RASTER_OPERATOR_CLASS_HEADER(InverseDFTOperatorRaster,
+                                          1, NIL,
+                                          typename R0::ElementType::value_type ) {
+        public:
+            // We do NOT know how to work with an ArbitrarySizeRaster, so
+            // scream "bloody murder" if we're instantiated with one.
+            BOOST_STATIC_ASSERT( ! is_arbitrary_size_raster<R0>::value );
+
+            // Get types from the superclass
+            INCA_RASTER_OPERATOR_IMPORT_TYPES(InverseDFTOperatorRaster<R0>)
+
+            // Constructor (precalculates the inverse DFT)
+            explicit InverseDFTOperatorRaster(const R0 & r) : OperatorBaseType(r, false) {
+                typedef typename Operand0RasterType::ElementType InputType;
+                typedef typename Operand0RasterType::Pointer     InputPointer;
+
+                // Figure out how many input & output elements we'll need
+                // Right now, this is FFTW-specific
+                SizeArray inputSizes(r.sizes()),
+                          outputSizes(inputSizes);
+                outputSizes[dimensionality - 1] = (inputSizes[dimensionality - 1] - 1) * 2;
+                SizeType inputElements = std::accumulate(inputSizes.begin(),
+                                                         inputSizes.end(), 1,
+                                                         std::multiplies<SizeType>());
+                SizeType outputElements = std::accumulate(outputSizes.begin(),
+                                                          outputSizes.end(), 1,
+                                                          std::multiplies<SizeType>());
+
+                // Allocate DFT library memory for the input and output
+                InputPointer inputMemory = dft_memory_allocate<InputType>(inputElements);
+                outputMemory.reset(dft_memory_allocate<ElementType>(outputElements),
+                                   dft_memory_deallocate<ElementType>);
+
+                // Do the transformation and put a MultiArrayView face on it
+                MultiArrayViewRaster<InputType, dimensionality>(inputMemory,
+                                                                inputSizes,
+                                                                CStorageOrder()) = r / ElementType(outputElements);
+                dft_backward_transform(outputSizes, outputMemory.get(), inputMemory);
+                transform = MultiArrayView<ElementType, dimensionality>(outputMemory.get(),
+                                                                        outputSizes,
+                                                                        FortranStorageOrder());
+
+                // Delete the input memory, since we don't need it anymore
+                dft_memory_deallocate(inputMemory);
+        }
+
+        protected:
+            // Our bounds are those of the MultiArray on our output
+            const Region & getRasterBounds() const { return transform.bounds(); }
+
+            // Lookup an element from the precomputed DFT
+            INCA_RASTER_OPERATOR_GET_ELEMENT_HEADER(indices) {
+                return transform(indices);
+            }
+
+            // Reference-counted DFT library memory and a MA interface to it
+            MultiArrayView<ElementType, dimensionality> transform;
+            shared_ptr<ElementType>                     outputMemory;
+        };
+
+
+        // Element remapping operator, decoding the peculiar FFTW array format into
+        // the more standard "DC at center" representation of the DFT
+        //  .........       ---------
+        //  ' 2 ' 1 '       | 4 | 3 |
+        //  ---------  =>   ----0----
+        //  | 3 | 4 |       | 1 | 2 |
+        //  O-------0       ---------
+        INCA_RASTER_OPERATOR_CLASS_HEADER(RemapDCToCenterOperatorRaster,
+                                          1, NIL,
+                                          typename R0::ElementType ) {
+        public:
+            // We do NOT know how to work with an ArbitrarySizeRaster, so
+            // scream "bloody murder" if we're instantiated with one.
+            BOOST_STATIC_ASSERT( ! is_arbitrary_size_raster<R0>::value );
+
+            // Get types from the superclass
+            INCA_RASTER_OPERATOR_IMPORT_TYPES(RemapDCToCenterOperatorRaster<R0>)
+
+            // Constructor (precalculates the inverse DFT)
+            explicit RemapDCToCenterOperatorRaster(const R0 & r) : OperatorBaseType(r, false) {
+                // Figure out the dimensions of the output image and how the symmetry
+                // works. This is a bit tricky because of the way FFTW handles r2c
+                // transforms, omitting (most of) the redundant data.
+                SizeArray sz(r.sizes());
+                sz[dimensionality - 1] = 2 * sz[dimensionality - 1] - 2;
+
+                IndexArray bs;
+                for (IndexType d = 0; d < dimensionality; ++d)
+                    bs[d] = -sz[d] / 2 + 1;
+
+                this->_bounds.setBases(bs);
+                this->_bounds.setSizes(sz);
+            }
+
+        protected:
+            // Remap the indices according to the DFT storage format
+            INCA_RASTER_OPERATOR_GET_ELEMENT_HEADER(indices) {
+                typename IndexList::const_iterator it = indices.begin();
+                IndexArray remapped;
+                for (IndexType d = 0; d < dimensionality; ++d, ++it) {
+                    IndexType idx = *it;
+
+                    // Just copy over positive indices
+                    if (idx >= 0)
+                        remapped[d] = idx;
+
+                    // Wrap any negative dimensions around to the other n-ant,
+                    else if (d < dimensionality - 1)
+                        remapped[d] = this->operand0.size(d) + idx;
+
+                    // except for the the last dimension (which is only half-stored).
+                    else
+                        remapped[d] = std::abs(idx);
+
+                }
+                return operand0(remapped);
+            }
+        };
+
+        //  .........       ---------
+        //  ' 2 ' 1 '       | 4 | 3 |
+        //  ---------  =>   ----0----
+        //  | 3 | 4 |       | 1 | 2 |
+        //  O-------0       ---------
+
+        // Factory functions
+        template <typename R0>
+        DFTOperatorRaster<R0> dft(const R0 & r) {
+            return DFTOperatorRaster<R0>(r);
+        }
+        template <typename R0>
+        InverseDFTOperatorRaster<R0> idft(const R0 & r) {
+            return InverseDFTOperatorRaster<R0>(r);
+        }
+        template <typename R0>
+        RemapDCToCenterOperatorRaster<R0> dcToCenter(const R0 & r) {
+            return RemapDCToCenterOperatorRaster<R0>(r);
+        }
+
+    };
+};
+
+
+// Clean up the preprocessor's namespace
+#define UNDEFINE_INCA_MULTI_DIM_MACROS
+#include <inca/util/multi-dimensional-macros.hpp>
+
+#endif

@@ -1,0 +1,321 @@
+/* -*- C++ -*-
+ *
+ * File: RasterIndexingFacet
+ *
+ * Author: Ryan L. Saunders
+ *
+ * Copyright 2004, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ *      The indexing facet of a raster handles interpreting a set of
+ *      n-dimensional indices in order to retrieve an element from the raster.
+ *      This facet is responsible for determining whether or not a set of
+ *      indices refer to a valid element of the raster, and what to do if an
+ *      invalid element is accessed.
+ *
+ *      The most common meaning of "invalid" indices is that they fall outside
+ *      of the rectangular bounds of the raster, but this need not be the case.
+ *      A Raster implementation is free to implement arbitrary schemes for
+ *      determining index validity (to pick a probably-useless example, a
+ *      Raster could have valid elements only where each index is a power of
+ *      two).
+ *
+ *      How indices are checked for validity is controlled by the
+ *      ValidityCheckTag, which is one of:
+ *          NoValidityCheckTag
+ *          BoundsValidityCheckTag
+ *          CustomValidityCheckTag
+ *
+ *      The NoValidityCheckTag indicates that no checking at all is desired,
+ *      and effectively disables validity/bounds checking altogether. This is
+ *      useful when the Raster core functions are able to handle any possible
+ *      set of indices (such as, for example, when the Raster is really a
+ *      function defined over the entire n-dimensional domain.
+ *
+ *      The BoundsValidityCheckTag interprets the validity check as a
+ *      normal bounds check (i.e., an index is valid if it falls between the
+ *      minimum and maximum indices, inclusive). If this validity checking
+ *      mode is used, the action to take for out-of-bounds indices is
+ *      controlled by the 'outOfBoundsPolicy' of the Raster, which may be
+ *      set to any of the following enumerated constants:
+ *          Ignore      do nothing...let OOB indices stay that way
+ *          Throw       throw an OutOfBoundsException
+ *          Constant    return a constant value
+ *          Nearest     return the value of the nearest in-bounds element
+ *          Mirror      reflect OOB indices across the boundary back inside
+ *          Wrap        wrap OOB indices back in at the opposite boundary
+ *
+ *      Finally, the CustomValidityCheckTag lets the Raster
+ *      coreUsesRelativeIndices T/F
+ *
+ *      The Core base class must implement the following two functions:
+ *          template <class IndexList, typename ReturnType>
+ *              ReturnType getElement(const IndexList & indices) const;
+ *          template <typename ReturnType>
+ *              ReturnType getDummyElement(ConstReference value) const;
+ *      The first function should return the appropriate type of value for the
+ *      element indexed by 'indices', which is guaranteed to be in-bounds. The
+ *      second function should return a dummy element of the appropriate type,
+ *      initialized to 'value', and is used for handling out-of-bounds
+ *      situations. The possible types of the ReturnType parameter are related
+ *      to the specifed access model (e.g., if the derived class's AccessTag is
+ *      ReadableRasterTag, then only ReadableElementType must be supported).
+ *
+ *      The following out-of-bounds policies are supported:
+ *          Throw       throw an OutOfBoundsException
+ *          Constant    return a constant value
+ *          Nearest     return the nearest in-bounds value
+ *          Mirror      reflect the indices back across the boundary
+ *          Wrap        wrap the indices around to the other boundary
+ *
+ *      If the 'Constant' OOB policy is used, then the outOfBoundsConstantValue
+ *      property is used to specify what that value is. If any of the
+ *      index-altering policies (Nearest, Mirror, Wrap) are used, then the
+ *      outOfBoundsReturnsDummy property controls whether the value returned
+ *      by an OOB access is the actual, remapped element or a dummy element
+ *      containing a copy. For example, if the Nearest policy is used and
+ *      outOfBoundsReturnsDummy is 'false' then assigning to an OOB element
+ *      will change the value of the nearest in-bounds element, whereas if it
+ *      is 'false', then assigning to an OOB element has no effect.
+ */
+
+#ifndef INCA_RASTER_FACET_INDEXING
+#define INCA_RASTER_FACET_INDEXING
+
+// Import system configuration
+#include <inca/inca-common.h>
+
+// Import OutOfBoundsException definition
+#include <inca/util/OutOfBoundsException.hpp>
+
+// Import multi-dimensional and template metaprogramming macros
+#include <inca/util/multi-dimensional-macros.hpp>
+#include <inca/util/metaprogramming/macros.hpp>
+
+// This is part of the Inca raster processing library
+namespace inca {
+    namespace raster {
+
+// Supported out-of-bounds handling policies
+enum OutOfBoundsPolicy { Ignore, Throw, Constant, Nearest, Mirror, Wrap };
+
+
+// Unspecialized version (does not compile)
+template <class Derived, class Tags, class Types, typename Enabled = void>
+class RasterIndexingFacet {
+    // Force a compile-time assertion. This is only evaluated if this
+    // specialization is instantiated.
+    static const bool RasterIndexingFacetDidNotSpecialize
+        = NOT( IS_SAME( Types, Types ) )::value;
+    BOOST_STATIC_ASSERT( RasterIndexingFacetDidNotSpecialize );
+};
+
+
+template <class Derived, class Tags, class Types>
+class RasterIndexingFacet<Derived, Tags, Types,
+        ENABLE_IF_C( ! Tags::doValidityChecks ) > {
+/*---------------------------------------------------------------------------*
+ | Type & constant declarations
+ *---------------------------------------------------------------------------*/
+public:
+    // Imported types
+    typedef typename Types::ElementType     ElementType;
+
+
+/*---------------------------------------------------------------------------*
+ | Access to the derived class
+ *---------------------------------------------------------------------------*/
+private:
+    DERIVED_CLASS_ACCESSORS(Derived)
+
+
+/*---------------------------------------------------------------------------*
+ | Index handling functions
+ *---------------------------------------------------------------------------*/
+public:
+    // Always report that indices are "valid"
+    template <class IndexList>
+    bool indicesValid(const IndexList & indices) const {
+        return true;
+    }
+
+protected:
+    // This function gets called by other facets, so we grant friendship
+    template <class D, class G, class T, typename E>
+        friend class RasterAccessFacet;
+
+    // This never gets called, since indices are always valid
+    template <class IndexList>
+    ElementType valueForInvalidIndices(const IndexList & indices) const {
+        return ElementType();
+    }
+};
+
+
+// FIXME: The data for this facet IS NOT COPIED!!!
+// This specialization of RasterIndexingFacet delegates all validity handling
+// to the Raster core implementation.
+//
+// The Derived class is not required to implement any functions.
+template <class Derived, class Tags, class Types>
+class RasterIndexingFacet <Derived, Tags, Types,
+        ENABLE_IF_C( Tags::doValidityChecks &&
+                   ! Tags::doCustomValidityChecks ) > {
+/*---------------------------------------------------------------------------*
+ | Type & constant declarations
+ *---------------------------------------------------------------------------*/
+public:
+    // Imported types
+    typedef typename Types::ElementType     ElementType;
+    typedef typename Types::ConstReference  ConstReference;
+    typedef typename Types::IndexArray      IndexArray;
+    typedef typename Types::Region          Region;
+
+
+/*---------------------------------------------------------------------------*
+ | Access to the derived class
+ *---------------------------------------------------------------------------*/
+private:
+    DERIVED_CLASS_ACCESSORS(Derived)
+
+
+/*---------------------------------------------------------------------------*
+ | Constructors
+ *---------------------------------------------------------------------------*/
+public:
+    // Constructor setting out-of-bounds policy and value
+    explicit RasterIndexingFacet(OutOfBoundsPolicy oobPolicy = Nearest,
+                                 ConstReference oobValue = ElementType())
+        : _outOfBoundsPolicy(oobPolicy),
+          _outOfBoundsValue(oobValue) { }
+
+
+/*---------------------------------------------------------------------------*
+ | Out-of-bounds policy
+ *---------------------------------------------------------------------------*/
+public:
+    OutOfBoundsPolicy outOfBoundsPolicy() const { return _outOfBoundsPolicy; }
+    void setOutOfBoundsPolicy(OutOfBoundsPolicy p) { _outOfBoundsPolicy = p; }
+
+    ConstReference outOfBoundsValue() const { return _outOfBoundsValue; }
+    void setOutOfBoundsValue(ConstReference v) { _outOfBoundsValue = v; }
+
+protected:
+    OutOfBoundsPolicy   _outOfBoundsPolicy;
+    ElementType         _outOfBoundsValue;
+
+
+/*---------------------------------------------------------------------------*
+ | Index handling functions
+ *---------------------------------------------------------------------------*/
+public:
+    // Are these indices in-bounds?
+    template <class IndexList>
+    bool indicesValid(const IndexList & indices) const {
+        return this->derived().bounds().contains(indices);
+    }
+
+protected:
+    // This function gets called by other facets, so we grant friendship
+    template <class D, class G, class T, typename E>
+        friend class RasterAccessFacet;
+
+    // Return a value, according to the current OOB policy
+    template <class IndexList>
+    ElementType valueForInvalidIndices(const IndexList & indices) const {
+        switch (outOfBoundsPolicy()) {
+        case Throw: {
+            typename IndexList::const_iterator it = indices.begin();
+            for (IndexType d = 0; d < Types::dimensionality; ++d) {
+                IndexType idx = IndexType(*it),
+                          bs  = this->derived().base(d),
+                          ex  = this->derived().extent(d);
+                if (idx < bs || idx > ex) {
+                    OutOfBoundsException e(bs, ex, idx);
+                    e << "Raster access out of bounds: [" << d << "] index "
+                      << idx << " not in [" << bs << ", " << ex << "]";
+                    throw e;
+                }
+            }
+        }
+        case Constant:
+            return outOfBoundsValue();
+        case Nearest:
+            return this->derived().template elementAt<IndexArray, ElementType>(
+                    this->derived().bounds().nearest(indices));
+        case Mirror:
+            return this->derived().template elementAt<IndexArray, ElementType>(
+                    this->derived().bounds().mirror(indices));
+        case Wrap:
+            return this->derived().template elementAt<IndexArray, ElementType>(
+                    this->derived().bounds().wrap(indices));
+        case Ignore:
+        default:
+//            return this->derived().elementAt(indices, ReturnType(dummy));
+            return this->derived().template elementAt<IndexList, ElementType>(indices);
+        }
+    }
+};
+
+
+// This specialization of RasterIndexingFacet delegates all validity handling
+// to the Raster core implementation.
+//
+// The Derived class is required to implement the following function(s):
+//      template <class IndexList>
+//          bool areIndicesValid(const IndexList & indices) const
+//      template <class IndexList, typename ValueType>
+//          ValueType getValueForInvalidIndices(const IndexList & indices) const
+template <class Derived, class Tags, class Types>
+class RasterIndexingFacet <Derived, Tags, Types,
+        ENABLE_IF_C( Tags::doValidityChecks &&
+                     Tags::doCustomValidityChecks ) > {
+/*---------------------------------------------------------------------------*
+ | Type & constant declarations
+ *---------------------------------------------------------------------------*/
+public:
+    // Imported types
+    typedef typename Types::ElementType     ElementType;
+
+
+/*---------------------------------------------------------------------------*
+ | Access to the derived class
+ *---------------------------------------------------------------------------*/
+private:
+    DERIVED_CLASS_ACCESSORS(Derived)
+
+
+/*---------------------------------------------------------------------------*
+ | Index handling functions
+ *---------------------------------------------------------------------------*/
+public:
+    // Are these indices valid (by whatever bizarre measuring stick you use)?
+    template <class IndexList>
+    bool indicesValid(const IndexList & indices) const {
+        return RasterCoreAccess::checkIndexValidity(this->derived(), indices);
+    }
+
+protected:
+    // This function gets called by other facets, so we grant friendship
+    template <class D, class G, class T, typename E>
+        friend class RasterAccessFacet;
+
+    // Return a value, according to whatever scheme the Derived class implements
+    template <class IndexList>
+    ElementType valueForInvalidIndices(const IndexList & indices) const {
+        return RasterCoreAccess::getValueForInvalidIndices(this->derived(),
+                                                           indices);
+    }
+};
+
+    };    // End namespace raster
+};    // End namespace inca
+
+// Clean up the preprocessor namespace
+#define UNDEFINE_INCA_MULTI_DIM_MACROS
+#include <inca/util/multi-dimensional-macros.hpp>
+#define UNDEFINE_INCA_METAPROGRAMMING_MACROS
+#include <inca/util/metaprogramming/macros.hpp>
+
+#endif
+

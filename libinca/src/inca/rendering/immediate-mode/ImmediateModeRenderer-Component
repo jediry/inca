@@ -1,7 +1,7 @@
 /** -*- C++ -*-
  *
  * File: ImmediateModeRenderer-Component
- * 
+ *
  * Author: Ryan L. Saunders
  *
  * Copyright 2004, Ryan L. Saunders. All rights reserved.
@@ -29,11 +29,17 @@ RENDERER_TEMPLATE
 class RENDERER::Component {
 public:
     // Constructor
-    Component(RENDERER &r, IDType myID) : renderer(r), id(myID) { }
+    Component(RENDERER & r, IDType myID) : _renderer(&r), _id(myID) { }
+
+    // Property accessors
+          RENDERER & renderer()       { return *_renderer; }
+    const RENDERER & renderer() const { return *_renderer; }
+
+    IDType id() const { return _id; }
 
 protected:
-    RENDERER &renderer;     // Daddy!
-    IDType id;              // API-specific handle/pointer
+    RENDERER * _renderer;   // Daddy!
+    IDType _id;             // API-specific handle/pointer
 };
 
 #endif

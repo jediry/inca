@@ -1,7 +1,7 @@
 /** -*- C++ -*-
  *
  * File: ImmediateModeRenderer-Buffer
- * 
+ *
  * Author: Ryan L. Saunders
  *
  * Copyright 2004, Ryan L. Saunders. All rights reserved.
@@ -30,7 +30,7 @@ public:
 //    Buffer() : renderer(*NULL) { }
 
     // Constructor linking to the parent renderer
-    Buffer(RENDERER &r, IDType id);
+    Buffer(RENDERER & r, IDType id) : Component(r, id) { }
 
     void clear();
     ElementType operator()(IndexType x, IndexType y) const;

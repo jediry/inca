@@ -1,22 +1,3 @@
-## Makefile.rules -- this is extra stuff
-
-###############################################################################
-##
-## Automatic source file tracking stuff
-##
-###############################################################################
-
-## Include the source file catalog
-include src_catalog
-
-# Make the Makefile depend on the src catalog
-Makefile.in : Makefile.am src_catalog
-
-# Rebuild the src catalog
-catalog :
-	$(top_srcdir)/ac_tools/make_src_catalog.sh . > src_catalog
-
-
 ###############################################################################
 ##
 ## Additional pattern rules
@@ -30,21 +11,3 @@ $(gen_srcdir)/%Parser.hpp : io/%.g
 	java antlr.Tool -o $(gen_srcdir) $<
 %Lexer.cpp : %Lexer.hpp
 %Parser.cpp : %Parser.hpp
-
-
-###############################################################################
-##
-## Special utility build targets
-##
-###############################################################################
-
-# Force a re-link of executables and libraries
-relink :
-	rm -f $(bin_PROGRAMS) $(dist_LIBRARIES)
-	make $(bin_PROGRAMS) $(dist_LIBRARIES)
-
-# Reset the dependency information that make uses
-clean-deps :
-	for file in .deps/*; do echo > $$file ; done
-
-

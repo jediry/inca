@@ -76,7 +76,7 @@ namespace inca {
                 ENABLE_FUNCTION_IF_C(BY_REF && SUPPORTS(CATEGORY))) {       \
         return scalar_##CATEGORY##_api<scalar>::NAME(s);                    \
     }
-    
+
 #define SCALAR_FUNCTION_2_ARG(CATEGORY, RETURN, NAME)                       \
     template <typename scalar>                                              \
     RETURN NAME(scalar const s1, scalar const s2,                           \
@@ -91,7 +91,7 @@ namespace inca {
 
 
 // Import the Inca template metaprogramming utilities
-#include <inca/util/template-metaprogramming-macros.hpp>
+#include <inca/util/metaprogramming/macros.hpp>
 
 
 // These are the free-floating scalar math functions. All of the usual
@@ -110,6 +110,10 @@ namespace inca {
         SCALAR_FUNCTION_1_ARG(arithmetic, bool, isNan);            // isNaN(x)
         SCALAR_FUNCTION_1_ARG(arithmetic, bool, effectivelyZero);  // x ~= 0
         SCALAR_FUNCTION_2_ARG(arithmetic, bool, effectivelyEqual); // x ~= y
+        SCALAR_FUNCTION_2_ARG(arithmetic, bool, effectivelyLessThan); // x ~< y
+        SCALAR_FUNCTION_2_ARG(arithmetic, bool, effectivelyGreaterThan); // x ~< y
+        SCALAR_FUNCTION_2_ARG(arithmetic, bool, effectivelyLessThanOrEqualTo); // x ~<= y
+        SCALAR_FUNCTION_2_ARG(arithmetic, bool, effectivelyGreaterThanOrEqualTo); // x ~>= y
 
         // $0.99 calculator stuff
         SCALAR_FUNCTION_1_ARG(arithmetic, scalar, negate);       // -x
@@ -227,6 +231,30 @@ struct inca::math::scalar_arithmetic_api {
                 return diff <= traits::relative_tolerance() * max(abs(s1), abs(s2));
         }
     }
+    static bool effectivelyLessThan(arg_type s1, arg_type s2) {
+        if (traits::is_integral)
+            return (s1 < s2);
+        else
+            return s1 < s2 && ! effectivelyEqual(s1, s2);
+    }
+    static bool effectivelyGreaterThan(arg_type s1, arg_type s2) {
+        if (traits::is_integral)
+            return (s1 > s2);
+        else
+            return s1 > s2 && ! effectivelyEqual(s1, s2);
+    }
+    static bool effectivelyLessThanOrEqual(arg_type s1, arg_type s2) {
+        if (traits::is_integral)
+            return (s1 <= s2);
+        else
+            return s1 >= s2 || effectivelyEqual(s1, s2);
+    }
+    static bool effectivelyGreaterThanOrEqual(arg_type s1, arg_type s2) {
+        if (traits::is_integral)
+            return (s1 >= s2);
+        else
+            return s1 >= s2 || effectivelyEqual(s1, s2);
+    }
 
     // Determine the absolute value of a scalar
     static value_type abs(arg_type s);
@@ -299,6 +327,9 @@ struct inca::math::scalar_transcendental_api {
 #undef SUPPORTS
 #undef SCALAR_FUNCTION_1_ARG
 #undef SCALAR_FUNCTION_2_ARG
+
+#define UNDEFINE_INCA_METAPROGRAMMING_MACROS
+#include <inca/util/metaprogramming/macros.hpp>
 
 #endif
 

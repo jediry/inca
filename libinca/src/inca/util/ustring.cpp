@@ -1,6 +1,6 @@
 /*
  * File: ustring.cpp
- * 
+ *
  * Author: Ryan L. Saunders
  *
  * Copyright 2003, Ryan L. Saunders. All rights reserved.
@@ -28,6 +28,8 @@ using namespace inca;
  * which isn't surprising, as Unicode is really an unsigned short. We need this
  * in order to make a basic_string out of Unicode.
  *****************************************************************************/
+
+ #elif 0
 void std::char_traits<Unicode>::assign(Unicode &c1, const Unicode &c2) {
     c1 = c2;
 }
@@ -49,7 +51,7 @@ int std::char_traits<Unicode>::compare(const Unicode *s1, const Unicode *s2, std
     }
     return 0;
 }
-    
+
 std::size_t std::char_traits<Unicode>::length(const Unicode *s) {
     std::size_t size;
     for (size = 0; s[size] != 0; size++) /* */;
@@ -135,7 +137,7 @@ ustring::ustring(int i) {
     char temp[MAX_INTEGER_LENGTH];
     sprintf(temp, "%d", i); // Convert to a char * string
     ascii = temp;           // Translate into an STL string
- 
+
     // Synchronize the cached state of the object
     numberValid = true;
     unicodeValid = false;
@@ -147,7 +149,7 @@ ustring::ustring(double d) {
     char temp[MAX_DOUBLE_LENGTH];
     sprintf(temp, "%f", d); // Convert to a char * string
     ascii = temp;      // Translate into an STL string
- 
+
     // Synchronize the cached state of the object
     numberValid = true;
     unicodeValid = false;
@@ -156,7 +158,7 @@ ustring::ustring(double d) {
 // Copy/assignment from ASCII string
 ustring::ustring(const std::string &s) {
     ascii = s;
- 
+
     // Synchronize the cached state of the object
     numberValid = false;
     unicodeValid = false;
@@ -168,7 +170,7 @@ ustring::ustring(const char * const s) {
         ascii = "";
     else
         ascii = s;
- 
+
     // Synchronize the cached state of the object
     numberValid = false;
     unicodeValid = false;

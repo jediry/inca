@@ -1,6 +1,6 @@
 /*
  * File: OpenGLTraits.hpp
- * 
+ *
  * Author: Ryan L. Saunders
  *
  * Copyright 2004, Ryan L. Saunders. All rights reserved.
@@ -29,6 +29,9 @@ namespace inca {
 #include <inca/math/color.hpp>
 #include <inca/math/linalg.hpp>
 
+// Import rendering enumerated types
+#include "types.hpp"
+
 
 class inca::rendering::OpenGLTraits {
 public:
@@ -51,22 +54,117 @@ public:
     typedef math::Vector<geometry_t, 3>                     Normal;
     typedef math::Point<geometry_t, 2>                      TexCoord;
 
-    // Enumeration of properties for use with get/setHardwareState
+//protected:
+    // Grant the ImmediateModeRenderer access to the hardware functions
+    template <class API, template <inca::SizeType> class CP>
+        friend class ImmediateModeRenderer;
+
+
+    // Properties and functions for the IMR::Rasterizer object
     enum Property {
+        // Renderer properties
+        CurrentMatrixStack,
+
+        // Rasterizer toggle properties
         DepthBuffering, AlphaBlending, FaceCulling, Lighting,
         PointSmoothing, LineSmoothing, PolygonSmoothing,
         BackgroundColor,
-        CurrentShadingModel, CurrentColor, CurrentNormal, CurrentTexCoord,
-        CurrentEdgeFlag,
+        ShadingModel, CurrentColor, CurrentNormal, CurrentTexCoord, CurrentEdgeFlag,
+        VertexArrayPointer,   VertexArrayStride,
+        NormalArrayPointer,   NormalArrayStride,
+        TexCoordArrayPointer, TexCoordArrayStride,
+        ColorArrayPointer,    ColorArrayStride,
+        EdgeFlagArrayPointer, EdgeFlagArrayStride,
+
+        // Matrix stack properties
+        CurrentMatrix,
+        MatrixStackDepth,
+
+        // Lighting unit properties
+        LightingUnitEnabled,
+        LightingUnitPosition,
+        LightingUnitAmbientColor,
+        LightingUnitDiffuseColor,
+        LightingUnitSpecularColor,
     };
+    static const Property FirstRendererProperty = CurrentMatrixStack;
+    static const Property LastRendererProperty  = CurrentMatrixStack;
+    static const Property FirstRasterizerProperty = DepthBuffering;
+    static const Property LastRasterizerProperty  = EdgeFlagArrayStride;
+    static const Property FirstMatrixStackProperty = CurrentMatrix;
+    static const Property LastMatrixStackProperty  = MatrixStackDepth;
+    static const Property FirstLightingUnitProperty = LightingUnitEnabled;
+    static const Property LastLightingUnitProperty  = LightingUnitSpecularColor;
+
+    // Hardware property get/set functions
+    template <Property p> static void getImplementationLimit(SizeType & sz);
+    template <Property p> static void getImplementationLimit(IDType id, IndexType & idx);
+    template <Property p> static void getHardwareState(IDType & id);
+    template <Property p> static void setHardwareState(IDType id);
+    template <Property p> static void getHardwareState(IDType id, IndexType & idx);
+    template <Property p> static void setHardwareState(IDType id, IndexType idx);
+    template <Property p> static void getHardwareState(bool & enabled);
+    template <Property p> static void setHardwareState(bool enabled);
+    template <Property p> static void getHardwareState(geometry_t & value);
+    template <Property p> static void setHardwareState(geometry_t value);
+    template <Property p> static void getHardwareState(Normal & value);
+    template <Property p> static void setHardwareState(const Normal & value);
+    template <Property p> static void getHardwareState(Color & value);
+    template <Property p> static void setHardwareState(const Color & value);
+    template <Property p> static void getHardwareState(TexCoord & value);
+    template <Property p> static void setHardwareState(const TexCoord & value);
+    template <Property p> static void getHardwareState(::inca::rendering::ShadingModel & model);
+    template <Property p> static void setHardwareState(::inca::rendering::ShadingModel model);
+
+    template <Property p> static void getHardwareState(IDType id, bool & enabled);
+    template <Property p> static void setHardwareState(IDType id, bool enabled);
+
+    template <Property p> static void getHardwareState(IDType id, Color & c);
+    template <Property p> static void setHardwareState(IDType id, const Color & c);
+    template <Property p> static void getHardwareState(IDType id, Point3D & p);
+    template <Property p> static void setHardwareState(IDType id, const Point3D & p);
+
+    template <Property p> static void getHardwareState(IDType id, Matrix & m);
+    template <Property p> static void setHardwareState(IDType id, const Matrix & m);
+
+    template <Property p> static void getHardwareState(DifferenceType & stride);
+    template <Property p> static void getHardwareState(void * & ptr);
+    template <Property p, typename T> static void setHardwareState(T const * ptr, DifferenceType stride);
+
+    // Functions used by the IMR object
+    static SizeType matrixStackCount();
+    static SizeType lightingUnitCount();
+    static SizeType texturingUnitCount();
+
+    static IDType matrixStackID(IndexType index);
+    static IDType lightingUnitID(IndexType index);
+    static IDType texturingUnitID(IndexType index);
+
+    static IndexType projectionMatrixIndex();
+    static IndexType viewMatrixIndex();
+    static IndexType worldMatrixIndex();
+    static IndexType colorMatrixIndex();
+
+    static void clearBuffers(IDType ids);
 
 
-protected:
-    template <Property property, typename Type>
-    void getHardwareState(Type & var);
+    // Functions used by the IMR::Rasterizer object
+    static void beginPrimitive(PrimitiveType type);
+    static void endPrimitive();
+    static void renderVertexIndex(IndexType index);
+    static void renderArrayRange(PrimitiveType type, IndexType from, SizeType count);
 
-    template <Property property, typename Type>
-    void setHardwareState(const Type & var);
+
+    // Functions used by the IMR::MatrixStack object
+    static void pushMatrix(IDType id);
+    static void popMatrix(IDType id);
+    static void resetMatrix(IDType id);
+    static void premultiplyMatrix(IDType id, const Matrix & m);
+    static void postmultiplyMatrix(IDType id, const Matrix & m);
+    static void scaleMatrix(IDType id, geometry_t s);
+    static void scaleMatrix(IDType id, const Vector3D & s);
+    static void rotateMatrix(IDType id, geometry_t angle, const Vector3D & axis);
+    static void translateMatrix(IDType id, const Vector3D & offset);
 };
 
 #endif

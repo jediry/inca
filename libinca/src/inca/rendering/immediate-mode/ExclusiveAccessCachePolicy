@@ -1,7 +1,7 @@
 /** -*- C++ -*-
  *
  * File: ExclusiveAccessCachePolicy
- * 
+ *
  * Author: Ryan L. Saunders
  *
  * Copyright 2004, Ryan L. Saunders. All rights reserved.
@@ -24,7 +24,7 @@
 namespace inca {
     namespace rendering {
         // Forward declarations
-        template <SizeType size> class ExclusiveAccessCachePolicy;
+        template <IDType first, IDType last> class ExclusiveAccessCachePolicy;
     };
 };
 
@@ -33,9 +33,12 @@ namespace inca {
 
 
 // Cache policy assuming exclusive access to the rendering hardware
-template <inca::SizeType size>
+template <inca::IDType first, inca::IDType last>
 class inca::rendering::ExclusiveAccessCachePolicy {
 public:
+    // How many items are in this cache?
+    static const SizeType size = last - first + 1;
+
     // Constructor
     ExclusiveAccessCachePolicy() {
         for (IDType i = 0; i < size; ++i) // Start out with cache invalid
@@ -43,25 +46,25 @@ public:
     }
 
     template <IDType id>
-    bool isCacheValid() {
-        BOOST_STATIC_ASSERT(id >= 0 && id < size);
-        return cache[id];
+    bool isCacheValid() const {
+        BOOST_STATIC_ASSERT(id >= first && id <= last);
+        return cache[id - first];
     }
 
     template <IDType id>
-    void validateCache() {
-        BOOST_STATIC_ASSERT(id >= 0 && id < size);
-        cache[id] = true;
+    void validateCache() const {
+        BOOST_STATIC_ASSERT(id >= first && id <= last);
+        cache[id - first] = true;
     }
 
     template <IDType id>
-    void invalidateCache() {
-        BOOST_STATIC_ASSERT(id >= 0 && id < size);
-        cache[id] = false;
+    void invalidateCache() const {
+        BOOST_STATIC_ASSERT(id >= first && id <= last);
+        cache[id - first] = false;
     }
 
 private:
-    Array<bool, size> cache;  // List of "valid" flags
+    mutable Array<bool, size> cache;  // List of "valid" flags
 };
 
 #endif

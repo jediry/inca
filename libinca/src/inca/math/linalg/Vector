@@ -61,6 +61,8 @@ public:
      */
     explicit Vector() { }
 
+    // FIXME: There needs to be a "copy from collection" constructor
+
     /**
      * Initialization from another Vector, possibly of a different scalar
      * type. The argument must be of the same dimensionality, and its
@@ -68,23 +70,23 @@ public:
      */
     template <typename scalar2>
     Vector(const Vector<scalar2, dimensionality> &v) {
-        std::copy(v.begin(), v.end(), begin());
+        std::copy(v.begin(), v.end(), this->begin());
     }
 
     /**
      * Initialization from an Array (or subclass).
      */
     explicit Vector(const Array<scalar_t, dimensionality> &arr) {
-        std::copy(arr.begin(), arr.end(), begin());
+        std::copy(arr.begin(), arr.end(), this->begin());
     }
 
     /**
      * Constant element initialization constructor.
      */
     explicit Vector(scalar_arg_t e) {
-        std::fill(begin(), end(), e);
+        std::fill(this->begin(), this->end(), e);
     }
- 
+
     /**
      * scalar_arg_t argument list constructors. Each of these is intended to
      * be used only with instances of the same dimensionality as there are
@@ -104,7 +106,7 @@ public:
     template <typename scalar2>
     explicit Vector(const Quaternion<scalar2> &q) {
         BOOST_STATIC_ASSERT(dimensionality == 3);  // Only works for 3D Vectors
-        std::copy(q.begin() + 1, q.end(), begin());
+        std::copy(q.begin() + 1, q.end(), this->begin());
     }
 
 
@@ -116,8 +118,8 @@ public:
      * Cast to string representation.
      * \returns a string like "(1.4, 3.5)"
      */
-    operator string() const {
-        return '(' + stringifyElements() + ')';
+    operator std::string() const {
+        return '(' + this->stringifyElements() + ')';
     }
 };
 

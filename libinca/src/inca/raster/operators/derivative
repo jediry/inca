@@ -1,0 +1,85 @@
+/** -*- C++ -*-
+ *
+ * File: derivative
+ *
+ * Author: Ryan L. Saunders
+ *
+ * Copyright 2004, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ *      This file implements a finite-difference approximation to the partial
+ *      derivative along a single dimensional axis.
+ */
+
+#ifndef INCA_RASTER_OPERATOR_DERIVATIVE
+#define INCA_RASTER_OPERATOR_DERIVATIVE
+
+
+// Import operator base class and macros
+#include "OperatorRasterBase"
+
+// Import the Vector class
+#include <inca/math/linalg.hpp>
+
+// Import metaprogramming tools
+#include <inca/util/metaprogramming/is_collection.hpp>
+#include <inca/util/multi-dimensional-macros.hpp>
+#include <inca/util/metaprogramming/macros.hpp>
+
+
+// This is part of the Inca raster processing library
+namespace inca {
+    namespace raster {
+
+        // Derivative operator
+        INCA_RASTER_OPERATOR_CLASS_HEADER(DerivativeOperatorRaster,
+                                          1, NIL,
+                                          typename R0::ElementType ) {
+        public:
+            // Get types from the superclass
+            INCA_RASTER_OPERATOR_IMPORT_TYPES(DerivativeOperatorRaster<R0>)
+
+            // Constructor taking a generic raster and a differentiation axis
+            DerivativeOperatorRaster(const R0 & r, IndexType axis)
+                : OperatorBaseType(r), differentiationAxis(axis),
+                  oneOverDifferential(ElementType(0.5)) { }
+
+        protected:
+            // Element evaluator function
+            INCA_RASTER_OPERATOR_GET_ELEMENT_HEADER(indices) {
+                IndexArray thisIndices(indices),
+                           prevIndices(indices),
+                           nextIndices(indices);
+                --prevIndices[differentiationAxis];
+                ++nextIndices[differentiationAxis];
+                ElementType next = operand0(nextIndices);
+                ElementType prev = operand0(prevIndices);
+                ElementType reslt = (next - prev) * oneOverDifferential;
+//                if (std::isnan(reslt))
+//                    cerr << "NAN at " << indices << ": " << next << " - " << prev << endl;
+                return reslt;
+            }
+
+            IndexType   differentiationAxis;    // What it says.
+            ElementType oneOverDifferential;    // World-space distance between elements
+        };
+
+
+        // Factory function for taking the first derivative, with an
+        // inter-element spacing of unity.
+        template <typename R0>
+        DerivativeOperatorRaster<R0> d(const R0 & r, IndexType axis) {
+            return DerivativeOperatorRaster<R0>(r, axis);
+        }
+
+    };
+};
+
+
+// Clean up the preprocessor's namespace
+#define UNDEFINE_INCA_MULTI_DIM_MACROS
+#include <inca/util/multi-dimensional-macros.hpp>
+#define UNDEFINE_INCA_METAPROGRAMMING_MACROS
+#include <inca/util/metaprogramming/macros.hpp>
+
+#endif

@@ -1,6 +1,6 @@
 /*
  * File: Window.hpp
- * 
+ *
  * Author: Ryan L. Saunders
  *
  * Copyright 2004, Ryan L. Saunders. All rights reserved.
@@ -79,7 +79,7 @@ public:
 public:
     // Pass redisplay requests up to my parent
     void redisplay(WidgetPartConstPtr w) const { requestRedisplay(); }
-    
+
     // My sub-widget has same dimensions as me
     Dimension getSize(WidgetPartConstPtr w) const { return getSize(); }
 
@@ -150,5 +150,14 @@ public:
     // Request redisplay of the entire Window
     virtual void requestRedisplay() const = 0;
 };
+
+
+/**
+ * The WINDOW(TOOLKIT) macro expands to produce the fully-qualified class
+ * name of the Window subclass implemented using the requested toolkit.
+ */
+#include <boost/preprocessor/cat.hpp>
+#define WINDOW(TOOLKIT) inca::ui:: BOOST_PP_CAT(TOOLKIT, Window)
+
 
 #endif

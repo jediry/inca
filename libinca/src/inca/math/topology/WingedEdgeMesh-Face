@@ -1,7 +1,7 @@
 /* -*- C++ -*-
  *
  * File: WingedEdgeMesh-Face
- * 
+ *
  * Author: Ryan L. Saunders
  *
  * Copyright 2004, Ryan L. Saunders. All rights reserved.
@@ -28,12 +28,12 @@ MESH_TEMPLATE class inca::math::MESH::Face : public FData, public MeshElement {
  *---------------------------------------------------------------------------*/
 public:
     // The mesh & friends need access to protected (modification) functions
-    friend Mesh;
-    friend Vertex;
-    friend Face;
-    friend Edge;
-    friend FaceVertex;
-    friend EdgeVertex;
+    friend class MESH;
+    friend class Vertex;
+    //friend class Face;
+    friend class Edge;
+    friend class FaceVertex;
+    friend class EdgeVertex;
 
 
 /*---------------------------------------------------------------------------*
@@ -41,12 +41,12 @@ public:
  *---------------------------------------------------------------------------*/
 public:
     // Iterator definitions
-    typedef basic_mesh_iterator< OrbitCCW<Vertex, Face> >     ccw_vertex_iterator;
-    typedef basic_mesh_iterator< OrbitCW<Vertex, Face> >      cw_vertex_iterator;
-    typedef basic_mesh_iterator< OrbitCCW<Edge, Face> >       ccw_edge_iterator;
-    typedef basic_mesh_iterator< OrbitCW<Edge, Face> >        cw_edge_iterator;
-    typedef basic_mesh_iterator< OrbitCCW<FaceVertex, Face> > ccw_face_vertex_iterator;
-    typedef basic_mesh_iterator< OrbitCW<FaceVertex, Face> >  cw_face_vertex_iterator;
+    typedef basic_mesh_iterator< OrbitCCW<Mesh, Vertex, Face> >     ccw_vertex_iterator;
+    typedef basic_mesh_iterator< OrbitCW<Mesh, Vertex, Face> >      cw_vertex_iterator;
+    typedef basic_mesh_iterator< OrbitCCW<Mesh, Edge, Face> >       ccw_edge_iterator;
+    typedef basic_mesh_iterator< OrbitCW<Mesh, Edge, Face> >        cw_edge_iterator;
+    typedef basic_mesh_iterator< OrbitCCW<Mesh, FaceVertex, Face> > ccw_face_vertex_iterator;
+    typedef basic_mesh_iterator< OrbitCW<Mesh, FaceVertex, Face> >  cw_face_vertex_iterator;
 
 
 /*---------------------------------------------------------------------------*
@@ -58,7 +58,7 @@ public:
         _edge = NULL;
         _edgeCount = 0;
     }
-    
+
     // Copy user-data into this element
     void setData(const FData &fd) {
         *static_cast<FData *>(this) = fd;
