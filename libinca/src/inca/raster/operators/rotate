@@ -6,6 +6,7 @@
  * Copyright 2004, Ryan L. Saunders. All rights reserved.
  *
  * Description:
+ * FIXME: This ought to calculate the actual bounds of the rotation.
  */
 
 #ifndef INCA_RASTER_OPERATOR_ROTATE
@@ -40,10 +41,13 @@ namespace inca {
             explicit RotateOperatorRaster(const R0 & r, Scalar angle,
                                           const ScalarList1 & axis,
                                           const ScalarList2 & center)
-                    : OperatorBaseType(r, false),
+                    : OperatorBaseType(r, true),
                       rotationAngle(-angle),
                       rotationAxis(axis),
-                      centerPoint(center) { }
+                      centerPoint(center) {
+                // Total HACK
+                this->_bounds.expand(10);
+            }
 
         protected:
             // Element evaluator function
@@ -69,8 +73,8 @@ namespace inca {
         RotateOperatorRaster<R0 COMMA Scalar> ) rotate(const R0 & r,
                                                        const Scalar & angle) {
             typedef RotateOperatorRaster<R0, Scalar> Rotate;
-            return Rotate(r, angle, typename Rotate::Point(Scalar(0)),
-                                    typename Rotate::Vector(Scalar(0)));
+            return Rotate(r, angle, typename Rotate::Vector(Scalar(0)),
+                                    typename Rotate::Point(Scalar(0)));
         }
 
         // Factory function taking N-D raster, rotation angle and center
@@ -82,7 +86,7 @@ namespace inca {
             typedef RotateOperatorRaster<R0, Scalar> Rotate;
             typename Rotate::Vector axis(Scalar(0));
             axis[0] = Scalar(1);
-            return Rotate(r, angle, center, axis);
+            return Rotate(r, angle, axis, center);
         }
 
         // Factory function taking N-D raster, rotation angle, axis and center
@@ -90,10 +94,10 @@ namespace inca {
         ENABLE_IF_T( is_raster<R0>,
         RotateOperatorRaster<R0 COMMA Scalar> ) rotate(const R0 & r,
                                                        const Scalar & angle,
-                                                       const ScalarList & center,
-                                                       const ScalarList & axis) {
+                                                       const ScalarList & axis,
+                                                       const ScalarList & center) {
             typedef RotateOperatorRaster<R0, Scalar> Rotate;
-            return Rotate(r, angle, center, axis);
+            return Rotate(r, angle, axis, center);
         }
 
     };
