@@ -36,6 +36,8 @@ namespace inca {
             typedef math::Color<color_t, math::sRGBA>               Color;
             typedef math::Point<int, 2>                             Pixel;
             typedef math::Vector<int, 2>                            Dimension;
+            typedef math::Vector<geometry_t, 3>                     Normal;
+            typedef math::Point<geometry_t, 2>                      TexCoord;
 
             // Number of internally cached properties
             static const int numBoolProperties   = 5;
