@@ -25,6 +25,9 @@
  *
  *      the necessity of constructor init and ThisType
  *
+ *      Traits are really needed to create operator overloads
+ *      Can we also determine whether it's safe to allow non-const refs?
+ *
  *      The property family of template classes implement C#-style properties,
  *      in which a value is wrapped by an object which controls access via
  *      accessor functions, but can still be accessed syntactically as a plain
@@ -118,7 +121,7 @@
 #define PTR_PROPERTY_CONSTRUCTORS(NAME, DEFAULT)                            \
     /* Constructor with the default initializion */                         \
     property_ ## NAME(Owner * own)                                          \
-        : owner(*own), initialized(false), defaultValue(DEFAULT) { }        \
+        : owner(*own), initialized(false), defaultValue(pointer(DEFAULT)) { }\
     /* Constructor with an explicit initialization */                       \
     property_ ## NAME(Owner * own, pointer def)                             \
         : owner(*own), initialized(false), defaultValue(def) { }            \
@@ -207,11 +210,19 @@
 
 #define LIST_PROPERTY_ACCESSORS(NAME)                                       \
     /* Getter operators and function */                                     \
-    const_reference operator [](unsigned int i) const;
+    const_reference operator [](index_t i) const { return get(i); }         \
+    const_reference get(index_t i) const {                                  \
+        return owner.get_ ## NAME(i);                                       \
+    }                                                                       \
+    size_t size() const { return owner. NAME ## _size(); }
 
 #define LIST_PROPERTY_MUTATORS(NAME)                                        \
     /* Setter operators and function */                                     \
-    reference operator [](unsigned int i);
+    reference operator [](index_t i) { return get(i); }                     \
+    reference get(index_t i) {                                              \
+        return owner.get_ ## NAME(i);                                       \
+    }                                                                       \
+    void add(const_reference v) { owner.add_ ## NAME(v); }
 
 
 /*****************************************************************************
@@ -311,11 +322,11 @@
 
 #define RO_LIST_PROPERTY_OWNER_VARIABLES(TYPE, NAME)                        \
     const property_ ## NAME NAME;                                           \
-    list<TYPE> _ ## NAME;
+    vector<TYPE> _ ## NAME;
 
 #define RW_LIST_PROPERTY_OWNER_VARIABLES(TYPE, NAME)                        \
     property_ ## NAME NAME;                                                 \
-    list<TYPE> _ ## NAME;
+    vector<TYPE> _ ## NAME;
 
 
 /*****************************************************************************
@@ -326,103 +337,75 @@
  *****************************************************************************/
 
 // These macros expand to the function signatures
-#define PROPERTY_OWNER_ACCESSOR(TYPE, NAME)                                 \
-    const TYPE & get_ ## NAME() const
+#define property_get(TYPE, NAME)     get_ ## NAME() const
+#define property_set(TYPE, NAME)     set_ ## NAME(const TYPE & value)
 
-#define PROPERTY_OWNER_MUTATOR(TYPE, NAME)                                  \
-    void set_ ## NAME(const TYPE & value)
+#define ptr_property_get(TYPE, NAME) get_ ## NAME() const
+#define ptr_property_set(TYPE, NAME) set_ ## NAME(shared_ptr<TYPE> value)
 
-#define PTR_PROPERTY_OWNER_ACCESSOR(TYPE, NAME)                             \
-    shared_ptr<TYPE> get_ ## NAME()
+#define list_property_size(TYPE, NAME)   NAME ## _size() const
+#define list_property_get(TYPE, NAME)    get_ ## NAME(index_t index) const
+#define list_property_set(TYPE, NAME)    get_ ## NAME(index_t index)
+#define list_property_add(TYPE, NAME)    add_ ## NAME(const TYPE & value)
+#define list_property_delete(TYPE, NAME) delete_ ## NAME(index_t index)
 
-#define PTR_PROPERTY_OWNER_MUTATOR(TYPE, NAME)                              \
-    void set_ ## NAME(shared_ptr<TYPE> value)
+// These are the full function prototypes (with return type)
+#define PROPERTY_GET_PROTOTYPE(TYPE, NAME)                                  \
+    const TYPE & property_get(TYPE, NAME)
+#define PROPERTY_SET_PROTOTYPE(TYPE, NAME)                                  \
+    void property_set(TYPE, NAME)
+#define PTR_PROPERTY_GET_PROTOTYPE(TYPE, NAME)                              \
+    shared_ptr<TYPE> ptr_property_get(TYPE, NAME)
+#define PTR_PROPERTY_SET_PROTOTYPE(TYPE, NAME)                              \
+    void ptr_property_set(TYPE, NAME)
+#define LIST_PROPERTY_SIZE_PROTOTYPE(TYPE, NAME)                            \
+    size_t list_property_size(TYPE, NAME)
+#define LIST_PROPERTY_GET_PROTOTYPE(TYPE, NAME)                             \
+    const TYPE & list_property_get(TYPE, NAME)
+#define LIST_PROPERTY_SET_PROTOTYPE(TYPE, NAME)                             \
+    TYPE & list_property_set(TYPE, NAME)
+#define LIST_PROPERTY_ADD_PROTOTYPE(TYPE, NAME)                             \
+    void list_property_add(TYPE, NAME)
+#define LIST_PROPERTY_DELETE_PROTOTYPE(TYPE, NAME)                          \
+    void list_property_delete(TYPE, NAME)
 
-#define LIST_PROPERTY_OWNER_ACCESSOR(TYPE, NAME)                            \
-    TYPE & get_ ## NAME(size_t index)
+// Default property getter function implementation
+#define DEFAULT_PROPERTY_GET(TYPE, NAME)                                    \
+    PROPERTY_GET_PROTOTYPE(TYPE, NAME) { return _ ## NAME; }
 
-#define LIST_PROPERTY_OWNER_MUTATOR(TYPE, NAME)                             \
-    void set_ ## NAME(size_t index, const TYPE & value)
-
-#define LIST_PROPERTY_OWNER_ADDER(TYPE, NAME)
-
-#define LIST_PROPERTY_OWNER_DELETER(TYPE, NAME)
-
-
-// Read-only primitive-type property implementation
-#define RO_PROPERTY_OWNER_DEFAULT_ACCESSOR(TYPE, NAME)                      \
-    /* Default getter function */                                           \
-    PROPERTY_OWNER_ACCESSOR(TYPE, NAME) {                                   \
-        return _ ## NAME;                                                   \
-    }
-
-#define RO_PROPERTY_OWNER_DEFAULT_MUTATOR(TYPE, NAME)                       \
-    /* Default setter function */                                           \
-    PROPERTY_OWNER_MUTATOR(TYPE, NAME) {                                    \
-        _ ## NAME = value;                                                  \
-    }
-
-
-// Read-write primitive-type property implementation
-#define RW_PROPERTY_OWNER_DEFAULT_ACCESSOR(TYPE, NAME)                      \
-    RO_PROPERTY_OWNER_DEFAULT_ACCESSOR(TYPE, NAME)
-
-#define RW_PROPERTY_OWNER_DEFAULT_MUTATOR(TYPE, NAME)                       \
-    RO_PROPERTY_OWNER_DEFAULT_MUTATOR(TYPE, NAME)
+// Default property setter function implementation
+#define DEFAULT_PROPERTY_SET(TYPE, NAME)                                    \
+    PROPERTY_SET_PROTOTYPE(TYPE, NAME) { _ ## NAME = value; }
 
 
-// Read-only pointer-type property implementation
-#define RO_PTR_PROPERTY_OWNER_DEFAULT_ACCESSOR(TYPE, NAME)                  \
-    /* Default getter function */                                           \
-    PTR_PROPERTY_OWNER_ACCESSOR(TYPE, NAME) {                               \
-        return _ ## NAME;                                                   \
-    }
+// Default pointer property getter function implementation
+#define DEFAULT_PTR_PROPERTY_GET(TYPE, NAME)                                \
+    PTR_PROPERTY_GET_PROTOTYPE(TYPE, NAME) { return _ ## NAME; }
 
-#define RO_PTR_PROPERTY_OWNER_DEFAULT_MUTATOR(TYPE, NAME)                   \
-    /* Default setter function */                                           \
-    PTR_PROPERTY_OWNER_MUTATOR(TYPE, NAME) {                                \
-        _ ## NAME = value;                                                  \
-    }
+// Default pointer property setter function implementation
+#define DEFAULT_PTR_PROPERTY_SET(TYPE, NAME)                                \
+    PTR_PROPERTY_SET_PROTOTYPE(TYPE, NAME) { _ ## NAME = value; }
 
 
-// Read-write pointer-type property implementation
-#define RW_PTR_PROPERTY_OWNER_DEFAULT_ACCESSOR(TYPE, NAME)                  \
-    RO_PTR_PROPERTY_OWNER_DEFAULT_ACCESSOR(TYPE, NAME)
+// Default list property size implementation
+#define DEFAULT_LIST_PROPERTY_SIZE(TYPE, NAME)                              \
+    LIST_PROPERTY_SIZE_PROTOTYPE(TYPE, NAME) { return _ ## NAME.size(); }
 
-#define RW_PTR_PROPERTY_OWNER_DEFAULT_MUTATOR(TYPE, NAME)                   \
-    RO_PTR_PROPERTY_OWNER_DEFAULT_MUTATOR(TYPE, NAME)
+// Default list property get implementation
+#define DEFAULT_LIST_PROPERTY_GET(TYPE, NAME)                               \
+    LIST_PROPERTY_GET_PROTOTYPE(TYPE, NAME) { return _ ## NAME[index]; }
 
+// Default list property set implementation
+#define DEFAULT_LIST_PROPERTY_SET(TYPE, NAME)                               \
+    LIST_PROPERTY_SET_PROTOTYPE(TYPE, NAME) { return _ ## NAME[index]; }
 
-// Read-only list-type property implementation
-#define RO_LIST_PROPERTY_OWNER_DEFAULT_ACCESSOR(TYPE, NAME)                 \
-    /* Default getter function */                                           \
-    LIST_PROPERTY_OWNER_ACCESSOR(TYPE, NAME)
+// Default list property add implementation
+#define DEFAULT_LIST_PROPERTY_ADD(TYPE, NAME)                               \
+    LIST_PROPERTY_ADD_PROTOTYPE(TYPE, NAME) { return _ ## NAME.push_back(value); }
 
-#define RO_LIST_PROPERTY_OWNER_DEFAULT_MUTATOR(TYPE, NAME)                  \
-    /* Default setter function */                                           \
-    LIST_PROPERTY_OWNER_MUTATOR(TYPE, NAME)
-
-#define RO_LIST_PROPERTY_OWNER_DEFAULT_ADDER(TYPE, NAME)                    \
-    /* Default setter function */                                           \
-    LIST_PROPERTY_OWNER_ADDER(TYPE, NAME)
-
-#define RO_LIST_PROPERTY_OWNER_DEFAULT_DELETER(TYPE, NAME)                  \
-    /* Default setter function */                                           \
-    LIST_PROPERTY_OWNER_DELETER(TYPE, NAME)
-
-
-// Read-write list-type property implementation
-#define RW_LIST_PROPERTY_OWNER_DEFAULT_ACCESSOR(TYPE, NAME)                 \
-    RO_LIST_PROPERTY_OWNER_DEFAULT_ACCESSOR(TYPE, NAME)
-
-#define RW_LIST_PROPERTY_OWNER_DEFAULT_MUTATOR(TYPE, NAME)                  \
-    RO_LIST_PROPERTY_OWNER_DEFAULT_MUTATOR(TYPE, NAME)
-
-#define RW_LIST_PROPERTY_OWNER_DEFAULT_ADDER(TYPE, NAME)                    \
-    RO_LIST_PROPERTY_OWNER_DEFAULT_ADDER(TYPE, NAME)
-
-#define RW_LIST_PROPERTY_OWNER_DEFAULT_DELETER(TYPE, NAME)                  \
-    RO_LIST_PROPERTY_OWNER_DEFAULT_DELETER(TYPE, NAME)
+// Default list property add implementation
+#define DEFAULT_LIST_PROPERTY_DELETE(TYPE, NAME)                            \
+    LIST_PROPERTY_DELETE_PROTOTYPE(TYPE, NAME) { }
 
 
 /*****************************************************************************
@@ -430,194 +413,139 @@
  * properties (using the above macros) and are the only ones that should be
  * directly invoked by the user.
  *****************************************************************************/
-// A read-only primitive property with default accessor/mutator
+// A read-only primitive property with default getter/setter
 #define ro_property(TYPE, NAME, DEFAULT)                                    \
 public:                                                                     \
     RO_PROPERTY_CLASS(TYPE, NAME, DEFAULT);                                 \
     RO_PROPERTY_OWNER_VARIABLES(TYPE, NAME);                                \
-    RO_PROPERTY_OWNER_DEFAULT_ACCESSOR(TYPE, NAME);                         \
-    RO_PROPERTY_OWNER_DEFAULT_MUTATOR(TYPE, NAME);
+    DEFAULT_PROPERTY_GET(TYPE, NAME);                                       \
+    DEFAULT_PROPERTY_SET(TYPE, NAME);
 
-// A read-only primitive property with default accessor/mutator
+// A read-only primitive property with default getter/setter
 #define rw_property(TYPE, NAME, DEFAULT)                                    \
 public:                                                                     \
     RW_PROPERTY_CLASS(TYPE, NAME, DEFAULT);                                 \
     RW_PROPERTY_OWNER_VARIABLES(TYPE, NAME);                                \
-    RW_PROPERTY_OWNER_DEFAULT_ACCESSOR(TYPE, NAME);                         \
-    RW_PROPERTY_OWNER_DEFAULT_MUTATOR(TYPE, NAME);
+    DEFAULT_PROPERTY_GET(TYPE, NAME);                                       \
+    DEFAULT_PROPERTY_SET(TYPE, NAME);
 
-// A read-only primitive property with default mutator
-#define ro_property_ca(TYPE, NAME, DEFAULT)                                 \
+// A read-only primitive property with no default getter
+#define ro_property_custom_get(TYPE, NAME, DEFAULT)                         \
 public:                                                                     \
     RO_PROPERTY_CLASS(TYPE, NAME, DEFAULT);                                 \
     RO_PROPERTY_OWNER_VARIABLES(TYPE, NAME);                                \
-    RO_PROPERTY_OWNER_DEFAULT_MUTATOR(TYPE, NAME);
+    DEFAULT_PROPERTY_SET(TYPE, NAME);
 
-// A read-write primitive property with default mutator
-#define rw_property_ca(TYPE, NAME, DEFAULT)                                 \
+// A read-write primitive property with no default getter
+#define rw_property_custom_get(TYPE, NAME, DEFAULT)                         \
 public:                                                                     \
     RW_PROPERTY_CLASS(TYPE, NAME, DEFAULT);                                 \
     RW_PROPERTY_OWNER_VARIABLES(TYPE, NAME);                                \
-    RW_PROPERTY_OWNER_DEFAULT_MUTATOR(TYPE, NAME);
+    DEFAULT_PROPERTY_SET(TYPE, NAME);
 
-// A read-only primitive property with default accessor
-#define ro_property_cm(TYPE, NAME, DEFAULT)                                 \
+// A read-only primitive property with no default setter
+#define ro_property_custom_set(TYPE, NAME, DEFAULT)                         \
 public:                                                                     \
     RO_PROPERTY_CLASS(TYPE, NAME, DEFAULT);                                 \
     RO_PROPERTY_OWNER_VARIABLES(TYPE, NAME);                                \
-    RO_PROPERTY_OWNER_DEFAULT_ACCESSOR(TYPE, NAME);
+    DEFAULT_PROPERTY_GET(TYPE, NAME);
 
-// A read-write primitive property with default accessor
-#define rw_property_cm(TYPE, NAME, DEFAULT)                                 \
+// A read-write primitive property with no default setter
+#define rw_property_custom_set(TYPE, NAME, DEFAULT)                         \
 public:                                                                     \
     RW_PROPERTY_CLASS(TYPE, NAME, DEFAULT);                                 \
     RW_PROPERTY_OWNER_VARIABLES(TYPE, NAME);                                \
-    RW_PROPERTY_OWNER_DEFAULT_ACCESSOR(TYPE, NAME);
+    DEFAULT_PROPERTY_GET(TYPE, NAME);
 
 // A read-only primitive property with no default functions
-#define ro_property_cam(TYPE, NAME, DEFAULT)                                \
+#define ro_property_custom_get_set(TYPE, NAME, DEFAULT)                     \
 public:                                                                     \
     RO_PROPERTY_CLASS(TYPE, NAME, DEFAULT);                                 \
     RO_PROPERTY_OWNER_VARIABLES(TYPE, NAME);
 
 // A read-write primitive property with no default functions
-#define rw_property_cam(TYPE, NAME, DEFAULT)                                \
+#define rw_property_custom_get_set(TYPE, NAME, DEFAULT)                     \
 public:                                                                     \
     RW_PROPERTY_CLASS(TYPE, NAME, DEFAULT);                                 \
     RW_PROPERTY_OWNER_VARIABLES(TYPE, NAME);
 
 
-// A read-only pointer property with default accessor/mutator
+// A read-only pointer property with default getter/setter
 #define ro_ptr_property(TYPE, NAME, DEFAULT)                                \
 public:                                                                     \
     RO_PTR_PROPERTY_CLASS(TYPE, NAME, DEFAULT);                             \
     RO_PTR_PROPERTY_OWNER_VARIABLES(TYPE, NAME);                            \
-    RO_PTR_PROPERTY_OWNER_DEFAULT_ACCESSOR(TYPE, NAME);                     \
-    RO_PTR_PROPERTY_OWNER_DEFAULT_MUTATOR(TYPE, NAME);
+    DEFAULT_PTR_PROPERTY_GET(TYPE, NAME);                                   \
+    DEFAULT_PTR_PROPERTY_SET(TYPE, NAME);
 
-// A read-write pointer property with default accessor/mutator
+// A read-write pointer property with default getter/setter
 #define rw_ptr_property(TYPE, NAME, DEFAULT)                                \
 public:                                                                     \
     RW_PTR_PROPERTY_CLASS(TYPE, NAME, DEFAULT);                             \
     RW_PTR_PROPERTY_OWNER_VARIABLES(TYPE, NAME);                            \
-    RW_PTR_PROPERTY_OWNER_DEFAULT_ACCESSOR(TYPE, NAME);                     \
-    RW_PTR_PROPERTY_OWNER_DEFAULT_MUTATOR(TYPE, NAME);
+    DEFAULT_PTR_PROPERTY_GET(TYPE, NAME);                                   \
+    DEFAULT_PTR_PROPERTY_SET(TYPE, NAME);
 
-// A read-only pointer property with default mutator
-#define ro_ptr_property_ca(TYPE, NAME, DEFAULT)                             \
+// A read-only pointer property with no default getter
+#define ro_ptr_property_custom_get(TYPE, NAME, DEFAULT)                     \
 public:                                                                     \
     RO_PTR_PROPERTY_CLASS(TYPE, NAME, DEFAULT);                             \
     RO_PTR_PROPERTY_OWNER_VARIABLES(TYPE, NAME);                            \
-    RO_PTR_PROPERTY_OWNER_DEFAULT_MUTATOR(TYPE, NAME);
+    DEFAULT_PTR_PROPERTY_SET(TYPE, NAME);
 
-// A read-write pointer property with default mutator
-#define rw_ptr_property_ca(TYPE, NAME, DEFAULT)                             \
+// A read-write pointer property with no default getter
+#define rw_ptr_property_custom_get(TYPE, NAME, DEFAULT)                     \
 public:                                                                     \
     RW_PTR_PROPERTY_CLASS(TYPE, NAME, DEFAULT);                             \
     RW_PTR_PROPERTY_OWNER_VARIABLES(TYPE, NAME);                            \
-    RW_PTR_PROPERTY_OWNER_DEFAULT_MUTATOR(TYPE, NAME);
+    DEFAULT_PTR_PROPERTY_SET(TYPE, NAME);
 
-// A read-only pointer property with default accessor
-#define ro_ptr_property_cm(TYPE, NAME, DEFAULT)                             \
+// A read-only pointer property with no default setter
+#define ro_ptr_property_custom_set(TYPE, NAME, DEFAULT)                             \
 public:                                                                     \
     RO_PTR_PROPERTY_CLASS(TYPE, NAME, DEFAULT);                             \
     RO_PTR_PROPERTY_OWNER_VARIABLES(TYPE, NAME);                            \
-    RO_PTR_PROPERTY_OWNER_DEFAULT_ACCESSOR(TYPE, NAME);
+    DEFAULT_PTR_PROPERTY_GET(TYPE, NAME);
 
-// A read-write pointer property with default accessor
-#define rw_ptr_property_cm(TYPE, NAME, DEFAULT)                             \
+// A read-write pointer property with no default setter
+#define rw_ptr_property_custom_set(TYPE, NAME, DEFAULT)                             \
 public:                                                                     \
     RW_PTR_PROPERTY_CLASS(TYPE, NAME, DEFAULT);                             \
     RW_PTR_PROPERTY_OWNER_VARIABLES(TYPE, NAME);                            \
-    RW_PTR_PROPERTY_OWNER_DEFAULT_ACCESSOR(TYPE, NAME);
+    DEFAULT_PTR_PROPERTY_GET(TYPE, NAME);
 
 // A read-only pointer property with no default functions
-#define ro_ptr_property_cam(TYPE, NAME, DEFAULT)                            \
+#define ro_ptr_property_custom_get_set(TYPE, NAME, DEFAULT)                 \
 public:                                                                     \
     RO_PTR_PROPERTY_CLASS(TYPE, NAME, DEFAULT);                             \
     RO_PTR_PROPERTY_OWNER_VARIABLES(TYPE, NAME);
 
 // A read-write pointer property with no default functions
-#define rw_ptr_property_cam(TYPE, NAME, DEFAULT)                            \
+#define rw_ptr_property_custom_get_set(TYPE, NAME, DEFAULT)                 \
 public:                                                                     \
     RW_PTR_PROPERTY_CLASS(TYPE, NAME, DEFAULT);                             \
     RW_PTR_PROPERTY_OWNER_VARIABLES(TYPE, NAME);
 
+// A read-only list property with default size/get/set/add/delete
 #define ro_list_property(TYPE, NAME)                                        \
 public:                                                                     \
     RO_LIST_PROPERTY_CLASS(TYPE, NAME);                                     \
     RO_LIST_PROPERTY_OWNER_VARIABLES(TYPE, NAME);                           \
-    RO_LIST_PROPERTY_OWNER_DEFAULT_ACCESSOR(TYPE, NAME);                    \
-    RO_LIST_PROPERTY_OWNER_DEFAULT_MUTATOR(TYPE, NAME);
+    DEFAULT_LIST_PROPERTY_SIZE(TYPE, NAME);                                 \
+    DEFAULT_LIST_PROPERTY_GET(TYPE, NAME);                                  \
+    DEFAULT_LIST_PROPERTY_SET(TYPE, NAME);                                  \
+    DEFAULT_LIST_PROPERTY_ADD(TYPE, NAME);                                  \
+    DEFAULT_LIST_PROPERTY_DELETE(TYPE, NAME);
 
+// A read-write list property with default size/get/set/add/delete
 #define rw_list_property(TYPE, NAME)                                        \
 public:                                                                     \
     RW_LIST_PROPERTY_CLASS(TYPE, NAME);                                     \
     RW_LIST_PROPERTY_OWNER_VARIABLES(TYPE, NAME);                           \
-    RW_LIST_PROPERTY_OWNER_DEFAULT_ACCESSOR(TYPE, NAME);                    \
-    RW_LIST_PROPERTY_OWNER_DEFAULT_MUTATOR(TYPE, NAME);
-
-#define ro_list_property_ca(TYPE, NAME)                                     \
-public:                                                                     \
-    RO_LIST_PROPERTY_CLASS(TYPE, NAME);                                     \
-    RO_LIST_PROPERTY_OWNER_VARIABLES(TYPE, NAME);                           \
-    RO_LIST_PROPERTY_OWNER_DEFAULT_MUTATOR(TYPE, NAME);
-
-#define rw_list_property_ca(TYPE, NAME)                                     \
-public:                                                                     \
-    RW_LIST_PROPERTY_CLASS(TYPE, NAME);                                     \
-    RW_LIST_PROPERTY_OWNER_VARIABLES(TYPE, NAME);                           \
-    RW_LIST_PROPERTY_OWNER_DEFAULT_MUTATOR(TYPE, NAME);
-
-#define ro_list_property_cm(TYPE, NAME)                                     \
-public:                                                                     \
-    RO_LIST_PROPERTY_CLASS(TYPE, NAME);                                     \
-    RO_LIST_PROPERTY_OWNER_VARIABLES(TYPE, NAME);                           \
-    RO_LIST_PROPERTY_OWNER_DEFAULT_ACCESSOR(TYPE, NAME);
-
-#define rw_list_property_cm(TYPE, NAME)                                     \
-public:                                                                     \
-    RW_LIST_PROPERTY_CLASS(TYPE, NAME);                                     \
-    RW_LIST_PROPERTY_OWNER_VARIABLES(TYPE, NAME);                           \
-    RW_LIST_PROPERTY_OWNER_DEFAULT_ACCESSOR(TYPE, NAME);
-
-#define ro_list_property_cam(TYPE, NAME)                                    \
-public:                                                                     \
-    RO_LIST_PROPERTY_CLASS(TYPE, NAME);                                     \
-    RO_LIST_PROPERTY_OWNER_VARIABLES(TYPE, NAME);
-
-#define rw_list_property_cam(TYPE, NAME)                                    \
-public:                                                                     \
-    RW_LIST_PROPERTY_CLASS(TYPE, NAME);                                     \
-    RW_LIST_PROPERTY_OWNER_VARIABLES(TYPE, NAME);
-
-
-
-// Macros for creating functions prototypes (these are useful for making
-// custom accessor/mutator functions)
-#define property_accessor(TYPE, NAME)                                       \
-    PROPERTY_OWNER_ACCESSOR(TYPE, NAME)
-
-#define property_mutator(TYPE, NAME)                                        \
-    PROPERTY_OWNER_MUTATOR(TYPE, NAME)
-
-#define ptr_property_accessor(TYPE, NAME)                                   \
-    PTR_PROPERTY_OWNER_ACCESSOR(TYPE, NAME)
-
-#define ptr_property_mutator(TYPE, NAME)                                    \
-    PTR_PROPERTY_OWNER_MUTATOR(TYPE, NAME)
-
-#define list_property_accessor(TYPE, NAME)                                  \
-    LIST_PROPERTY_OWNER_ACCESSOR(TYPE, NAME)
-
-#define list_property_mutator(TYPE, NAME)                                   \
-    LIST_PROPERTY_OWNER_MUTATOR(TYPE, NAME)
-
-#define list_property_adder(TYPE, NAME)                                     \
-    LIST_PROPERTY_OWNER_ADDER(TYPE, NAME)
-
-#define list_property_deleter(TYPE, NAME)                                   \
-    LIST_PROPERTY_OWNER_DELETER(TYPE, NAME)
+    DEFAULT_LIST_PROPERTY_SIZE(TYPE, NAME);                                 \
+    DEFAULT_LIST_PROPERTY_GET(TYPE, NAME);                                  \
+    DEFAULT_LIST_PROPERTY_SET(TYPE, NAME);                                  \
+    DEFAULT_LIST_PROPERTY_ADD(TYPE, NAME);                                  \
+    DEFAULT_LIST_PROPERTY_DELETE(TYPE, NAME);
 
 #endif
-

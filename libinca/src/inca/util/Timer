@@ -89,8 +89,8 @@ namespace inca {
 // Import scalar math support
 #include <inca/math.hpp>
 
-// Import listener notification support
-#include <inca/util/ListenerNotifier>
+// Import our collection of weakly-help shared pointers
+#include <inca/util/weak_ptr_set>
 
 
 /*****************************************************************************
@@ -122,8 +122,8 @@ public:
 
     // Definition of listener notification stuff
     typedef TimerListener<scalar>                   Listener;
-    typedef ListenerNotifier<Listener>              ListenerNotifier;
-    typedef typename ListenerNotifier::ListenerPtr  ListenerPtr;
+    typedef weak_ptr_set<Listener>                  ListenerSet;
+    typedef typename ListenerSet::shared_pointer    ListenerPtr;
 
 
 /*---------------------------------------------------------------------------*
@@ -650,58 +650,50 @@ public:
     // Listener management
     void addTimerListener(ListenerPtr ls) {
         //BOOST_STATIC_ASSERT(generateEvents);   // Make sure we're equipped...
-        notifier.add(ls);
+        listeners.insert(ls);
     }
 
     void removeTimerListener(ListenerPtr ls) {
         //BOOST_STATIC_ASSERT(generateEvents);   // Make sure we're equipped...
-        notifier.remove(ls);
+        listeners.erase(ls);
     }
 
 protected:
     // Send timerStarted events to each listener who is still alive
     void fireStarted(scalar_arg_t time) {
         //BOOST_STATIC_ASSERT(generateEvents);   // Make sure we're equipped...
-        ListenerPtr ls = notifier.firstListener();
-        while (ls) {
-            ls->timerStarted(time);
-            ls = notifier.nextListener();
-        }
+        typename ListenerSet::iterator i;
+        for (i = listeners.begin(); i != listeners.end(); ++i)
+            (*i)->timerStarted(time);
     }
 
     // Send timerStopped events to each listener who is still alive
     void fireStopped(scalar_arg_t time) {
         //BOOST_STATIC_ASSERT(generateEvents);   // Make sure we're equipped...
-        ListenerPtr ls = notifier.firstListener();
-        while (ls) {
-            ls->timerStopped(time);
-            ls = notifier.nextListener();
-        }
+        typename ListenerSet::iterator i;
+        for (i = listeners.begin(); i != listeners.end(); ++i)
+            (*i)->timerStopped(time);
     }
 
     // Send timerSet events to each listener who is still alive
     void fireSet(scalar_arg_t time) {
         //BOOST_STATIC_ASSERT(generateEvents);   // Make sure we're equipped...
-        ListenerPtr ls = notifier.firstListener();
-        while (ls) {
-            ls->timerSet(time);
-            ls = notifier.nextListener();
-        }
+        typename ListenerSet::iterator i;
+        for (i = listeners.begin(); i != listeners.end(); ++i)
+            (*i)->timerSet(time);
     }
 
     // Sends timerPulsed events to each listener who is still alive.
     // Prints a warning if this timer was compiled w/o notification support.
     void firePulsed(scalar_arg_t time) {
         //BOOST_STATIC_ASSERT(generateEvents);   // Make sure we're equipped...
-        ListenerPtr ls = notifier.firstListener();
-        while (ls) {
-            ls->timerPulsed(time);
-            ls = notifier.nextListener();
-        }
+        typename ListenerSet::iterator i;
+        for (i = listeners.begin(); i != listeners.end(); ++i)
+            (*i)->timerPulsed(time);
     }
 
     // This little guy helps us manage our "audience"
-    ListenerNotifier notifier;
+    ListenerSet listeners;
 };
 
 #endif

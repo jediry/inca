@@ -1,0 +1,129 @@
+/** -*- C++ -*-
+ *
+ * \file weak_ptr_set
+ *
+ *XXX This could probably be done more efficiently
+ */
+
+#ifndef INCA_UTIL_WEAK_PTR_SET
+#define INCA_UTIL_WEAK_PTR_SET
+
+// Import system configuration
+#include <inca/inca-common.h>
+
+
+// This is part of the Inca utilities collection
+namespace inca {
+    // Forward declarations
+    template <typename T> class weak_ptr_set;
+};
+
+// Import weak_ptr_iterator definition
+#include "weak_ptr_iterator"
+
+
+template <typename T>
+class inca::weak_ptr_set : public hash_set< weak_ptr<T> > {
+/*---------------------------------------------------------------------------*
+ | Type definitions
+ *---------------------------------------------------------------------------*/
+private:
+    // Underlying container typedef
+    typedef hash_set< weak_ptr<T> >                 container_type;
+    typedef typename container_type::iterator       cnt_iterator;
+    typedef typename container_type::const_iterator cnt_const_iterator;
+
+public:
+    // Type definitions
+    typedef T                               value_type;
+    typedef value_type *                    pointer;
+    typedef const value_type *              const_pointer;
+    typedef T &                             reference;
+    typedef const T &                       const_reference;
+    typedef shared_ptr<T>                   shared_pointer;
+    typedef weak_ptr<T>                     weak_pointer;
+
+    // Container type definitions
+    typedef typename container_type::size_type          size_type;
+    typedef typename container_type::difference_type    difference_type;
+
+    // Iterator typedefs
+    typedef weak_ptr_iterator<cnt_iterator>         iterator;
+    typedef weak_ptr_iterator<cnt_const_iterator>   const_iterator;
+
+
+/*---------------------------------------------------------------------------*
+ | Constructors
+ *---------------------------------------------------------------------------*/
+    // Create an empty weak_ptr_set
+    weak_ptr_set() : container_type() { }
+    
+    // Create a weak_ptr_set with at least n buckets
+    explicit weak_ptr_set(size_type n) : container_type(n) { }
+
+    // Create a copy of another weak_ptr_set
+    weak_ptr_set(const weak_ptr_set &set) : container_type(set) { }
+
+    // Not implemented:
+    //      Constructors taking hash and equality functions (superfluous)
+    //      Constructors taking iterators (I'm lazy)
+
+
+/*---------------------------------------------------------------------------*
+ | Iterator access
+ *---------------------------------------------------------------------------*/
+    // Why iterator and not const_iterator?
+    iterator begin() const { return iterator(container_type::begin()); }
+    iterator end()   const { return iterator(container_type::end()); }
+
+
+/*---------------------------------------------------------------------------*
+ | Container modification
+ *---------------------------------------------------------------------------*/
+    pair<iterator, bool> insert(shared_pointer ptr) {
+        // We don't add NULL pointers
+        if (! ptr)
+            // This probably isn't standard-conforming...
+            return pair<iterator, bool>(end(), false);
+
+        // Hand off to the underlying container
+        pair<cnt_iterator, bool> result
+            = container_type::insert(weak_pointer(ptr));
+        return pair<iterator, bool>(iterator(result.first), result.second);
+    }
+
+    template <class InputIterator>
+    void insert(InputIterator first, InputIterator last) {
+        for (InputIterator current = first; current != last; ++current)
+            insert(weak_pointer(*current));
+    }
+
+    void erase(iterator pos) {
+        container_type::erase(pos.base());
+    }
+
+    size_type erase(shared_pointer ptr) {
+        container_type::erase(weak_pointer(ptr));
+    }
+
+    void erase(iterator first, iterator last) {
+        container_type::erase(first.base(), last.base());
+    }
+
+    iterator find(shared_pointer ptr) {
+        return iterator(container_type::find(weak_pointer(ptr)));
+    }
+
+    size_type count(shared_pointer ptr) {
+        return container_type::count(weak_pointer(ptr));
+    }
+
+    pair<iterator, iterator> equal_range(shared_pointer ptr) {
+        pair<cnt_iterator, cnt_iterator> result;
+        result = container_type::equal_range(weak_pointer(ptr));
+        return pair<iterator, iterator>(iterator(result.first),
+                                        iterator(result.second));
+    }
+};
+
+#endif

@@ -35,10 +35,28 @@
         // Comparison function for shared_ptr
         template <class T>
         struct less< boost::shared_ptr<T> >
-            : public binary_function < boost::shared_ptr<T>, boost::shared_ptr<T>, bool> {
+            : public binary_function <boost::shared_ptr<T>,
+                                      boost::shared_ptr<T>,
+                                      bool> {
         public:
-            bool operator()(boost::shared_ptr<T> p1, boost::shared_ptr<T> p2) const {
-                return comp(p1.get(), p2.get());
+            bool operator()(boost::shared_ptr<T> p1,
+                            boost::shared_ptr<T> p2) const {
+                return p1 < p2; // Already implemented
+            }
+        protected:
+            less<T *> comp;
+        };
+
+        // Comparison function for weak_ptr
+        template <class T>
+        struct less< boost::weak_ptr<T> >
+            : public binary_function <boost::weak_ptr<T>,
+                                      boost::weak_ptr<T>,
+                                      bool> {
+        public:
+            bool operator()(boost::weak_ptr<T> p1,
+                            boost::weak_ptr<T> p2) const {
+                return p1 < p2; // Already implemented
             }
         protected:
             less<T *> comp;
@@ -51,6 +69,13 @@
         template <class T>
         inline size_t hash_value(boost::shared_ptr<T> ptr) {
             return hash_value(ptr.get());
+        }
+
+        // Hash function for weak_ptr
+        template <class T>
+        inline size_t hash_value(boost::weak_ptr<T> ptr) {
+            // First convert to shared_ptr, then hash
+            return hash_value(boost::shared_ptr<T>(ptr).get());
         }
     };
 
@@ -82,6 +107,16 @@
                 return s1 == s2;
             }
         };
+
+        template <typename T>   // Pointer equality for Boost weak_ptrs
+        struct equal_to< boost::weak_ptr<T> >
+                : public binary_function<boost::weak_ptr<T>,
+                                         boost::weak_ptr<T>,
+                                         bool> {
+            bool operator() (boost::weak_ptr<T> p1, boost::weak_ptr<T> p2) {
+                return boost::shared_ptr<T>(p1) == boost::shared_ptr<T>(p2);
+            }
+        };
     };
 
     // Stick a few more things into the hash namespace
@@ -110,6 +145,16 @@
         struct hash< boost::shared_ptr<Key> > {
             size_t operator() (boost::shared_ptr<Key> ptr) const {
                 return hashPtr(ptr.get());
+            }
+
+        protected:
+            hash<Key *> hashPtr;
+        };
+
+        template<class Key>         // Hash-code for Boost weak_ptrs
+        struct hash< boost::weak_ptr<Key> > {
+            size_t operator() (boost::weak_ptr<Key> ptr) const {
+                return hashPtr(boost::shared_ptr<Key>(ptr).get());
             }
 
         protected:

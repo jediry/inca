@@ -1,0 +1,194 @@
+/* -*- C++ -*-
+ *
+ * File: weak_ptr_iterator
+ * 
+ * Author: Ryan L. Saunders
+ *
+ * Copyright 2004, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ *      This file implements STL-compatible iterator types that can be layered
+ *      on top of those created by existing STL containers to provide
+ *      additional functionality.
+ *
+ *      The weak_ptr_iterator does stuff. XXX
+ *
+ *
+ *      ??? How do we ensure that this is only instantiated for weak_ptr types?
+ *      ??? How do we avoid pruning for const_iterators/input_iterators
+ *      ??? How do we choose whether or not to have -- operators?
+ *      ??? Is there a way to give a -> definition that's meaningful?
+ */
+
+#ifndef INCA_UTIL_WEAK_PTR_ITERATOR
+#define INCA_UTIL_WEAK_PTR_ITERATOR
+
+// Import system configuration
+#include <inca/inca-common.h>
+
+// This is part of the Inca utilities collection
+namespace inca {
+    // Forward declarations
+    template <typename _Iterator> class weak_ptr_iterator;
+};
+
+// Import the STL's iterator implementation
+#include <iterator>
+
+template <typename _Iterator>
+class inca::weak_ptr_iterator
+    : public std::iterator<     // Inherit the basic STL iterator
+            typename std::iterator_traits<_Iterator>::iterator_category,
+            typename std::iterator_traits<_Iterator>::value_type::element_type,
+            typename std::iterator_traits<_Iterator>::difference_type,
+            typename std::iterator_traits<_Iterator>::value_type::element_type *,
+            typename std::iterator_traits<_Iterator>::value_type::element_type &> {
+private:
+    typedef std::iterator_traits<_Iterator> traits;
+
+public:
+    // Iterator type definitions
+    typedef _Iterator                                   iterator_type;
+    typedef typename traits::value_type::element_type   value_type;
+    typedef typename traits::difference_type            difference_type;
+    typedef value_type *                                pointer;
+    typedef value_type &                                reference;
+    typedef boost::shared_ptr<value_type>               shared_pointer;
+    typedef boost::weak_ptr<value_type>                 weak_pointer;
+
+
+/*---------------------------------------------------------------------------*
+ | Constructors
+ *---------------------------------------------------------------------------*/
+public:
+    // Default constructor
+    weak_ptr_iterator() : current() { }
+
+    // Constructor accepting an underlying iterator
+    explicit
+    weak_ptr_iterator(iterator_type iter) : current(iter) { }
+
+    // Normal copy constructor
+    weak_ptr_iterator(const weak_ptr_iterator &iter)
+        : current(iter.current) { }
+
+    // A weak_ptr iterator can be copied from a similar type (?)
+    template <typename _It>
+    weak_ptr_iterator(const weak_ptr_iterator<_It> &iter)
+        : current(iter.base()) { }
+
+
+/*---------------------------------------------------------------------------*
+ | Accessors and operators
+ *---------------------------------------------------------------------------*/
+public:
+    // Access to the underlying iterator that does all the work
+    iterator_type base() const { return current; }
+
+    // Get a shared_ptr for the current item (or for the next non-dead item)
+    shared_pointer operator*() {
+        iterator_type end;
+        shared_pointer ptr;
+
+        // While we've not found one and there are still more to look at...
+        while (!ptr && current != end) {
+            ptr = current->lock();  // Try to get a shared_ptr from weak_ptr
+            if (!ptr) {
+                // Handle the dead pointer in the appropriate way
+//                if (pruneDeadPointers)  current = container.erase(current);
+//                else                    ++current;  // Just skip it
+                ++current;
+            }
+        }
+        return ptr; // This will return a NULL pointer if we hit the end
+    }
+
+    // WARNING: This is not safe w/r to shared_ptr deletions
+    pointer operator->() {
+        return (*this).get();
+    }
+
+    // Prefix increment operator
+    weak_ptr_iterator & operator++() {
+        ++current;  // Move along our slave
+        return *this;
+    }
+
+    // Postfix increment operator
+    weak_ptr_iterator operator++(int) {
+        weak_ptr_iterator temp = *this;
+        ++current;
+        return temp;
+    }
+
+    // Not implementing the following operations:
+    //      i--
+    //      --i
+    //      i + n, n + i
+    //      i += n
+    //      i - n
+    //      i -= n
+    //      i[n]
+
+protected:
+    iterator_type current;  // The iterator we're using to do the hard stuff
+};
+
+
+/*---------------------------------------------------------------------------*
+ | Iterator comparison operators
+ *---------------------------------------------------------------------------*/
+namespace inca {
+    // Iterator equality comparison
+    template <typename _Iterator>
+    inline bool operator==(const weak_ptr_iterator<_Iterator> &x,
+                           const weak_ptr_iterator<_Iterator> &y) {
+        return x.base() == y.base();
+    }
+
+    // Iterator less-than comparison
+    template <typename _Iterator>
+    inline bool operator<(const weak_ptr_iterator<_Iterator> &x,
+                          const weak_ptr_iterator<_Iterator> &y) {
+        return x.base() < y.base();
+    }
+
+    // Iterator non-equality comparison
+    template <typename _Iterator>
+    inline bool operator!=(const weak_ptr_iterator<_Iterator> &x,
+                           const weak_ptr_iterator<_Iterator> &y) {
+        return ! (x == y);
+    }
+
+    // Iterator greater-than comparison
+    template <typename _Iterator>
+    inline bool operator>(const weak_ptr_iterator<_Iterator> &x,
+                          const weak_ptr_iterator<_Iterator> &y) {
+        return (y < x);
+    }
+
+    // Iterator less-than-or-equal comparison
+    template <typename _Iterator>
+    inline bool operator<=(const weak_ptr_iterator<_Iterator> &x,
+                           const weak_ptr_iterator<_Iterator> &y) {
+        return ! (y < x);
+    }
+
+    // Iterator greater-than-or-equal comparison
+    template <typename _Iterator>
+    inline bool operator>=(const weak_ptr_iterator<_Iterator> &x,
+                           const weak_ptr_iterator<_Iterator> &y) {
+        return ! (x < y);
+    }
+
+    // The number of elements difference between two iterators
+    // XXX MAY BE BROKEN!!!
+    template <typename _Iterator>
+    inline typename weak_ptr_iterator<_Iterator>::difference_type
+    operator-(const weak_ptr_iterator<_Iterator> &x,
+              const weak_ptr_iterator<_Iterator> &y) {
+        return x.base() - y.base();
+    }
+};
+
+#endif
