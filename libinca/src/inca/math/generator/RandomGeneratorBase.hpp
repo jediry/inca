@@ -33,7 +33,7 @@ namespace inca {
 class inca::math::RandomGeneratorBase {
 public:
     // Constructor using a random (timer-based) seed
-    RandomGeneratorBase() { reseed(); }
+    RandomGeneratorBase() { /*reseed();*/ }
 
     // Constructor accepting a user-specified seed
     RandomGeneratorBase(unsigned int s) { reseed(s); }
