@@ -67,8 +67,9 @@ public:
  | There can be only one. Application behaves (almost) as a singleton object.
  *---------------------------------------------------------------------------*/
 public:
-    // This returns THE instance.
-    static Application & instance() { return *_instance; }
+    static bool instanceExists();       // Do we have an Application?
+    static Application & instance();    // Get it.
+    static void destroy();              // Destroy it (danger!)
 
 protected:
     // Singleton pointer to THE application
@@ -76,13 +77,16 @@ protected:
 
 
 /*---------------------------------------------------------------------------*
- | Initialization functions
+ | Constructors & destructor
  *---------------------------------------------------------------------------*/
 public:
     // Constructor
-    explicit Application();
+    Application();
 
-    // Call all of the other initialization functions
+    // Destructor
+    ~Application();
+
+    // Framework initialization function (called by main() after constructor)
     void initialize(int &argc, char **argv);
 
 
@@ -105,10 +109,6 @@ public:
     // Initialize the UI-toolkit and process toolkit-specific arguments
     virtual void initializeToolkit(int &argc, char **argv) = 0;
 
-    // Create a Window using the related toolkit
-    virtual WindowPtr createWindow(const string & title) = 0;
-    virtual WindowPtr createWindow(WidgetPtr w, const string & title) = 0;
-
     // Launch the application's event-handling mechanism (may not return)
     virtual int run() = 0;
 
@@ -117,13 +117,18 @@ public:
 
 
 /*---------------------------------------------------------------------------*
- | GUI management functions
+ | Window management functions
  *---------------------------------------------------------------------------*/
 public:
-    void registerComponent(UIComponentPtr uic);
+    void registerComponent(UIComponentPtr c);
+    
+    virtual void registerWindow(WindowPtr w);
+    WindowPtr getWindowForID(IDType id);
+    virtual void destroyWindow(IDType id);
 
 protected:
     std::vector<UIComponentPtr> components;
+    std::vector<WindowPtr> windows;
 
 
 /*---------------------------------------------------------------------------*

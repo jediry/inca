@@ -23,7 +23,7 @@ RENDERER_TEMPLATE
 class RENDERER::MatrixStack : public RENDERER::Component {
 public:
     // Constructor
-    MatrixStack(RENDERER &r, id_t id);
+    MatrixStack(RENDERER &r, IDType id);
 
     // Stack depth functions
     int stackDepth() const;         // How many matrices right now (min. 1)?
@@ -71,7 +71,7 @@ public:
 protected:
     void ensureActive() const;  // Make sure I'm the active matrix
 
-    const   id_t id;            // API's ID for this matrix stack
+    const   IDType id;            // API's ID for this matrix stack
     mutable int depth;          // How many matrices on the stack right now?
             int maxDepth;       // How many can it hold?
     mutable Matrix current;     // The current top of the stack

@@ -64,7 +64,7 @@ class inca::world::SelectionSet {
  *---------------------------------------------------------------------------*/
 protected:
     // Container typedefs
-    typedef std::set<id_t>  IDSet;
+    typedef std::set<IDType>  IDSet;
 
 public:
     // Iterator typedefs -- passed up from the set
@@ -89,11 +89,11 @@ public:
  | Element operations & tests
  *---------------------------------------------------------------------------*/
 public:
-    size_t size() const;                // How many items in the selection?
-    void select(id_t id);               // Make this item selected
-    void deselect(id_t id);             // Make this item unselected
-    bool isSelected(id_t id) const;     // Is this item selected?
-    void setSelected(id_t id, bool s);  // Make it so
+    SizeType size() const;              // How many items in the selection?
+    void select(IDType id);               // Make this item selected
+    void deselect(IDType id);             // Make this item unselected
+    bool isSelected(IDType id) const;     // Is this item selected?
+    void setSelected(IDType id, bool s);  // Make it so
 
 
 /*---------------------------------------------------------------------------*
@@ -129,44 +129,45 @@ public:
  | template operators so that they can correctly call overloaded functions
  | in subclasses of SelectionSet without the need to make them virtual, and also
  | in order to generate the appropriate return type for functions that
- | return a SelectionSet.
+ | return a SelectionSet. Binary operators require that the two arguments be
+ | of the same type.
  *---------------------------------------------------------------------------*/
 
 // Import template metaprogramming constructs
-#include <inca/util/metaprogramming>
-#include <boost/type_traits.hpp>
+#include <inca/util/template-metaprogramming-macros.hpp>
 
-#define TEMPLATE        template <class _Sel>
-#define SELECTION       _Sel
-#define SELECTION_ARG   _Sel &
-#define SELECTION_CARG  const _Sel &
-#define SELECTION_RET   typename inca::constraint<boost::is_base_and_derived<inca::world::SelectionSet,_Sel>::value, _Sel>::satisfied
-#define BOOL_RET        typename inca::constraint<boost::is_base_and_derived<inca::world::SelectionSet,_Sel>::value, bool>::satisfied
+#define SEL_1_TEMPLATE  template <class _Sel2>
+#define SEL_2_TEMPLATE  template <class _Sel1, class _Sel2>
+#define SEL_LHS         _Sel1
+#define SEL_RHS         _Sel2
+#define SEL_1_RETURN    ENABLE_IF_T( DERIVED_FROM(SEL_RHS, inca::world::SelectionSet), SEL_RHS )
+#define SEL_2_RETURN    ENABLE_IF_T( AND2(DERIVED_FROM(SEL_LHS, inca::world::SelectionSet), IS_SAME(SEL_LHS, SEL_RHS)), SEL_RHS )
+#define BOOL_RETURN     ENABLE_IF_T( AND2(DERIVED_FROM(SEL_LHS, inca::world::SelectionSet), IS_SAME(SEL_LHS, SEL_RHS)), bool )
 
 
 /*---------------------------------------------------------------------------*
  | Mutating (computed assignment) set operators
  *---------------------------------------------------------------------------*/
 // Union-with operator
-TEMPLATE SELECTION_RET & operator+=(SELECTION_ARG s1, SELECTION_CARG s2) {
+SEL_2_TEMPLATE SEL_2_RETURN & operator+=(SEL_LHS & s1, const SEL_RHS & s2) {
     s1.unionWith(s2);
     return s1;
 }
 
 // Intersection-with operator
-TEMPLATE SELECTION_RET & operator^=(SELECTION_ARG s1, SELECTION_CARG s2) {
+SEL_2_TEMPLATE SEL_2_RETURN & operator^=(SEL_LHS & s1, const SEL_RHS & s2) {
     s1.intersectWith(s2);
     return s1;
 }
 
 // Difference-with operator
-TEMPLATE SELECTION_RET & operator-=(SELECTION_ARG s1, SELECTION_CARG s2) {
+SEL_2_TEMPLATE SEL_2_RETURN & operator-=(SEL_LHS & s1, const SEL_RHS & s2) {
     s1.differenceWith(s2);
     return s1;
 }
 
 // Symmetric-difference-with operator
-TEMPLATE SELECTION_RET & operator%=(SELECTION_ARG s1, SELECTION_CARG s2) {
+SEL_2_TEMPLATE SEL_2_RETURN & operator%=(SEL_LHS & s1, const SEL_RHS & s2) {
     s1.symmetricDifferenceWith(s2);
     return s1;
 }
@@ -176,77 +177,82 @@ TEMPLATE SELECTION_RET & operator%=(SELECTION_ARG s1, SELECTION_CARG s2) {
  | Non-mutating set operators
  *---------------------------------------------------------------------------*/
 // Union operator
-TEMPLATE SELECTION_RET & operator+(SELECTION_CARG s1, SELECTION_CARG s2) {
-    SELECTION s3(s1);
+SEL_2_TEMPLATE SEL_2_RETURN & operator+(const SEL_LHS & s1, const SEL_RHS & s2) {
+    SEL_RHS s3(s1);
     return s3 += s2;
 }
 
 // Intersection operator
-TEMPLATE SELECTION_RET operator^(SELECTION_CARG s1, SELECTION_CARG s2) {
-    SELECTION s3(s1);
+SEL_2_TEMPLATE SEL_2_RETURN operator^(const SEL_LHS & s1, const SEL_RHS & s2) {
+    SEL_RHS s3(s1);
     return s3 ^= s2;
 }
 
 // Difference operator
-TEMPLATE SELECTION_RET operator-(SELECTION_CARG s1, SELECTION_CARG s2) {
-    SELECTION s3(s1);
+SEL_2_TEMPLATE SEL_2_RETURN operator-(const SEL_LHS & s1, const SEL_RHS & s2) {
+    SEL_RHS s3(s1);
     return s3 -= s2;
 }
 
 // Symmetric-difference operator
-TEMPLATE SELECTION_RET operator%(SELECTION_CARG s1, SELECTION_CARG s2) {
-    SELECTION s3(s1);
+SEL_2_TEMPLATE SEL_2_RETURN operator%(const SEL_LHS & s1, const SEL_RHS & s2) {
+    SEL_RHS s3(s1);
     return s3 %= s2;
 }
-
 // Set complement operator
-TEMPLATE SELECTION_RET operator~(SELECTION_CARG s1) {
-    SELECTION s3(s1);
+#if 0   // VS can't hack it!
+SEL_1_TEMPLATE SEL_1_RETURN operator~(const SEL_RHS &s2) {
+    SEL_RHS s3(s2);
     s3.complement();
     return s3;
 }
-
+#endif
 
 /*---------------------------------------------------------------------------*
  | Set test operators
  *---------------------------------------------------------------------------*/
 // Set equality test
-TEMPLATE BOOL_RET operator==(SELECTION_CARG s1, SELECTION_CARG s2) {
+SEL_2_TEMPLATE BOOL_RETURN operator==(const SEL_LHS & s1, const SEL_RHS & s2) {
     return s1.isEqualTo(s2);
 }
 
 // Set inequality test
-TEMPLATE BOOL_RET operator!=(SELECTION_CARG s1, SELECTION_CARG s2) {
+SEL_2_TEMPLATE BOOL_RETURN operator!=(const SEL_LHS & s1, const SEL_RHS & s2) {
     return s1.isUnequalTo(s2);
 }
 
 // Superset test
-TEMPLATE BOOL_RET operator>=(SELECTION_CARG s1, SELECTION_CARG s2) {
+SEL_2_TEMPLATE BOOL_RETURN operator>=(const SEL_LHS & s1, const SEL_RHS & s2) {
     return s1.isSupersetOf(s2);
 }
 
 // Subset test
-TEMPLATE BOOL_RET operator<=(SELECTION_CARG s1, SELECTION_CARG s2) {
+SEL_2_TEMPLATE BOOL_RETURN operator<=(const SEL_LHS & s1, const SEL_RHS & s2) {
     return s1.isSubsetOf(s2);
 }
 
 // Strict superset test
-TEMPLATE BOOL_RET operator>(SELECTION_CARG s1, SELECTION_CARG s2) {
+SEL_2_TEMPLATE BOOL_RETURN operator>(const SEL_LHS & s1, const SEL_RHS & s2) {
     return s1.isStrictSupersetOf(s2);
 }
 
 // Strict subset test
-TEMPLATE BOOL_RET operator<(SELECTION_CARG s1, SELECTION_CARG s2) {
+SEL_2_TEMPLATE BOOL_RETURN operator<(const SEL_LHS & s1, const SEL_RHS & s2) {
     return s1.isStrictSubsetOf(s2);
 }
 
 
 // Clean up the preprocessor namespace
-#undef TEMPLATE
-#undef SELECTION
-#undef SELECTION_ARG
-#undef SELECTION_CARG
-#undef SELECTION_RET
-#undef BOOL_RET
+#undef SEL_1_TEMPLATE
+#undef SEL_2_TEMPLATE
+#undef SEL_LHS
+#undef SEL_RHS
+#undef SEL_1_RETURN
+#undef SEL_2_RETURN
+#undef BOOL_RETURN
+
+// Clean up the preprocessor's namespace
+#define UNDEFINE_INCA_METAPROGRAMMING_MACROS
+#include <inca/util/template-metaprogramming-macros.hpp>
 
 #endif

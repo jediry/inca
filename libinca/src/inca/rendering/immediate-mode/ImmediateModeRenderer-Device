@@ -25,7 +25,7 @@ RENDERER_TEMPLATE
 class RENDERER::Device : public RENDERER::Component {
 public:
     // Constructor
-    Device(RENDERER &r, id_t id);
+    Device(RENDERER &r, IDType id);
 };
 
 #endif

@@ -39,67 +39,59 @@
 namespace inca {
     namespace rendering {
         // Forward declarations
-        template <class APITraits> class ImmediateModeRenderer;
+        template <class APITraits, template <inca::SizeType> class CachePolicy>
+            class ImmediateModeRenderer;
     };
 };
 
 
 // Import superclass definitions
-#include "Renderer.hpp"
+//#include "../Renderer.hpp"
 #include <boost/utility.hpp>
 
 // Import rendering type definitions
 #include "types.hpp"
 #include "Primitive"
 
-// Import types from other Inca libraries
-#include <inca/math.hpp>
-#include <inca/world.hpp>
-
 
 // Import container definitions
 #include <vector>
-#include <boost/array.hpp>
-
-    //PickingProjection
-    //OrthographicProjection
-    //PerspectiveProjection
-    //ScreenspaceProjection
 
 
 // Make some REALLY long names shorter
-#define RENDERER_TEMPLATE template <class APITraits>
-#define RENDERER inca::rendering::ImmediateModeRenderer<APITraits>
+#define RENDERER_TEMPLATE template <class API, template <inca::SizeType> class CachePolicy>
+#define RENDERER inca::rendering::ImmediateModeRenderer<API, CachePolicy>
 
 
 RENDERER_TEMPLATE
-class inca::rendering::ImmediateModeRenderer : boost::noncopyable {
+class inca::rendering::ImmediateModeRenderer
+    : protected API, boost::noncopyable {
 /*---------------------------------------------------------------------------*
  | Type definitions
  *---------------------------------------------------------------------------*/
 public:
     // Geometric type definitions
-    typedef typename APITraits::geometry_t geometry_t;
-    INCA_MATH_LINALG_TYPES_CUSTOM(geometry_t, 2, /* */, 2D);
-    INCA_MATH_LINALG_TYPES_CUSTOM(geometry_t, 3, /* */, 3D);
-    typedef Quaternion3D                Quaternion;
-    typedef typename APITraits::Matrix  Matrix;
+    typedef typename API::geometry_t    geometry_t;
+    typedef typename API::Point3D       Point3D;
+    typedef typename API::Vector3D      Vector3D;
+    typedef typename API::Quaternion    Quaternion;
+    typedef typename API::Matrix        Matrix;
+    typedef typename API::Normal        Normal;
 
     // Color type definitions
-    typedef typename APITraits::color_t color_t;
-    typedef typename APITraits::Color   Color;
+    typedef typename API::color_t       color_t;
+    typedef typename API::Color         Color;
 
     // Texture coordinate type definitions
-    typedef typename APITraits::tex_coord_t tex_coord_t;
-    typedef typename APITraits::TexCoord    TexCoord;
-    typedef typename APITraits::Normal      Normal;
+    typedef typename API::tex_coord_t   tex_coord_t;
+    typedef typename API::TexCoord      TexCoord;
     
-    // Timer type definitions
-    typedef typename APITraits::timer_t timer_t;
-
     // Screenspace type definitions
-    typedef typename APITraits::Pixel       Pixel;
-    typedef typename APITraits::Dimension   Dimension;
+    typedef typename API::Pixel         Pixel;
+    typedef typename API::Dimension     Dimension;
+
+    // Timer type definitions
+    typedef typename API::timer_t       timer_t;
 
     // Import world object types
     typedef world::Transform Transform;
@@ -171,8 +163,7 @@ public:
     MatrixStack & colorMatrix();
 
     // Access to available hardware buffers
-    ColorBuffer & auxillaryBuffer(index_t i);
-    ColorBuffer & stencilBuffer();
+    ColorBuffer & auxillaryBuffer(IndexType i);
     ScalarBuffer & depthBuffer();
     AccumulationBuffer & accumulationBuffer();
     StencilBuffer & stencilBuffer();
@@ -232,14 +223,15 @@ public:
  | Selection functions
  *---------------------------------------------------------------------------*/
 public:
-    void setSelectionID(id_t id) const;
-    void pushSelectionID(id_t id) const;
+    void setSelectionID(IDType id) const;
+    void pushSelectionID(IDType id) const;
     void popSelectionID() const;
 //    void getSelectedIDs(world::SelectionSet &s) const;
 };
 
 
 // Import implementation of renderer sub-objects
+#include "ImmediateModeRenderer-Component"
 #include "ImmediateModeRenderer-Rasterizer"
 #include "ImmediateModeRenderer-Viewport"
 #include "ImmediateModeRenderer-MatrixStack"

@@ -23,7 +23,7 @@ RENDERER_TEMPLATE
 class RENDERER::TextureUnit : public RENDERER::Component {
 public:
     // Constructor
-    TextureUnit(RENDERER &r, id_t id);
+    TextureUnit(RENDERER &r, IDType id);
 };
 
 #endif

@@ -42,7 +42,7 @@ public:
     typedef const T *       const_pointer;
 
     // This is a sentinel value for "not found in list"
-    static const index_t NOT_FOUND = 0xFFFFFFFF;
+    static const IndexType NOT_FOUND = 0xFFFFFFFF;
 
 private:
     // Linked-list node
@@ -87,8 +87,8 @@ public:
  *---------------------------------------------------------------------------*/
 public:
     // Constructor giving capacity of data structure
-    random_access_list(size_t cap) : _capacity(cap), _size(0),
-                                     _dirty(false), _locked(false) {
+    random_access_list(SizeType cap) : _capacity(cap), _size(0),
+                                       _dirty(false), _locked(false) {
         // Allocate our array-style storage
         array = new value[capacity()];
 
@@ -112,8 +112,8 @@ public:
     }
 
 protected:
-    const size_t _capacity;     // The fixed maximum size of this structure
-    size_t _size;               // How full it is right now
+    const SizeType _capacity;   // The fixed maximum size of this structure
+    SizeType _size;             // How full it is right now
     bool _dirty;                // True if the array and list are out of sync
     bool _locked;               // True if we're in random-access mode
 
@@ -127,12 +127,12 @@ protected:
  | Query functions
  *---------------------------------------------------------------------------*/
 public:
-    size_t size()     const { return _size; }
-    size_t capacity() const { return _capacity; }
-    bool   empty()    const { return _size == 0; }
-    bool   full()     const { return _size == _capacity; }
-    bool   dirty()    const { return _dirty; }
-    bool   locked()   const { return _locked; }
+    SizeType size()     const { return _size; }
+    SizeType capacity() const { return _capacity; }
+    bool     empty()    const { return _size == 0; }
+    bool     full()     const { return _size == _capacity; }
+    bool     dirty()    const { return _dirty; }
+    bool     locked()   const { return _locked; }
 
     // To-string cast
     operator string() const {
@@ -151,8 +151,8 @@ public:
 
 protected:
     // These are mostly just useful for debugging
-    size_t freeNodeCount() const {
-        size_t count = 0;
+    SizeType freeNodeCount() const {
+        SizeType count = 0;
         node * n = freeNodeList;
         while(n != NULL) {
             n = n->next;
@@ -161,8 +161,8 @@ protected:
         return count;
     }
 
-    size_t usedNodeCount() const {
-        size_t count = 0;
+    SizeType usedNodeCount() const {
+        SizeType count = 0;
         node * n = listHead;
         while(n != NULL) {
             n = n->next;
@@ -183,7 +183,7 @@ public:
         // Clear the linked list
         listHead = listTail = NULL;
         freeNodeList = listNodes;
-        for (index_t i = 0; i < capacity() - 1; i++)    // Link 'em all
+        for (IndexType i = 0; i < capacity() - 1; i++)    // Link 'em all
             listNodes[i].next = &listNodes[i + 1];
         listNodes[capacity() - 1].next = NULL;  // Last guy points nowhere
     }
@@ -246,7 +246,7 @@ public:
 
     // Insert an item before the specified index, or at the end
     // (whichever is sooner)
-    bool insert(index_t beforeIndex, const_reference v) {
+    bool insert(IndexType beforeIndex, const_reference v) {
         if (locked()) {
             if (debug)
                 cerr << "Dummy! No inserts allowed while locked\n";
@@ -258,7 +258,7 @@ public:
         } else {
             // Walk down the list 'til we find our spot, or run out of road
             node * guyBefore = NULL, guyAfter = listHead;
-            for (index_t i = 0; i < beforeIndex; i++) {
+            for (IndexType i = 0; i < beforeIndex; i++) {
                 if (guyAfter == NULL)
                     break;
                 guyBefore = guyAfter;
@@ -318,7 +318,7 @@ public:
 
     // Remove the item at the specified index (returns false for an
     // out-of-range index)
-    bool erase(index_t atIndex) {
+    bool erase(IndexType atIndex) {
         if (locked()) {
             if (debug)
                 cerr << "Dummy! No deletes allowed while locked\n";
@@ -330,7 +330,7 @@ public:
         } else {
             // Walk down the list 'til we find our spot, or run out of road
             node * guyBefore = NULL, guyToDelete = listHead;
-            for (index_t i = 0; i < atIndex; i++) {
+            for (IndexType i = 0; i < atIndex; i++) {
                 if (guyToDelete == NULL)
                     return false;
                 guyBefore = guyToDelete;
@@ -415,7 +415,7 @@ protected:
 
     void rebuildArray() {
         node * n = listHead;
-        for (index_t i = 0; i < size(); i++) {
+        for (IndexType i = 0; i < size(); i++) {
             if (debug && n == NULL)
                 cerr << "Oh no! rebuildList() ran out of stuff at index " << i << '\n';
             array[i] = n->v;    // Copy over the value to the array
@@ -429,7 +429,7 @@ protected:
  | Random-access accessor functions (should only be called when locked)
  *---------------------------------------------------------------------------*/
 public:
-    reference operator[](index_t i) {
+    reference operator[](IndexType i) {
         // These should get compiled out if debug == false
         if (debug && ! locked())
             cerr << "Ack! Attempting to index into an unlocked "
@@ -440,7 +440,7 @@ public:
         return array[i];
     }
 
-    const_reference operator[](index_t i) const {
+    const_reference operator[](IndexType i) const {
         // These should get compiled out if debug == false
         if (debug && ! locked())
             cerr << "Ack! Attempting to index into an unlocked "
@@ -452,13 +452,13 @@ public:
     }
 
     // Do a linear search for the index 
-    index_t index_of(const_reference v) const {
-        index_t index = NOT_FOUND;
+    IndexType index_of(const_reference v) const {
+        IndexType index = NOT_FOUND;
         if (debug && ! locked()) {
             cerr << "Ack! Attempting to search an unlocked "
                     "RandomAccessList. Die foolish programmer!\n";
         } else if (locked()) {
-            for (index_t i = 0; i < capacity(); i++)
+            for (IndexType i = 0; i < capacity(); i++)
                 if (array[i] == v) {
                     index = i;
                     break;

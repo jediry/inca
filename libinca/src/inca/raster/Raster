@@ -7,9 +7,20 @@
  * Copyright 2004, Ryan L. Saunders. All rights reserved.
  *
  * Description:
- *      The Raster template class is an n-dimensional grid-like structure of
- *      identical elements. Possible uses for Rasters include images,
- *      2D or 3D fluid simulations, and voxel object representations.
+ *      The Raster template class is an arbitrary-dimensional grid-like
+ *      structure of homogeneous elements. It can be instantiated in a number
+ *      of ways, to achieve a wide array of ends. The most common use is as a
+ *      wrapper around an in-memory container of homogeneous elements, such as
+ *      a C-style array or MultiArray, or an image structure, such as that
+ *      provided by ImageMagick. Other uses for the Raster interface include
+ *      user-accessible pixel buffers in a 3D graphics accelerator card, and
+ *      the compile-time-optimized raster-processing expression mechanism in
+ *      this package.
+ *
+ *      The RasterView template class implements the Raster interface
+ *      functions common to all Raster implementations, specifically the
+ *      following:
+ *          (=) assignment operators from Raster and ElementType
  */
 
 #ifndef INCA_RASTER_RASTER
@@ -18,258 +29,129 @@
 // Import system configuration
 #include <inca/inca-common.h>
 
+// Import system configuration
+#include <inca/inca-common.h>
 
 // This is part of the Inca raster processing library
 namespace inca {
     namespace raster {
         // Forward declarations
-        template <typename ElementT, inca::size_t dim> class Raster;
+        template <class Base> class RasterView;
     };
 };
 
-// Import container definitions
-#include <boost/multi_array.hpp>
-#include <boost/static_assert.hpp>
+// Import multi-dimensional preprocessor metaprogramming macros
+#include <inca/util/multi-dimensional-macros.hpp>
 
 
-template <typename ElementT, inca::size_t dim>
-class inca::raster::Raster {
+template <class RasterBase>
+class inca::raster::RasterView : public RasterBase {
 /*---------------------------------------------------------------------------*
- | Type declarations
+ | Type & constant declarations
  *---------------------------------------------------------------------------*/
 public:
-    // Underlying MultiArray types
-    typedef boost::multi_array<ElementT, dim>       MultiArray;
-    typedef boost::multi_array_ref<ElementT, dim>   MultiArrayRef;
+    // Typedefs for me and my base (implementation) class
+    typedef RasterView<RasterBase>  ThisType;
+    typedef RasterBase              Base;
 
-    // Boost MultiArray-compliant type definitions
-    typedef typename MultiArray::element            element;
-    typedef typename MultiArray::index              index;
-    typedef typename MultiArray::index_gen          index_gen;
-    typedef typename MultiArray::index_range        index_range;
-    typedef typename MultiArray::extent_gen         extent_gen;
-    typedef typename MultiArray::extent_range       extent_range;
-    typedef typename MultiArray::storage_order_type storage_order_type;
+    // Numeric types
+    typedef typename Base::SizeType         SizeType;
+    typedef typename Base::IndexType        IndexType;
+    typedef typename Base::DifferenceType   DifferenceType;
 
-    // STL-compliant type definitions
-    typedef typename MultiArray::value_type         value_type;
-    typedef typename MultiArray::reference          reference;
-    typedef typename MultiArray::const_reference    const_reference;
-    typedef element *                               pointer;
-    typedef element const *                         const_pointer;
-    typedef typename MultiArray::difference_type    difference_type;
-    typedef typename MultiArray::size_type          size_type;
+    // Numeric list types
+    typedef typename Base::ExtentList       ExtentList;
+    typedef typename Base::IndexList        IndexList;
 
-    // STL-compliant iterator definitions
-    typedef typename MultiArray::iterator               iterator;
-    typedef typename MultiArray::const_iterator         const_iterator;
-    typedef typename MultiArray::reverse_iterator       reverse_iterator;
-    typedef typename MultiArray::const_reverse_iterator const_reverse_iterator;
+    // Iterator types
+    typedef typename Base::Iterator              Iterator;
+    typedef typename Base::ConstIterator         ConstIterator;
+    typedef typename Base::ReverseIterator       ReverseIterator;
+    typedef typename Base::ConstReverseIterator  ConstReverseIterator;
 
-    // Inca-compliant type definitions
-    typedef index index_type;
+    // How many dimensions do I have?
+    static const SizeType dimensionality = Base::dimensionality;
 
-    // Inca-compliant dimensionality declaration
-    static const size_type dimension = dim;
+    // What type of things do I contain?
+    typedef typename Base::ElementType      ElementType;
+    typedef typename Base::Reference        Reference;
+    typedef typename Base::ConstReference   ConstReference;
+    typedef typename Base::Pointer          Pointer;
+    typedef typename Base::ConstPointer     ConstPointer;
 
 
 /*---------------------------------------------------------------------------*
- | Constructors
+ | Assignment operators
  *---------------------------------------------------------------------------*/
 public:
-    // Default (no initialization) constructor
-    Raster() : array(0) { }
-
-    // Copy constructor
-    Raster(const Raster<ElementT, dimension> &r) {
-        if (r.array)
-            array.reset(new MultiArray(*r.array));
-        else
-            array.reset(0);
-    }
-
-    // Arbitrary-dimensional constructor
-    template <class ExtentList>
-    Raster(const ExtentList & sizes)
-        : array(new MultiArray(sizes)) { }
-
-    // 1D constructor
-    Raster(size_type s1) {
-        BOOST_STATIC_ASSERT(dimension == 1);
-        array.reset(new MultiArray(boost::extents[s1]));
-    }
-
-    // 2D constructor
-    Raster(size_type s1, size_type s2) {
-        BOOST_STATIC_ASSERT(dimension == 2);
-        array.reset(new MultiArray(boost::extents[s1][s2], boost::fortran_storage_order()));
-    }
-
-    // 3D constructor
-    Raster(size_type s1, size_type s2, size_type s3) {
-        BOOST_STATIC_ASSERT(dimension == 3);
-        array.reset(new MultiArray(boost::extents[s1][s2][s3]));
-    }
-
-    // 4D constructor
-    Raster(size_type s1, size_type s2, size_type s3, size_type s4) {
-        BOOST_STATIC_ASSERT(dimension == 4);
-        array.reset(new MultiArray(boost::extents[s1][s2][s3][s4]));
-    }
-
-    // 5D constructor
-    Raster(size_type s1, size_type s2, size_type s3, size_type s4,
-           size_type s5) {
-        BOOST_STATIC_ASSERT(dimension == 5);
-        array.reset(new MultiArray(boost::extents[s1][s2][s3][s4][s5]));
-    }
-
-    // 6D constructor
-    Raster(size_type s1, size_type s2, size_type s3, size_type s4,
-           size_type s5, size_type s6) {
-        BOOST_STATIC_ASSERT(dimension == 6);
-        array.reset(new MultiArray(boost::extents[s1][s2][s3][s4][s5][s6]));
-    }
-
-    // 7D constructor
-    Raster(size_type s1, size_type s2, size_type s3, size_type s4,
-           size_type s5, size_type s6, size_type s7) {
-        BOOST_STATIC_ASSERT(dimension == 7);
-        array.reset(new MultiArray(boost::extents[s1][s2][s3][s4][s5][s6][s7]));
-    }
-
-
-/*---------------------------------------------------------------------------*
- | Assignment operator
- *---------------------------------------------------------------------------*/
-public:
-    Raster & operator=(const Raster<element, dimension> &r) {
-        // Make sure it's the right size
-        reshape(r.shape()[0], r.shape()[1]);
-
-        // Copy the elements
-        *array = *r.array;
-
+    // Fill with a constant value (must be convertible to the ElementType)
+    ThisType & operator=(ConstReference e) {
+        fill(*this, e);
         return *this;
     }
 
-protected:
-    scoped_ptr<MultiArray> array;
+    // Copy assignment from another RasterView object
+    template <class Base2>
+    constraint ThisType is resizeable
+    ThisType & operator=(const RasterView<Base2> &r) {
+        resize(r.extents());            // Make sure it's the right size
+        copy(r, *this);                 // Copy all the elements
+        return *this;                   // Return a reference
+    }
+    
+    template <class Base2>
+    constraint ThisType is not resizeable
 
 
 /*---------------------------------------------------------------------------*
- | Query functions
+ | Size & shape functions
  *---------------------------------------------------------------------------*/
 public:
-    // MultiArray-compliant size and shape
-    size_type size() const           { return array->size(); }
-    size_type num_elements() const   { return array->num_elements(); }
-    size_type num_dimensions() const { return array->num_dimensions(); }
-    const size_type *  shape() const       { return array->shape(); }
-    const index_type * strides() const     { return array->strides(); }
-    const index_type * index_bases() const { return array->index_bases(); }
-    const storage_order_type & storage_order() const {
-        return array->storage_order();
-    }
+    // Arbitrary-dimensional resize function...implemented by Base class
+    template <class IndexList>
+    void resize(const ExtentList &extents) { Base::resize(extents); }
 
-    // XXX HACK XXX
-    void reshape(int x, int y) {
-        // Make sure we have an array of the right size
-        if (!array || array->num_elements() != x * y)
-            array.reset(new MultiArray(boost::extents[x][y],
-                                       fortran_storage_order()));
-
-        // Make sure it's the right size
-        else {
-            boost::array<int, 2> dims;
-            dims[0] = x; dims[1] = y;
-            array->reshape(dims);
+    // Dimensionality-specific resize functions
+    #define CREATE_DIMENSIONAL_RESIZE(DIM)                                  \
+        void resize(PARAMS(DIM, int e)) {                                   \
+            resize(PARAMS(DIM, e));                                         \
         }
-    }
-        
-
-/*---------------------------------------------------------------------------*
- | Iterators
- *---------------------------------------------------------------------------*/
-public:
-    iterator begin() { return array->begin(); }
-    iterator end()   { return array->end(); }
-    const_iterator begin() const {
-        return const_cast<MultiArray const *>(array.get())->begin();
-    }
-    const_iterator end() const {
-        return const_cast<MultiArray const *>(array.get())->end();
-    }
-    reverse_iterator rbegin() { return array->rbegin(); }
-    reverse_iterator rend()   { return array->rend(); }
-    const_reverse_iterator rbegin() const {
-        return const_cast<MultiArray const *>(array.get())->rbegin();
-    }
-    const_reverse_iterator rend() const {
-        return const_cast<MultiArray const *>(array.get())->rend();
-    }
-
-
-/*---------------------------------------------------------------------------*
- | Raw element accessors
- *---------------------------------------------------------------------------*/
-public:
-    // Underlying data array accessors
-    element * data()             { return array->data(); }
-    element const * data() const { return array->data(); }
-
-    // Logical origin element accessors
-    element * origin()             { return array->origin(); }
-    element const * origin() const { return array->origin(); }
+    FOR_ALL_DIMS(CREATE_DIMENSIONAL_RESIZE);
+    #undef CREATE_DIMENSIONAL_RESIZE
 
 
 /*---------------------------------------------------------------------------*
  | Element accessors
  *---------------------------------------------------------------------------*/
 public:
-    // Raw element accessors (always 1D)
-    reference operator[](index_type i)             { return (*array)[i]; }
-    const_reference operator[](index_type i) const { return (*array)[i]; }
-
-    // Arbitrary-dimensional element accessors
+    // Arbitrary-dimensional element accessors...implemented by Base class
     template <class IndexList>
-    element & operator()(const IndexList &indices) {
-        return (*array)(indices);
+    Reference operator()(const IndexList &indices) {
+        return Base::operator()(indices);
     }
     template <class IndexList>
-    const element & operator()(const IndexList &indices) const {
-        return (*array)(indices);
+    ConstReference operator()(const IndexList &indices) const {
+        return Base::operator()(indices);
     }
 
-    // 1D element accessors
-    element & operator()(index_type i1) {
-        BOOST_STATIC_ASSERT(dimension == 1);
-        return (*array)[i1];
-    }
-    const element & operator()(index_type i1) const {
-        BOOST_STATIC_ASSERT(dimension == 1);
-        return (*array)[i1];
-    }
-
-    // 2D element accessors
-    element & operator()(index_type i1, index_type i2) {
-        BOOST_STATIC_ASSERT(dimension == 2);
-        return (*array)[i1][i2];
-    }
-    const element & operator()(index_type i1, index_type i2) const {
-        BOOST_STATIC_ASSERT(dimension == 2);
-        return (*array)[i1][i2];
-    }
-
-    // 3D element accessors
-    element & operator()(index_type i1, index_type i2, index_type i3) {
-        BOOST_STATIC_ASSERT(dimension == 3);
-        return (*array)[i1][i2][i3];
-    }
-    const element & operator()(index_type i1, index_type i2, index_type i3) const {
-        BOOST_STATIC_ASSERT(dimension == 3);
-        return (*array)[i1][i2][i3];
-    }
+    // Dimension-specific element accessors
+    // These simply call the arbitrary-dimensional versions.
+    #define CREATE_DIMENSIONAL_ACCESSOR(DIM)                                \
+        Reference operator()(PARAMS(DIM, Index_type i)) {                   \
+            BOOST_STATIC_ASSERT(dimension == DIM);                          \
+            return operator()(IndexArray((PARAMS(DIM, i)));                 \
+        }                                                                   \
+        ConstReference operator()(PARAMS(DIM, Index_type i)) const {        \
+            BOOST_STATIC_ASSERT(dimension == DIM);                          \
+            return operator()(IndexArray((PARAMS(DIM, i)));                 \
+        }
+    FOR_ALL_DIMS(CREATE_DIMENSIONAL_ACCESSOR);
+    #undef CREATE_DIMENSIONAL_ACCESSOR
 };
+
+
+// Clean up the preprocessor's namespace
+#define UNDEFINE_INCA_MULTI_DIM_MACROS
+#include <inca/util/multi-dimensional-macros.hpp>
 
 #endif

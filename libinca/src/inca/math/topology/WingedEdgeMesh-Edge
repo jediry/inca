@@ -90,8 +90,8 @@ public:
     }
 
 protected:
-    size_t _vertexCount;    // 0, 1, or 2 -- how many vertices do we have?
-    size_t _faceCount;      // 0, 1, or 2...
+    SizeType _vertexCount;    // 0, 1, or 2 -- how many vertices do we have?
+    SizeType _faceCount;      // 0, 1, or 2...
 
     // Starting and ending connections to vertices
     EdgeVertex _startEdgeVertex, _endEdgeVertex;
@@ -107,7 +107,7 @@ protected:
 public:
     VertexPtr startVertex() const { return _startEdgeVertex.vertex(); }
     VertexPtr endVertex()   const { return _endEdgeVertex.vertex(); }
-    size_t vertexCount() const { return _vertexCount; }
+    SizeType vertexCount() const { return _vertexCount; }
     bool touchesVertex(VertexConstPtr v) const {
         return (_startEdgeVertex.touchesVertex(v)
              || _endEdgeVertex.touchesVertex(v));
@@ -191,7 +191,7 @@ public:
 public:
     FacePtr positiveFace() const { return _positiveFace; }
     FacePtr negativeFace() const { return _negativeFace; }
-    size_t faceCount() const { return _faceCount; }
+    SizeType faceCount() const { return _faceCount; }
     bool touchesFace(FaceConstPtr face) const {
         return (face == _positiveFace || face == _negativeFace);
     }

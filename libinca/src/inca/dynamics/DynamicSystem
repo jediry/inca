@@ -282,7 +282,7 @@ public:
         SystemState current(_currentTime, objects().size());
 
         // Add each object's data to the system state vector
-        for (index_t i = 0; i < objects().size(); i++)
+        for (IndexType i = 0; i < objects().size(); i++)
             current[i] = objects()[i]->retrieveState();
 
         // Return it
@@ -292,7 +292,7 @@ public:
     // Push state information back to the objects
     void propagate(const SystemState &state) {
         _currentTime = state.time();
-        for (index_t i = 0; i < objects().size(); i++)
+        for (IndexType i = 0; i < objects().size(); i++)
             objects()[i]->propagateState(state[i]);
     }
 
@@ -325,7 +325,7 @@ public:
         SystemState delta(step, objects().size());
 
         // Do any initialization we need to do
-        for (index_t i = 0; i < objects().size(); i++)
+        for (IndexType i = 0; i < objects().size(); i++)
             calculation[i].initialize(current[i], *objects()[i]);
 
         // Accumulate the effects of any 1st derivative operators
@@ -344,7 +344,7 @@ public:
                                            current, objects());
 
         // Evaluate the resulting 1st derivative
-        for (index_t i = 0; i < objects().size(); i++)
+        for (IndexType i = 0; i < objects().size(); i++)
             delta[i].evaluateFirstDerivativeDelta(calculation[i], current[i],
                                                   *objects()[i], step);
 
@@ -355,7 +355,7 @@ public:
                                           current, objects());
 
         // Evaluate the resulting 0th derivative
-        for (index_t i = 0; i < objects().size(); i++)
+        for (IndexType i = 0; i < objects().size(); i++)
             delta[i].evaluateZerothDerivativeDelta(calculation[i], current[i],
                                                    *objects()[i], step);
 

@@ -70,7 +70,7 @@ public:
     // Calculation of forces exterted on all particles affected by this object
     virtual void apply(ParticleState &state, scalar_arg_t dt) {
         // Find our "spot" in the ParticleState
-        index_t i1 = p1->index,
+        IndexType i1 = p1->index,
                    i2 = p2->index;
 
         // See how far apart the points are
@@ -136,7 +136,7 @@ public:
     // Calculation of forces exterted on all particles affected by this object
     virtual void apply(ParticleState &state, scalar_arg_t dt) {
         // Find our "spot" in the ParticleState
-        index_t ih1 = hinge1->index,
+        IndexType ih1 = hinge1->index,
                    ih2 = hinge2->index,
                    ip1 = p1->index,
                    ip2 = p2->index;

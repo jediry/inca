@@ -1,0 +1,39 @@
+/** -*- C++ -*-
+ *
+ * File: ImmediateModeRenderer-Component
+ * 
+ * Author: Ryan L. Saunders
+ *
+ * Copyright 2004, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ *      This file defines the Component inner class belonging to
+ *      ImmediateModeRenderer. Component is the base class for all of the
+ *      other sub-components of ImmediateModeRenderer.
+ *
+ *      All renderer subcomponents have a reference back to the parent
+ *      ImmediateModeRenderer object (needed to get access to the underlying
+ *      API context) and a generic unsigned int "id" value, representing a
+ *      handle or pointer to the corresponding API-specific resource (the
+ *      API-specific header files will provide macros for casting these values
+ *      to the actual correct type).
+ *
+ *      This file is not meant to be used directly, but is included by
+ *      the main ImmediateModeRenderer header file.
+ */
+
+#ifndef INCA_RENDERING_IMMEDIATE_MODE_RENDERER_COMPONENT
+#define INCA_RENDERING_IMMEDIATE_MODE_RENDERER_COMPONENT
+
+RENDERER_TEMPLATE
+class RENDERER::Component {
+public:
+    // Constructor
+    Component(RENDERER &r, IDType myID) : renderer(r), id(myID) { }
+
+protected:
+    RENDERER &renderer;     // Daddy!
+    IDType id;              // API-specific handle/pointer
+};
+
+#endif

@@ -1,0 +1,157 @@
+/* -*- C++ -*-
+ *
+ * File: operations
+ *
+ * Author: Ryan A. Saunders
+ *
+ * Copyright 2004, Ryan A. Saunders. All rights reserved.
+ *
+ * Description:
+ *      This file declares the various operations that work on color-type
+ *      objects.
+ *
+ *      For the sake of consistency, all operations but those that MUST be
+ *      implemented as class members are implemented as free functions.
+ */
+
+#ifndef INCA_MATH_COLOR_OPERATIONS
+#define INCA_MATH_COLOR_OPERATIONS
+
+
+// Import the definitions of the color primitive types
+#include "Color"
+
+// Import the scalar operations, which will be used in implementing some
+// array-type operations
+#include "../scalar.hpp"
+
+
+// Import math macros
+#include "../math-macros.hpp"
+
+// This is part of the Inca math library
+namespace inca {
+    namespace math {
+    /*-----------------------------------------------------------------------*
+     | iostream interface operators
+     *-----------------------------------------------------------------------*/
+        // std::ostream "<<" operators
+        C_TEMPLATE      OSTREAM_OP_A( C );                      // o << C
+
+
+    /*-----------------------------------------------------------------------*
+     | Comparison operators
+     *-----------------------------------------------------------------------*/
+        C_TEMPLATE      A_EQ_A( C, C );                         // C == C ?
+        C_TEMPLATE      A_NE_A( C, C );                         // C != C ?
+
+
+    /*-----------------------------------------------------------------------*
+     | Extended assignment operators
+     *-----------------------------------------------------------------------*/
+        // Assignment operators for Color
+        C_TEMPLATE      A_ASSIGN_A( C, +=, C );                 // C += C
+        C_TEMPLATE      A_ASSIGN_A( C, -=, C );                 // C -= C
+        C_TEMPLATE      A_ASSIGN_S( C, *=, S    );              // C *= S
+        C_TEMPLATE      A_ASSIGN_S( C, /=, S    );              // C /= S
+
+
+    /*-----------------------------------------------------------------------*
+     | Arithmetic operators
+     *-----------------------------------------------------------------------*/
+        // Unary operators for element-wise negation of list types
+        C_TEMPLATE      OP_A( C, -, C );                        // C = -C
+
+        // Binary operators for element-wise operations between list types
+        C_TEMPLATE      A_OP_A( C, C, +, C );                   // C = C + C
+        C_TEMPLATE      A_OP_A( C, C, -, C );                   // C = C - C
+        C_TEMPLATE      A_OP_A( C, C, *, C );                   // C = C * C
+        C_TEMPLATE      A_OP_A( C, C, /, C );                   // C = C / C
+
+        // Binary operators for scaling list types
+        C_TEMPLATE      A_OP_S( C, C, *, S );                   // C = C * S
+        C_TEMPLATE      A_OP_S( C, C, /, S );                   // C = C / S
+        C_TEMPLATE      S_OP_A( C, S, *, C );                   // C = S * C
+        C_TEMPLATE      S_OP_A( C, S, /, C );                   // C = S / C
+
+
+    /*-----------------------------------------------------------------------*
+     | Element-wise mathematical functions
+     *-----------------------------------------------------------------------*/
+        // Arithmetic functions
+        C_TEMPLATE      A_FUNC_2A( C, min,     C, C );
+        C_TEMPLATE      A_FUNC_2A( C, max,     C, C );
+
+        C_TEMPLATE      A_FUNC_1A( C, abs,     C );
+        C_TEMPLATE      A_FUNC_1A( C, floor,   C );
+        C_TEMPLATE      A_FUNC_1A( C, ceil,    C );
+        C_TEMPLATE      A_FUNC_1A( C, round,   C );
+
+        // Algebraic functions
+        C_TEMPLATE      A_FUNC_1A( C, sqrt,    C );
+
+        // Power/log functions
+        C_TEMPLATE      A_FUNC_2A( C, pow,     C, C );
+        C_TEMPLATE      A_FUNC_2A( C, log,     C, C );
+        C_TEMPLATE      A_FUNC_1A( C, exp,     C );
+        C_TEMPLATE      A_FUNC_1A( C, ln,      C );
+
+        // Trigonometric functions
+        C_TEMPLATE      A_FUNC_1A( C, sin,     C );
+        C_TEMPLATE      A_FUNC_1A( C, cos,     C );
+        C_TEMPLATE      A_FUNC_1A( C, tan,     C );
+        C_TEMPLATE      A_FUNC_1A( C, cot,     C );
+        C_TEMPLATE      A_FUNC_1A( C, sec,     C );
+        C_TEMPLATE      A_FUNC_1A( C, csc,     C );
+        C_TEMPLATE      A_FUNC_1A( C, arcsin,  C );
+        C_TEMPLATE      A_FUNC_1A( C, arccos,  C );
+        C_TEMPLATE      A_FUNC_1A( C, arctan,  C );
+        C_TEMPLATE      A_FUNC_2A( C, arctan,  C, C );
+        C_TEMPLATE      A_FUNC_1A( C, arccot,  C );
+        C_TEMPLATE      A_FUNC_2A( C, arccot,  C, C );
+        C_TEMPLATE      A_FUNC_1A( C, arcsec,  C );
+        C_TEMPLATE      A_FUNC_1A( C, arccsc,  C );
+
+
+    /*-----------------------------------------------------------------------*
+     | Color operations
+     *-----------------------------------------------------------------------*/
+        // Alpha-based blending of Colors. This uses the "associative color"
+        // blending algorithm from Dr. Ergun  Ackelman's raytracing class.
+        // Both arguments must be in the same colorspace. The RHS argument is
+        // the color "on top", and must have an alpha channel. The result is
+        // of the same type as the LHS argument and 
+        template <typename scalar, template <bool> class cs, bool alpha>
+        Color<scalar, cs<alpha> > operator%(const Color<scalar, cs<alpha> > &c1,
+                                            const Color<scalar, cs<true> >  &c2) {
+            // The number of color components (excluding alpha)
+            SizeType components = cs<alpha>::components;
+
+            // Either c1 has alpha, or we assign it an alpha of 1
+            scalar alphaC1 = alpha ? c1[components] : scalar(1);
+            scalar alphaC2 = c2[components];
+            scalar alphaR  = alphaC2 + alphaC1 * (1 - alphaC2);
+
+            Color<scalar, cs<alpha> > result;
+
+            // Do the associative color thing
+            for (IndexType i = 0; i < IndexType(components); i++) {
+                result[i] = (alphaC2 * c2[i]
+                          + (alphaC1 * c1[i]) * (1 - alphaC2)) / alphaR;
+            }
+
+            // If we have an alpha channel, store the new alpha
+            if (alpha)
+                result[components] = alphaR;
+
+            return result;
+        }
+
+    };
+};
+
+// Clean up the preprocessor's namespace
+#define UNDEFINE_INCA_MATH_MACROS
+#include "../math-macros.hpp"
+
+#endif

@@ -19,13 +19,13 @@ using namespace inca::world;
 /*---------------------------------------------------------------------------*
  | Element operations & tests
  *---------------------------------------------------------------------------*/
-inca::size_t SelectionSet::size() const { return items.size(); }
-bool SelectionSet::isSelected(id_t id) const {
+SizeType SelectionSet::size() const { return items.size(); }
+bool SelectionSet::isSelected(IDType id) const {
     return (items.find(id) != items.end());
 }
-void SelectionSet::select(id_t id) { items.insert(id); }
-void SelectionSet::deselect(id_t id) { items.erase(id); }
-void SelectionSet::setSelected(id_t id, bool s) {
+void SelectionSet::select(IDType id) { items.insert(id); }
+void SelectionSet::deselect(IDType id) { items.erase(id); }
+void SelectionSet::setSelected(IDType id, bool s) {
     s ? select(id) : deselect(id);
 }
 

@@ -14,10 +14,15 @@
 #define INCA_RASTER
 
 // Include raster and associated primitive class definitions
-#include "raster/Raster"
-#include "raster/Block"
-//#include "raster/RasterGenerator"
-//#include "raster/RasterAnalyzer"
-//#include "raster/RasterFilter"
+#include "raster/concepts"
+#include "raster/MultiArrayRaster"
+
+// Algorithms working on Raster objects
+//#include "raster/algorithms"
+
+// Raster operator lambda-expression construction
+//#include "raster/operators/arithmetic"
+//#include "raster/operators/selection"
+//#include "raster/operators/transformation"
 
 #endif

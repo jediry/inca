@@ -28,7 +28,7 @@
 
 
 // Import math macros
-#include "../macros.hpp"
+#include "../math-macros.hpp"
 
 // This is part of the Inca math library
 namespace inca {
@@ -37,8 +37,8 @@ namespace inca {
         // Make this an identity matrix
         M_TEMPLATE(1,1)
         M(D0,D0,AS0) & loadIdentity( M(D0,D0,AS0) &m) {
-            for (index_t row = 0; row < D0; row++)
-                for (index_t col = 0; col < D0; col++)
+            for (IndexType row = 0; row < D0; row++)
+                for (IndexType col = 0; col < D0; col++)
                     m(row, col) = (row == col) ? S(1) : S(0);
             return m;
         }
@@ -54,7 +54,7 @@ namespace inca {
         // Fill this matrix with a constant value
         M_TEMPLATE(1,1)
         M(D0,D0,AS0) & loadConstant( M(D0,D0,AS0) &m, S_ARG c) {
-            for (index_t i = 0; i < m.size; i++)
+            for (IndexType i = 0; i < m.size(); i++)
                 m[i] = c;
             return m;
         }
@@ -77,7 +77,7 @@ namespace inca {
             loadIdentity(m);    // Start with an identity matrix
 
             // Fill in the right-most column from the Vector
-            for (index_t row = 0; row < D0 - 1; row++)
+            for (IndexType row = 0; row < D0 - 1; row++)
                 m.rowCol(row, D0 - 1) = t[row];
             m.rowCol(D0-1, D0-1) = S(1);
             return m;
@@ -187,7 +187,7 @@ namespace inca {
             loadConstant(m, 0);   // Start with a zero matrix
 
             // Fill in the matrix diagonal from the Vector
-            for (index_t i = 0; i < D0 - 1; i++)
+            for (IndexType i = 0; i < D0 - 1; i++)
                 m(i, i) = s[i];
             m(D0 - 1, D0 - 1) = 1;
             return m;
@@ -290,6 +290,6 @@ namespace inca {
 
 // Clean up the preprocessor's namespace
 #define UNDEFINE_INCA_MATH_MACROS
-#include "../macros.hpp"
+#include "../math-macros.hpp"
 
 #endif

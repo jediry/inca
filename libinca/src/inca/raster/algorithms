@@ -1,0 +1,408 @@
+
+#ifndef INCA_RASTER_ALGORITHMS
+#define INCA_RASTER_ALGORITHMS
+
+// Import inca math tools
+#include <inca/math.hpp>
+
+
+// Import metaprogramming tools and simplifying macros
+#include <inca/util/template-metaprogramming-macros.hpp>
+
+
+namespace inca {
+    namespace raster {
+
+        // Recursive fill functor
+        template <typename R1, typename E, class IndexList, inca::SizeType dim>
+        struct FillSlice {
+            void operator()(R1 & dst, const E & src, IndexList & it,
+                       const IndexList & bases, const IndexList & extents) {
+                for (it[dim] = bases[dim]; it[dim] <= extents[dim]; ++it[dim])
+                    FillSlice<R1, E, IndexList, dim - 1>()
+                        (dst, src, it, bases, extents);
+            }
+        };
+        // Recursion base case
+        template <typename R1, typename E, class IndexList>
+        struct FillSlice<R1, E, IndexList, 0> {
+            void operator()(R1 & dst, const E & src, IndexList & it,
+                       const IndexList & bases, const IndexList & extents) {
+                for (it[0] = bases[0]; it[0] <= extents[0]; ++it[0]) {
+                    dst(it) = static_cast<typename R1::ElementType>(src);
+                }
+            }
+        };
+
+
+        // Recursive copy functor
+        template <class R1, class R2, class IndexList, inca::SizeType dim>
+        struct CopySlice {
+            void operator()(R1 & dst, const R2 & src, IndexList & it,
+                       const IndexList & bases, const IndexList & extents) {
+                for (it[dim] = bases[dim]; it[dim] <= extents[dim]; ++it[dim])
+                    CopySlice<R1, R2, IndexList, dim - 1>()
+                        (dst, src, it, bases, extents);
+            }
+        };
+        // Recursion base case
+        template <class R1, class R2, class IndexList>
+        struct CopySlice<R1, R2, IndexList, 0> {
+            void operator()(R1 & dst, const R2 & src, IndexList & it,
+                       const IndexList & bases, const IndexList & extents) {
+                for (it[0] = bases[0]; it[0] <= extents[0]; ++it[0]) {
+                    dst(it) = static_cast<typename R1::ElementType>(src(it));
+                }
+            }
+        };
+
+        // Recursive unary-functor-application functor
+        template <typename F, class R1, class IndexList, inca::SizeType dim>
+        struct ApplyUnaryFunctorToSlice {
+            void operator()(F & f, R1 & r1, IndexList & it,
+                            const IndexList & bases,
+                            const IndexList & extents) {
+                for (it[dim] = bases[dim]; it[dim] <= extents[dim]; ++it[dim])
+                    ApplyUnaryFunctorToSlice<F, R1, IndexList, dim - 1>()
+                        (f, r1, it, bases, extents);
+            }
+        };
+        // Recursion base case
+        template <typename F, class R1, class IndexList>
+        struct ApplyUnaryFunctorToSlice<F, R1, IndexList, 0> {
+            void operator()(F & f, R1 & r1, IndexList & it,
+                            const IndexList & bases,
+                            const IndexList & extents) {
+                for (it[0] = bases[0]; it[0] <= extents[0]; ++it[0])
+                    f(r1(it));
+            }
+        };
+
+        // Recursive binary-functor-application functor
+        template <typename F, class R1, class R2, class IndexList, inca::SizeType dim>
+        struct ApplyBinaryFunctorToSlice {
+            void operator()(F & f, R1 & r1, R2 & r2, IndexList & it,
+                            const IndexList & bases,
+                            const IndexList & extents) {
+                for (it[dim] = bases[dim]; it[dim] <= extents[dim]; ++it[dim])
+                    ApplyBinaryFunctorToSlice<F, R1, R2, IndexList, dim - 1>()
+                        (f, r1, r2, it, bases, extents);
+            }
+        };
+        // Recursion base case
+        template <typename F, class R1, class R2, class IndexList>
+        struct ApplyBinaryFunctorToSlice<F, R1, R2, IndexList, 0> {
+            void operator()(F & f, R1 & r1, R2 & r2, IndexList & it,
+                            const IndexList & bases,
+                            const IndexList & extents) {
+                for (it[0] = bases[0]; it[0] <= extents[0]; ++it[0])
+                    f(r1(it), r2(it));
+            }
+        };
+
+        template <typename R1, typename E>
+        void fill(R1 & dst, const E & src) {
+            typedef Array<IndexType, R1::dimensionality> IndexArray;
+
+            IndexArray it = dst.bases();
+            FillSlice<R1, E, IndexArray, R1::dimensionality - 1>()
+                (dst, src, it, dst.bases(), dst.extents());
+        }
+
+        template <class R1, class R2>
+        void copy(R1 & dst, const R2 & src) {
+            typedef Array<IndexType, R1::dimensionality> IndexArray;
+
+            IndexArray bases, extents, it;
+            for (IndexType d = 0; d < R1::dimensionality; ++d) {
+                bases[d] = inca::math::max(src.base(d), dst.base(d));
+                extents[d] = inca::math::min(src.extent(d), dst.extent(d));
+            }
+            it = bases;
+            CopySlice<R1, R2, IndexArray, R1::dimensionality - 1>()
+                (dst, src, it, bases, extents);
+        }
+
+
+        // Apply an arbitrary unary functor to every element in a raster
+        template <typename F, class R1>
+        ENABLE_IF_T( AND3( NOT(is_raster<F>),
+                           is_raster<R1>,
+                           NOT(is_arbitrary_size_raster<R1>)
+                         ),
+        void )
+        apply(F & f, R1 & r1) {
+            typedef Array<IndexType, R1::dimensionality> IndexArray;
+
+            IndexArray it = dst.bases();
+            ApplyUnaryFunctorToSlice<F, R1, IndexArray, R1::dimensionality - 1>()
+                (f, r1, it, r1.bases(), r1.extents());
+        }
+
+        // Apply an arbitrary unary functor to every element in a const raster
+        template <typename F, class R1>
+        ENABLE_IF_T( AND3( NOT(is_raster<F>),
+                           is_raster<R1>,
+                           NOT(is_arbitrary_size_raster<R1>)
+                         ),
+        void )
+        apply(F & f, const R1 & r1) {
+            typedef Array<IndexType, R1::dimensionality> IndexArray;
+
+            IndexArray it = r1.bases();
+            ApplyUnaryFunctorToSlice<F, const R1, IndexArray, R1::dimensionality - 1>()
+                (f, r1, it, r1.bases(), r1.extents());
+        }
+
+
+        // Apply an arbitrary binary functor to every element in a raster
+        template <typename F, class R1, class R2>
+        ENABLE_IF_T( AND4( NOT(is_raster<F>),
+                           is_raster<R1>,
+                           is_raster<R2>,
+                           OR2( NOT(is_arbitrary_size_raster<R1>),
+                                NOT(is_arbitrary_size_raster<R2>)
+                           )
+                         ),
+        void )
+        apply(F & f, R1 & r1, R2 & r2) {
+            typedef Array<IndexType, R1::dimensionality> IndexArray;
+
+            IndexArray bases, extents, it;
+            for (IndexType d = 0; d < R1::dimensionality; ++d) {
+                bases[d] = inca::math::max(r1.base(d), r2.base(d));
+                extents[d] = inca::math::min(r1.extent(d), r2.extent(d));
+            }
+            it = bases;
+            ApplyBinaryFunctorToSlice<F, R1, R2, IndexArray, R1::dimensionality - 1>()
+                (f, r1, r2, it, bases, extents);
+        }
+
+        // Apply an arbitrary binary functor to every element in a const raster
+        template <typename F, class R1, class R2>
+        ENABLE_IF_T( AND4( NOT(is_raster<F>),
+                           is_raster<R1>,
+                           is_raster<R2>,
+                           OR2( NOT(is_arbitrary_size_raster<R1>),
+                                NOT(is_arbitrary_size_raster<R2>)
+                           )
+                         ),
+        void )
+        apply(F & f, const R1 & r1, const R2 & r2) {
+            typedef Array<IndexType, R1::dimensionality> IndexArray;
+
+            IndexArray bases, extents, it;
+            for (IndexType d = 0; d < R1::dimensionality; ++d) {
+                bases[d] = inca::math::max(r1.base(d), r2.base(d));
+                extents[d] = inca::math::min(r1.extent(d), r2.extent(d));
+            }
+            it = bases;
+            ApplyBinaryFunctorToSlice<F, const R1, const R2, IndexArray, R1::dimensionality - 1>()
+                (f, r1, r2, it, bases, extents);
+        }
+
+
+        // Min/max range measurement
+        template <typename T>
+        class Range {
+        public:
+            typedef T ElementType;
+
+            // Default constructor
+            Range() : _minMax(ElementType(0)), initialized(false) { }
+
+            // Function call operator
+            void operator()(const ElementType & t) {
+                if (! initialized) {
+                    _minMax[0] = _minMax[1] = t;
+                    initialized = true;
+                } else if (t < _minMax[0]) {
+                    _minMax[0] = t;
+                } else if (t > _minMax[1]) {
+                    _minMax[1] = t;
+                }
+            }
+
+            // Result accessor functions            
+            const ElementType & min() const { return _minMax[0]; }
+            const ElementType & max() const { return _minMax[1]; }
+            const Array<ElementType, 2> & minMax() const { return _minMax; }
+
+            // Cast to 2-element array of ElementType
+            operator const Array<ElementType, 2> &() const { return minMax(); }
+
+        protected:
+            bool initialized;               // Do we have valid values?
+            Array<ElementType, 2> _minMax;  // Our current min and max
+        };
+
+
+        template <class R1>
+        ENABLE_IF_T( is_raster<R1>,
+        Array<typename R1::ElementType COMMA 2> ) range(const R1 & r) {
+            typedef typename R1::ElementType T;
+            Range<T> minmax;    // Create the range-measurement functor
+            apply(minmax, r);   // Apply it to the raster
+            return minmax.minMax();   // Return its output (cast to array)
+        }
+
+
+        // Mean measurement
+        template <typename T>
+        class Mean {
+        public:
+            typedef T ElementType;
+
+            // Default constructor (T must be default constructible)
+            Mean() : sum(0), count(0), evaluated(false) { }
+
+            // Unary function call operator
+            void operator()(const ElementType & t) {
+                sum += t;
+                ++count;
+            }
+
+            // Result accessor functions            
+            const ElementType & mean() const {
+                if (! evaluated) {
+                    if (count == 0)     _mean = 0;
+                    else                _mean = sum / count;
+                    evaluated = true;
+                }
+                return _mean;
+            }
+
+            // Cast to ElementType (calls accessor)
+            operator const ElementType &() const { return mean(); }
+
+        protected:
+            mutable bool evaluated;     // Have we solved for the mean already?
+            mutable ElementType _mean;  // The answer
+            ElementType sum;    // Running sum of squares
+            int count;          // Running count of elements
+        };
+
+        template <class R1>
+        ENABLE_IF_T( is_raster<R1>,
+        typename R1::ElementType ) mean(const R1 & r) {
+            typedef typename R1::ElementType T;
+            Mean<T> M;              // Create the mean-measurement functor
+            apply(M, r);            // Apply it to the raster
+            return M;               // Return its output (cast to ElementType)
+        }
+
+
+        // Root-mean-square measurement (of single quantity, or of difference)
+        template <typename T>
+        class RootMeanSquare {
+        public:
+            typedef T ElementType;
+
+            // Default constructor (T must be default constructible)
+            RootMeanSquare() : sum(0), count(0), evaluated(false) { }
+
+            // Unary function call operator
+            void operator()(const ElementType & t) {
+                sum += t * t;
+                ++count;
+            }
+
+            // Binary function call operator
+            void operator()(const ElementType & t1, const ElementType & t2) {
+                // Ensure that our difference is always positive. This is
+                // needed to correctly handle unsigned types
+                if (t1 >= t2)       operator()(t1 - t2);
+                else                operator()(t2 - t1);
+            }
+
+            // Result accessor functions            
+            const ElementType & rms() const {
+                if (! evaluated) {
+                    if (count == 0)     _rms = 0;
+                    else                _rms = inca::math::sqrt(sum / count);
+                    evaluated = true;
+                }
+                return _rms;
+            }
+
+            // Cast to ElementType (calls accessor)
+            operator const ElementType &() const { return rms(); }
+
+        protected:
+            mutable bool evaluated;     // Have we solved for RMS already?
+            mutable ElementType _rms;   // The answer
+            ElementType sum;    // Running sum of squares
+            int count;          // Running count of elements
+        };
+
+        template <class R1>
+        ENABLE_IF_T( is_raster<R1>,
+        typename R1::ElementType ) rms(const R1 & r1) {
+            typedef typename R1::ElementType T;
+            RootMeanSquare<T> RMS;  // Create the RMS-measurement functor
+            apply(RMS, r1);         // Apply it to the raster
+            return RMS;             // Return its output (cast to ElementType)
+        }
+
+        template <class R1, class R2>
+        ENABLE_IF_T( AND2( is_raster<R1>, is_raster<R2> ),
+        typename R1::ElementType ) rms(const R1 & r1, const R2 & r2) {
+            typedef typename R1::ElementType T;
+            RootMeanSquare<T> RMS;  // Create the RMS-measurement functor
+            apply(RMS, r1, r2);     // Apply it to the raster
+            return RMS;             // Return its output (cast to ElementType)
+        }
+
+
+#if 0
+        template <class RasterType>
+        void fill(RasterType & r, const typename RasterType::ElementType & e) {
+            // Make sure these types fulfill the requirements
+//            function_requires< WritableRasterConcept<RasterType> >();
+//            function_requires< AssignableConcept<RasterType::ElementType> >();
+
+            // Copy the element to every cell in the raster
+            typename RasterType::Iterator i;
+            for (i = r.begin(); i != r.end(); ++i)
+                *i = e;
+        }
+
+        template <class RasterType1, class RasterType2>
+        void copy(RasterType1 & dst, const RasterType2 & src) {
+            // Make sure these types fulfill the requirements
+//            function_requires< WritableRasterConcept<RasterType1> >();
+//            function_requires< ReadableRasterConcept<RasterType2> >();
+
+            cerr << "Starting copy";
+            
+            cerr << "Copied " << count << " thingies\n";
+            // Copy the element to every cell in the raster
+            typename RasterType1::Iterator      di = dst.begin();
+            typename RasterType2::ConstIterator si = src.begin();
+            int count = 0;
+            for (di = dst.begin(), si = src.begin();
+              si != src.end(); ) {
+                count++;
+                *(di++) = *(si++);
+            }
+        }
+
+
+        template <class RasterType, 
+                  template <typename, SizeType> Solid>
+        void fillInside(Raster<element_t, dim> & r,
+                        const Solid<scalar_t, dim> & s,
+                        const element_t & e) {
+            for (i = r.begin(); i != r.end(); ++i)
+                if (inside(s, i))
+                    *i = e;
+        }
+#endif
+    };
+};
+
+// Clean up the preprocessor's namespace
+#define UNDEFINE_INCA_METAPROGRAMMING_MACROS
+#include <inca/util/template-metaprogramming-macros.hpp>
+
+#endif

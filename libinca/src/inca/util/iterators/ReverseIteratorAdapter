@@ -1,0 +1,197 @@
+/* -*- C++ -*-
+ *
+ * File: ReverseIteratorAdapter
+ * 
+ * Author: Ryan L. Saunders
+ *
+ * Copyright 2004, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ *      This file implements STL-compatible iterator types that can be layered
+ *      on top of those created by existing STL containers to provide
+ *      additional functionality.
+ *
+ */
+
+#ifndef INCA_UTIL_REVERSE_ITERATOR_ADAPTER
+#define INCA_UTIL_REVERSE_ITERATOR_ADAPTER
+
+// Import system configuration
+#include <inca/inca-common.h>
+
+// This is part of the Inca utilities collection
+namespace inca {
+    // Forward declarations
+    template <typename _Iterator> class ReverseIteratorAdapter;
+};
+
+// Import the STL's iterator implementation
+#include <iterator>
+
+
+template <typename _Iterator>
+class inca::ReverseIteratorAdapter
+    : public std::iterator<     // Inherit the basic STL iterator
+            typename std::iterator_traits<_Iterator>::iterator_category,
+            typename std::iterator_traits<_Iterator>::value_type,
+            typename std::iterator_traits<_Iterator>::difference_type,
+            typename std::iterator_traits<_Iterator>::pointer,
+            typename std::iterator_traits<_Iterator>::reference> {
+private:
+    typedef std::iterator_traits<_Iterator> traits;
+
+public:
+    // Iterator type definitions
+    typedef _Iterator                                   iterator_type;
+    typedef typename traits::value_type                 value_type;
+    typedef typename traits::difference_type            difference_type;
+    typedef typename traits::pointer                    pointer;
+    typedef typename traits::reference                  reference;
+
+
+/*---------------------------------------------------------------------------*
+ | Constructors & accessors
+ *---------------------------------------------------------------------------*/
+public:
+    // Default constructor
+    ReverseIteratorAdapter() : _iterator() { }
+
+    // Normal copy constructor
+    ReverseIteratorAdapter(const ReverseIteratorAdapter &iter)
+        : _iterator(iter._iterator) { }
+
+
+    // Access to the underlying iterator
+    iterator_type iterator() const { return _iterator; }
+
+protected:
+    iterator_type _iterator;    // The iterator type we're wrapping
+
+
+/*---------------------------------------------------------------------------*
+ | Operators
+ *---------------------------------------------------------------------------*/
+public:
+    // Get a reference to the current element
+    reference operator*() { return iterator().operator*(); }
+
+    // Get a pointer to the current element
+    pointer operator->() { return iterator().operator->(); }
+
+    // Prefix increment operator
+    ReverseIteratorAdapter & operator++() {
+        --_iterator;    // Go the other way
+        return *this;
+    }
+
+    // Postfix increment operator
+    ReverseIteratorAdapter operator++(int) {
+        ReverseIteratorAdapter temp = *this;
+        --_iterator;
+        return temp;
+    }
+
+    // Prefix decrement operator
+    ReverseIteratorAdapter & operator--() {
+        ++_iterator;    // Go the other way
+        return *this;
+    }
+
+    // Postfix decrement operator
+    ReverseIteratorAdapter operator--(int) {
+        ReverseIteratorAdapter temp = *this;
+        ++_iterator;
+        return temp;
+    }
+
+    // Not implementing the following operations:
+    //      i + n, n + i
+    //      i += n
+    //      i - n
+    //      i -= n
+    //      i[n]
+};
+
+
+/*---------------------------------------------------------------------------*
+ | Iterator comparison operators
+ *---------------------------------------------------------------------------*/
+namespace inca {
+    // Iterator equality comparison:
+    template <typename _Iterator>
+    inline bool operator==(const ReverseIteratorAdapter<_Iterator> &x,
+                           const ReverseIteratorAdapter<_Iterator> &y) {
+        return x.iterator() == y.iterator();
+    }
+
+    // Iterator less-than comparison
+    template <typename _Iterator>
+    inline bool operator<(const ReverseIteratorAdapter<_Iterator> &x,
+                          const ReverseIteratorAdapter<_Iterator> &y) {
+        return x.iterator() > y.iterator();
+    }
+
+    // Underlying iterator equality comparison
+    template <typename _Iterator>
+    inline bool operator==(const ReverseIteratorAdapter<_Iterator> &x,
+                           const _Iterator &y) {
+        return x.iterator() == y;
+    }
+    template <typename _Iterator>
+    inline bool operator==(const _Iterator &x,
+                           const ReverseIteratorAdapter<_Iterator> &y) {
+        return y == x;
+    }
+
+
+    // Iterator non-equality comparison
+    template <typename _Iterator>
+    inline bool operator!=(const ReverseIteratorAdapter<_Iterator> &x,
+                           const ReverseIteratorAdapter<_Iterator> &y) {
+        return ! (x == y);
+    }
+    template <typename _Iterator>
+    inline bool operator!=(const ReverseIteratorAdapter<_Iterator> &x,
+                           const _Iterator &y) {
+        return ! (x == y);
+    }
+    template <typename _Iterator>
+    inline bool operator!=(const _Iterator &x,
+                           const ReverseIteratorAdapter<_Iterator> &y) {
+        return ! (x == y);
+    }
+
+
+    // Iterator greater-than comparison
+    template <typename _Iterator>
+    inline bool operator>(const ReverseIteratorAdapter<_Iterator> &x,
+                          const ReverseIteratorAdapter<_Iterator> &y) {
+        return (y < x);
+    }
+
+    // Iterator less-than-or-equal comparison
+    template <typename _Iterator>
+    inline bool operator<=(const ReverseIteratorAdapter<_Iterator> &x,
+                           const ReverseIteratorAdapter<_Iterator> &y) {
+        return ! (y < x);
+    }
+
+    // Iterator greater-than-or-equal comparison
+    template <typename _Iterator>
+    inline bool operator>=(const ReverseIteratorAdapter<_Iterator> &x,
+                           const ReverseIteratorAdapter<_Iterator> &y) {
+        return ! (x < y);
+    }
+#if 0
+    // The number of elements difference between two iterators
+    // XXX MAY BE BROKEN!!!
+    template <typename _Iterator>
+    inline typename wraparound_iterator<_Iterator>::difference_type
+    operator-(const wraparound_iterator<_Iterator> &x,
+              const wraparound_iterator<_Iterator> &y) {
+        return x.current() - y.current();
+    }
+#endif
+};
+
+#endif

@@ -64,7 +64,7 @@ public:
                                 SystemCalculation &calc,
                           const SystemState &prev,
                           const ObjectPtrList &objects) {
-        for (index_t i = 0; i < objects.size(); i++) {
+        for (IndexType i = 0; i < objects.size(); i++) {
             calc[i].F += gravity() / objects[i]->inverseM;
         }
     }

@@ -50,15 +50,13 @@ namespace inca {
 // These macros represent allow us to choose which overload of each function
 // gets called, based on whether the scalar_traits for this type of scalar
 // says the scalar should be passed by value or by reference. Whee!
-#define PASS_BY_VALUE     typename constraint< TRAITS::pass_by_value >::satisfied = 0
-#define PASS_BY_REFERENCE typename constraint< ! TRAITS::pass_by_value >::satisfied = 0
+#define BY_VALUE    TRAITS::pass_by_value
+#define BY_REF    ! TRAITS::pass_by_value
 
-// These macros allow us to constrain whether a function will even be
+// This macro allows us to constrain whether a function will even be
 // considered as a possible overload for a particular scalar type.
-#define CONSTRAINT_INTEGER          typename constraint< TRAITS::supports_integer_ops >::satisfied = 0
-#define CONSTRAINT_ARITHMETIC       typename constraint< TRAITS::supports_arithmetic_ops >::satisfied = 0
-#define CONSTRAINT_ALGEBRAIC        typename constraint< TRAITS::supports_algebraic_ops >::satisfied = 0
-#define CONSTRAINT_TRANSCENDENTAL   typename constraint< TRAITS::supports_transcendental_ops >::satisfied = 0
+#define SUPPORTS(CATEGORY) TRAITS::supports_ ## CATEGORY ## _ops
+
 
 // These macros let us define the scalar pass-thru functions in only one
 // line apiece. They all have nearly identical structure, having two separate
@@ -67,52 +65,33 @@ namespace inca {
 // the real function implementations which are contained in the
 // scalar_*_functions templates, which is where specialization should be done
 // for new scalar models.
-#define SCALAR_FUNCTION_1_ARG(RETURN, NAME, CATEGORY, CONSTRAINT)           \
+#define SCALAR_FUNCTION_1_ARG(CATEGORY, RETURN, NAME)                       \
     template <typename scalar>                                              \
-    RETURN NAME(scalar const s, PASS_BY_VALUE, CONSTRAINT) {                \
+    RETURN NAME(scalar const s,                                             \
+                ENABLE_FUNCTION_IF_C(BY_VALUE && SUPPORTS(CATEGORY))) {     \
         return scalar_##CATEGORY##_api<scalar>::NAME(s);                    \
     }                                                                       \
     template <typename scalar>                                              \
-    RETURN NAME(scalar const & s, PASS_BY_REFERENCE, CONSTRAINT) {          \
+    RETURN NAME(scalar const & s,                                           \
+                ENABLE_FUNCTION_IF_C(BY_REF && SUPPORTS(CATEGORY))) {       \
         return scalar_##CATEGORY##_api<scalar>::NAME(s);                    \
     }
     
-#define SCALAR_FUNCTION_2_ARG(RETURN, NAME, CATEGORY, CONSTRAINT)           \
+#define SCALAR_FUNCTION_2_ARG(CATEGORY, RETURN, NAME)                       \
     template <typename scalar>                                              \
-    RETURN NAME(scalar const s1, scalar const s2, PASS_BY_VALUE, CONSTRAINT) {\
+    RETURN NAME(scalar const s1, scalar const s2,                           \
+                ENABLE_FUNCTION_IF_C(BY_VALUE && SUPPORTS(CATEGORY))) {     \
         return scalar_##CATEGORY##_api<scalar>::NAME(s1, s2);               \
     }                                                                       \
     template <typename scalar>                                              \
-    RETURN NAME(scalar const & s1, scalar const & s2, PASS_BY_REFERENCE, CONSTRAINT) {\
+    RETURN NAME(scalar const s1, scalar const s2,                           \
+                ENABLE_FUNCTION_IF_C(BY_REF && SUPPORTS(CATEGORY))) {       \
         return scalar_##CATEGORY##_api<scalar>::NAME(s1, s2);               \
     }
-    
-#define SCALAR_INTEGER_FUNCTION_1_ARG(RETURN, NAME)                      \
-    SCALAR_FUNCTION_1_ARG(RETURN, NAME, integer, CONSTRAINT_INTEGER)
 
-#define SCALAR_INTEGER_FUNCTION_2_ARG(RETURN, NAME)                      \
-    SCALAR_FUNCTION_2_ARG(RETURN, NAME, integer, CONSTRAINT_INTEGER)
-
-#define SCALAR_ARITHMETIC_FUNCTION_1_ARG(RETURN, NAME)                      \
-    SCALAR_FUNCTION_1_ARG(RETURN, NAME, arithmetic, CONSTRAINT_ARITHMETIC)
-
-#define SCALAR_ARITHMETIC_FUNCTION_2_ARG(RETURN, NAME)                      \
-    SCALAR_FUNCTION_2_ARG(RETURN, NAME, arithmetic, CONSTRAINT_ARITHMETIC)
-
-#define SCALAR_ALGEBRAIC_FUNCTION_1_ARG(RETURN, NAME)                      \
-    SCALAR_FUNCTION_1_ARG(RETURN, NAME, algebraic, CONSTRAINT_ALGEBRAIC)
-
-#define SCALAR_ALGEBRAIC_FUNCTION_2_ARG(RETURN, NAME)                      \
-    SCALAR_FUNCTION_2_ARG(RETURN, NAME, algebraic, CONSTRAINT_ALGEBRAIC)
-
-#define SCALAR_TRANSCENDENTAL_FUNCTION_1_ARG(RETURN, NAME)                      \
-    SCALAR_FUNCTION_1_ARG(RETURN, NAME, transcendental, CONSTRAINT_TRANSCENDENTAL)
-
-#define SCALAR_TRANSCENDENTAL_FUNCTION_2_ARG(RETURN, NAME)                      \
-    SCALAR_FUNCTION_2_ARG(RETURN, NAME, transcendental, CONSTRAINT_TRANSCENDENTAL)
 
 // Import the Inca template metaprogramming utilities
-#include <inca/util/metaprogramming>
+#include <inca/util/template-metaprogramming-macros.hpp>
 
 
 // These are the free-floating scalar math functions. All of the usual
@@ -128,64 +107,64 @@ namespace inca {
      | Arithmetic functions
      *-----------------------------------------------------------------------*/
         // Boolean comparison functions
-        SCALAR_ARITHMETIC_FUNCTION_1_ARG(scalar, isNan);            // isNaN(x)
-        SCALAR_ARITHMETIC_FUNCTION_1_ARG(scalar, effectivelyZero);  // x ~= 0
-        SCALAR_ARITHMETIC_FUNCTION_2_ARG(scalar, effectivelyEqual); // x ~= y
+        SCALAR_FUNCTION_1_ARG(arithmetic, bool, isNan);            // isNaN(x)
+        SCALAR_FUNCTION_1_ARG(arithmetic, bool, effectivelyZero);  // x ~= 0
+        SCALAR_FUNCTION_2_ARG(arithmetic, bool, effectivelyEqual); // x ~= y
 
         // $0.99 calculator stuff
-        SCALAR_ARITHMETIC_FUNCTION_1_ARG(scalar, negate);       // -x
-        SCALAR_ARITHMETIC_FUNCTION_2_ARG(scalar, sum);          // x + y
-        SCALAR_ARITHMETIC_FUNCTION_2_ARG(scalar, difference);   // x - y
-        SCALAR_ARITHMETIC_FUNCTION_2_ARG(scalar, product);      // x * y
-        SCALAR_ARITHMETIC_FUNCTION_2_ARG(scalar, quotient);     // x / y
-        SCALAR_ARITHMETIC_FUNCTION_2_ARG(scalar, modulus);      // x % y
+        SCALAR_FUNCTION_1_ARG(arithmetic, scalar, negate);       // -x
+        SCALAR_FUNCTION_2_ARG(arithmetic, scalar, sum);          // x + y
+        SCALAR_FUNCTION_2_ARG(arithmetic, scalar, difference);   // x - y
+        SCALAR_FUNCTION_2_ARG(arithmetic, scalar, product);      // x * y
+        SCALAR_FUNCTION_2_ARG(arithmetic, scalar, quotient);     // x / y
+        SCALAR_FUNCTION_2_ARG(arithmetic, scalar, modulus);      // x % y
 
         // Selection functions
-        SCALAR_ARITHMETIC_FUNCTION_2_ARG(scalar, min);          // min(x, y)
-        SCALAR_ARITHMETIC_FUNCTION_2_ARG(scalar, max);          // max(x, y)
+        SCALAR_FUNCTION_2_ARG(arithmetic, scalar, min);          // min(x, y)
+        SCALAR_FUNCTION_2_ARG(arithmetic, scalar, max);          // max(x, y)
 
         // Non numbers
         template <typename scalar>
         scalar INF() { return scalar_traits<scalar>::infinity(); }
 
         // Single argument arithmetic functions
-        SCALAR_ARITHMETIC_FUNCTION_1_ARG(scalar, abs);          // |x|
-        SCALAR_ARITHMETIC_FUNCTION_1_ARG(scalar, floor);        // |.x.|
-        SCALAR_ARITHMETIC_FUNCTION_1_ARG(scalar, ceiling);      // |'x'|
-        SCALAR_ARITHMETIC_FUNCTION_1_ARG(scalar, round);        // round(x)
+        SCALAR_FUNCTION_1_ARG(arithmetic, scalar, abs);          // |x|
+        SCALAR_FUNCTION_1_ARG(arithmetic, scalar, floor);        // |.x.|
+        SCALAR_FUNCTION_1_ARG(arithmetic, scalar, ceiling);      // |'x'|
+        SCALAR_FUNCTION_1_ARG(arithmetic, scalar, round);        // round(x)
 
 
     /*-----------------------------------------------------------------------*
      | Algebraic Functions
      *-----------------------------------------------------------------------*/
         // Determine the square root of a scalar
-        SCALAR_ALGEBRAIC_FUNCTION_1_ARG(scalar, sqrt);          // sqrt(x)
+        SCALAR_FUNCTION_1_ARG(algebraic, scalar, sqrt);          // sqrt(x)
 
 
     /*-----------------------------------------------------------------------*
      | Transcendental Functions
      *-----------------------------------------------------------------------*/
         // Power/log functions
-        SCALAR_TRANSCENDENTAL_FUNCTION_2_ARG(scalar, pow);      // x^y
-        SCALAR_TRANSCENDENTAL_FUNCTION_2_ARG(scalar, log);      // log_x(y)
-        SCALAR_TRANSCENDENTAL_FUNCTION_1_ARG(scalar, exp);      // e^x
-        SCALAR_TRANSCENDENTAL_FUNCTION_1_ARG(scalar, ln);       // ln(x)
+        SCALAR_FUNCTION_2_ARG(transcendental, scalar, pow);      // x^y
+        SCALAR_FUNCTION_2_ARG(transcendental, scalar, log);      // log_x(y)
+        SCALAR_FUNCTION_1_ARG(transcendental, scalar, exp);      // e^x
+        SCALAR_FUNCTION_1_ARG(transcendental, scalar, ln);       // ln(x)
 
         // Trigonometric functions (in radians)
-        SCALAR_TRANSCENDENTAL_FUNCTION_1_ARG(scalar, sin);      // sin(x)
-        SCALAR_TRANSCENDENTAL_FUNCTION_1_ARG(scalar, cos);      // cos(x)
-        SCALAR_TRANSCENDENTAL_FUNCTION_1_ARG(scalar, tan);      // tan(x)
-        SCALAR_TRANSCENDENTAL_FUNCTION_1_ARG(scalar, cot);      // cot(x)
-        SCALAR_TRANSCENDENTAL_FUNCTION_1_ARG(scalar, sec);      // sec(x)
-        SCALAR_TRANSCENDENTAL_FUNCTION_1_ARG(scalar, csc);      // csc(x)
-        SCALAR_TRANSCENDENTAL_FUNCTION_1_ARG(scalar, arcsin);   // sin^-1(x)
-        SCALAR_TRANSCENDENTAL_FUNCTION_1_ARG(scalar, arccos);   // cos^-1(x)
-        SCALAR_TRANSCENDENTAL_FUNCTION_1_ARG(scalar, arctan);   // tan^-1(x)
-        SCALAR_TRANSCENDENTAL_FUNCTION_2_ARG(scalar, arctan);   // tan^-1(x,y)
-        SCALAR_TRANSCENDENTAL_FUNCTION_1_ARG(scalar, arccot);   // cot^-1(x)
-        SCALAR_TRANSCENDENTAL_FUNCTION_2_ARG(scalar, arccot);   // cot^-1(x,y)
-        SCALAR_TRANSCENDENTAL_FUNCTION_1_ARG(scalar, arcsec);   // sec^-1(x)
-        SCALAR_TRANSCENDENTAL_FUNCTION_1_ARG(scalar, arccsc);   // csc^-1(x)
+        SCALAR_FUNCTION_1_ARG(transcendental, scalar, sin);      // sin(x)
+        SCALAR_FUNCTION_1_ARG(transcendental, scalar, cos);      // cos(x)
+        SCALAR_FUNCTION_1_ARG(transcendental, scalar, tan);      // tan(x)
+        SCALAR_FUNCTION_1_ARG(transcendental, scalar, cot);      // cot(x)
+        SCALAR_FUNCTION_1_ARG(transcendental, scalar, sec);      // sec(x)
+        SCALAR_FUNCTION_1_ARG(transcendental, scalar, csc);      // csc(x)
+        SCALAR_FUNCTION_1_ARG(transcendental, scalar, arcsin);   // sin^-1(x)
+        SCALAR_FUNCTION_1_ARG(transcendental, scalar, arccos);   // cos^-1(x)
+        SCALAR_FUNCTION_1_ARG(transcendental, scalar, arctan);   // tan^-1(x)
+        SCALAR_FUNCTION_2_ARG(transcendental, scalar, arctan);   // tan^-1(x,y)
+        SCALAR_FUNCTION_1_ARG(transcendental, scalar, arccot);   // cot^-1(x)
+        SCALAR_FUNCTION_2_ARG(transcendental, scalar, arccot);   // cot^-1(x,y)
+        SCALAR_FUNCTION_1_ARG(transcendental, scalar, arcsec);   // sec^-1(x)
+        SCALAR_FUNCTION_1_ARG(transcendental, scalar, arccsc);   // csc^-1(x)
 
         // Transcendental numbers
 #if 0
@@ -203,8 +182,8 @@ namespace inca {
     /*-----------------------------------------------------------------------*
      | Conversion functions
      *-----------------------------------------------------------------------*/
-        SCALAR_TRANSCENDENTAL_FUNCTION_1_ARG(scalar, radiansToDegrees);
-        SCALAR_TRANSCENDENTAL_FUNCTION_1_ARG(scalar, degreesToRadians);
+        SCALAR_FUNCTION_1_ARG(transcendental, scalar, radiansToDegrees);
+        SCALAR_FUNCTION_1_ARG(transcendental, scalar, degreesToRadians);
     };
 };
 
@@ -315,22 +294,11 @@ struct inca::math::scalar_transcendental_api {
 
 // Clean up this travesty we've made of the preprocessor namespace
 #undef TRAITS
-#undef PASS_BY_VALUE
-#undef PASS_BY_REFERENCE
-#undef CONSTRAINT_INTEGER
-#undef CONSTRAINT_ARITHMETIC
-#undef CONSTRAINT_ALGEBRAIC
-#undef CONSTRAINT_TRANSCENDENTAL
+#undef BY_VALUE
+#undef BY_REF
+#undef SUPPORTS
 #undef SCALAR_FUNCTION_1_ARG
 #undef SCALAR_FUNCTION_2_ARG
-#undef SCALAR_INTEGER_FUNCTION_1_ARG
-#undef SCALAR_INTEGER_FUNCTION_2_ARG
-#undef SCALAR_ARITHMETIC_FUNCTION_1_ARG
-#undef SCALAR_ARITHMETIC_FUNCTION_2_ARG
-#undef SCALAR_ALGEBRAIC_FUNCTION_1_ARG
-#undef SCALAR_ALGEBRAIC_FUNCTION_2_ARG
-#undef SCALAR_TRANSCENDENTAL_FUNCTION_1_ARG
-#undef SCALAR_TRANSCENDENTAL_FUNCTION_2_ARG
 
 #endif
 

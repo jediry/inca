@@ -1,0 +1,407 @@
+/* -*- C++ -*-
+ *
+ * File: MultiDimensionalIterator
+ * 
+ * Author: Ryan L. Saunders
+ *
+ * Copyright 2004, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ *      The MultiDimensionalIterator template class implements an iterator
+ *      with semantics defined for multiple dimensions. Its most obvious use
+ *      is as the iterator for the MultiArray generic container, but it could
+ *      be specialized to work for any multi-dimensional purpose.
+ *
+ *      XXX old docs begin here
+ *      The MultiArrayIterator class allows to iterate through every element
+ *      in the MultiArray in a linear fashion just like any iterator,
+ *      regardless of the dimensionality of the container. Additionally, it
+ *      offers a multi-dimensional interface, allowing to move freely
+ *      through the container, along any axis.
+ *
+ *      The linear iteration functionality is accessed as with any
+ *      random-access iterator:
+ *          i++, i--    increment, decrement
+ *          i += n      jump
+ *
+ *      The multi-dimensional iteration functionality is accessed analogously,
+ *      but through an array of AxisWalker objects, which implement the
+ *      requisite iterator operators (minus the accessors * and ->) by
+ *      stepping the parent iterator by the appropriate number of elements:
+ *          i[0]++      increment along the first axis
+ *          i[n] += m   jump along the nth axis
+ *
+ *      The n-dimensional coordinates 
+ */
+
+// Questions:
+//      Conflict between using [] for axes and traditional ptr-style meaning
+//      Good way to do n-D coordinates
+// TODO: 
+
+
+#ifndef INCA_UTIL_MULTI_DIMENSIONAL_ITERATOR
+#define INCA_UTIL_MULTI_DIMENSIONAL_ITERATOR
+
+// Import system configuration
+#include <inca/inca-common.h>
+
+// This is part of the Inca utilities collection
+namespace inca {
+    // Forward declarations
+    template <class MultiArrayType, typename ReturnType, bool reversed>
+        class MultiArrayIterator;
+};
+
+// Import statically-sized Array class
+#include <inca/util/Array>
+
+
+// Implementation of MultiArray iterator class
+template <class MultiArrayType, typename ReturnType, bool reversed>
+class inca::MultiArrayIterator {
+/*---------------------------------------------------------------------------*
+ | Type & constant declarations
+ *---------------------------------------------------------------------------*/
+public:
+    // The MultiArray we're iterating through
+    typedef MultiArrayType MultiArray;
+
+    // How many dimensions do I have?
+    static const SizeType dimensionality = MultiArray::dimensionality;
+
+    // Numeric types used by the MultiArray
+//    typedef typename MultiArray::SizeType       SizeType;
+//    typedef typename MultiArray::IndexType      IndexType;
+//    typedef typename MultiArray::DifferenceType DifferenceType;
+
+    // Contained type definitions imported from MultiArray
+    typedef typename MultiArray::ElementType    ElementType;
+    typedef typename MultiArray::Reference      Reference;
+    typedef typename MultiArray::ConstReference ConstReference;
+    typedef typename MultiArray::Pointer        Pointer;
+    typedef typename MultiArray::ConstPointer   ConstPointer;
+
+    // This iterator type
+    typedef MultiArrayIterator<MultiArrayType, ReturnType, reversed> IteratorType;
+
+
+    // Stateless inner class for stepping the owning iterator by some
+    // number of elements along a single dimensional axis
+    class AxisWalker;
+
+    // An array of walkers, one for each dimension
+    typedef Array<AxisWalker, dimensionality>   AxisWalkerArray;
+
+
+/*---------------------------------------------------------------------------*
+ | Constructors & accessors
+ *---------------------------------------------------------------------------*/
+public:
+    // Default constructor
+    explicit MultiArrayIterator()
+            : _array(NULL), _index(-1) { }
+
+    // Normal copy constructor
+    MultiArrayIterator(const IteratorType &it)
+            : _array(it._array), _index(it.index()) {
+        // Create the array of AxisWalkers
+        for (IndexType i = 0; i < dimensionality; ++i)
+            _axes[i] = AxisWalker(*this, i);
+    }
+
+
+    // Copy constructor from any MultiArrayIterator type
+    template <typename RType, bool rev>
+    MultiArrayIterator(const MultiArrayIterator<MultiArray, RType, rev> &it)
+            : _array(it._array), _index(it.index()) {
+        // Create the array of AxisWalkers
+        for (IndexType i = 0; i < dimensionality; ++i)
+            _axes[i] = AxisWalker(*this, i);
+    }
+
+    // Linear-access constructor
+    explicit MultiArrayIterator(MultiArray & a, IndexType idx = 0)
+            : _array(&a), _index(idx) {
+        // Create the array of AxisWalkers
+        for (IndexType i = 0; i < dimensionality; ++i)
+            _axes[i] = AxisWalker(*this, i);
+    }
+
+    // Multi-dimension-access constructor
+    template <class IndexList>
+    explicit MultiArrayIterator(MultiArray & a, const IndexList &indices)
+            : _array(&a), _index(_array->indexOf(indices)) {
+        // Create the array of AxisWalkers
+        for (IndexType i = 0; i < dimensionality; ++i)
+            _axes[i] = AxisWalker(*this, i);
+    }
+
+
+    // Accessor functions
+          MultiArray & array()       { return *_array; }
+    const MultiArray & array() const { return *_array; }
+          AxisWalker & operator[](IndexType axis)       { return _axes[axis]; }
+    const AxisWalker & operator[](IndexType axis) const { return _axes[axis]; }
+    IndexType index() const { return _index; }
+
+protected:
+    MultiArray * _array;    // The MultiArray we're iterating through
+    IndexType _index;       // Where we are in it
+    AxisWalkerArray _axes;  // Walkers for each dimension
+
+
+/*---------------------------------------------------------------------------*
+ | Operators
+ *---------------------------------------------------------------------------*/
+public:
+    // Get a reference to the current element
+    ReturnType & operator*() { return array()[index()]; }
+
+    // Get a pointer to the current element
+    ReturnType * operator->() { return & array()[index()]; }
+
+    // Prefix increment operator
+    IteratorType & operator++() {
+        ++_index;
+        return *this;
+    }
+
+    // Postfix increment operator
+    IteratorType operator++(int) {
+        IteratorType temp = *this;
+        ++_index;
+        return temp;
+    }
+
+    // Prefix decrement operator
+    IteratorType & operator--() {
+        --_index;
+        return *this;
+    }
+
+    // Postfix decrement operator
+    IteratorType operator--(int) {
+        IteratorType temp = *this;
+        --_index;
+        return temp;
+    }
+
+    // Computed add/assignment operator
+    IteratorType & operator+=(DifferenceType n) {
+        _index += n;
+        return *this;
+    }
+
+    // Computed subtract/assignment operator
+    IteratorType & operator-=(DifferenceType n) {
+        _index -= n;
+        return *this;
+    }
+};
+
+
+/*---------------------------------------------------------------------------*
+ | Iterator non-member arithmetic operators
+ *---------------------------------------------------------------------------*/
+namespace inca {
+    // Iterator/integer addition: i + n
+    template <class MA, typename RT, bool rev>
+    inline MultiArrayIterator<MA, RT, rev>
+    operator+(const MultiArrayIterator<MA, RT, rev> &i,
+              typename MultiArrayIterator<MA, RT, rev>::DifferenceType n) {
+        MultiArrayIterator<MA, RT, rev> result = i;
+        return result += n;
+    }
+
+    // Iterator/integer addition: n + i
+    template <class MA, typename RT, bool rev>
+    inline MultiArrayIterator<MA, RT, rev>
+    operator+(typename MultiArrayIterator<MA, RT, rev>::DifferenceType n,
+              const MultiArrayIterator<MA, RT, rev> &i) {
+        return i + n;
+    }
+
+    // Iterator/integer subtraction: i - n
+    template <class MA, typename RT, bool rev>
+    inline MultiArrayIterator<MA, RT, rev>
+    operator-(const MultiArrayIterator<MA, RT, rev> &i,
+              typename MultiArrayIterator<MA, RT, rev>::DifferenceType n) {
+        MultiArrayIterator<MA, RT, rev> result = i;
+        return result -= n;
+    }
+};
+
+
+/*---------------------------------------------------------------------------*
+ | Iterator comparison operators
+ *---------------------------------------------------------------------------*/
+namespace inca {
+
+    // Iterator equality comparison:
+    template <class MA1, class MA2, typename RT1, typename RT2, bool rev>
+    inline bool operator==(const MultiArrayIterator<MA1, RT1, rev> &x,
+                           const MultiArrayIterator<MA2, RT2, rev> &y) {
+        return x.index() == y.index();
+    }
+
+    // Iterator less-than comparison
+    template <class MA1, class MA2, typename RT1, typename RT2, bool rev>
+    inline bool operator<(const MultiArrayIterator<MA1, RT1, rev> &x,
+                          const MultiArrayIterator<MA2, RT2, rev> &y) {
+        if (! reversed)     return x.index() < y.index();
+        else                return x.index() > y.index();
+    }
+
+
+    // Iterator non-equality comparison
+    template <class MA1, class MA2, typename RT1, typename RT2, bool rev>
+    inline bool operator!=(const MultiArrayIterator<MA1, RT1, rev> &x,
+                           const MultiArrayIterator<MA2, RT2, rev> &y) {
+        return ! (x == y);
+    }
+
+
+    // Iterator greater-than comparison
+    template <class MA1, class MA2, typename RT1, typename RT2, bool rev>
+    inline bool operator>(const MultiArrayIterator<MA1, RT1, rev> &x,
+                          const MultiArrayIterator<MA2, RT2, rev> &y) {
+        return (y < x);
+    }
+
+    // Iterator less-than-or-equal comparison
+    template <class MA1, class MA2, typename RT1, typename RT2, bool rev>
+    inline bool operator<=(const MultiArrayIterator<MA1, RT1, rev> &x,
+                           const MultiArrayIterator<MA2, RT2, rev> &y) {
+        return ! (y < x);
+    }
+
+    // Iterator greater-than-or-equal comparison
+    template <class MA1, class MA2, typename RT1, typename RT2, bool rev>
+    inline bool operator>=(const MultiArrayIterator<MA1, RT1, rev> &x,
+                           const MultiArrayIterator<MA2, RT2, rev> &y) {
+        return ! (x < y);
+    }
+
+};
+
+
+// Implementation of AxisWalker inner class (inherits types from
+// MultiArrayIterator)
+template <class MAType, typename RType, bool reversed>
+class inca::MultiArrayIterator<MAType, RType, reversed>::AxisWalker {
+/*---------------------------------------------------------------------------*
+ | Constructors & accessors
+ *---------------------------------------------------------------------------*/
+public:
+    // Default (no initialization) constructor
+    AxisWalker() : _array(NULL), _iterator(NULL), _axis(0) { }
+
+    // Copy constructor
+/*    AxisWalker(const AxisWalker & w)
+        : _array(const_cast<AxisWalker &>(w).array()),
+          _iterator(const_cast<AxisWalker &>(w).iterator()),
+          _axis(w.axis()) { }
+*/
+    AxisWalker(const AxisWalker & w)
+        : _array(w._array),
+          _iterator(w._iterator),
+          _axis(w.axis()) { }
+
+    // Constructor specifying iterator and axis
+    AxisWalker(IteratorType & i, IndexType ax)
+        : _array(&i.array()), _iterator(&i), _axis(ax) { }
+
+    // Accessor functions
+          MultiArray & array()       { return *_array; }
+    const MultiArray & array() const { return *_array; }
+          IteratorType & iterator()       { return *_iterator; }
+    const IteratorType & iterator() const { return *_iterator; }
+    IndexType axis() const { return _axis; }
+
+//    IndexType index() const { return 0; }
+
+protected:
+    MultiArray * _array;
+    IteratorType * _iterator;
+    IndexType _axis;
+
+
+/*---------------------------------------------------------------------------*
+ | Operators
+ *---------------------------------------------------------------------------*/
+public:
+    // Prefix increment operator
+    IteratorType & operator++() {
+        if (reversed)   return iterator() -= array().stride(axis());
+        else            return iterator() += array().stride(axis());
+    }
+
+    // Postfix increment operator
+    IteratorType operator++(int) {
+        IteratorType temp = iterator();
+        if (reversed)   iterator() -= array().stride(axis());
+        else            iterator() += array().stride(axis());
+        return temp;
+    }
+
+    // Prefix decrement operator
+    IteratorType & operator--() {
+        if (reversed)   return iterator() += array().stride(axis());
+        else            return iterator() -= array().stride(axis());
+    }
+
+    // Postfix decrement operator
+    IteratorType operator--(int) {
+        IteratorType temp = iterator();
+        if (reversed)   iterator() += array().stride(axis());
+        else            iterator() -= array().stride(axis());
+        return temp;
+    }
+
+    // Computed add/assignment operator
+    IteratorType & operator+=(DifferenceType n) {
+        if (reversed)   return iterator() -= n * array().stride(axis());
+        else            return iterator() += n * array().stride(axis());
+    }
+
+    // Computed subtract/assignment operator
+    IteratorType & operator-=(DifferenceType n) {
+        if (reversed)   return iterator() += n * array().stride(axis());
+        else            return iterator() -= n * array().stride(axis());
+    }
+};
+
+
+/*---------------------------------------------------------------------------*
+ | AxisWalker non-member arithmetic operators
+ *---------------------------------------------------------------------------*/
+namespace inca {
+    // AxisWalker/integer addition: w + n
+    template <class MA, typename RT, bool rev>
+    inline MultiArrayIterator<MA, RT, rev>
+    operator+(const typename MultiArrayIterator<MA, RT, rev>::AxisWalker &w,
+              typename MultiArrayIterator<MA, RT, rev>::DifferenceType n) {
+        MultiArrayIterator<MA, RT, rev> result = w.iterator();
+        return result[w.axis()] += n;
+    }
+
+    // AxisWalker/integer addition: n + w
+    template <class MA, typename RT, bool rev>
+    inline MultiArrayIterator<MA, RT, rev>
+    operator+(typename MultiArrayIterator<MA, RT, rev>::DifferenceType n,
+              const typename MultiArrayIterator<MA, RT, rev>::AxisWalker &w) {
+        return w + n;
+    }
+
+    // AxisWalker/integer subtraction: w - n
+    template <class MA, typename RT, bool rev>
+    inline MultiArrayIterator<MA, RT, rev>
+    operator-(const typename MultiArrayIterator<MA, RT, rev>::AxisWalker &w,
+              typename MultiArrayIterator<MA, RT, rev>::DifferenceType n) {
+        MultiArrayIterator<MA, RT, rev> result = w.iterator();
+        return result[w.axis()] -= n;
+    }
+};
+
+#endif

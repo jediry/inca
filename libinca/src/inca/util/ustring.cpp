@@ -24,23 +24,23 @@ using namespace inca;
 
 #if __GNUC__
 /*****************************************************************************
- * Implementation of char_traits for uchar, which the SGI STL doesn't implement,
- * which isn't surprising, as uchar is really an unsigned short. We need this
- * in order to make a basic_string out of uchar.
+ * Implementation of char_traits for Unicode, which the SGI STL doesn't implement,
+ * which isn't surprising, as Unicode is really an unsigned short. We need this
+ * in order to make a basic_string out of Unicode.
  *****************************************************************************/
-void std::char_traits<uchar>::assign(uchar &c1, const uchar &c2) {
+void std::char_traits<Unicode>::assign(Unicode &c1, const Unicode &c2) {
     c1 = c2;
 }
 
-bool std::char_traits<uchar>::eq(const uchar &c1, const uchar &c2) {
+bool std::char_traits<Unicode>::eq(const Unicode &c1, const Unicode &c2) {
     return c1 == c2;
 }
 
-bool std::char_traits<uchar>::lt(const uchar &c1, const uchar &c2) {
+bool std::char_traits<Unicode>::lt(const Unicode &c1, const Unicode &c2) {
     return c1 < c2;
 }
 
-int std::char_traits<uchar>::compare(const uchar *s1, const uchar *s2, std::size_t n) {
+int std::char_traits<Unicode>::compare(const Unicode *s1, const Unicode *s2, std::size_t n) {
     for (int i = 0; i < n; i++) {
         if (s1[i] < s2[i])
             return -1;
@@ -50,41 +50,41 @@ int std::char_traits<uchar>::compare(const uchar *s1, const uchar *s2, std::size
     return 0;
 }
     
-std::size_t std::char_traits<uchar>::length(const uchar *s) {
+std::size_t std::char_traits<Unicode>::length(const Unicode *s) {
     std::size_t size;
     for (size = 0; s[size] != 0; size++) /* */;
     return size;
 }
 
-const uchar * std::char_traits<uchar>::find(const uchar *s, std::size_t n, const uchar &c) {
+const Unicode * std::char_traits<Unicode>::find(const Unicode *s, std::size_t n, const Unicode &c) {
     std::size_t size;
     for (size = 0; s[size] != c && size < n; size++) /* */;
-    return (uchar*)(s + size);
+    return (Unicode*)(s + size);
 }
 
-uchar * std::char_traits<uchar>::move(uchar *dst, const uchar *src, std::size_t n) {
+Unicode * std::char_traits<Unicode>::move(Unicode *dst, const Unicode *src, std::size_t n) {
     for (std::size_t i = 0; i < n; i++)
         dst[i] = src[i];
     return dst;
 }
 
-uchar * std::char_traits<uchar>::copy(uchar *dst, const uchar *src, std::size_t n) {
+Unicode * std::char_traits<Unicode>::copy(Unicode *dst, const Unicode *src, std::size_t n) {
     for (std::size_t i = 0; i < n; i++)
         dst[i] = src[i];
     return dst;
 }
 
-uchar * std::char_traits<uchar>::assign(uchar *dst, std::size_t n, uchar c) {
+Unicode * std::char_traits<Unicode>::assign(Unicode *dst, std::size_t n, Unicode c) {
     for (std::size_t i = 0; i < n; i++)
         dst[i] = c;
     return dst;
 }
 
-uchar std::char_traits<uchar>::to_char_type(const unsigned long &c) {
-    return (uchar)c;
+Unicode std::char_traits<Unicode>::to_char_type(const unsigned long &c) {
+    return (Unicode)c;
 }
 
-unsigned long std::char_traits<uchar>::to_int_type(const uchar &c) {
+unsigned long std::char_traits<Unicode>::to_int_type(const Unicode &c) {
     return (unsigned long)c;
 }
 #endif
@@ -175,7 +175,7 @@ ustring::ustring(const char * const s) {
 }
 
 // Copy/assignment from Unicode string
-ustring::ustring(const uchar * const s) {
+ustring::ustring(const Unicode * const s) {
     if (s == NULL) {    // Handle the case where this is NULL
         ascii = "";
         unicodeValid = false;
@@ -220,7 +220,7 @@ ustring::operator double() const {
 
 ustring::operator string() const { return ascii; }
 
-ustring::operator const uchar*() const {
+ustring::operator const Unicode*() const {
     regenerateUnicode();
     return unicode.c_str();
 }
@@ -240,7 +240,7 @@ inline void ustring::regenerateUnicode() const {
         unicode.clear();
         unicode.reserve(length);
         for (int i = 0; i < length; i++)
-            unicode.push_back(static_cast<uchar>(str[i]));
+            unicode.push_back(static_cast<Unicode>(str[i]));
 #endif
     }
 }
@@ -268,7 +268,7 @@ const ustring ustring::operator+(const string &s) const {
 const ustring ustring::operator+(const char * const s) const {
     return ustring(ascii + s);
 }
-const ustring ustring::operator+(const uchar * const s) const {
+const ustring ustring::operator+(const Unicode * const s) const {
     return ustring((unicode + s).c_str());
 }
 const ustring ustring::operator+(const ustring &s) const {
@@ -302,7 +302,7 @@ bool ustring::operator==(const char * const s) const {
     return (ascii == s);
 }
 
-bool ustring::operator==(const uchar *const s) const {
+bool ustring::operator==(const Unicode *const s) const {
     return (*this == ustring(s));
 }
 

@@ -1,0 +1,147 @@
+/*
+ * File: concepts
+ * 
+ * Author: Ryan L. Saunders
+ *
+ * Copyright 2004, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ *      This file implements
+ */
+
+#ifndef INCA_RASTER_CONCEPTS
+#define INCA_RASTER_CONCEPTS
+
+// Import system configuration
+#include <inca/inca-common.h>
+
+// This is part of the Inca raster processing library
+namespace inca {
+    namespace raster {
+        // Raster concept tags
+        class RasterTag { };
+        class WritableRasterTag : public RasterTag { };
+        class FixedSizeRasterTag : public RasterTag { };
+        class ResizableRasterTag : public RasterTag { };
+        class ArbitrarySizeRasterTag : public RasterTag { };
+        class InMemoryRasterTag : public RasterTag { };
+        class ContiguousMemoryRasterTag : public InMemoryRasterTag { };
+
+        // Raster concept checking classes
+        template <class T> class RasterConcept;
+        template <class T> class WritableRasterConcept;
+        template <class T> class FixedSizeRasterConcept;
+        template <class T> class ResizableRasterConcept;
+        template <class T> class ArbitrarySizeRasterConcept;
+        template <class T> class InMemoryRasterConcept;
+        template <class T> class ContiguousMemoryRasterConcept;
+
+        // Raster concept boolean metafunctions
+        template <class T, class Enable> struct is_raster;
+        template <class T, class Enable> struct is_writable_raster;
+        template <class T, class Enable> struct is_fixed_size_raster;
+        template <class T, class Enable> struct is_resizable_raster;
+        template <class T, class Enable> struct is_arbitrary_size_raster;
+        template <class T, class Enable> struct is_in_memory_raster;
+        template <class T, class Enable> struct is_contiguous_memory_raster;
+
+        // Raster operator concept tags
+        class RasterOperatorTag : public RasterTag { };
+        class PerCellRasterOperatorTag : public RasterOperatorTag { };
+        class UnaryRasterOperatorTag : public RasterOperatorTag { };
+        class BinaryRasterOperatorTag : public RasterOperatorTag { };
+
+        // Raster operator concept checking classes
+        template <class T> class RasterOperatorConcept;
+        template <class T> class PerCellRasterOperatorConcept;
+        template <class T> class UnaryRasterOperatorConcept;
+        template <class T> class BinaryRasterOperatorConcept;
+
+        // Raster operator concept boolean metafunctions
+        template <class T, class Enable> struct is_raster_operator;
+        template <class T, class Enable> struct is_per_cell_raster_operator;
+        template <class T, class Enable> struct is_unary_raster_operator;
+        template <class T, class Enable> struct is_binary_raster_operator;
+
+        // Miscellaneous Raster metafunctions
+        template <class T, class Enable> struct raster_dimensionality;
+        template <class T, class Enable> struct element_type;
+    };
+};
+
+// Import metaprogramming tools and simplifying macros
+#include <inca/util/template-metaprogramming-macros.hpp>
+
+
+namespace inca {
+    namespace raster {
+
+// is_raster<T>::value evaluates to true if T is derived from the
+// RasterTag class, indicating that it implements the Raster concept.
+BOOL_METAFUNCTION(is_raster, DERIVED_FROM(T, RasterTag))
+
+// is_writable_raster<T>::value evaluates to true if T is derived from the
+// WritableRasterTag class, indicating that it implements the
+// WritableRaster concept.
+BOOL_METAFUNCTION(is_writable_raster, DERIVED_FROM(T, WritableRasterTag))
+
+// is_fixed_size_raster<T>::value evaluates to true if T is derived from the
+// FixedSizeRasterTag class, indicating that it implements the
+// FixedSizeRaster concept.
+BOOL_METAFUNCTION(is_fixed_size_raster, DERIVED_FROM(T, FixedSizeRasterTag))
+
+// is_resizable_raster<T>::value evaluates to true if T is derived from the
+// ResizableRasterTag class, indicating that it implements the
+// ResizableRaster concept.
+BOOL_METAFUNCTION(is_resizable_raster, DERIVED_FROM(T, ResizableRasterTag))
+
+// is_arbitrary_size_raster<T>::value evaluates to true if T is derived from the
+// ArbitrarySizeRasterTag class, indicating that it implements the
+// ArbitrarySizeRaster concept.
+BOOL_METAFUNCTION(is_arbitrary_size_raster, DERIVED_FROM(T, ArbitrarySizeRasterTag))
+
+// is_in_memory_raster<T>::value evaluates to true if T is derived from the
+// InMemoryRasterTag class, indicating that it implements the
+// InMemoryRaster concept.
+BOOL_METAFUNCTION(is_in_memory_raster, DERIVED_FROM(T, InMemoryRasterTag))
+
+// is_contiguous_memory_raster<T>::value evaluates to true if T is derived from the
+// ContiguousMemoryRasterTag class, indicating that it implements the
+// ContiguousMemoryRaster concept.
+BOOL_METAFUNCTION(is_contiguous_memory_raster, DERIVED_FROM(T, ContiguousMemoryRasterTag))
+
+
+
+// The element_type template strips a Raster down to its contained
+// element type (Raster of T becomes just T). If the parameter is not a Raster
+// type, raster_element_type just returns that type without modification.
+template <class T, typename enable = void>
+struct element_type {
+    typedef T type;
+};
+template <class T>
+struct element_type<T, ENABLE_IF( is_raster<T> ) > {
+    typedef typename T::ElementType type;
+};
+
+
+// The raster_dimensionality metafunction returns the dimensionality of its
+// argument if it is a raster, or zero if the argument is not.
+template <class T, typename enable = void>
+struct raster_dimensionality {
+    static const SizeType value = 0;
+};
+template <class T>
+struct raster_dimensionality<T, ENABLE_IF( is_raster<T> ) > {
+    static const SizeType value = T::dimensionality;
+};
+
+    };
+};
+
+
+// Clean up the preprocessor's namespace
+#define UNDEFINE_INCA_METAPROGRAMMING_MACROS
+#include <inca/util/template-metaprogramming-macros.hpp>
+
+#endif

@@ -1,0 +1,37 @@
+/* -*- C++ -*-
+ *
+ * File: sRGB
+ *
+ * Author: Ryan L. Saunders
+ *
+ * Copyright 2004, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ *      This file implements the standard 3-component RGB colorspace with
+ *      an optional alpha channel.
+ */
+
+
+#ifndef INCA_MATH_COLOR_SRGB
+#define INCA_MATH_COLOR_SRGB
+
+// Import system configuration
+#include <inca/inca-common.h>
+
+// This is part of the Inca math library
+namespace inca {
+    namespace math {
+        // 3 or 4 channel RGB colorspace
+        template <bool alpha> struct sRGB {
+            static const SizeType   components = 3;
+            static const bool       hasAlpha   = alpha;
+            static const SizeType   channels   = components + int(alpha);
+
+            static std::string name() {
+                return hasAlpha ? std::string("RGBA") : std::string("RGB");
+            }
+        };
+    };
+};
+
+#endif

@@ -23,7 +23,7 @@ RENDERER_TEMPLATE
 class RENDERER::LightingUnit : public RENDERER::Component {
 public:
     // Constructor
-    LightingUnit(RENDERER &r, id_t id);
+    LightingUnit(RENDERER &r, IDType id);
 };
 
 #endif

@@ -22,29 +22,30 @@
 namespace inca {
     namespace math {
         // Forward declarations
-        template <typename scalar, inca::size_t maj, inca::size_t min,
+        template <typename scalar, inca::SizeType maj, inca::SizeType min,
                   bool rowMajAccess = true, bool rowMajorStorage = true>
         class Matrix;
     };
 };
 
-// Import superclass definition
-#include "../Array"
-
 // Import STL algorithms
 #include <algorithm>
 
-// Import related class definitions
+// Import scalar math implementation
+#include "../scalar.hpp"
+
+// Import superclass and related class definitions
+#include <inca/util/Array>
 #include "Point"
 #include "Vector"
 
+// Import multi-dimensional preprocessor metaprogramming macros
+#include <inca/util/multi-dimensional-macros.hpp>
 
-// Import math macros
-#include "../macros.hpp"
 
-template <typename scalar, inca::size_t _major, inca::size_t _minor,
+template <typename scalar, inca::SizeType _major, inca::SizeType _minor,
           bool _rowMajorAccess, bool _rowMajorStorage>
-class inca::math::Matrix : public inca::math::Array<scalar, _major * _minor> {
+class inca::math::Matrix : public inca::Array<scalar, _major * _minor> {
 /*---------------------------------------------------------------------------*
  | Type/constant declarations
  *---------------------------------------------------------------------------*/
@@ -53,14 +54,14 @@ public:
     INCA_MATH_SCALAR_TYPES(scalar, IS_WITHIN_TEMPLATE);
 
     // What size matrix, and what storage order are we working with?
-    static const size_t major = _major;
-    static const size_t minor = _minor;
+    static const SizeType major = _major;
+    static const SizeType minor = _minor;
     static const bool rowMajorAccess =   _rowMajorAccess;
     static const bool colMajorAccess = ! _rowMajorAccess;
     static const bool rowMajorStorage =   _rowMajorStorage;
     static const bool colMajorStorage = ! _rowMajorStorage;
-    static const size_t rows = rowMajorAccess ? major : minor;
-    static const size_t cols = colMajorAccess ? major : minor;
+    static const SizeType rows = rowMajorAccess ? major : minor;
+    static const SizeType cols = colMajorAccess ? major : minor;
 
 
 /*---------------------------------------------------------------------------*
@@ -73,12 +74,20 @@ public:
     explicit Matrix() { }
 
     /**
-     * Initialization from another array type, possibly of a different scalar
-     * type. The argument array must be of the same dimensionality, and its
+     * Initialization from another Matrix, possibly of a different scalar
+     * type. The argument must be of the same dimensionality, and its
      * scalar type must be convertible to scalar_t.
      */
-    template <typename scalar2>
-    explicit Matrix(const boost::array<scalar2, static_size> &arr) {
+    template <typename scalar2, bool rowAccess2, bool rowStorage2>
+    Matrix(const Matrix<scalar2, major, minor, rowAccess2, rowStorage2> &p) {
+        BOOST_STATIC_ASSERT(1 == -1);
+        std::copy(p.begin(), p.end(), begin());
+    }
+
+    /**
+     * Initialization from an Array (or subclass).
+     */
+    explicit Matrix(const Array<scalar_t, dimensionality> &arr) {
         std::copy(arr.begin(), arr.end(), begin());
     }
 
@@ -98,8 +107,8 @@ public:
      */
     template <typename scalar2>
     explicit Matrix(scalar2 arr[major][minor]) {
-        for (index_t i = 0; i < major; i++)
-            for (index_t j = 0; j < minor; j++)
+        for (IndexType i = 0; i < major; i++)
+            for (IndexType j = 0; j < minor; j++)
                 at(indexOf(i, j)) = arr[i][j];
         // FIXME: this doesn't respect storage order
     }
@@ -125,30 +134,30 @@ public:
     /**
      * 2D matrix-subscript element accessor.
      */
-    const scalar_t & operator()(index_t maj, index_t min) const {
+    const scalar_t & operator()(IndexType maj, IndexType min) const {
         return at(indexOf(maj, min));
     }
-    scalar_t & operator()(index_t maj, index_t min) {
+    scalar_t & operator()(IndexType maj, IndexType min) {
         return at(indexOf(maj, min));
     }
 
     /**
      * 2D, storage-order-independent element accessor.
      */
-    const scalar_t & rowCol(index_t r, index_t c) const {
+    const scalar_t & rowCol(IndexType r, IndexType c) const {
         return at(rowMajorStorage ? r * cols + c : c * rows + r);
     }
-    scalar_t & rowCol(index_t r, index_t c) {
+    scalar_t & rowCol(IndexType r, IndexType c) {
         return at(rowMajorStorage ? r * cols + c : c * rows + r);
     }
 
     /**
      * 2D, storage-order-independent element accessor.
      */
-    const scalar_t & colRow(index_t c, index_t r) const {
+    const scalar_t & colRow(IndexType c, IndexType r) const {
         return rowCol(r, c);
     }
-    scalar_t & colRow(index_t c, index_t r) {
+    scalar_t & colRow(IndexType c, IndexType r) {
         return rowCol(r, c);
     }
 
@@ -156,7 +165,7 @@ public:
      * Calculate a 1D index into the underlying ScalarList from a pair of
      * major-axis, minor-axis subscripts.
      */
-    index_t indexOf(index_t maj, index_t min) const {
+    IndexType indexOf(IndexType maj, IndexType min) const {
         if (rowMajorStorage == rowMajorAccess)  // Same access as storage
             return maj * minor + min;
         else
@@ -174,7 +183,7 @@ public:
      */
     operator std::string() const {
         std::ostringstream ss;
-        for (index_t row = 0; row < rows; row++)
+        for (IndexType row = 0; row < rows; row++)
             // Stringify a single row in the matrix. This has to be done
             // differently, depending on the storage scheme
             if (colMajorStorage)
@@ -186,7 +195,7 @@ public:
 };
 
 // Clean up the preprocessor's namespace
-#define UNDEFINE_INCA_MATH_MACROS
-#include "../macros.hpp"
+#define UNDEFINE_INCA_MULTI_DIM_MACROS
+#include <inca/util/multi-dimensional-macros.hpp>
 
 #endif

@@ -49,6 +49,8 @@
  *      FIXME:? What about the case where we want to allow access to non-const
  *      functions of the target, but not allow assignment to the target. Is
  *      this possible?
+ *
+ *      list ops - clear()?
  */
 
 #ifndef INCA_UTIL_PROPERTY
@@ -85,6 +87,7 @@
         typedef TYPE const *        const_pointer;                          \
         typedef shared_ptr<TYPE>    shared_pointer;                         \
         typedef shared_ptr<TYPE const> const_shared_pointer;                \
+        typedef std::vector<TYPE>   list_type;                              \
         typedef ThisType            Owner;
 
 
@@ -135,8 +138,12 @@
 
 
 #define LIST_PROPERTY_CONSTRUCTORS(NAME)                                    \
-    /* Constructor with the default initializion */                         \
-    property_ ## NAME(Owner * own) : owner(*own) { }
+    /* Constructor with no initialization */                                \
+    property_ ## NAME(Owner * own) : owner(*own) { }                        \
+    /* Constructor initializing from a collection */                        \
+    template <class Collection>                                             \
+        property_ ## NAME(Owner *own, const Collection &c)                  \
+            : owner(*own) { *this = c; }
 
 
 /*****************************************************************************
@@ -224,20 +231,31 @@
 
 
 #define LIST_PROPERTY_ACCESSORS(NAME)                                       \
-    /* Getter operators and function */                                     \
-    const_reference operator [](index_t i) const { return get(i); }         \
-    const_reference get(index_t i) const {                                  \
-        return owner.get_ ## NAME(i);                                       \
-    }                                                                       \
-    size_t size() const { return owner. NAME ## _size(); }
+    /* Getter operators and functions */                                    \
+    std::size_t size() const { return owner. NAME ## _size(); }             \
+    operator const list_type &() const { return get(); }                    \
+    const list_type & operator()() const { return get(); }                  \
+    const_reference operator [](IndexType i) const { return get_item(i); }  \
+    const list_type & get() const { return owner.get_ ## NAME(); }          \
+    const_reference get_item(IndexType i) const {                           \
+        return owner.get_ ## NAME ## _item(i);                              \
+    }
 
 #define LIST_PROPERTY_MUTATORS(NAME)                                        \
     /* Setter operators and function */                                     \
-    reference operator [](index_t i) { return get(i); }                     \
-    reference get(index_t i) {                                              \
-        return owner.get_ ## NAME(i);                                       \
+    reference operator [](IndexType i) { return get_item(i); }              \
+    template <class Collection>                                             \
+        property_ ## NAME & operator=(const Collection &c) {                \
+            assign(c);                                                      \
+            return *this;                                                   \
+        }                                                                   \
+    template <class Collection>                                             \
+        void assign(const Collection &c) { owner.assign_ ## NAME(c); }      \
+    reference get_item(IndexType i) {                                       \
+        return owner.get_ ## NAME ## _item(i);                              \
     }                                                                       \
-    void add(const_reference v) { owner.add_ ## NAME(v); }
+    void add_item(const_reference i) { owner.add_ ## NAME ## _item(i); }    \
+    void delete_item(IndexType i) { owner.delete_ ## NAME ## _item(i); }
 
 
 /*****************************************************************************
@@ -358,11 +376,13 @@
 #define ptr_property_get(TYPE, NAME) get_ ## NAME() const
 #define ptr_property_set(TYPE, NAME) set_ ## NAME(shared_ptr<TYPE> value)
 
-#define list_property_size(TYPE, NAME)   NAME ## _size() const
-#define list_property_get(TYPE, NAME)    get_ ## NAME(index_t index) const
-#define list_property_set(TYPE, NAME)    get_ ## NAME(index_t index)
-#define list_property_add(TYPE, NAME)    add_ ## NAME(const TYPE & value)
-#define list_property_delete(TYPE, NAME) delete_ ## NAME(index_t index)
+#define list_property_size(TYPE, NAME)        NAME ## _size() const
+#define list_property_get_list(TYPE, NAME)    get_ ## NAME() const
+#define list_property_assign_list(TYPE, NAME) assign_ ## NAME(const Collection &c)
+#define list_property_get_item(TYPE, NAME)    get_ ## NAME ## _item(IndexType index) const
+#define list_property_set_item(TYPE, NAME)    get_ ## NAME ## _item(IndexType index)
+#define list_property_add_item(TYPE, NAME)    add_ ## NAME ## _item(const TYPE & value)
+#define list_property_delete_item(TYPE, NAME) delete_ ## NAME ## _item(IndexType index)
 
 // These are the full function prototypes (with return type)
 #define PROPERTY_GET_PROTOTYPE(TYPE, NAME)                                  \
@@ -374,15 +394,20 @@
 #define PTR_PROPERTY_SET_PROTOTYPE(TYPE, NAME)                              \
     void ptr_property_set(TYPE, NAME)
 #define LIST_PROPERTY_SIZE_PROTOTYPE(TYPE, NAME)                            \
-    size_t list_property_size(TYPE, NAME)
-#define LIST_PROPERTY_GET_PROTOTYPE(TYPE, NAME)                             \
-    const TYPE & list_property_get(TYPE, NAME)
-#define LIST_PROPERTY_SET_PROTOTYPE(TYPE, NAME)                             \
-    TYPE & list_property_set(TYPE, NAME)
-#define LIST_PROPERTY_ADD_PROTOTYPE(TYPE, NAME)                             \
-    void list_property_add(TYPE, NAME)
-#define LIST_PROPERTY_DELETE_PROTOTYPE(TYPE, NAME)                          \
-    void list_property_delete(TYPE, NAME)
+    SizeType list_property_size(TYPE, NAME)
+#define LIST_PROPERTY_GET_LIST_PROTOTYPE(TYPE, NAME)                        \
+    const std::vector<TYPE> & list_property_get_list(TYPE, NAME)
+#define LIST_PROPERTY_ASSIGN_LIST_PROTOTYPE(TYPE, NAME)                     \
+    template <class Collection>                                             \
+        void list_property_assign_list(TYPE, NAME)
+#define LIST_PROPERTY_GET_ITEM_PROTOTYPE(TYPE, NAME)                        \
+    const TYPE & list_property_get_item(TYPE, NAME)
+#define LIST_PROPERTY_SET_ITEM_PROTOTYPE(TYPE, NAME)                        \
+    TYPE & list_property_set_item(TYPE, NAME)
+#define LIST_PROPERTY_ADD_ITEM_PROTOTYPE(TYPE, NAME)                        \
+    void list_property_add_item(TYPE, NAME)
+#define LIST_PROPERTY_DELETE_ITEM_PROTOTYPE(TYPE, NAME)                     \
+    void list_property_delete_item(TYPE, NAME)
 
 // Default property getter function implementation
 #define DEFAULT_PROPERTY_GET(TYPE, NAME)                                    \
@@ -407,20 +432,31 @@
     LIST_PROPERTY_SIZE_PROTOTYPE(TYPE, NAME) { return _ ## NAME.size(); }
 
 // Default list property get implementation
-#define DEFAULT_LIST_PROPERTY_GET(TYPE, NAME)                               \
-    LIST_PROPERTY_GET_PROTOTYPE(TYPE, NAME) { return _ ## NAME[index]; }
+#define DEFAULT_LIST_PROPERTY_GET_LIST(TYPE, NAME)                          \
+    LIST_PROPERTY_GET_LIST_PROTOTYPE(TYPE, NAME) { return _ ## NAME; }
 
-// Default list property set implementation
-#define DEFAULT_LIST_PROPERTY_SET(TYPE, NAME)                               \
-    LIST_PROPERTY_SET_PROTOTYPE(TYPE, NAME) { return _ ## NAME[index]; }
+// Default list property assign implementation
+#define DEFAULT_LIST_PROPERTY_ASSIGN_LIST(TYPE, NAME)                       \
+    LIST_PROPERTY_ASSIGN_LIST_PROTOTYPE(TYPE, NAME) {                            \
+        _ ## NAME.clear();                                                  \
+        _ ## NAME.insert(_ ## NAME.begin(), c.begin(), c.end());            \
+    }
 
-// Default list property add implementation
-#define DEFAULT_LIST_PROPERTY_ADD(TYPE, NAME)                               \
-    LIST_PROPERTY_ADD_PROTOTYPE(TYPE, NAME) { return _ ## NAME.push_back(value); }
+// Default list property get item implementation
+#define DEFAULT_LIST_PROPERTY_GET_ITEM(TYPE, NAME)                          \
+    LIST_PROPERTY_GET_ITEM_PROTOTYPE(TYPE, NAME) { return _ ## NAME[index]; }
 
-// Default list property add implementation
-#define DEFAULT_LIST_PROPERTY_DELETE(TYPE, NAME)                            \
-    LIST_PROPERTY_DELETE_PROTOTYPE(TYPE, NAME) { }
+// Default list property set item implementation
+#define DEFAULT_LIST_PROPERTY_SET_ITEM(TYPE, NAME)                          \
+    LIST_PROPERTY_SET_ITEM_PROTOTYPE(TYPE, NAME) { return _ ## NAME[index]; }
+
+// Default list property add item implementation
+#define DEFAULT_LIST_PROPERTY_ADD_ITEM(TYPE, NAME)                          \
+    LIST_PROPERTY_ADD_ITEM_PROTOTYPE(TYPE, NAME) { return _ ## NAME.push_back(value); }
+
+// Default list property delete item implementation
+#define DEFAULT_LIST_PROPERTY_DELETE_ITEM(TYPE, NAME)                       \
+    LIST_PROPERTY_DELETE_ITEM_PROTOTYPE(TYPE, NAME) { }
 
 
 /*****************************************************************************
@@ -547,10 +583,12 @@ public:                                                                     \
     RO_LIST_PROPERTY_CLASS(TYPE, NAME);                                     \
     RO_LIST_PROPERTY_OWNER_VARIABLES(TYPE, NAME);                           \
     DEFAULT_LIST_PROPERTY_SIZE(TYPE, NAME);                                 \
-    DEFAULT_LIST_PROPERTY_GET(TYPE, NAME);                                  \
-    DEFAULT_LIST_PROPERTY_SET(TYPE, NAME);                                  \
-    DEFAULT_LIST_PROPERTY_ADD(TYPE, NAME);                                  \
-    DEFAULT_LIST_PROPERTY_DELETE(TYPE, NAME);
+    DEFAULT_LIST_PROPERTY_GET_LIST(TYPE, NAME);                             \
+    DEFAULT_LIST_PROPERTY_ASSIGN_LIST(TYPE, NAME);                          \
+    DEFAULT_LIST_PROPERTY_GET_ITEM(TYPE, NAME);                             \
+    DEFAULT_LIST_PROPERTY_SET_ITEM(TYPE, NAME);                             \
+    DEFAULT_LIST_PROPERTY_ADD_ITEM(TYPE, NAME);                             \
+    DEFAULT_LIST_PROPERTY_DELETE_ITEM(TYPE, NAME);
 
 // A read-write list property with default size/get/set/add/delete
 #define rw_list_property(TYPE, NAME)                                        \
@@ -558,9 +596,11 @@ public:                                                                     \
     RW_LIST_PROPERTY_CLASS(TYPE, NAME);                                     \
     RW_LIST_PROPERTY_OWNER_VARIABLES(TYPE, NAME);                           \
     DEFAULT_LIST_PROPERTY_SIZE(TYPE, NAME);                                 \
-    DEFAULT_LIST_PROPERTY_GET(TYPE, NAME);                                  \
-    DEFAULT_LIST_PROPERTY_SET(TYPE, NAME);                                  \
-    DEFAULT_LIST_PROPERTY_ADD(TYPE, NAME);                                  \
-    DEFAULT_LIST_PROPERTY_DELETE(TYPE, NAME);
+    DEFAULT_LIST_PROPERTY_GET_LIST(TYPE, NAME);                             \
+    DEFAULT_LIST_PROPERTY_ASSIGN_LIST(TYPE, NAME);                          \
+    DEFAULT_LIST_PROPERTY_GET_ITEM(TYPE, NAME);                             \
+    DEFAULT_LIST_PROPERTY_SET_ITEM(TYPE, NAME);                             \
+    DEFAULT_LIST_PROPERTY_ADD_ITEM(TYPE, NAME);                             \
+    DEFAULT_LIST_PROPERTY_DELETE_ITEM(TYPE, NAME);
 
 #endif

@@ -29,10 +29,10 @@
 #define INCA_DYNAMIC_SYSTEM_STATE
 
 // This is part of the Inca dynamics library
-namespace Inca {
-    namespace Dynamics {
+namespace inca {
+    namespace dynamics {
         // Forward declaration
-        template <class DynObj, unsigned int n> class StateVector;
+        template <class DynObj, SizeType n> class StateVector;
         template <class DynObj> class StateVectorProxy;
     };
 };
@@ -44,8 +44,8 @@ namespace Inca {
 /*****************************************************************************
  * A StateVector is an array of individual States, and 
  *****************************************************************************/
-template <class State, unsigned int n>
-class Inca::Dynamics::StateVector {
+template <class State, inca::SizeType n>
+class inca::dynamics::StateVector {
 private:
     // Convenience typedefs
     typedef StateVector<State, n> ThisType;
@@ -64,7 +64,7 @@ public:
     explicit StateVector() : _size(0) { }
 
 protected:
-    size_t _size;       // The number of valid states in this vector
+    SizeType _size;       // The number of valid states in this vector
     State states[n];    // The state objects (some may be unused)
 
 
@@ -73,14 +73,14 @@ protected:
  *---------------------------------------------------------------------------*/
 public:
     // Query used and total size for the state vector
-    size_t size()     const { return _size; }
-    size_t capacity() const { return n; }
-    bool   empty()    const { return size() == 0; }
-    bool   full()     const { return size() == capacity(); }
+    SizeType size()     const { return _size; }
+    SizeType capacity() const { return n; }
+    bool     empty()    const { return size() == 0; }
+    bool     full()     const { return size() == capacity(); }
 
     // Change the size of the state vector
     void clear() { setSize(0); }
-    void setSize(size_t s) {
+    void setSize(SizeType s) {
         if (s <= capacity())
             _size = s;
         else
@@ -88,8 +88,8 @@ public:
     }
 
     // Access to an individual state object
-          State & operator[](index_t i)       { return (states)[i]; }
-    const State & operator[](index_t i) const { return (states)[i]; }
+          State & operator[](IndexType i)       { return (states)[i]; }
+    const State & operator[](IndexType i) const { return (states)[i]; }
 
 
 /*---------------------------------------------------------------------------*
@@ -98,28 +98,28 @@ public:
 public:
     // State (+)accumulation assignment
     ThisType & operator+=(const ThisType &s) {
-        for (index_t i = 0; i < _size; i++)
+        for (IndexType i = 0; i < _size; i++)
             states[i] += s[i];
         return *this;
     }
 
     // State (-)accumulation assignment
     ThisType & operator-=(const ThisType &s) {
-        for (index_t i = 0; i < _size; i++)
+        for (IndexType i = 0; i < _size; i++)
             states[i] -= s[i];
         return *this;
     }
 
     // Scalar multiplication assignment
     ThisType & operator*=(scalar_arg_t s) {
-        for (index_t i = 0; i < _size; i++)
+        for (IndexType i = 0; i < _size; i++)
             states[i] *= s;
         return *this;
     }
 
     // Scalar division assignment
     ThisType & operator/=(scalar_arg_t s) {
-        for (index_t i = 0; i < _size; i++)
+        for (IndexType i = 0; i < _size; i++)
             states[i] /= s;
         return *this;
     }
@@ -163,7 +163,7 @@ protected:
  *---------------------------------------------------------------------------*/
 public:
     // Constructor
-    explicit StateVectorProxy(scalar_arg_t t, size_t sz) : _time(t) {
+    explicit StateVectorProxy(scalar_arg_t t, SizeType sz) : _time(t) {
         _objectStates = stateVectorPool.acquire();   // Get me a state vector
         setSize(sz);
     }
@@ -202,17 +202,17 @@ protected:
  *---------------------------------------------------------------------------*/
 public:
     // Query used and total size for the state vector
-    size_t size()     const { return _objectStates->size(); }
-    size_t capacity() const { return _objectStates->capacity(); }
+    SizeType size()     const { return _objectStates->size(); }
+    SizeType capacity() const { return _objectStates->capacity(); }
     bool   empty()    const { return _objectStates->empty(); }
 
     // Change the size of the state vector
     void clear() { _objectStates->clear(); }
-    void setSize(size_t s) { _objectStates->setSize(s); }
+    void setSize(SizeType s) { _objectStates->setSize(s); }
 
     // Access to an individual state object
-          State & operator[](index_t i)       { return (*_objectStates)[i]; }
-    const State & operator[](index_t i) const { return (*_objectStates)[i]; }
+          State & operator[](IndexType i)       { return (*_objectStates)[i]; }
+    const State & operator[](IndexType i) const { return (*_objectStates)[i]; }
 
 
 /*---------------------------------------------------------------------------*

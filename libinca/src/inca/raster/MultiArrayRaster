@@ -1,0 +1,282 @@
+/* -*- C++ -*-
+ *
+ * File: MultiArrayRaster
+ * 
+ * Author: Ryan L. Saunders
+ *
+ * Copyright 2004, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ *      The MultiArrayRaster template class implements the Raster
+ *      interface using the inca::MultiArray multi-dimensional container.
+ *
+ *      This is the preferred implementation for in-memory Rasters, unless you
+ *      need to interface with another image processing library (e.g.,
+ *      ImageMagick or VIGRA) or to wrap really strange memory layouts (e.g.
+ *      multi-band RGB). It supports arbitrary dimensionality, resizing,
+ *      adjustable index bases, and user-configurable storage order.
+ */
+
+// TODO: add iterator versions to accessors and stuff
+// Add setters for bases, storage order, etc.
+// Do slicing.
+// Do descending storage
+
+#ifndef INCA_RASTER_MULTI_ARRAY_RASTER
+#define INCA_RASTER_MULTI_ARRAY_RASTER
+
+// Import system configuration
+#include <inca/inca-common.h>
+
+
+// This is part of the Inca raster processing library
+namespace inca {
+    namespace raster {
+        // Forward declarations
+        template <typename T, inca::SizeType dim> class MultiArrayRaster;
+    };
+};
+
+// Import concept tag definitions and algorithms
+#include "concepts"
+#include "algorithms"
+
+// Import container definition
+#include <inca/util/MultiArray>
+
+// Import metaprogramming macros
+#include <inca/util/multi-dimensional-macros.hpp>
+#include <inca/util/template-metaprogramming-macros.hpp>
+
+
+template <typename T, inca::SizeType dim>
+class inca::raster::MultiArrayRaster : public WritableRasterTag,
+                                       public ResizableRasterTag,
+                                       public ContiguousMemoryRasterTag {
+/*---------------------------------------------------------------------------*
+ | Type & constant declarations
+ *---------------------------------------------------------------------------*/
+public:
+    typedef MultiArrayRaster<T, dim>            ThisType;
+
+    // Underlying MultiArray type
+    typedef inca::MultiArray<T, dim>            MultiArray;
+    typedef typename MultiArray::StorageOrder   StorageOrder;
+
+    // Numeric types
+//    typedef typename MultiArray::SizeType       SizeType;
+//    typedef typename MultiArray::IndexType      IndexType;
+//    typedef typename MultiArray::DifferenceType DifferenceType;
+
+    // Container types
+    typedef typename MultiArray::SizeArray          SizeArray;
+    typedef typename MultiArray::IndexArray         IndexArray;
+    typedef typename MultiArray::DifferenceArray    DifferenceArray;
+
+    // Iterator types
+    typedef typename MultiArray::Iterator               Iterator;
+    typedef typename MultiArray::ConstIterator          ConstIterator;
+    typedef typename MultiArray::ReverseIterator        ReverseIterator;
+    typedef typename MultiArray::ConstReverseIterator   ConstReverseIterator;
+
+    // What type of things do I contain?
+    typedef typename MultiArray::ElementType    ElementType;
+    typedef typename MultiArray::Reference      Reference;
+    typedef typename MultiArray::ConstReference ConstReference;
+    typedef typename MultiArray::Pointer        Pointer;
+    typedef typename MultiArray::ConstPointer   ConstPointer;
+
+    // How many dimensions do I have?
+    static const SizeType dimensionality = MultiArray::dimensionality;
+
+
+/*---------------------------------------------------------------------------*
+ | Constructors
+ *---------------------------------------------------------------------------*/
+public:
+    // Default (no initialization) constructor
+    explicit MultiArrayRaster(const StorageOrder & so = CStorageOrder())
+        : _array(so) { }
+
+    // Copy constructor
+    MultiArrayRaster(const ThisType &r)
+        : _array(r.array()) { }
+
+    // Raster conversion constructor
+    template <typename SrcRaster>
+    MultiArrayRaster(const SrcRaster & r,
+                     const StorageOrder & so = CStorageOrder(),
+                     ENABLE_FUNCTION_IF(is_raster<SrcRaster>))
+            : _array(so) {
+        array().setBounds(r.bases(), r.extents());
+        copy(*this, r);                 // Copy all the elements
+    }
+
+    // Arbitrary-dimensional constructor
+    template <class ExtentList>
+    explicit MultiArrayRaster(const ExtentList & ext,
+                              const StorageOrder & so = CStorageOrder(),
+                              typename ExtentList::size_type dummy = 0)
+        : _array(ext, so) { }
+
+    /**
+     * Parameter list constructors giving the size along each dimension.
+     * Each of these is intended to be used only with instances of the
+     * appropriate rank (calling a constructor of the wrong rank will cause
+     * a compile-time assert).
+     */
+    #define CREATE_DIMENSIONAL_CONSTRUCTOR(DIM)                             \
+        explicit MultiArrayRaster(PARAMS(DIM, SizeType e),                  \
+                        const StorageOrder & so = CStorageOrder())          \
+            : _array(PARAMS(DIM, e), so) { }
+    FOR_ALL_DIMS(CREATE_DIMENSIONAL_CONSTRUCTOR);
+    #undef CREATE_DIMENSIONAL_CONSTRUCTOR
+
+
+/*---------------------------------------------------------------------------*
+ | Assignment operators
+ *---------------------------------------------------------------------------*/
+public:
+    // Fill with a constant value (must be convertible to the ElementType)
+    ThisType & operator=(ConstReference e) {
+        fill(*this, e);                 // Stick this into every slot
+        return *this;                   // Return a reference
+    }
+
+    // Copy assignment from an object of the same type
+    ThisType & operator=(const ThisType &r) {
+        resize(r.extents());            // Make sure it's the right size
+        copy(*this, r);                 // Copy all the elements
+        return *this;                   // Return a reference
+    }
+
+    // Copy assignment from another RasterView object
+    template <class Src>
+    ENABLE_IF_T(is_raster<Src>, ThisType &) operator=(const Src &r) {
+        array().setBounds(r.bases(), r.extents());
+//        resize(r.sizes());               // Make sure it's the right size
+        copy(*this, r);                 // Copy all the elements
+        return *this;                   // Return a reference
+    }
+
+
+
+/*---------------------------------------------------------------------------*
+ | Data accessors
+ *---------------------------------------------------------------------------*/
+public:
+    // Reference to the underlying MultiArray
+          MultiArray & array()       { return _array; }
+    const MultiArray & array() const { return _array; }
+
+    // Pointer to underlying array of elements
+         Pointer elements()       { return array().elements(); }
+    ConstPointer elements() const { return array().elements(); }
+
+    // Pointer to the logical origin element
+         Pointer origin()       { return array().origin(); }
+    ConstPointer origin() const { return array().origin(); }
+
+protected:
+    MultiArray _array;      // The MultiArray that does all the work
+
+
+/*---------------------------------------------------------------------------*
+ | Size & shape functions
+ *---------------------------------------------------------------------------*/
+public:
+    // Total number of elements
+    SizeType size() const                   { return array().size(); }
+
+    // Number of elements along each dimensional axis
+    SizeType size(IndexType d) const  { return array().size(d); }
+    const SizeArray & sizes() const   { return array().sizes(); }
+
+    // Stride length along each dimensional axis
+    SizeType stride(IndexType d) const  { return array().stride(d); }
+    const SizeArray & strides() const   { return array().strides(); }
+
+    // Starting offset along each dimensional axis
+    DifferenceType offset(IndexType d) const    { return array().offset(d); }
+    const DifferenceArray & offsets() const     { return array().offsets(); }
+
+    // Index base (minimum index) along each dimensional axis
+    IndexType base(IndexType d) const  { return array().base(d); }
+    const IndexArray & bases() const   { return array().bases(); }
+
+    // Index extent (maximum index) along each dimensional axis
+    IndexType extent(IndexType d) const     { return array().extent(d); }
+    const IndexArray & extents() const      { return array().extents(); }
+
+    // How the various dimensions are laid out in memory
+    const StorageOrder & storageOrder() const { return array().storageOrder(); }
+    void setStorageOrder(const StorageOrder &s) { array().setStorageOrder(s); }
+
+
+    // Arbitrary dimensional resize function
+    template <class ExtentList>
+    void resize(const ExtentList & ext) { array().resize(ext);  }
+
+    // Dimensionality-specific resize functions
+    #define CREATE_DIMENSIONAL_RESIZE(DIM)                                  \
+        void resize(PARAMS(DIM, SizeType s)) {                              \
+            array().resize(PARAMS(DIM, s));                                 \
+        }
+    FOR_ALL_DIMS(CREATE_DIMENSIONAL_RESIZE);
+    #undef CREATE_DIMENSIONAL_RESIZE
+
+    // Swap-underlying-array function
+    void swap(MultiArrayRaster<ElementType, dim> & r) {
+        array().swap(r.array());
+    }
+
+
+/*---------------------------------------------------------------------------*
+ | Iterator accessors
+ *---------------------------------------------------------------------------*/
+public:
+         Iterator begin()       { return array().begin(); }
+    ConstIterator begin() const { return array().begin(); }
+         Iterator end()         { return array().end(); }
+    ConstIterator end() const   { return array().end(); }
+
+         ReverseIterator reverseBegin()       { return array().reverseBegin(); }
+    ConstReverseIterator reverseBegin() const { return array().reverseBegin(); }
+         ReverseIterator reverseEnd()         { return array().reverseEnd(); }
+    ConstReverseIterator reverseEnd() const   { return array().reverseEnd(); }
+
+
+/*---------------------------------------------------------------------------*
+ | Element accessors
+ *---------------------------------------------------------------------------*/
+public:
+    // Linear [] element accessors (always 1D)
+         Reference operator[](IndexType i)       { return array()[i]; }
+    ConstReference operator[](IndexType i) const { return array()[i]; }
+
+    // Arbitrary-dimensional element accessors
+    template <class IndexList>
+         Reference operator()(const IndexList &indices)       { return array()(indices); }
+    template <class IndexList>
+    ConstReference operator()(const IndexList &indices) const { return array()(indices); }
+
+    #define CREATE_DIMENSIONAL_ACCESSOR(DIM)                                \
+        Reference operator()(PARAMS(DIM, IndexType i)) {                    \
+            return array()(PARAMS(DIM, i));                                 \
+        }                                                                   \
+        ConstReference operator()(PARAMS(DIM, IndexType i)) const {         \
+            return array()(PARAMS(DIM, i));                                 \
+        }
+    FOR_ALL_DIMS(CREATE_DIMENSIONAL_ACCESSOR);
+    #undef CREATE_DIMENSIONAL_ACCESSOR
+
+};
+
+
+// Clean up the preprocessor's namespace
+#define UNDEFINE_INCA_MULTI_DIM_MACROS
+#include <inca/util/multi-dimensional-macros.hpp>
+#define UNDEFINE_INCA_METAPROGRAMMING_MACROS
+#include <inca/util/template-metaprogramming-macros.hpp>
+
+#endif

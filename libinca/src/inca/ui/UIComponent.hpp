@@ -59,8 +59,8 @@ private:
 
 public:
     // Screen geometry typedefs
-    typedef math::Point<index_t, 2> Pixel;      // X,Y pair of integer coords
-    typedef math::Vector<size_t, 2> Dimension;  // W,H pair of unsigned dims
+    typedef math::Point<IndexType, 2> Pixel;     // X,Y pair of integer coords
+    typedef math::Vector<SizeType, 2> Dimension; // W,H pair of unsigned dims
 
 protected:
     // Default constructor

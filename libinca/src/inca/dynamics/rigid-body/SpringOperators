@@ -76,7 +76,7 @@ public:
                                 SystemCalculation &calc,
                           const SystemState &prev,
                           const ObjectPtrList &objects) {
-        index_t i = objects.index_of(object());
+        IndexType i = objects.index_of(object());
         if (i != objects.NOT_FOUND) {
             // First, find the contact point in world space
             const Quaternion &q = prev[i].q;

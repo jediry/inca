@@ -33,7 +33,7 @@
 
 
 // Import math macros
-#include "../macros.hpp"
+#include "../math-macros.hpp"
 
 // This is part of the Inca math library
 namespace inca {
@@ -238,7 +238,7 @@ namespace inca {
         A_TEMPLATE(1)
         S sum(const A(D0) & arr) {
             S result = arr[0];
-            for (index_t i = 1; i < arr.static_size; i++)
+            for (IndexType i = 1; i < arr.size(); i++)
                 result += arr[i];
             return result;
         }
@@ -251,7 +251,7 @@ namespace inca {
         A_TEMPLATE(1)
         S product(const A(D0) & arr) {
             S result = arr[0];
-            for (index_t i = 1; i < arr.static_size; i++)
+            for (IndexType i = 1; i < arr.size(); i++)
                 result *= arr[i];
             return result;
         }
@@ -264,7 +264,7 @@ namespace inca {
         A_TEMPLATE(1)
         S min(const A(D0) & arr) {
             S result = arr[0];
-            for (index_t i = 1; i < arr.static_size; i++)
+            for (IndexType i = 1; i < arr.size(); i++)
                 if (arr[i] < result)
                     result = arr[i];
             return result;
@@ -278,7 +278,7 @@ namespace inca {
         A_TEMPLATE(1)
         S max(const A(D0) & arr) {
             S result = arr[0];
-            for (index_t i = 1; i < arr.static_size; i++)
+            for (IndexType i = 1; i < arr.size(); i++)
                 if (arr[i] > result)
                     result = arr[i];
             return result;
@@ -294,7 +294,7 @@ namespace inca {
         A_TEMPLATE(1)
         S dot(const A(D0) &a1, const A(D0) &a2) {
             S result = 0;
-            for (index_t i = 0; i < a1.static_size; i++)
+            for (IndexType i = 0; i < a1.size(); i++)
                 result += a1[i] * a2[i];
             return result;
         }
@@ -307,7 +307,7 @@ namespace inca {
         S_TEMPLATE
         S magnitude(const Q &q) {
             S result = 0;
-            for (index_t i = 0; i < 4; i++)
+            for (IndexType i = 0; i < 4; i++)
                 result += q[i] * q[i];
             return sqrt(result);
         }
@@ -335,7 +335,7 @@ namespace inca {
         Q inverse(const Q &q) {
             // Find the square of the magnitude of 'q'
             S ms = 0.0;
-            for (index_t i = 0; i < 4; i++)
+            for (IndexType i = 0; i < 4; i++)
                 ms += q[i] * q[i];
 
             // Find the components of the inverse
@@ -390,7 +390,7 @@ namespace inca {
         A_TEMPLATE(1)
         S distance(const P(D0) &p0, const P(D0) &p1) {
             S result = 0;
-            for (index_t i = 0; i < p0.static_size; i++) { // Accumulate the squares
+            for (IndexType i = 0; i < p0.size(); i++) { // Accumulate the squares
                 S diff = p1[i] - p0[i];             // of differences along
                 result += diff * diff;              // each axis
             }
@@ -405,7 +405,7 @@ namespace inca {
         A_TEMPLATE(1)
         S magnitude(const V(D0) &v) {
             S result = 0;
-            for (index_t i = 0; i < v.static_size; i++)
+            for (IndexType i = 0; i < v.size(); i++)
                 result += v[i] * v[i];
             return sqrt(result);
         }
@@ -452,7 +452,7 @@ namespace inca {
 //        A_TEMPLATE(1)
 //        S dot(const V(D0) &v1, const V(D0) &v2) {
 //            S result = 0;
-//            for (index_t i = 0; i < v1.static_size; i++)
+//            for (IndexType i = 0; i < v1.size(); i++)
 //                result += v1[i] * v2[i];
 //            return result;
 //        }
@@ -464,7 +464,7 @@ namespace inca {
             BOOST_STATIC_ASSERT(D0 >= 3);
 
             V(D0) result;
-            for (index_t i = 0; i < D0; i++)
+            for (IndexType i = 0; i < D0; i++)
                 result[i] = v1[(i + 1) % D0] * v2[(i + 2) % D0]
                             - v1[(i + 2) % D0] * v2[(i + 1) % D0];
             return result;
@@ -533,19 +533,19 @@ namespace inca {
         // Calculate a submatrix by eliminating a row and a column
         M_TEMPLATE(2,1)
         M(D0 - 1,D1 - 1, AS0)
-        sub(const M(D0,D1,AS0) &m, index_t er, index_t ec) {
+        sub(const M(D0,D1,AS0) &m, IndexType er, IndexType ec) {
             M(D0-1,D1-1,AS0) result;
-            for (index_t c = 0; c < ec; c++)
-                for (index_t r = 0; r < er; r++)
+            for (IndexType c = 0; c < ec; c++)
+                for (IndexType r = 0; r < er; r++)
                     result.rowCol(r, c) = m.rowCol(r, c);
-            for (index_t c = 0; c < ec; c++)
-                for (index_t r = er; r < m.rows - 1; r++)
+            for (IndexType c = 0; c < ec; c++)
+                for (IndexType r = er; r < m.rows - 1; r++)
                     result.rowCol(r, c) = m.rowCol(r + 1, c);
-            for (index_t c = ec; c < m.cols - 1; c++)
-                for (index_t r = 0; r < er; r++)
+            for (IndexType c = ec; c < m.cols - 1; c++)
+                for (IndexType r = 0; r < er; r++)
                     result.rowCol(r, c) = m.rowCol(r, c + 1);
-            for (index_t c = ec; c < m.cols - 1; c++)
-                for (index_t r = er; r < m.rows - 1; r++)
+            for (IndexType c = ec; c < m.cols - 1; c++)
+                for (IndexType r = er; r < m.rows - 1; r++)
                     result.rowCol(r, c) = m.rowCol(r + 1, c + 1);
             return result;
         }
@@ -554,7 +554,7 @@ namespace inca {
         M_TEMPLATE(1,1)
         S det(const M(D0,D0,AS0) &m) {
             S result = 0;
-            for (index_t i = 0; i < D; i++)
+            for (IndexType i = 0; i < D; i++)
                 if (i % 2 == 0)
                     result += m(i, 0) * det(sub(m, i, 0));
                 else
@@ -574,9 +574,9 @@ namespace inca {
             S detM = det(m);
             M(D0,D0,AS0) inv;
             bool negative;
-            for (index_t r = 0; r < D0; r++) {
+            for (IndexType r = 0; r < D0; r++) {
                 negative = (r % 2 != 0);
-                for (index_t c = 0; c < D0; c++) {
+                for (IndexType c = 0; c < D0; c++) {
                     if (negative)
                         inv(c, r) = -det(sub(m, r, c)) / detM;
                     else
@@ -597,8 +597,8 @@ namespace inca {
         M_TEMPLATE(2,1)
         M(D1,D0,AS0) transpose(const M(D0,D1,AS0) &m) {
             M(D1,D0,AS0) result;
-            for (index_t r = 0; r < D0; r++)
-                for (index_t c = 0; c < D1; c++)
+            for (IndexType r = 0; r < D0; r++)
+                for (IndexType c = 0; c < D1; c++)
                     result.rowCol(c, r) = m.colRow(c, r);
             return result;
         }
@@ -614,10 +614,10 @@ namespace inca {
         M_TEMPLATE(3,1)
         M(D0,D2,AS0) operator%(const M(D0,D1,AS0) &m1, const M(D1,D2,AS0) &m2) {
             M(D0,D2,AS0) result;
-            for (index_t d0 = 0; d0 < D0; d0++)
-                for (index_t d2 = 0; d2 < D2; d2++) {
+            for (IndexType d0 = 0; d0 < D0; d0++)
+                for (IndexType d2 = 0; d2 < D2; d2++) {
                     result.rowCol(d0, d2) = 0;
-                    for (index_t d1 = 0; d1 < D1; d1++)
+                    for (IndexType d1 = 0; d1 < D1; d1++)
                         result.rowCol(d0, d2) += m1.rowCol(d0, d1)
                                                * m2.rowCol(d1, d2);
                 }
@@ -626,6 +626,59 @@ namespace inca {
 
         // Right multiplication of a Matrix by a point (column vector with
         // implicit homogeneous coordinate w == 1)
+        M_TEMPLATE(0,1)
+        P(2)
+        operator%(const M(3,3,AS(0)) &m, const P(2) &p) {
+            P(2) result;
+
+            // Calculate the normal multiplication of matrix by column vector
+            for (IndexType r = 0; r < m.rows - 1; r++) {
+                result[r] = m.rowCol(r, m.cols - 1);
+                for (IndexType c = 0; c < m.cols - 1; c++)
+                    result[r] += m.rowCol(r, c) * p[c];
+            }
+
+            // Figure out the value of 'w', the homogeneous coordinate (which
+            // is implicitly '1' in the input point).
+            S w = m.rowCol(m.rows - 1, m.cols - 1); // * S(1)
+            for (IndexType c = 0; c < m.cols - 1; c++)
+                w += m.rowCol(m.rows - 1, c) * p[c];
+
+            // Divide through by 'w' to make the output point's homogeneous
+            // coordinate '1' (so we don't have to explicitly represent it).
+            if (w != S(1))
+                for (IndexType r = 0; r < m.rows - 1; r++)
+                    result[r] /= w;
+            return result;
+        }
+
+        M_TEMPLATE(0,1)
+        P(3)
+        operator%(const M(4,4,AS(0)) &m, const P(3) &p) {
+            P(3) result;
+
+            // Calculate the normal multiplication of matrix by column vector
+            for (IndexType r = 0; r < m.rows - 1; r++) {
+                result[r] = m.rowCol(r, m.cols - 1);
+                for (IndexType c = 0; c < m.cols - 1; c++)
+                    result[r] += m.rowCol(r, c) * p[c];
+            }
+
+            // Figure out the value of 'w', the homogeneous coordinate (which
+            // is implicitly '1' in the input point).
+            S w = m.rowCol(m.rows - 1, m.cols - 1); // * S(1)
+            for (IndexType c = 0; c < m.cols - 1; c++)
+                w += m.rowCol(m.rows - 1, c) * p[c];
+
+            // Divide through by 'w' to make the output point's homogeneous
+            // coordinate '1' (so we don't have to explicitly represent it).
+            if (w != S(1))
+                for (IndexType r = 0; r < m.rows - 1; r++)
+                    result[r] /= w;
+            return result;
+        }
+
+#if 0
 //        M_TEMPLATE(2,1)
 //        POINT( ( boost::mpl::minus<boost::mpl::integral_c<unsigned int, dim1>, boost::mpl::integral_c<unsigned int, 1> >::type::value ) )
 //        operator%(const M(0,1,0) &m, const POINT( ( boost::mpl::minus<boost::mpl::integral_c<unsigned int, dim1>, boost::mpl::integral_c<unsigned int, 1> >::type::value ) ) &p) {
@@ -636,22 +689,22 @@ namespace inca {
             P(3) result;
 
             // Calculate the normal multiplication of matrix by column vector
-            for (index_t r = 0; r < m.rows - 1; r++) {
+            for (IndexType r = 0; r < m.rows - 1; r++) {
                 result[r] = m.rowCol(r, m.cols - 1);
-                for (index_t c = 0; c < m.cols - 1; c++)
+                for (IndexType c = 0; c < m.cols - 1; c++)
                     result[r] += m.rowCol(r, c) * p[c];
             }
 
             // Figure out the value of 'w', the homogeneous coordinate (which
             // is implicitly '1' in the input point).
             S w = m.rowCol(m.rows - 1, m.cols - 1); // * S(1)
-            for (index_t c = 0; c < m.cols - 1; c++)
+            for (IndexType c = 0; c < m.cols - 1; c++)
                 w += m.rowCol(m.rows - 1, c) * p[c];
 
             // Divide through by 'w' to make the output point's homogeneous
             // coordinate '1' (so we don't have to explicitly represent it).
             if (w != S(1))
-                for (index_t r = 0; r < m.rows - 1; r++)
+                for (IndexType r = 0; r < m.rows - 1; r++)
                     result[r] /= w;
             return result;
         }
@@ -661,22 +714,22 @@ namespace inca {
             P(3) result;
 
             // Calculate the normal multiplication of matrix by column vector
-            for (index_t r = 0; r < m.rows - 1; r++) {
+            for (IndexType r = 0; r < m.rows - 1; r++) {
                 result[r] = m.rowCol(r, m.cols - 1);
-                for (index_t c = 0; c < m.cols - 1; c++)
+                for (IndexType c = 0; c < m.cols - 1; c++)
                     result[r] += m.rowCol(r, c) * p[c];
             }
 
             // Figure out the value of 'w', the homogeneous coordinate (which
             // is implicitly '1' in the input point).
             S w = m.rowCol(m.rows - 1, m.cols - 1); // * S(1)
-            for (index_t c = 0; c < m.cols - 1; c++)
+            for (IndexType c = 0; c < m.cols - 1; c++)
                 w += m.rowCol(m.rows - 1, c) * p[c];
 
             // Divide through by 'w' to make the output point's homogeneous
             // coordinate '1' (so we don't have to explicitly represent it).
             if (w != S(1))
-                for (index_t r = 0; r < m.rows - 1; r++)
+                for (IndexType r = 0; r < m.rows - 1; r++)
                     result[r] /= w;
             return result;
         }
@@ -686,22 +739,22 @@ namespace inca {
             P(3) result;
 
             // Calculate the normal multiplication of matrix by column vector
-            for (index_t r = 0; r < m.rows - 1; r++) {
+            for (IndexType r = 0; r < m.rows - 1; r++) {
                 result[r] = m.rowCol(r, m.cols - 1);
-                for (index_t c = 0; c < m.cols - 1; c++)
+                for (IndexType c = 0; c < m.cols - 1; c++)
                     result[r] += m.rowCol(r, c) * p[c];
             }
 
             // Figure out the value of 'w', the homogeneous coordinate (which
             // is implicitly '1' in the input point).
             S w = m.rowCol(m.rows - 1, m.cols - 1); // * S(1)
-            for (index_t c = 0; c < m.cols - 1; c++)
+            for (IndexType c = 0; c < m.cols - 1; c++)
                 w += m.rowCol(m.rows - 1, c) * p[c];
 
             // Divide through by 'w' to make the output point's homogeneous
             // coordinate '1' (so we don't have to explicitly represent it).
             if (w != S(1))
-                for (index_t r = 0; r < m.rows - 1; r++)
+                for (IndexType r = 0; r < m.rows - 1; r++)
                     result[r] /= w;
             return result;
         }
@@ -711,31 +764,31 @@ namespace inca {
             P(3) result;
 
             // Calculate the normal multiplication of matrix by column vector
-            for (index_t r = 0; r < m.rows - 1; r++) {
+            for (IndexType r = 0; r < m.rows - 1; r++) {
                 result[r] = m.rowCol(r, m.cols - 1);
-                for (index_t c = 0; c < m.cols - 1; c++)
+                for (IndexType c = 0; c < m.cols - 1; c++)
                     result[r] += m.rowCol(r, c) * p[c];
             }
 
             // Figure out the value of 'w', the homogeneous coordinate (which
             // is implicitly '1' in the input point).
             S w = m.rowCol(m.rows - 1, m.cols - 1); // * S(1)
-            for (index_t c = 0; c < m.cols - 1; c++)
+            for (IndexType c = 0; c < m.cols - 1; c++)
                 w += m.rowCol(m.rows - 1, c) * p[c];
 
             // Divide through by 'w' to make the output point's homogeneous
             // coordinate '1' (so we don't have to explicitly represent it).
             if (w != S(1))
-                for (index_t r = 0; r < m.rows - 1; r++)
+                for (IndexType r = 0; r < m.rows - 1; r++)
                     result[r] /= w;
             return result;
         }
-
+#endif
     };
 };
 
 // Clean up the preprocessor's namespace
 #define UNDEFINE_INCA_MATH_MACROS
-#include "../macros.hpp"
+#include "../math-macros.hpp"
 
 #endif

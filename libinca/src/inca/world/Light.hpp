@@ -56,7 +56,7 @@ private:
 public:
     // Import color typedefs
     INCA_MATH_SCALAR_TYPES(float, IS_NOT_WITHIN_TEMPLATE);
-    INCA_MATH_COLOR_TYPES(scalar_t, sRGB);
+    INCA_MATH_COLOR_TYPES(scalar_t, sRGB, false);
 
     // Constructor
     Light() : transform(this), color(this), intensity(this) { }

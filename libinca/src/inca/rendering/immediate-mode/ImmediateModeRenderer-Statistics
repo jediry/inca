@@ -28,8 +28,8 @@ class RENDERER::Statistics : public RENDERER::Component {
 public:
     // Timer typedefs
     typedef inca::Timer<timer_t>    Timer;
-    static const size_t PRIMITIVE_TYPE_COUNT = ALL_PRIMITIVE_TYPES;
-    static const size_t RENDER_PASS_COUNT    = ALL_RENDER_PASSES;
+    static const SizeType PRIMITIVE_TYPE_COUNT = ALL_PRIMITIVE_TYPES;
+    static const SizeType RENDER_PASS_COUNT    = ALL_RENDER_PASSES;
 
     // Constructor
     Statistics() { reset(); }
@@ -42,16 +42,16 @@ public:
         // Zero our counters
         _frameCount = 0;
         _vertexCount = 0;
-        for (index_t i = 0; i < PRIMITIVE_TYPE_COUNT; i++) {
+        for (IndexType i = 0; i < PRIMITIVE_TYPE_COUNT; i++) {
             _vertexTypeCounts[i];
-            for (index_t j = 0; j < RENDER_PASS_COUNT; j++)
+            for (IndexType j = 0; j < RENDER_PASS_COUNT; j++)
                 _vertexTypePassCounts[i][j];
         }
 
         // Zero our timers
         _renderTime.reset();
         _realTime.reset();
-        for (index_t i = 0; i < RENDER_PASS_COUNT; i++)
+        for (IndexType i = 0; i < RENDER_PASS_COUNT; i++)
             _renderPassTimes[i].reset();
 
         // Start the real-time timer going
@@ -66,7 +66,7 @@ public:
         _renderTime.stop();
     }
 
-    void beginRenderPass(index_t pass) {
+    void beginRenderPass(IndexType pass) {
         if (boundsCheck) {
             if (pass < 0 || pass >= RENDER_PASS_COUNT) {
                 cerr << "RenderStatistics::beginRenderPass(" << pass
@@ -76,7 +76,7 @@ public:
         }
         _renderPassTimes[pass].start();
     }
-    void endRenderPass(index_t pass) {
+    void endRenderPass(IndexType pass) {
         if (boundsCheck) {
             if (pass < 0 || pass >= RENDER_PASS_COUNT) {
                 cerr << "RenderStatistics::endRenderPass(" << pass
@@ -87,7 +87,7 @@ public:
         _renderPassTimes[pass].stop();
     }
 
-    void vertexRendered(index_t type, index_t pass) {
+    void vertexRendered(IndexType type, IndexType pass) {
         if (boundsCheck) {
             if (type < 0 || type >= PRIMITIVE_TYPE_COUNT) {
                 cerr << "RenderStatistics::vertexRendered("
@@ -111,15 +111,15 @@ public:
 /*---------------------------------------------------------------------------*
  | Query functions
  *---------------------------------------------------------------------------*/
-    size_t frameCount() const {
+    SizeType frameCount() const {
         return _frameCount;
     }
 
-    size_t primitiveCount() const {
+    SizeType primitiveCount() const {
         return _vertexCount;
     }
 
-    size_t primitiveCount(index_t type) const {
+    SizeType primitiveCount(IndexType type) const {
         if (boundsCheck) {
             if (type < 0 || type >= PRIMITIVE_TYPE_COUNT) {
                 cerr << "RenderStatistics::primitiveCount(" << type
@@ -131,7 +131,7 @@ public:
         }
     }
 
-    size_t primitiveCount(index_t type, index_t pass) const {
+    SizeType primitiveCount(IndexType type, IndexType pass) const {
         if (boundsCheck) {
             if (type < 0 || type >= PRIMITIVE_TYPE_COUNT) {
                 cerr << "RenderStatistics::primitiveCount("
@@ -152,7 +152,7 @@ public:
 
     timer_t realTime() const { return _realTime.getTime(); }
     timer_t renderTime() const { return _renderTime.getTime(); }
-    timer_t renderTime(index_t pass) const {
+    timer_t renderTime(IndexType pass) const {
         if (boundsCheck) {
             if (pass < 0 || pass >= RENDER_PASS_COUNT) {
                 cerr << "RenderStatistics::renderTime(" << pass
@@ -171,12 +171,12 @@ public:
 
 protected:
     // Number of frames rendered
-    size_t _frameCount;
+    SizeType _frameCount;
 
     // Accounting of rendered primitives
-    size_t _vertexCount;
-    size_t _vertexTypeCounts[PRIMITIVE_TYPE_COUNT];
-    size_t _vertexTypePassCounts[PRIMITIVE_TYPE_COUNT][RENDER_PASS_COUNT];
+    SizeType _vertexCount;
+    SizeType _vertexTypeCounts[PRIMITIVE_TYPE_COUNT];
+    SizeType _vertexTypePassCounts[PRIMITIVE_TYPE_COUNT][RENDER_PASS_COUNT];
 
     // Timers for keeping track of where our render time is spent
     Timer _realTime;                        // Time since last call to reset()

@@ -54,7 +54,7 @@ public:
     typedef _vertex_t vertex_t;
 
     // Constructor & Destructor
-    VertexArray(size_t n) : _size(n), _vertices(new vertex_t[n]) { }
+    VertexArray(SizeType n) : _size(n), _vertices(new vertex_t[n]) { }
     ~VertexArray() { delete [] _vertices; }
 
     // Access to the contained array
@@ -62,15 +62,15 @@ public:
     vertex_t       * vertices()       { return _vertices; }
 
     // Access to an individual element
-    vertex_t const & vertex(index_t i) const { return _vertices[i]; }
-    vertex_t       & vertex(index_t i)       { return _vertices[i]; }
+    vertex_t const & vertex(IndexType i) const { return _vertices[i]; }
+    vertex_t       & vertex(IndexType i)       { return _vertices[i]; }
 
     // The number of elements in this array
-    size_t size() const { return _size; }
+    SizeType size() const { return _size; }
 
 protected:
     vertex_t *_vertices;
-    size_t   _size;
+    SizeType  _size;
 };
 
 
@@ -82,7 +82,7 @@ public:
     typedef _normal_t normal_t;
 
     // Constructor & Destructor
-    NormalArray(size_t n) : _size(n), _normals(new normal_t[n]) { }
+    NormalArray(SizeType n) : _size(n), _normals(new normal_t[n]) { }
     ~NormalArray() { delete [] _normals; }
 
     // Access to the contained array
@@ -90,15 +90,15 @@ public:
     normal_t       * normals()       { return _normals; }
 
     // Access to an individual element
-    normal_t const & normal(index_t i) const { return _normals[i]; }
-    normal_t       & normal(index_t i)       { return _normals[i]; }
+    normal_t const & normal(IndexType i) const { return _normals[i]; }
+    normal_t       & normal(IndexType i)       { return _normals[i]; }
 
     // The number of elements in this array
-    size_t size() const { return _size; }
+    SizeType size() const { return _size; }
 
 protected:
     normal_t *_normals;
-    size_t   _size;
+    SizeType  _size;
 };
 
 
@@ -110,7 +110,7 @@ public:
     typedef _tex_coord_t tex_coord_t;
 
     // Constructor & Destructor
-    TexCoordArray(size_t n) : _size(n), _texCoords(new tex_coord_t[n]) { }
+    TexCoordArray(SizeType n) : _size(n), _texCoords(new tex_coord_t[n]) { }
     ~TexCoordArray() { delete [] _texCoords; }
 
     // Access to the contained array
@@ -118,15 +118,15 @@ public:
     tex_coord_t       * texCoords()       { return _texCoords; }
 
     // Access to an individual element
-    tex_coord_t const & texCoord(index_t i) const { return _texCoords[i]; }
-    tex_coord_t       & texCoord(index_t i)       { return _texCoords[i]; }
+    tex_coord_t const & texCoord(IndexType i) const { return _texCoords[i]; }
+    tex_coord_t       & texCoord(IndexType i)       { return _texCoords[i]; }
 
     // The number of elements in this array
-    size_t size() const { return _size; }
+    SizeType size() const { return _size; }
 
 protected:
     tex_coord_t *_texCoords;
-    size_t      _size;
+    SizeType     _size;
 };
 
 
@@ -138,7 +138,7 @@ public:
     typedef _color_t color_t;
 
     // Constructor & Destructor
-    ColorArray(size_t n) : _size(n), _colors(new color_t[n]) { }
+    ColorArray(SizeType n) : _size(n), _colors(new color_t[n]) { }
     ~ColorArray() { delete [] _colors; }
 
     // Access to the contained array
@@ -146,15 +146,15 @@ public:
     color_t       * colors()       { return _colors; }
 
     // Access to an individual element
-    color_t const & color(index_t i) const { return _colors[i]; }
-    color_t       & color(index_t i)       { return _colors[i]; }
+    color_t const & color(IndexType i) const { return _colors[i]; }
+    color_t       & color(IndexType i)       { return _colors[i]; }
 
     // The number of elements in this array
-    size_t size() const { return _size; }
+    SizeType size() const { return _size; }
 
 protected:
     color_t *_colors;
-    size_t  _size;
+    SizeType _size;
 };
 
 
@@ -166,7 +166,7 @@ public:
     typedef _edge_flag_t edge_flag_t;
 
     // Constructor & Destructor
-    EdgeFlagArray(size_t n) : _size(n), _edge_flags(new edge_flag_t[n]) { }
+    EdgeFlagArray(SizeType n) : _size(n), _edge_flags(new edge_flag_t[n]) { }
     ~EdgeFlagArray() { delete [] _edge_flags; }
 
     // Access to the contained array
@@ -174,25 +174,25 @@ public:
     edge_flag_t       * edgeFlags()       { return _edge_flags; }
 
     // Access to an individual element
-    edge_flag_t const & edge_flag(index_t i) const { return _edge_flags[i]; }
-    edge_flag_t       & edge_flag(index_t i)       { return _edge_flags[i]; }
+    edge_flag_t const & edge_flag(IndexType i) const { return _edge_flags[i]; }
+    edge_flag_t       & edge_flag(IndexType i)       { return _edge_flags[i]; }
 
     // The number of elements in this array
-    size_t size() const { return _size; }
+    SizeType size() const { return _size; }
 
 protected:
     edge_flag_t *_edge_flags;
-    size_t      _size;
+    SizeType     _size;
 };
 
 
 // Null specializations of the data array templates in which the data is
 // omitted. This is useful for the higher-level objects, which inherit from
 // these array objects.
-template <> class inca::rendering::NormalArray<inca::rendering::Omitted>    { public: NormalArray(size_t) { } };
-template <> class inca::rendering::TexCoordArray<inca::rendering::Omitted>  { public: TexCoordArray(size_t) { } };
-template <> class inca::rendering::ColorArray<inca::rendering::Omitted>     { public: ColorArray(size_t) { } };
-template <> class inca::rendering::EdgeFlagArray<inca::rendering::Omitted>  { public: EdgeFlagArray(size_t) { } };
+template <> class inca::rendering::NormalArray<inca::rendering::Omitted>    { public: NormalArray(SizeType) { } };
+template <> class inca::rendering::TexCoordArray<inca::rendering::Omitted>  { public: TexCoordArray(SizeType) { } };
+template <> class inca::rendering::ColorArray<inca::rendering::Omitted>     { public: ColorArray(SizeType) { } };
+template <> class inca::rendering::EdgeFlagArray<inca::rendering::Omitted>  { public: EdgeFlagArray(SizeType) { } };
 
 
 template <typename _vertex_t, typename _normal_t, typename _tex_coord_t,
@@ -205,7 +205,7 @@ class inca::rendering::Primitive : public VertexArray<_vertex_t>,
 {
 public:
     // Constructor
-    Primitive(PrimitiveType p, size_t vtxCount)
+    Primitive(PrimitiveType p, SizeType vtxCount)
         : VertexArray<_vertex_t>     (vtxCount),
           NormalArray<_normal_t>     (vtxCount),
           TexCoordArray<_tex_coord_t>(vtxCount),
@@ -218,7 +218,7 @@ public:
     void setPrimitiveType(PrimitiveType p) { _primitiveType = p; }
 
     // The number of vertices in this primitive
-    size_t size() const { return VertexArray<_vertex_t>::size(); }
+    SizeType size() const { return VertexArray<_vertex_t>::size(); }
 
 protected:
     PrimitiveType _primitiveType;   // What sort of primitive is this?

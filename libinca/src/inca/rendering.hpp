@@ -16,8 +16,10 @@
 // Import Renderer supertype definition
 #include "rendering/Renderer.hpp"
 
-// Import (usually) hardware-accelerated renderer definition
-#include "rendering/ImmediateModeRenderer"
+// Import (usually) hardware-accelerated renderer definition and cache policies
+#include "rendering/immediate-mode/ImmediateModeRenderer"
+#include "rendering/immediate-mode/ExclusiveAccessCachePolicy"
+#include "rendering/immediate-mode/OpenGLTraits.hpp"
 
 // Import Raytracer Renderer
 //#include "raytracing/RaytracingRenderer.hpp"
@@ -25,33 +27,9 @@
 // Declare known specializations of the renderer types
 namespace inca {
     namespace rendering {
-        // Rendering API traits class for using the system's OpenGL driver
-        struct OpenGLTraits {
-            typedef float geometry_t;   // Geometry/matrix precision
-            typedef float color_t;      // Color component precision
-            typedef float tex_coord_t;  // Texture coordinate precision
-            typedef float timer_t;      // Timer precision
-
-            typedef math::Matrix<geometry_t, 4, 4, true, false>     Matrix;
-            typedef math::Color<color_t, math::sRGBA>               Color;
-            typedef math::Point<int, 2>                             Pixel;
-            typedef math::Vector<int, 2>                            Dimension;
-            typedef math::Vector<geometry_t, 3>                     Normal;
-            typedef math::Point<geometry_t, 2>                      TexCoord;
-
-            // Number of internally cached properties
-            static const int numBoolProperties   = 5;
-            static const int numIntProperties    = 1;
-            static const int numFloatProperties  = 3;
-            static const int numDoubleProperties = 1;
-            static const int numColorProperties  = 1;
-        };
-
-//        class Direct3D { }  // Use Microsoft Direct3D API
-
         // Convenient aliases for known renderer configurations
-        typedef ImmediateModeRenderer<OpenGLTraits>   OpenGLRenderer;
-//        typedef ImmediateModeRenderer<Direct3D> Direct3DRenderer;
+        typedef ImmediateModeRenderer<OpenGLTraits, ExclusiveAccessCachePolicy>
+            OpenGLRenderer;
     };
 };
 

@@ -1,5 +1,5 @@
 /**
- * File: macros.hpp
+ * File: math-macros.hpp
  *
  * Author: Ryan L. Saunders
  *
@@ -46,7 +46,7 @@
  *      all array-based types.
  *          A(n)        Array of dimension n
  *
- *      The scalar and complex types don't need a dimensionality parameter,
+ *      The scalar and complex types don't need a size() parameter,
  *      since their number of elements is intrinsic to their definition.
  *          S           Scalar
  *          S_ARG       Scalar function argument
@@ -59,7 +59,7 @@
  *          L(cs)       Color of colorspace cs
  *
  *      The arbitrary-dimensional linear algebra types take one or more
- *      dimensionality parameters, and possibly a matrix access/storage order
+ *      size() parameters, and possibly a matrix access/storage order
  *      parameter.
  *          P(n)        Point of dimension n
  *          V(n)        Vector of dimension n
@@ -76,69 +76,7 @@
 
 
 /*---------------------------------------------------------------------------*/
-#ifndef UNDEFINE_INCA_MATH_MACROS   /* Define the macros                     */
-/*---------------------------------------------------------------------------*/
-
-// Import Boost static assert mechanism
-#include <boost/static_assert.hpp>
-
-// Import Boost preprocessor metaprogramming library
-#include <boost/preprocessor/repetition/repeat_from_to.hpp>
-#include <boost/preprocessor/repetition/enum_params.hpp>
-#include <boost/preprocessor/punctuation/comma_if.hpp>
-#include <boost/preprocessor/arithmetic/inc.hpp>
-
-
-/*---------------------------------------------------------------------------*/
-/* Variable-length parameter list constructor macros                         */
-/*---------------------------------------------------------------------------*/
-
-// These macros control which dimensionalities the constructors are
-// generated for.
-#define MIN_DIMENSION 2
-#define MAX_DIMENSION 9
-
-// This macro is used by the calls to BOOST_PP_REPEAT to assign constructor
-// parameters to their corresponding slot in the list
-#define ASSIGN_ARG(Z, IDX, JUNK) (*this)[IDX] = e ## IDX;
-
-// This macro is used to instantiate a single variable-arg-count constructor
-#define PARAM_LIST_CONSTRUCTOR(Z, DIM, CLASS)                               \
-    template <typename scalar2>                                             \
-    explicit CLASS(BOOST_PP_ENUM_PARAMS(DIM, scalar2 e)) {                  \
-        /* Cause a compile-time failure if this constructor is used with    \
-         * an instance of the wrong dimensionality.                         \
-         */                                                                 \
-        BOOST_STATIC_ASSERT(static_size == DIM);                            \
-                                                                            \
-        /* Copy each paramter to its slot in the array */                   \
-        BOOST_PP_REPEAT(DIM, ASSIGN_ARG, BOOST_PP_EMPTY);                   \
-    }
-
-// This macro generates a series of variable-arg-count constructors for the
-// specified class, spanning the given range
-#define PARAM_LIST_CONSTRUCTORS(CLASS, MIN, MAX)                            \
-    BOOST_PP_REPEAT_FROM_TO(MIN, BOOST_PP_INC(MAX),                         \
-                            PARAM_LIST_CONSTRUCTOR, CLASS);
-
-
-// This macro is used to instantiate the List<N>(List<N-1>, scalar) constructors
-#define UP_DIM_CONSTRUCTOR(Z, K, CLASS)                                     \
-    explicit CLASS(const CLASS<scalar_t, static_size - K> &arr,             \
-                   BOOST_PP_REPEAT(K,  )                                    \
-        /* Cause a compile-time failure if this constructor is used with    \
-         * an instance of the wrong dimensionality.                         \
-         */                                                                 \
-        BOOST_STATIC_ASSERT(DIM == dimension);                              \
-                                                                            \
-        /* Copy each paramter to its slot in the array */                   \
-        BOOST_PP_REPEAT(DIM, ASSIGN_ARG, BOOST_PP_EMPTY);                   \
-    }
-
-
-
-/*---------------------------------------------------------------------------*/
-/* Template simplification macros                                            */
+#ifndef UNDEFINE_INCA_MATH_MACROS                       /* Create the macros */
 /*---------------------------------------------------------------------------*/
 
 // Template declaration macros
@@ -146,15 +84,14 @@
 
 #define A_TEMPLATE(D)                                                       \
     template <typename scalar BOOST_PP_COMMA_IF(D)                          \
-              BOOST_PP_ENUM_PARAMS(D, inca::size_t dim)>
+              BOOST_PP_ENUM_PARAMS(D, inca::SizeType dim)>
 
-#define L_TEMPLATE(CS)                                                      \
-    template <typename scalar BOOST_PP_COMMA_IF(D)                          \
-              BOOST_PP_ENUM_PARAMS(D, class cs)>
+#define C_TEMPLATE                                                          \
+    template <typename scalar, class ColorSpace>
 
 #define M_TEMPLATE(D, M)                                                    \
     template <typename scalar                                               \
-              BOOST_PP_COMMA_IF(D) BOOST_PP_ENUM_PARAMS(D, inca::size_t dim)\
+              BOOST_PP_COMMA_IF(D) BOOST_PP_ENUM_PARAMS(D, inca::SizeType dim)\
               BOOST_PP_COMMA_IF(M) BOOST_PP_ENUM_PARAMS(M, bool access)     \
               BOOST_PP_COMMA_IF(M) BOOST_PP_ENUM_PARAMS(M, bool storage)>
 
@@ -163,7 +100,7 @@
 #define A(n)        Array<scalar, n>
 
 // Color type
-#define L(cs)       Color<scalar, cs>
+#define C           Color<scalar, ColorSpace>
 
 // Scalar and complex types
 #define S           typename scalar_traits<scalar>::value_type
@@ -222,14 +159,14 @@
 
 #define A_ASSIGN_A(LHS, OP, RHS)                                            \
     LHS & operator OP (LHS & lhs, const RHS & rhs) {                        \
-        for (index_t i = 0; i < lhs.static_size; i++)                              \
+        for (IndexType i = 0; i < lhs.size(); i++)                          \
             lhs[i] OP rhs[i];                                               \
         return lhs;                                                         \
     }
 
 #define A_ASSIGN_S(LHS, OP, RHS_DUMMY)                                      \
     LHS & operator OP (LHS & lhs, S_ARG rhs) {                              \
-        for (index_t i = 0; i < lhs.static_size; i++)                              \
+        for (IndexType i = 0; i < lhs.size(); i++)                          \
             lhs[i] OP rhs;                                                  \
         return lhs;                                                         \
     }
@@ -237,7 +174,7 @@
 #define OP_A(RET, OP, RHS)                                                  \
     RET operator OP (const RHS & rhs) {                                     \
         RET result;                                                         \
-        for (index_t i = 0; i < rhs.static_size; i++)                              \
+        for (IndexType i = 0; i < rhs.size(); i++)                          \
             result[i] = OP rhs[i];                                          \
         return result;                                                      \
     }
@@ -245,7 +182,7 @@
 #define A_OP_A(RET, LHS, OP, RHS)                                           \
     RET operator OP (const LHS & lhs, const RHS & rhs) {                    \
         RET result;                                                         \
-        for (index_t i = 0; i < lhs.static_size; i++)                              \
+        for (IndexType i = 0; i < lhs.size(); i++)                          \
             result[i] = lhs[i] OP rhs[i];                                   \
         return result;                                                      \
     }
@@ -253,7 +190,7 @@
 #define A_OP_S(RET, LHS, OP, RHS_DUMMY)                                     \
     RET operator OP (const LHS & lhs, S_ARG rhs) {                          \
         RET result;                                                         \
-        for (index_t i = 0; i < lhs.static_size; i++)                              \
+        for (IndexType i = 0; i < lhs.size(); i++)                          \
             result[i] = lhs[i] OP rhs;                                      \
         return result;                                                      \
     }
@@ -261,14 +198,14 @@
 #define S_OP_A(RET, LHS_DUMMY, OP, RHS)                                     \
     RET operator OP (S_ARG lhs, const RHS & rhs) {                          \
         RET result;                                                         \
-        for (index_t i = 0; i < rhs.static_size; i++)                              \
+        for (IndexType i = 0; i < rhs.size(); i++)                          \
             result[i] = lhs OP rhs[i];                                      \
         return result;                                                      \
     }
 
 #define A_EQ_A(LHS, RHS)                                                    \
     bool operator == (const LHS & lhs, const RHS & rhs) {                   \
-        for (index_t i = 0; i < lhs.static_size; i++)                              \
+        for (IndexType i = 0; i < lhs.size(); i++)                          \
             if (! effectivelyEqual(lhs[i], rhs[i]))                         \
                 return false;                                               \
         return true;                                                        \
@@ -282,7 +219,7 @@
 #define A_FUNC_1A(RET, FUNC, L1)                                            \
     RET FUNC(const L1 & l1) {                                               \
         RET result;                                                         \
-        for (index_t i = 0; i < l1.static_size; i++)                               \
+        for (IndexType i = 0; i < l1.size(); i++)                           \
             result[i] = FUNC(l1[i]);                                        \
         return result;                                                      \
     }
@@ -290,7 +227,7 @@
 #define A_FUNC_2A(RET, FUNC, L1, L2)                                        \
     RET FUNC(const L1 & l1, const L2 & l2) {                                \
         RET result;                                                         \
-        for (index_t i = 0; i < l1.static_size; i++)                               \
+        for (IndexType i = 0; i < l1.size(); i++)                           \
             result[i] = FUNC(l1[i], l2[i]);                                 \
         return result;                                                      \
     }
@@ -301,7 +238,7 @@
 
 #undef S_TEMPLATE
 #undef A_TEMPLATE
-#undef L_TEMPLATE
+#undef C_TEMPLATE
 #undef M_TEMPLATE
 
 #undef S
@@ -310,7 +247,7 @@
 
 #undef A
 
-#undef L
+#undef C
 
 #undef P
 #undef V
@@ -359,4 +296,6 @@
 // Finally, make sure we can re-enable these macros later
 #undef UNDEFINE_INCA_MATH_MACROS
 
-#endif
+/*---------------------------------------------------------------------------*/
+#endif                                                 /* All done...go home */
+/*---------------------------------------------------------------------------*/

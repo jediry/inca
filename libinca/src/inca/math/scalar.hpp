@@ -34,6 +34,8 @@
 
 // Primitive types
 #include "scalar/scalar_types"
+
+// Operators & functions
 #include "scalar/scalar_ops"
 
 

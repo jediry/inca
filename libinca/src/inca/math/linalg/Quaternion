@@ -24,22 +24,18 @@ namespace inca {
     };
 };
 
-// Import superclass definition
-#include "../Array"
-
 // Import STL algorithms
 #include <algorithm>
 
-// Import related class definitions
-#include "Point"
-#include "Vector"
+// Import scalar math implementation
+#include "../scalar.hpp"
 
+// Import superclass and related class definitions
+#include <inca/util/Array>
 
-// Import math macros
-#include "../macros.hpp"
 
 template <typename scalar>
-class inca::math::Quaternion : public inca::math::Array<scalar, 4> {
+class inca::math::Quaternion : public inca::Array<scalar, 4> {
 /*---------------------------------------------------------------------------*
  | Type/constant declarations
  *---------------------------------------------------------------------------*/
@@ -58,12 +54,19 @@ public:
     explicit Quaternion() { }
 
     /**
-     * Initialization from another array type, possibly of a different scalar
-     * type. The argument array must be of the same dimensionality, and its
+     * Initialization from another Quaternion, possibly of a different scalar
+     * type. The argument must be of the same dimensionality, and its
      * scalar type must be convertible to scalar_t.
      */
     template <typename scalar2>
-    explicit Quaternion(const boost::array<scalar2, 4> &arr) {
+    explicit Quaternion(const Quaternion<scalar2> &q) {
+        std::copy(q.begin(), q.end(), begin());
+    }
+
+    /**
+     * Initialization from an Array (or subclass).
+     */
+    explicit Quaternion(const Array<scalar_t, 4> &arr) {
         std::copy(arr.begin(), arr.end(), begin());
     }
 
@@ -76,7 +79,7 @@ public:
      * The array's element type must be convertible to scalar_t.
      */
     template <typename scalar2>
-    explicit Quaternion(const boost::array<scalar2, 3> &arr) {
+    explicit Quaternion(const Array<scalar2, 3> &arr) {
         *begin() = scalar_t(0.0);
         std::copy(arr.begin(), arr.end(), begin() + 1);
     }
@@ -90,7 +93,7 @@ public:
      * The array's element type must be convertible to scalar_t.
      */
     template <typename scalar2>
-    explicit Quaternion(scalar_arg_t s, const boost::array<scalar2, 3> &arr) {
+    explicit Quaternion(scalar_arg_t s, const Array<scalar2, 3> &arr) {
         *begin() = s;
         std::copy(arr.begin(), arr.end(), begin() + 1);
     }
@@ -114,7 +117,9 @@ public:
     /**
      * scalar_t argument list constructor.
      */
-    PARAM_LIST_CONSTRUCTORS(Quaternion, 4, 4);
+    explicit Quaternion(scalar_arg_t e0, scalar_arg_t e1,
+                        scalar_arg_t e2, scalar_arg_t e3)
+        : Array<scalar_t, 4>(e0, e1, e2, e3) { }
 
 
 /*---------------------------------------------------------------------------*
@@ -132,6 +137,6 @@ public:
 
 // Clean up the preprocessor's namespace
 #define UNDEFINE_INCA_MATH_MACROS
-#include "../macros.hpp"
+#include "../math-macros.hpp"
 
 #endif

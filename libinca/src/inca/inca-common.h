@@ -31,15 +31,15 @@
 
 // Declare special primitive types
 namespace inca {
-    typedef int             size_t;     // A number of elements
-    typedef int             index_t;    // An index into a list
-    typedef unsigned int    id_t;       // A unique, numeric identifier
-    typedef unsigned short  uchar;      // Unicode character
+    typedef int             SizeType;       // An integral size quantity
+    typedef int             IndexType;      // An index into a list
+    typedef int             DifferenceType; // Integral difference
+    typedef unsigned int    IDType;         // A unique numeric identifier
+    typedef unsigned short  Unicode;        // A Unicode character
 };
 
 
 // We take the C++ stdlib & Boost smart(er) pointers as "core" components
-#define BOOST_DISABLE_ASSERTS   // Don't want smart_ptrs to assert
 #include <memory>
 #include <boost/scoped_ptr.hpp>
 #include <boost/scoped_array.hpp>

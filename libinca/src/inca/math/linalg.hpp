@@ -23,7 +23,7 @@
 #include "linalg/Quaternion"
 #include "linalg/Matrix"
 
-// Algorithms
+// Operators & functions
 #include "linalg/operations"
 #include "linalg/transformations"
 #include "linalg/projections"

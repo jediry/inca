@@ -58,11 +58,10 @@
 //#include "surface/PolynomialSurface"
 #include "surface/Plane"
 
-
+#endif
 
 // Analytic solid definitions
 #include "math/solid/Sphere"
-#include "math/solid/QuadPrism"
-#endif
+#include "math/solid/Block"
 
 #endif

@@ -1,0 +1,67 @@
+/** -*- C++ -*-
+ *
+ * File: ExclusiveAccessCachePolicy
+ * 
+ * Author: Ryan L. Saunders
+ *
+ * Copyright 2004, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ *      The ExclusiveAccessCachePolicy is an implementation of an
+ *      ImmediateModeRenderer cache policy that assumes that the underlying
+ *      rendering context is not being modified by the application in any
+ *      other way than through the ImmediateModeRenderer (i.e., the IMR has
+ *      exclusive access to the rendering context).
+ */
+
+#ifndef INCA_RENDERING_IMMEDIATE_MODE_EXCLUSIVE_ACCESS_CACHE_POLICY
+#define INCA_RENDERING_IMMEDIATE_MODE_EXCLUSIVE_ACCESS_CACHE_POLICY
+
+// Import system configuration
+#include <inca/inca-common.h>
+
+// This is part of the Inca rendering subsystem
+namespace inca {
+    namespace rendering {
+        // Forward declarations
+        template <SizeType size> class ExclusiveAccessCachePolicy;
+    };
+};
+
+// Import container definitions
+#include <inca/util/Array>
+
+
+// Cache policy assuming exclusive access to the rendering hardware
+template <inca::SizeType size>
+class inca::rendering::ExclusiveAccessCachePolicy {
+public:
+    // Constructor
+    ExclusiveAccessCachePolicy() {
+        for (IDType i = 0; i < size; ++i) // Start out with cache invalid
+            cache[i] = false;
+    }
+
+    template <IDType id>
+    bool isCacheValid() {
+        BOOST_STATIC_ASSERT(id >= 0 && id < size);
+        return cache[id];
+    }
+
+    template <IDType id>
+    void validateCache() {
+        BOOST_STATIC_ASSERT(id >= 0 && id < size);
+        cache[id] = true;
+    }
+
+    template <IDType id>
+    void invalidateCache() {
+        BOOST_STATIC_ASSERT(id >= 0 && id < size);
+        cache[id] = false;
+    }
+
+private:
+    Array<bool, size> cache;  // List of "valid" flags
+};
+
+#endif

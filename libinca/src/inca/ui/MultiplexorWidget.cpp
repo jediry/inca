@@ -31,25 +31,25 @@ typedef wraparound_iterator<MultiplexorWidget::WidgetList
  | Search functions
  *---------------------------------------------------------------------------*/
 // Return the index in the list of the first occurance of Widget 'w'
-index_t MultiplexorWidget::indexOf(WidgetConstPtr w) const {
+IndexType MultiplexorWidget::indexOf(WidgetConstPtr w) const {
     // Try to find the first occurance of this Widget
-    for (index_t i = 0; i < index_t(widgets.size()); ++i)
+    for (IndexType i = 0; i < IndexType(widgets.size()); ++i)
         if (widgets[i] == w)        // OK...we found it
             return i;
     return NOT_FOUND;   // Crap.
 }
 
 // Return the index in the list of the first occurance of a Widget named 'nm'
-index_t MultiplexorWidget::indexOf(const string &nm) const {
+IndexType MultiplexorWidget::indexOf(const string &nm) const {
     // Try to find the first occurance of this Widget
-    for (index_t i = 0; i < index_t(widgets.size()); ++i)
+    for (IndexType i = 0; i < IndexType(widgets.size()); ++i)
         if (widgets[i] != NULL && widgets[i]->name() == nm)
             return i;   // OK...we found it
     return NOT_FOUND;   // Crap.
 }
 
 // Return the index of the previous non-NULL Widget (wrapping at the end)
-index_t MultiplexorWidget::indexBefore(index_t from) const {
+IndexType MultiplexorWidget::indexBefore(IndexType from) const {
     // Iterate through every slot in the vector, starting with the current
     reverse_wrap_iter i(selectedIndex, widgets.rbegin(), widgets.rend());
     ++i;
@@ -62,7 +62,7 @@ index_t MultiplexorWidget::indexBefore(index_t from) const {
 }
 
 // Return the index of the next non-NULL Widget (wrapping at the end)
-index_t MultiplexorWidget::indexAfter(index_t from) const {
+IndexType MultiplexorWidget::indexAfter(IndexType from) const {
     // Iterate through every slot in the vector, starting with the current
     wrap_iter i(selectedIndex, widgets.begin(), widgets.end());
     ++i;
@@ -84,12 +84,12 @@ void MultiplexorWidget::addWidget(WidgetPtr w) {
         return;
 
     // First, let's go hunt for an empty slot in the array
-    index_t slot;
-    for (slot = 0; slot < index_t(widgets.size()); ++slot)
+    IndexType slot;
+    for (slot = 0; slot < IndexType(widgets.size()); ++slot)
         if (widgets[slot] == NULL)
             break;
 
-    if (slot < index_t(widgets.size())) // There was an empty slot
+    if (slot < IndexType(widgets.size())) // There was an empty slot
         widgets[slot] = w;
     else                                // Have to add it to the end
         widgets.push_back(w);
@@ -109,9 +109,9 @@ bool MultiplexorWidget::removeWidget(const string &nm) {
 }
 
 // Remove a widget at the speficied location (true means success)
-bool MultiplexorWidget::removeWidget(index_t index) {
+bool MultiplexorWidget::removeWidget(IndexType index) {
     // Make sure there's a valid Widget at that spot
-    if (index >= 0 && index < index_t(widgets.size())
+    if (index >= 0 && index < IndexType(widgets.size())
                  && widgets[index] != NULL) {
         widgets[index] = WidgetPtr();   // Set it to NULL
         return true;                    // Success!
@@ -144,9 +144,9 @@ bool MultiplexorWidget::selectWidget(const string &name) {
 }
 
 // Jump straight to a widget
-bool MultiplexorWidget::selectWidget(index_t index) {
+bool MultiplexorWidget::selectWidget(IndexType index) {
     // Make sure this is sane
-    if (index >= 0 && index < index_t(widgets.size())) {
+    if (index >= 0 && index < IndexType(widgets.size())) {
         WidgetPtr w = widgets[index];
         if (w != NULL) {        // ...then this slot has a valid Widget
             widget = w;             // The superclass's "widget" property will

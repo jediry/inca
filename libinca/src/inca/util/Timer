@@ -208,8 +208,8 @@ public:
 
             // See if we need to pulse anybody
             if (generateEvents && math::abs(_pulseIntervalClocks) > 0) {
-                size_t missed = math::abs(_lastPulseClocks - elapsedClocks())
-                              / math::abs(_pulseIntervalClocks);
+                SizeType missed = math::abs(_lastPulseClocks - elapsedClocks())
+                                / math::abs(_pulseIntervalClocks);
 
                 if (maySkipPulses()) {  // ...its OK to ignore missed pulses
                     _lastPulseClocks += missed * _pulseIntervalClocks;

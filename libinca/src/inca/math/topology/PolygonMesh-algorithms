@@ -50,7 +50,7 @@ namespace Inca {
             const VertexPtrList &vertices = mesh.vertices();
             for (vi = vertices.begin(); vi != vertices.end(); vi++) {
                 const Point &p = (*vi)->location();
-                for (index_t i = 0; i < dim; i++) {
+                for (IndexType i = 0; i < dim; i++) {
                     if (p[i] > max[i])  max[i] = p[i];
                     if (p[i] < min[i])  min[i] = p[i];
                 }

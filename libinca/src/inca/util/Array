@@ -1,0 +1,209 @@
+/** -*- C++ -*-
+ *
+ * \file Array
+ *
+ * \author Ryan L. Saunders
+ *
+ * Copyright 2004, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ */
+
+#ifndef INCA_UTIL_ARRAY
+#define INCA_UTIL_ARRAY
+
+// Import system configuration
+#include <inca/inca-common.h>
+
+// This is part of the Inca utilities collection
+namespace inca {
+    // Forward declarations
+    template <typename T, inca::SizeType dim> class Array;
+};
+
+// Import iterator adapter definitions
+#include "iterators/ReverseIteratorAdapter"
+
+// Import STL function definitions
+#include <algorithm>
+
+// Import multi-dimensional preprocessor metaprogramming macros
+#include "multi-dimensional-macros.hpp"
+
+
+template <typename T, inca::SizeType dim>
+class inca::Array {
+/*---------------------------------------------------------------------------*
+ | Type & constant declarations
+ *---------------------------------------------------------------------------*/
+public:
+    // How many dimensions do I have?
+    static const SizeType dimensionality = dim;
+
+    // Contained types
+    typedef T                           ElementType;
+    typedef T *                         Pointer;
+    typedef T const *                   ConstPointer;
+    typedef T &                         Reference;
+    typedef T const &                   ConstReference;
+
+    // Iterator types
+    typedef Pointer                                 Iterator;
+    typedef ConstPointer                            ConstIterator;
+    typedef ReverseIteratorAdapter<Iterator>        ReverseIterator;      
+    typedef ReverseIteratorAdapter<ConstIterator>   ConstReverseIterator;
+    
+    typedef Iterator iterator;
+    typedef ConstIterator const_iterator;
+    typedef ReverseIterator reverse_iterator;
+    typedef ConstReverseIterator const_reverse_iterator;
+
+
+/*---------------------------------------------------------------------------*
+ | Constructors
+ *---------------------------------------------------------------------------*/
+public:
+    // Default (no initialization) constructor
+    explicit Array() { }
+
+    // Initialization from an arbitrary collection
+    template <class Collection>
+    explicit Array(const Collection & c) {
+        std::copy(c.begin(), c.end(), begin());
+    }
+
+    // Constant value initialization constructor
+    explicit Array(ElementType e) {
+        std::fill(begin(), end(), e);
+    }
+
+    /**
+     * Parameter list constructors giving the size along each dimension.
+     * Each of these is intended to be used only with instances of the
+     * appropriate rank (calling a constructor of the wrong rank will cause
+     * a compile-time assert).
+     */
+    #define ASSIGN_ELEMENT(DIM) _elements[DIM] = e ## DIM;
+    #define CREATE_DIMENSIONAL_CONSTRUCTOR(DIM)                             \
+        explicit Array(PARAMS(DIM, ElementType e)) {                        \
+            /* Cause a compile-time failure if this constructor is used     \
+             * with an instance of the wrong dimensionality. */             \
+            BOOST_STATIC_ASSERT(dimensionality == DIM);                     \
+                                                                            \
+            /* Copy each of the size parameters */                          \
+            FOR_EACH(DIM, ASSIGN_ELEMENT);                                  \
+        }
+    FOR_ALL_DIMS(CREATE_DIMENSIONAL_CONSTRUCTOR);
+    #undef CREATE_DIMENSIONAL_CONSTRUCTOR
+    #undef ASSIGN_ELEMENT
+
+protected:
+    ElementType _elements[dimensionality];  // The elements we're containing
+
+
+/*---------------------------------------------------------------------------*
+ | Accessors & query functions
+ *---------------------------------------------------------------------------*/
+public:
+    // How many elements do we contain?
+    SizeType size() const { return dimensionality; }
+
+    // C-style indexed access to elements
+         Reference operator[](IndexType i)       { return _elements[i]; }
+    ConstReference operator[](IndexType i) const { return _elements[i]; }
+
+    // Fortran-style indexed access to elements
+         Reference operator()(IndexType i)       { return _elements[i]; }
+    ConstReference operator()(IndexType i) const { return _elements[i]; }
+
+    // Pointer to underlying array
+         Pointer elements()       { return _elements; }
+    ConstPointer elements() const { return _elements; }
+
+    // Alternative element "at" function
+         Reference at(IndexType i)       { return _elements[i]; }
+    ConstReference at(IndexType i) const { return _elements[i]; }
+
+
+/*---------------------------------------------------------------------------*
+ | Iterators
+ *---------------------------------------------------------------------------*/
+public:
+    // Forward iterators
+         Iterator begin()       { return &_elements[0]; }
+    ConstIterator begin() const { return &_elements[0]; }
+         Iterator end()       { return &_elements[dimensionality]; }
+    ConstIterator end() const { return &_elements[dimensionality]; }
+
+    // Reverse iterators
+    ReverseIterator reverseBegin() {
+        return ReverseIterator(&_elements[dimensionality - 1]);
+    }
+    ConstReverseIterator reverseBegin() const {
+        return ConstReverseIterator(&_elements[dimensionality - 1]);
+    }
+    ReverseIterator reverseEnd() {
+        return ReverseIterator(&_elements[-1]);
+    }
+    ConstReverseIterator reverseEnd() const {
+        return ConstReverseIterator(&_elements[-1]);
+    }
+
+
+/*---------------------------------------------------------------------------*
+ | String conversion functions
+ *---------------------------------------------------------------------------*/
+public:
+    /**
+     * Creates a string representation of elements in this list.
+     * This version
+     * \returns a string containing a comma-separated list of scalars
+     */
+    std::string stringifyElements() const {
+        return stringifyElements(0, dimensionality);
+    }
+
+    /**
+     * \overload stringifyElements()
+     * This version allows to specify the index range which should be
+     * stringified. If either \a start or \a (start + num * stride) are
+     * outside the range * [0, dimension - 1], they will be clamped to the nearest
+     * valid index.
+     *
+     * \param start     the index of the first element to stringify
+     * \param num       the number of elements to print
+     * \param stride    the stride length to take through the list with each
+     *                  element we print. If this is \c 1, all elements in
+     *                  the range will be printed; if \c 2, every other, etc.
+     * \returns a string containing a comma-separated list of scalars
+     */
+    string stringifyElements(IndexType start, IndexType num,
+                             SizeType stride = 1) const {
+        IndexType end = start + num * stride;
+        if (start < 0)                      start = 0;
+        else if (start >= dimensionality)   start = dimensionality;
+        if (end < 0)                        end = 0;
+        else if (end >= dimensionality)     end = dimensionality;
+        std::ostringstream ss;
+        for (IndexType i = start; i < end; i += stride) {
+            ss << _elements[i];
+            if (IndexType(i + stride) < end)  ss << ", ";
+        }
+        return ss.str();
+    }
+};
+
+// std::ostream writer operator
+namespace inca {
+    template <typename scalar, inca::SizeType dim>
+    std::ostream & operator<<(std::ostream & os, const Array<scalar, dim> & a) {
+        return os << a.stringifyElements();
+    }
+};
+
+// Clean up the preprocessor's namespace
+#define UNDEFINE_INCA_MULTI_DIM_MACROS
+#include "multi-dimensional-macros.hpp"
+
+#endif
+

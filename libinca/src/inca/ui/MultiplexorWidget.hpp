@@ -67,29 +67,29 @@ public:
     }
 
     // Search functions
-    index_t indexOf(WidgetConstPtr w) const; // First index of 'w'
-    index_t indexOf(const string &nm) const; // First widget named 'nm'
-    index_t indexBefore(index_t from) const; // Previous widget before 'from'
-    index_t indexAfter(index_t from)  const; // Next widget after 'from'
+    IndexType indexOf(WidgetConstPtr w) const; // First index of 'w'
+    IndexType indexOf(const string &nm) const; // First widget named 'nm'
+    IndexType indexBefore(IndexType from) const; // Previous widget before 'from'
+    IndexType indexAfter(IndexType from)  const; // Next widget after 'from'
 
-    static const index_t NOT_FOUND = -1;// The "I couldn't find it" index
+    static const IndexType NOT_FOUND = -1;// The "I couldn't find it" index
 
     // Add/remove functions
     void addWidget(WidgetPtr w);        // Stick a new Widget into the list
     bool removeWidget(WidgetPtr w);     // Remove the first occurance of 'w'
     bool removeWidget(const string &nm);// Remove the widget with name 'nm'
-    bool removeWidget(index_t index);   // Remove the widget at 'index'
+    bool removeWidget(IndexType index);   // Remove the widget at 'index'
 
     // Widget selection functions
     bool selectPreviousWidget();        // Step backward in the widget order
     bool selectNextWidget();            // Step forward in the widget order
     bool selectWidget(WidgetConstPtr w);// Select the first occurance of 'w'
     bool selectWidget(const string &nm);// Select the wigdet with name 'nm'
-    bool selectWidget(index_t index);   // Select the widget at 'index'
+    bool selectWidget(IndexType index);   // Select the widget at 'index'
 
 protected:
     WidgetList widgets;                 // The Widgets we're managing
-    index_t selectedIndex;              // Index of the active Widget
+    IndexType selectedIndex;              // Index of the active Widget
 };
 
 #endif

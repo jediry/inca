@@ -20,21 +20,21 @@
 
 
 RENDERER_TEMPLATE
-template <typename _element_t>
+template <typename T>
 class RENDERER::Buffer : public RENDERER::Component {
 public:
     // Type definitions
-    typedef _element_t element_t;
+    typedef T ElementType;
 
     // Default constructor
 //    Buffer() : renderer(*NULL) { }
 
     // Constructor linking to the parent renderer
-    Buffer(RENDERER &r, id_t id);
+    Buffer(RENDERER &r, IDType id);
 
     void clear();
-    element_t operator()(index_t x, index_t y) const;
-    element_t operator()(Pixel p) const;
+    ElementType operator()(IndexType x, IndexType y) const;
+    ElementType operator()(Pixel p) const;
 
     unsigned int writeMask() const;
     void setWriteMask(unsigned int mask) const;
@@ -43,7 +43,7 @@ public:
 //    void load(XX);
 
 protected:
-    void resize(size_t x, size_t y);
+    void resize(SizeType x, SizeType y);
     void resize(Dimension d);
 };
 

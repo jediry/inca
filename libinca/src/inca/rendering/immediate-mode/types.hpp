@@ -115,19 +115,19 @@ namespace inca {
 
 
         // Enumeration of the different ways to shade objects
-        enum ShadingMode {
+        enum ShadingModel {
             SmoothShade = 0,    // Smooth shade objects
             FlatShade   = 1,    // Flat shade objects
             Paint       = 2,    // Draw objects w/o lighting
         };
-        const unsigned int ALL_SHADING_MODES = Paint + 1;
-        inline ostream & operator<<(ostream &o, ShadingMode mode) {
-            switch (mode) {
+        const unsigned int ALL_SHADING_MODELS = Paint + 1;
+        inline ostream & operator<<(ostream &o, ShadingModel model) {
+            switch (model) {
                 case SmoothShade:   return o << "SmoothShade";
                 case FlatShade:     return o << "FlatShade";
                 case Paint:         return o << "Paint";
-                default:            return o << "UNKNOWN ShadingMode "
-                                             << int(mode);
+                default:            return o << "UNKNOWN ShadingModel "
+                                             << int(model);
             }
         }
 

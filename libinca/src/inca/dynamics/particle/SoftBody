@@ -90,7 +90,7 @@ public:
         }
     }
 
-    ParticlePtr particle(index_t i) { return particles[i]; }
+    ParticlePtr particle(IndexType i) { return particles[i]; }
 
 protected:
     ParticleSystemPtr system;   // Our integrator
@@ -167,11 +167,11 @@ public:
     // Calculation of forces exterted on all particles affected by this object
     virtual void apply(ParticleState &state, scalar_arg_t dt) {
         // First apply the linear springs
-        for (index_t i = 0; i < linearSprings.size(); i++)
+        for (IndexType i = 0; i < linearSprings.size(); i++)
             linearSprings[i].apply(state, dt);
             
         // Now apply the angular springs
-        for (index_t i = 0; i < angularSprings.size(); i++)
+        for (IndexType i = 0; i < angularSprings.size(); i++)
             angularSprings[i].apply(state, dt);
     }
 };

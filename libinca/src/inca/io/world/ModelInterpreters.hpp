@@ -46,10 +46,10 @@ namespace Inca {
 class Inca::IO::ModelHandler {
 public:
     // Container typedefs
-    typedef hash_map<index_t, index_t>  IndexMap;
-    typedef hash_map<string, index_t>   MaterialMap;
+    typedef hash_map<IndexType, IndexType>  IndexMap;
+    typedef hash_map<string, IndexType>   MaterialMap;
 
-    static const index_t NONE = 0;
+    static const IndexType NONE = 0;
 
 
 /*---------------------------------------------------------------------------*
@@ -60,14 +60,14 @@ public:
         : _vertexCount(0), _normalCount(0), _texCoordsCount(0), _faceCount(0),
           currentNormal(NONE), currentTexCoords(NONE), currentMaterial(0) { }
 
-    size_t vertexCount() const { return _vertexCount; }
-    size_t normalCount() const { return _normalCount; }
-    size_t texCoordsCount() const { return _texCoordsCount; }
-    size_t faceCount() const { return _faceCount; }
+    SizeType vertexCount() const { return _vertexCount; }
+    SizeType normalCount() const { return _normalCount; }
+    SizeType texCoordsCount() const { return _texCoordsCount; }
+    SizeType faceCount() const { return _faceCount; }
 
 protected:
-    size_t _vertexCount, _normalCount, _texCoordsCount, _faceCount;
-    index_t currentNormal, currentTexCoords, currentMaterial;
+    SizeType _vertexCount, _normalCount, _texCoordsCount, _faceCount;
+    IndexType currentNormal, currentTexCoords, currentMaterial;
 
 
 /*---------------------------------------------------------------------------*
@@ -83,11 +83,11 @@ public:
     // Put 'em together into faces
     virtual void setMaterial(const string &name) = 0;
     virtual void setGroup(const string &name) = 0;
-    virtual void setSmoothingGroup(index_t sg) = 0;
+    virtual void setSmoothingGroup(IndexType sg) = 0;
     virtual void createFace() = 0;
-        virtual void setNormal(index_t vn) { currentNormal = vn; }
-        virtual void setTexCoords(index_t vt) { currentTexCoords = vt; }
-        virtual void addVertex(index_t v) = 0;
+        virtual void setNormal(IndexType vn) { currentNormal = vn; }
+        virtual void setTexCoords(IndexType vt) { currentTexCoords = vt; }
+        virtual void addVertex(IndexType v) = 0;
     virtual void endFace() = 0;
 };
 
@@ -112,9 +112,9 @@ public:
     // Put 'em together into faces
     void setMaterial(const string &name);
     void setGroup(const string &name);
-    void setSmoothingGroup(index_t sg);
+    void setSmoothingGroup(IndexType sg);
     void createFace();
-        void addVertex(index_t v);
+        void addVertex(IndexType v);
     void endFace();
 
 protected:
@@ -134,7 +134,7 @@ public:
     typedef PolygonMesh::Vector                     Vector;
     typedef PolygonMesh::TexCoords                  TexCoords;
     
-    typedef hash_map<index_t, PolygonMesh::VertexPtr>   VertexMap;
+    typedef hash_map<IndexType, PolygonMesh::VertexPtr>   VertexMap;
 
 
     // Constructor
@@ -152,11 +152,11 @@ public:
     // Put 'em together into faces
     void setMaterial(const string &name);
     void setGroup(const string &name);
-    void setSmoothingGroup(index_t sg);
+    void setSmoothingGroup(IndexType sg);
     void createFace();
-        void setNormal(index_t vn);
-        void setTexCoords(index_t vt);
-        void addVertex(index_t v);
+        void setNormal(IndexType vn);
+        void setTexCoords(IndexType vt);
+        void addVertex(IndexType v);
     void endFace();
 
 protected:

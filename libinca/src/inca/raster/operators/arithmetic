@@ -1,0 +1,97 @@
+/*
+ * File: arithmetic
+ * 
+ * Author: Ryan L. Saunders
+ *
+ * Copyright 2004, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ *      This file implements
+ */
+
+#ifndef INCA_RASTER_OPERATORS_ARITHMETIC
+#define INCA_RASTER_OPERATORS_ARITHMETIC
+
+
+// Import operator base classes and macros
+#include "operator-bases"
+
+#include <cmath>
+
+// This is part of the Inca raster processing library
+namespace inca {
+    namespace raster {
+        // Arithmetic operators
+        BINARY_OPERATOR(+, AddRasterOperator);
+        BINARY_OPERATOR(-, SubtractRasterOperator);
+        BINARY_OPERATOR(*, MultiplyRasterOperator);
+        BINARY_OPERATOR(/, DivideRasterOperator);
+        BINARY_OPERATOR(%, ModulateRasterOperator);
+
+        // Arithmetic functions
+//        UNARY_FUNCTION(log, LogRasterFunction);
+
+        template <typename R1>
+        class AbsoluteValueRasterFunction
+            : public UnaryRasterOperator<R1, typename R1::ElementType> {
+        public:
+            typedef typename R1::ElementType        ReturnType;
+            typedef UnaryRasterOperator<R1, ReturnType>         Superclass;
+            typedef typename Superclass::ElementType            ElementType;
+            typedef AbsoluteValueRasterFunction<R1>          OperatorType;
+
+            /* Constructor */
+            AbsoluteValueRasterFunction(R1 & r1) : Superclass(r1) { }
+
+            /* Evaluator function */
+            template <class IndexList>
+            ReturnType operator()(const IndexList &indices) const {
+                return std::abs(first(indices));
+            }
+        };
+        template <typename R1>
+        AbsoluteValueRasterFunction<R1> abs(R1 &r) {
+            return AbsoluteValueRasterFunction<R1>(r);
+        }
+
+        template <typename R1>
+        class LogRasterFunction
+            : public UnaryRasterOperator<R1, typename R1::ElementType> {
+        public:
+            typedef typename R1::ElementType        ReturnType;
+            typedef UnaryRasterOperator<R1, ReturnType>         Superclass;
+            typedef typename Superclass::ElementType            ElementType;
+            typedef LogRasterFunction<R1>          OperatorType;
+
+            /* Constructor */
+            LogRasterFunction(R1 & r1) : Superclass(r1) { }
+
+            /* Evaluator function */
+            template <class IndexList>
+            ReturnType operator()(const IndexList &indices) const {
+                return std::log10(first(indices));
+            }
+        };
+        template <typename R1>
+        LogRasterFunction<R1> log(R1 &r) {
+            return LogRasterFunction<R1>(r);
+        }
+
+        // Complex arithmetic functions
+//        UNARY_FUNCTION(magnitude, ComplexMagnitudeRasterFunction);
+//        UNARY_FUNCTION(phase,     ComplexPhaseRasterFunction);
+
+        // Corresponding computed-assignment operators
+        COMPUTED_ASSIGNMENT_OPERATOR(+);    // +=
+        COMPUTED_ASSIGNMENT_OPERATOR(-);    // -=
+        COMPUTED_ASSIGNMENT_OPERATOR(*);    // *=
+        COMPUTED_ASSIGNMENT_OPERATOR(/);    // /=
+        COMPUTED_ASSIGNMENT_OPERATOR(%);    // %=
+    };
+};
+
+// Clean up the preprocessor's namespace
+#define UNDEFINE_INCA_RASTER_OPERATOR_MACROS
+#include "operator-bases"
+
+#endif

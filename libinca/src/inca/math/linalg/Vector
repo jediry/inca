@@ -21,31 +21,35 @@
 namespace inca {
     namespace math {
         // Forward declarations
-        template <typename scalar, inca::size_t dim> class Vector;
+        template <typename scalar, inca::SizeType dim> class Vector;
     };
 };
-
-// Import superclass definition
-#include "../Array"
 
 // Import STL algorithms
 #include <algorithm>
 
-// Import related class definitions
+// Import scalar math implementation
+#include "../scalar.hpp"
+
+// Import superclass and related class definitions
+#include <inca/util/Array>
 #include "Quaternion"
 
+// Import multi-dimensional preprocessor metaprogramming macros
+#include <inca/util/multi-dimensional-macros.hpp>
 
-// Import math macros
-#include "../macros.hpp"
 
-template <typename scalar, inca::size_t dim>
-class inca::math::Vector : public inca::math::Array<scalar, dim> {
+template <typename scalar, inca::SizeType dim>
+class inca::math::Vector : public inca::Array<scalar, dim> {
 /*---------------------------------------------------------------------------*
  | Type/constant declarations
  *---------------------------------------------------------------------------*/
 public:
     // Scalar typedefs
     INCA_MATH_SCALAR_TYPES(scalar, IS_WITHIN_TEMPLATE);
+
+    // How many dimensions do I have?
+    static const SizeType dimensionality = dim;
 
 
 /*---------------------------------------------------------------------------*
@@ -58,22 +62,20 @@ public:
     explicit Vector() { }
 
     /**
-     * Initialization from another array type, possibly of a different scalar
-     * type. The argument array must be of the same dimensionality, and its
+     * Initialization from another Vector, possibly of a different scalar
+     * type. The argument must be of the same dimensionality, and its
      * scalar type must be convertible to scalar_t.
      */
     template <typename scalar2>
-    explicit Vector(const boost::array<scalar2, static_size> &arr) {
-        std::copy(arr.begin(), arr.end(), begin());
+    Vector(const Vector<scalar2, dimensionality> &v) {
+        std::copy(v.begin(), v.end(), begin());
     }
 
     /**
-     * C-style array constructor. The element type must be convertible to
-     * scalar_t.
+     * Initialization from an Array (or subclass).
      */
-    template <typename scalar2>
-    explicit Vector(scalar2 * arr) {
-        std::copy(arr, arr + static_size, begin());
+    explicit Vector(const Array<scalar_t, dimensionality> &arr) {
+        std::copy(arr.begin(), arr.end(), begin());
     }
 
     /**
@@ -89,7 +91,11 @@ public:
      * arguments. Attempting to invoke a constructor for a different
      * dimensionality will cause a compile-time failure.
      */
-    PARAM_LIST_CONSTRUCTORS(Vector, MIN_DIMENSION, MAX_DIMENSION);
+    #define CREATE_DIMENSIONAL_CONSTRUCTOR(DIM)                             \
+        explicit Vector(PARAMS(DIM, scalar_arg_t s))                        \
+            : Array<scalar_t, dimensionality>(PARAMS(DIM, s)) { }
+    FOR_ALL_DIMS(CREATE_DIMENSIONAL_CONSTRUCTOR);
+    #undef CREATE_DIMENSIONAL_CONSTRUCTOR
 
     /**
      * Initialization from a Quaternion. This is only valid for 3D Vectors,
@@ -97,7 +103,7 @@ public:
      */
     template <typename scalar2>
     explicit Vector(const Quaternion<scalar2> &q) {
-        BOOST_STATIC_ASSERT(static_size == 3);  // Only works for 3D Vectors
+        BOOST_STATIC_ASSERT(dimensionality == 3);  // Only works for 3D Vectors
         std::copy(q.begin() + 1, q.end(), begin());
     }
 
@@ -116,7 +122,7 @@ public:
 };
 
 // Clean up the preprocessor's namespace
-#define UNDEFINE_INCA_MATH_MACROS
-#include "../macros.hpp"
+#define UNDEFINE_INCA_MULTI_DIM_MACROS
+#include <inca/util/multi-dimensional-macros.hpp>
 
 #endif

@@ -1,0 +1,64 @@
+#ifndef HACKED_COMPLEX_OPS
+#define HACKED_COMPLEX_OPS
+
+#include <complex>
+
+#include "operator-bases"
+
+
+namespace inca {
+    namespace raster {
+
+        template <typename R1>
+        class ComplexMagnitudeRasterFunction
+            : public UnaryRasterOperator<R1, typename R1::ElementType::value_type> {
+        public:
+            typedef typename R1::ElementType::value_type        ReturnType;
+            typedef UnaryRasterOperator<R1, ReturnType>         Superclass;
+            typedef typename Superclass::ElementType            ElementType;
+            typedef ComplexMagnitudeRasterFunction<R1>          OperatorType;
+
+            /* Constructor */
+            ComplexMagnitudeRasterFunction(R1 & r1) : Superclass(r1) { }
+
+            /* Evaluator function */
+            template <class IndexList>
+            ReturnType operator()(const IndexList &indices) const {
+                return std::abs(first(indices));
+            }
+        };
+
+        template <typename R1>
+        class ComplexAngleRasterFunction
+            : public UnaryRasterOperator<R1, typename R1::ElementType::value_type> {
+        public:
+            typedef typename R1::ElementType::value_type        ReturnType;
+            typedef UnaryRasterOperator<R1, ReturnType>         Superclass;
+            typedef typename Superclass::ElementType            ElementType;
+            typedef ComplexAngleRasterFunction<R1>              OperatorType;
+
+            /* Constructor */
+            ComplexAngleRasterFunction(R1 & r1) : Superclass(r1) { }
+
+            /* Evaluator function */
+            template <class IndexList>
+            ReturnType operator()(const IndexList &indices) const {
+                return std::arg(first(indices));
+            }
+        };
+
+
+        template <typename R1>
+        ComplexMagnitudeRasterFunction<R1> mag(R1 &r) {
+            return ComplexMagnitudeRasterFunction<R1>(r);
+        }
+
+        template <typename R1>
+        ComplexAngleRasterFunction<R1> arg(R1 &r) {
+            return ComplexAngleRasterFunction<R1>(r);
+        }
+    };
+};
+
+
+#endif

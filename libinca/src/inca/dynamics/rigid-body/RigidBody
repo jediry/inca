@@ -93,7 +93,7 @@ public:
         // Calculate the moment of inertia matrix
         Vector dim = extent(*mesh);
         const Vector &scale = xform->scale();
-        for (index_t i = 0; i < 3; i++)
+        for (IndexType i = 0; i < 3; i++)
             dim[i] *= scale[i];
 
         Matrix I(0.0);

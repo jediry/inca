@@ -38,9 +38,6 @@ namespace inca {
 // Import Timer definition
 #include <inca/util/Timer>
 
-// Import container definitions
-#include <vector>
-
 
 /**
  * The GLUTWindow class is the superclass for all GLUT windows used by the
@@ -55,7 +52,27 @@ namespace inca {
  */
 class inca::ui::GLUTWindow : public Window {
 /*---------------------------------------------------------------------------*
- | Static functions to patch thru to the GLUT event-handling mechanism
+ | Window layout defaults
+ *---------------------------------------------------------------------------*/
+protected:
+    // Defaults for new windows (if unspecified)
+    static const string    DEFAULT_TITLE;
+    static const Pixel     DEFAULT_POSITION;
+    static const Dimension DEFAULT_SIZE;
+    static const Dimension DEFAULT_MINIMUM_SIZE;
+    static const Dimension DEFAULT_MAXIMUM_SIZE;
+    static const float     DEFAULT_ASPECT_RATIO;
+    static const bool      DEFAULT_IS_FULL_SCREEN;
+
+protected:
+    // Button click timing
+    static const SizeType        SUPPORTED_BUTTONS = 10; // How many buttons?
+    typedef Timer<float, false>  Timer;  // Float scalar, no events produced
+    static const Timer::scalar_t CLICK_DURATION;    // How long can a click be?
+
+
+/*---------------------------------------------------------------------------*
+ | Static functions to patch thru the GLUT event-handling mechanism
  *---------------------------------------------------------------------------*/
 public:
     static void reshapeFunc(int width, int height);
@@ -71,26 +88,11 @@ public:
     static void idleFunc();
 
 protected:
-    // The list of existing GLUT windows
-    static std::vector<GLUTWindow *> windowList;
-
-    // Defaults for new windows (if unspecified)
-    static const string    DEFAULT_TITLE;
-    static const Pixel     DEFAULT_POSITION;
-    static const Dimension DEFAULT_SIZE;
-    static const Dimension DEFAULT_MINIMUM_SIZE;
-    static const Dimension DEFAULT_MAXIMUM_SIZE;
-    static const float     DEFAULT_ASPECT_RATIO;
-    static const bool      DEFAULT_IS_FULL_SCREEN;
-
-    // Button click timing
-    static const size_t          SUPPORTED_BUTTONS = 10; // How many buttons?
-    typedef Timer<float, false>  Timer;  // Float scalar, no events produced
-    static const Timer::scalar_t CLICK_DURATION;    // How long can a click be?
+    static void registerCallbacks();
 
 
 /*---------------------------------------------------------------------------*
- | Constructors and window instance management
+ | Constructors & destructor
  *---------------------------------------------------------------------------*/
 public:
     // Default Constructor
@@ -102,9 +104,14 @@ public:
     // Destructor
     virtual ~GLUTWindow();
 
+    // self() function to get a shared_ptr to myself of the appropriate type
+    SHARED_PTR_TO_SELF(GLUTWindow);
+
+    // The window's GLUT window-id
+    IDType getWindowID() const { return windowID; }
+
 protected:
-    void createWindow(const string &title); // This does the real work
-    unsigned int windowID;  // The GLUT window ID that we own
+    IDType windowID;  // The ID of the GLUT window we own
 
 
 /*---------------------------------------------------------------------------*
@@ -141,6 +148,7 @@ protected:
 /*---------------------------------------------------------------------------*
  | GLUT -> Inca event translation functions
  *---------------------------------------------------------------------------*/
+protected:
     // Translate a GLUT mouse button into an Inca MouseButton
     MouseButton translateMouseButton(int button);
 
@@ -153,6 +161,9 @@ protected:
  | Window interface functions
  *---------------------------------------------------------------------------*/
 public:
+    // Window ID
+    IDType getID() const { return windowID; }
+
     // Window title
     string getTitle() const { return title; }
     void setTitle(const string &title);

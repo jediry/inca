@@ -94,5 +94,6 @@
 
 // Import supported toolkit implementations
 #include <inca/integration/glut/GLUTApplication.hpp>
+#include <inca/integration/glut/GLUTWindow.hpp>
 
 #endif

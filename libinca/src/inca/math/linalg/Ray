@@ -21,7 +21,7 @@
 namespace inca {
     namespace math {
         // Forward declarations
-        template <typename scalar, inca::size_t dim> class Ray;
+        template <typename scalar, inca::SizeType dim> class Ray;
     };
 };
 
@@ -31,16 +31,20 @@ namespace inca {
 
 
 // Import math macros
-#include "../macros.hpp"
+#include "../math-macros.hpp"
 
-template <typename scalar, inca::size_t dim>
+template <typename scalar, inca::SizeType dim>
 class inca::math::Ray {
 public:
 /*---------------------------------------------------------------------------*
- | Type/constant declarations
+ | Type & constant declarations
  *---------------------------------------------------------------------------*/
     // Scalar typedefs
     INCA_MATH_SCALAR_TYPES(scalar, IS_WITHIN_TEMPLATE);
+
+    // Linear algebra typedefs
+    typedef inca::math::Point<scalar_t, dim>    Point;
+    typedef inca::math::Vector<scalar_t, dim>   Vector;
 
 
 /*---------------------------------------------------------------------------*
@@ -69,12 +73,12 @@ public:
     /**
      * The positional part of this ray.
      */
-    Point<scalar, dim> & position() { return _position; }
+    Point & position() { return _position; }
 
     /**
      * The directional part of this ray.
      */
-    Vector<scalar, dim> & direction() { return _direction; }
+    Vector & direction() { return _direction; }
 
 
 /*---------------------------------------------------------------------------*
@@ -90,12 +94,12 @@ public:
     }
 
 protected:
-    Point<scalar, dim>  _position;
-    Vector<scalar, dim> _direction;
+    Point  _position;
+    Vector _direction;
 };
 
 // Clean up the preprocessor's namespace
 #define UNDEFINE_INCA_MATH_MACROS
-#include "../macros.hpp"
+#include "../math-macros.hpp"
 
 #endif

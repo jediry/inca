@@ -73,7 +73,7 @@ public:
     //      count:  how many forward from begin to start from (this wraps too)
     //      begin:  where to reset to when end is reached
     //      end:   where to jump back to begin
-    wraparound_iterator(size_t count,
+    wraparound_iterator(std::size_t count,
                         iterator_type begin,
                         iterator_type end)
             : _start(begin),
@@ -83,7 +83,7 @@ public:
               _done(false) {
 
         // Walk forward "count" steps
-        for (size_t i = 0; i < count; i++)
+        for (std::size_t i = 0; i < count; i++)
             _current = next();
 
         // This is our new 'start'

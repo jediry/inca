@@ -1,0 +1,102 @@
+/*
+ * File: DFT
+ * 
+ * Author: Ryan L. Saunders
+ *
+ * Copyright 2004, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ *      This file implements a discrete Fourier transform (DFT) of the input
+ *      raster. Unlike many of the operators in the Inca raster library, this
+ *      operator evaluates its input over the entire domain when it is first
+ *      accessed and simply returns elements from the transform when accessed
+ *      subsequently.
+ *
+ * Implementation:
+ *      Note that because it internally caches the transformed elements, it
+ *      implements the InMemoryRasterConcept. Furthermore, because the DFT
+ *      requires a known, finite amount of input data, the input raster cannot
+ *      implement the ArbitrarySizedRasterConcept.
+ *
+ * XXX This needs change tracking to know when to regenerate the transform.
+ * This could also do MUCH better as far as optimization.
+ */
+
+#ifndef INCA_RASTER_OPERATORS_DFT
+#define INCA_RASTER_OPERATORS_DFT
+
+
+// Import operator base classes and macros
+#include "operator-bases"
+#include "../MultiArrayRaster"
+
+// Import complex number definition
+#include <complex>
+
+// This is part of the Inca raster processing library
+namespace inca {
+    namespace raster {
+        // General form (less efficient, since it has to copy)
+        template <typename R1, typename R2>
+        void calculateDFT(R1 & dest, const R2 & r2, bool DCInCenter);
+
+
+        // Specializations for float, double, long double (implemented by
+        // third-party FFT library)
+        template <>
+        void calculateDFT(MultiArrayRaster< std::complex<float>, 2> & dest,
+                          const MultiArrayRaster< float, 2 > & src,
+                          bool DCInCenter);
+        template <>
+        void calculateDFT(MultiArrayRaster< std::complex<double>, 2> & dest,
+                          const MultiArrayRaster< double, 2 > & src,
+                          bool DCInCenter);
+        template <>
+        void calculateDFT(MultiArrayRaster< std::complex<long double>, 2> & dest,
+                          const MultiArrayRaster< long double, 2 > & src,
+                          bool DCInCenter);
+
+
+        // Time/space domain => frequency domain transformation operator
+        template <typename R1>
+        class DFTRasterOperator
+                    : public UnaryRasterOperator<R1, std::complex<typename R1::ElementType> >,
+                      public InMemoryRasterTag {
+        public:
+            typedef UnaryRasterOperator<R1, std::complex<typename R1::ElementType> > Superclass;
+            typedef DFTRasterOperator<R1>               OperatorType;
+            typedef typename Superclass::ElementType    ElementType;
+            typedef typename Superclass::IndexArray     IndexArray;
+            
+            // Constructor
+            DFTRasterOperator(R1 & r, bool DCInCenter) : Superclass(r) {
+                MultiArrayRaster<typename ElementType::value_type, dimensionality> input(r);
+                calculateDFT(dft, input, DCInCenter);
+            }
+
+            // Evaluator function
+            template <class IndexList>
+            ElementType operator()(const IndexList &indices) const {
+                return dft(indices);
+            }
+
+        protected:
+            // The DFT coefficients
+            MultiArrayRaster<ElementType, R1::dimensionality> dft;
+        };
+
+
+        // Factory function
+        template <typename R1>
+        DFTRasterOperator<R1> DFT(R1 &r, bool DCInCenter = false) {
+            return DFTRasterOperator<R1>(r, DCInCenter);
+        }
+    };
+};
+
+// Clean up the preprocessor's namespace
+#define UNDEFINE_INCA_RASTER_OPERATOR_MACROS
+#include "operator-bases"
+
+#endif
+

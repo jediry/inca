@@ -66,7 +66,7 @@ public:
 
 protected:
     EdgePtr _edge;          // One of the edges adjacent to us
-    size_t _edgeCount;      // How many edges do we have?
+    SizeType _edgeCount;      // How many edges do we have?
 
 
 /*---------------------------------------------------------------------------*
@@ -74,14 +74,14 @@ protected:
  *---------------------------------------------------------------------------*/
 public:
     // Number of edges (same as # vertices)
-    size_t edgeCount()   const { return _edgeCount; }
-    size_t vertexCount() const { return _edgeCount; }
+    SizeType edgeCount()   const { return _edgeCount; }
+    SizeType vertexCount() const { return _edgeCount; }
 
     // The edge we use to link into the mesh
     EdgePtr edge() const { return _edge; }
 
 protected:
-    void setEdgeCount(size_t ec) { _edgeCount = ec; }
+    void setEdgeCount(SizeType ec) { _edgeCount = ec; }
     void setEdge(EdgePtr e) { _edge = e; }
 
 

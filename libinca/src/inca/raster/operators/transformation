@@ -1,0 +1,157 @@
+/*
+ * File: transformation
+ * 
+ * Author: Ryan L. Saunders
+ *
+ * Copyright 2004, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ *      RemapRange operator a unary operator that clamps its input to a
+ *      specified range, then does a linear transformation into an output
+ *      range. This has the effect of ensuring that no output value falls
+ *      outside the output range.
+ */
+
+#ifndef INCA_RASTER_OPERATORS_TRANSFORMATION
+#define INCA_RASTER_OPERATORS_TRANSFORMATION
+
+
+// Import operator base classes and macros
+#include "operator-bases"
+
+// Import statistics functions
+#include "../algorithms"
+
+
+// This is part of the Inca raster processing library
+namespace inca {
+    namespace raster {
+
+        // Map a clamped input range to an output range
+        template <class R1>
+        class LinearMapRasterOperator
+                    : public UnaryRasterOperator<R1, typename R1::ElementType> {
+        public:
+            typedef UnaryRasterOperator<R1, typename R1::ElementType> Superclass;
+            typedef LinearMapRasterOperator<R1>        OperatorType;
+            typedef typename Superclass::ElementType    ElementType;
+            typedef Array<ElementType, 2>               ElementRange;
+
+            // Constructor giving input range and output range
+            LinearMapRasterOperator(R1 & r,
+                                    const ElementRange iRange,
+                                    const ElementRange oRange)
+                    : Superclass(r), inputRange(iRange) {
+
+                ElementType iDiff = iRange[1] - iRange[0];
+                if (! math::effectivelyZero(iDiff)) {
+                    scale  = (oRange[1] - oRange[0]) / iDiff;
+                    offset = oRange[0] - iRange[0] * scale;
+                } else {
+                    scale  = ElementType(0);
+                    offset = iRange[0];
+                }
+                cerr << "Scale: " << scale << "   offset: " << offset << endl;
+            }
+
+            // Constructor giving input range and transform
+            LinearMapRasterOperator(R1 & r,
+                    const ElementRange & iRange,
+                    const ElementType & sc, const ElementType & off)
+                    : Superclass(r), inputRange(iRange),
+                      scale(sc), offset(off) { }
+
+            // Evaluator function -- clamp and transform
+            template <class IndexList>
+            ElementType operator()(const IndexList &indices) const {
+                ElementType value = first(indices);
+                if (value < inputRange[0])      value = inputRange[0];
+                else if (value > inputRange[1]) value = inputRange[1];
+                return value * scale + offset;
+            }
+
+        protected:
+            // Input range, linear transform
+            ElementRange inputRange;
+            ElementType scale, offset;
+        };
+
+#if 0
+        // Scale an image up or down
+        template <class R1>
+        class ScaleRasterOperator
+                    : public UnaryRasterOperator<R1, typename R1::ElementType> {
+        public:
+            typedef UnaryRasterOperator<R1, typename R1::ElementType> Superclass;
+            typedef ScaleRasterOperator<R1>             OperatorType;
+            typedef typename Superclass::ElementType    ElementType;
+            typedef Array<double, dimensionality>       ScaleFactors;
+
+            // Constructor giving scale factor(s)
+            template <class Collection>
+            ScaleRasterOperator(R1 & r, const Collection & s)
+                    : Superclass(r), scale(s) {
+                
+            }
+
+            // Constructor giving input range and transform
+            template <class R1>
+            LinearMapRasterOperator(R1 & r,
+                    const ElementRange & iRange,
+                    const ElementType & sc, const ElementType & off)
+                    : Superclass(r), inputRange(iRange),
+                      scale(sc), offset(off) { }
+
+            // Evaluator function -- clamp and transform
+            template <class IndexList>
+            ElementType operator()(const IndexList &indices) const {
+                ElementType value = first(indices);
+                if (value < inputRange[0])      value = inputRange[0];
+                else if (value > inputRange[1]) value = inputRange[1];
+                return value * scale + offset;
+            }
+
+        protected:
+            // Scale factors
+            ScaleFactors scale;
+        };
+
+        class RotateRasterOperator : ??
+        
+
+        // Factory functions
+        X rotate
+        X scale
+#endif
+
+        // Factory functions
+        template <typename R1, class Collection>
+        LinearMapRasterOperator<R1> linearMap(R1 &r, const Collection & oRange) {
+            Array<typename R1::ElementType, 2> inRange, outRange;
+            inRange = range(r);
+            outRange = oRange;
+            cerr << "Trying to map [" << inRange[0] << "," << inRange[1] << "] to [" << outRange[0] << "," << outRange[1] << "]\n";
+            return LinearMapRasterOperator<R1>(r, inRange, outRange);
+        }
+
+#if 0
+        // Factory functions
+        template <typename R1, class Collection>
+        LogarithmicMapRasterOperator<R1> logarithmicMap(R1 &r, const Collection & oRange) {
+            Array<typename R1::ElementType, 2> inRange, outRange;
+            inRange  = range(r);
+            Collection::const_iterator i = oRange.begin();
+            outRange[0] = *i;
+            outRange[1] = *(++i);
+            cerr << "Trying to map [" << inRange[0] << "," << inRange[1] << "] to [" << outRange[0] << "," << outRange[1] << "]\n";
+            return LogarithmicMapRasterOperator<R1>(r, inRange, outRange);
+        }
+#endif
+    };
+};
+
+// Clean up the preprocessor's namespace
+#define UNDEFINE_INCA_RASTER_OPERATOR_MACROS
+#include "operator-bases"
+
+#endif

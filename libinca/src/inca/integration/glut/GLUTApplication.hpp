@@ -33,6 +33,20 @@ namespace inca {
 
 
 class inca::ui::GLUTApplication : virtual public Application {
+/*---------------------------------------------------------------------------*
+ | Constructors & destructor
+ *---------------------------------------------------------------------------*/
+public:
+    // Constructor
+    GLUTApplication();
+
+    // Destructor
+    ~GLUTApplication();
+
+
+/*---------------------------------------------------------------------------*
+ | Application-inherited functions
+ *---------------------------------------------------------------------------*/
 public:
     // Initialize the application
     void initializeToolkit(int &argc, char **argv);
@@ -42,12 +56,6 @@ public:
 
     // Exit the application
     void exit(int status, const string &msg);
-
-    // Request a GLUT-based window with the specified title
-    WindowPtr createWindow(const string &title);
-
-    // Request a GLUT-based window with the specified title containing a widget
-    WindowPtr createWindow(WidgetPtr w, const string &title);
 };
 
 #endif

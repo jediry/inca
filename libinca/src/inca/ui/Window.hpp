@@ -93,6 +93,9 @@ public:
  | Window interface functions (must be implemented for specific GUI toolkit)
  *---------------------------------------------------------------------------*/
 public:
+    // Window ID
+    virtual IDType getID() const = 0;
+
     // Window title
     virtual string getTitle() const = 0;
     virtual void setTitle(const string &title) = 0;
@@ -115,7 +118,7 @@ public:
     // Window position
     virtual Pixel getPosition() const = 0;
     virtual void setPosition(Pixel p) = 0;
-    void setPosition(index_t x, index_t y) { setPosition(Pixel(x, y)); }
+    void setPosition(IndexType x, IndexType y) { setPosition(Pixel(x, y)); }
     virtual void centerOnScreen() {
         Dimension scr = getScreenSize();
         Dimension sz = getSize();
@@ -125,17 +128,17 @@ public:
     // Current size
     virtual Dimension getSize() const = 0;
     virtual void setSize(Dimension d) = 0;
-    void setSize(size_t w, size_t h) { setSize(Dimension(w, h)); }
+    void setSize(SizeType w, SizeType h) { setSize(Dimension(w, h)); }
 
     // Minimum allowable size
     virtual Dimension getMinimumSize() const = 0;
     virtual void setMinimumSize(Dimension d) = 0;
-    void setMinimumSize(size_t w, size_t h) { setMinimumSize(Dimension(w, h)); }
+    void setMinimumSize(SizeType w, SizeType h) { setMinimumSize(Dimension(w, h)); }
 
     // Maximum allowable size
     virtual Dimension getMaximumSize() const = 0;
     virtual void setMaximumSize(Dimension d) = 0;
-    void setMaximumSize(size_t w, size_t h) { setMaximumSize(Dimension(w, h)); }
+    void setMaximumSize(SizeType w, SizeType h) { setMaximumSize(Dimension(w, h)); }
 
     // Force aspect ratio (0.0 to allow unrestricted A/R)
     virtual float getAspectRatio() const = 0;

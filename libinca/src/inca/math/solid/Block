@@ -28,7 +28,7 @@
 namespace inca {
     namespace math {
         // Forward declarations
-        template <typename scalar_t, inca::size_t dim> class Block;
+        template <typename scalar_t, inca::SizeType dim> class Block;
     };
 };
 
@@ -37,24 +37,24 @@ namespace inca {
 #include <inca/math/linalg.hpp>
 
 // Import statically-sized array class
-#include <boost/array.hpp>
+#include <inca/util/Array>
 
 
-template <typename scalar, inca::size_t dim>
+template <typename scalar, inca::SizeType dim>
 class inca::math::Block {
 /*---------------------------------------------------------------------------*
  | Type/constant declarations
  *---------------------------------------------------------------------------*/
 public:
     // What dimensionality are we working with?
-    static const size_t dimensionality = dim;
+    static const SizeType dimensionality = dim;
 
     // Scalar & linear algebra typedefs
     INCA_MATH_SCALAR_TYPES(scalar, IS_WITHIN_TEMPLATE);
     INCA_MATH_LINALG_TYPES(scalar, dim);
 
     // Array of boolean
-    typedef boost::array<bool, dim> BoolArray;
+    typedef Array<bool, dim> BoolArray;
 
 
 /*---------------------------------------------------------------------------*
@@ -83,9 +83,9 @@ public:
     void setExtrema(const Point &p1, const Point &p2) {
         // Copy the min and max into the appropriate slots and check for
         // degenerate cases (no distance along one axis)
-        for (index_t i = 0; i < index_t(dimensionality); ++i) {
-            minimumCorner[i] = min(p1[i], p2[i]);
-            maximumCorner[i] = max(p1[i], p2[i]);
+        for (IndexType i = 0; i < IndexType(dimensionality); ++i) {
+            _minimumCorner[i] = min(p1[i], p2[i]);
+            _maximumCorner[i] = max(p1[i], p2[i]);
             degenerate[i] =  effectivelyEqual(p1[i], p2[i]);
         }
     }
@@ -93,17 +93,29 @@ public:
     // This function chooses the corner point closest to the given point
     Point nearestPointTo(const Point &p) const {
         Point closest;
-        for (index_t i = 0; i < index_t(dimensionality); ++i) {
-            if (abs(p[i] - minimumCorner[i]) < abs(p[i] - maximumCorner[i]))
-                closest[i] = minimumCorner[i];
+        for (IndexType i = 0; i < IndexType(dimensionality); ++i) {
+            if (abs(p[i] - _minimumCorner[i]) < abs(p[i] - _maximumCorner[i]))
+                closest[i] = _minimumCorner[i];
             else
-                closest[i] = maximumCorner[i];
+                closest[i] = _maximumCorner[i];
         }
         return closest;
     }
 
+    // These functions return the "minimum" and "maximum" corners
+          Point & minimumCorner()       { return _minimumCorner; }
+    const Point & minimumCorner() const { return _minimumCorner; }
+          Point & maximumCorner()       { return _maximumCorner; }
+    const Point & maximumCorner() const { return _maximumCorner; }
+
+    // These functions return the size along each dimension
+    Vector size() const { return maximumCorner() - minimumCorner(); }
+    scalar_t size(IndexType d) const {
+        return _maximumCorner[d] - _minimumCorner[d];
+    }
+
 protected:
-    Point minimumCorner, maximumCorner;
+    Point _minimumCorner, _maximumCorner;
     BoolArray degenerate;
 };
 

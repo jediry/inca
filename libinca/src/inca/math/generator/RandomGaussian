@@ -78,7 +78,7 @@ public:
         // Lookup/interpolate the gaussian value from the table
         scalar_t lookup = u * 2 * TABLE_MAX;
         scalar_t delta;
-        index_t index = (index_t)lookup;
+        IndexType index = (IndexType)lookup;
         if (index == TABLE_MAX)
             delta = inverseGauss[TABLE_MAX];
         else {

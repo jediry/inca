@@ -42,13 +42,13 @@ public:
     Renderer() : width(this), height(this) { }
 
     // Basic properties needed by a renderer
-    rw_property(size_t, width, 640);
-    rw_property(size_t, height, 480);
+    rw_property(SizeType, width, 640);
+    rw_property(SizeType, height, 480);
 
     // Subclasses should (re)implement these functions, which are (hopefully)
     // only called in a valid rendering context
     virtual void initialize() { }
-    virtual void resize(size_t w, size_t h) {
+    virtual void resize(SizeType w, SizeType h) {
         width = w;
         height = h;
     }

@@ -16,16 +16,22 @@
 namespace inca {
     namespace math {
         // Forward declarations
-        template <typename _scalar_t, size_t dim> class Sphere;
+        template <typename _scalar_t, SizeType dim> class Sphere;
     };
 };
 
+// Import linear algebra types
+#include <inca/math/linalg.hpp>
 
-template <typename _scalar_t, size_t dim>
+
+template <typename _scalar_t, inca::SizeType dim>
 class inca::math::Sphere {
+/*---------------------------------------------------------------------------*
+ | Type & constant definitions
+ *---------------------------------------------------------------------------*/
 public:
     // What dimensionality are we working with?
-    static const size_t dimensionality = dim;
+    static const SizeType dimensionality = dim;
 
     // Type definitions
     INCA_MATH_SCALAR_TYPES(_scalar_t, IS_WITHIN_TEMPLATE);
@@ -36,7 +42,9 @@ public:
  | Constructors
  *---------------------------------------------------------------------------*/
 public:
-    Sphere() : _radius(1) { }
+    // Constructor, defaulting to a unit sphere at the origin
+    Sphere(scalar_arg_t r = 1, const Point & c = Point(0))
+        : _radius(r), _center(c) { }
 
 
 /*---------------------------------------------------------------------------*
@@ -45,6 +53,26 @@ public:
 public:
     scalar_t radius() const { return _radius; }
     void setRadius(scalar_arg_t r) { _radius = r; }
+
+    const Point center() const { return _center; }
+    void setCenter(const Point & c) { _center = c; }
+
+protected:
+    Point       _center;    // The center of the sphere
+    scalar_t    _radius;    // The radius of the sphere
+};
+
+
+namespace inca {
+    namespace math {
+
+        // Test for point-inside-sphere
+        template <typename scalar1, typename scalar2, SizeType dim>
+        bool inside(const Sphere<scalar1, dim> & s,
+                    const Point<scalar2, dim> & p) {
+            Vector & d = p - s.center();
+            return (s.radius() * s.radius() - dot(d, d) >= 0);
+        }
 
 #if 0
     scalar_t calculateDistance(const Ray &along) const {
@@ -75,8 +103,8 @@ public:
     }
 #endif
 
-protected:
-    scalar_t _radius;   // The radius of the sphere
-};
+    }
+}
 
 #endif
+

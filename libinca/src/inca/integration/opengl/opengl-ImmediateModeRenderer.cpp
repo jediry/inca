@@ -10,175 +10,234 @@
  *      the OpenGL API.
  */
 
-// Import class definition
-#include <inca/rendering.hpp>
-using namespace inca::math;
+// Import type definitions
+#include <inca/rendering/immediate-mode/OpenGLTraits.hpp>
+#include <inca/rendering/immediate-mode/types.hpp>
+using namespace inca;
 using namespace inca::rendering;
-using inca::id_t;
-
 
 // Import C++-ified OpenGL
+#define GL_HPP_IMPORT_INCA
 #include "GL.hpp"
 using namespace GL;
 
 
+// Simplify naming of the things we'll be working with
+#define API OpenGLTraits
+//using API::Point;
+//using API::Vector;
+//using API::Matrix;
+//using API::Pixel;
+//using API::Dimension;
+typedef API::Color RGB;
+using API::Normal;
+using API::TexCoord;
+
+
+
 // Macros to make long names shorter
-#define RENDERER        ImmediateModeRenderer<OpenGLTraits>
-#define RASTERIZER      RENDERER::Rasterizer
-#define VIEWPORT        RENDERER::Viewport
-#define MATRIX_STACK    RENDERER::MatrixStack
-#define LIGHTING_UNIT   RENDERER::LightingUnit
-#define TEXTURE_UNIT    RENDERER::TextureUnit
-#define COLOR_BUFFER    RENDERER::Buffer<RENDERER::Color>
-#define DEPTH_BUFFER    RENDERER::Buffer<RENDERER::geometry_t>
-
-
-// Symbolic names for rendering state properties for cache lookup
-enum BoolProperties {
-    DEPTH_TEST, LINE_SMOOTH, POLYGON_SMOOTH, BLEND, LIGHTING,
-};
-enum IntProperties {
-    MATRIX_MODE,
-};
-enum FloatProperties {
-    POINT_SIZE, LINE_WIDTH, POINT_SMOOTH,
-};
-enum ColorProperties {
-    COLOR_CLEAR_VALUE,
-};
+//#define RENDERER        ImmediateModeRenderer<OpenGLTraits, ExclusiveAccessCachePolicy>
+//#define RASTERIZER      RENDERER::Rasterizer
+//#define VIEWPORT        RENDERER::Viewport
+//#define MATRIX_STACK    RENDERER::MatrixStack
+//#define LIGHTING_UNIT   RENDERER::LightingUnit
+//#define TEXTURE_UNIT    RENDERER::TextureUnit
+//#define COLOR_BUFFER    RENDERER::Buffer<RENDERER::Color>
+//#define DEPTH_BUFFER    RENDERER::Buffer<RENDERER::geometry_t>
 
 
 /*---------------------------------------------------------------------------*
  | OpenGL-specific non-member functions
  *---------------------------------------------------------------------------*/
-int OpenGL_currentMatrix(const RENDERER &r) {
+/*int OpenGL_currentMatrix(const RENDERER &r) {
     if (! intPropertyCache[MATRIX_MODE].valid) {
         glGetFloatv(GL_MATRIX_MODE, &intPropertyCache[MATRIX_MODE].value);
         intPropertyCache[MATRIX_MODE].valid = true;
     }
     return intPropertyCache[MATRIX_MODE].value;
 }
-void OpenGL_ensureMatrixIsCurrent(const RENDERER &r, id_t id) {
+void OpenGL_ensureMatrixIsCurrent(const RENDERER &r, IDType id) {
     // Only if the current matrix != this one do we change
     if (OpenGL_currentMatrix(r) != id)
         glMatrixMode(id);
-}
+}*/
 
-#define SET_CACHE_VALUE(TYPE, PROPERTY, VALUE) {        \
-    r.TYPE ## Properties[PROPERTY].valid = true;        \
-    r.TYPE ## Properties[PROPERTY].value = VALUE;       \
+#define GL_GET_BOOLEAN_VALUE(PROPERTY, VALUE) {                     \
+    GLboolean result;                                               \
+    glGetBooleanv(PROPERTY, &result);                               \
+    VALUE = (result == GL_TRUE);                                    \
 }
-#define GET_CACHE_VALUE(TYPE, PROPERTY) r.TYPE ## Properties[PROPERTY].value
-
-#define SYNC_BOOL_CACHE_VALUE(PROPERTY, ID) {                       \
-    GLbool result;                                                  \
-    glGetBooleanv(ID, &result);                                     \
-    r.boolProperties[PROPERTY].valid = true;                        \
-    r.boolProperties[PROPERTY].value = static_cast<bool>(result);   \
+#define GL_GET_INTEGER_VALUE(PROPERTY, VALUE) {                     \
+    glGetIntegerv(PROPERTY, &VALUE);                                \
 }
-#define ENABLE(PROPERTY, ENABLED) {                                 \
-    if (ENABLED)    glEnable(GL_ ## PROPERTY);                      \
-    else            glDisable(GL_ ## PROPERTY);                     \
-    SET_CACHE_VALUE(bool, PROPERTY, ENABLED);                       \
+#define GL_GET_ARRAY_VALUE(PROPERTY, VALUE) {                       \
+    glGetArray(PROPERTY, VALUE);                                    \
+}
+#define GL_ENABLE(PROPERTY, ENABLED) {                              \
+    if (ENABLED)    glEnable(PROPERTY);                             \
+    else            glDisable(PROPERTY);                            \
 }
 
 
 /*---------------------------------------------------------------------------*
- | ImmediateModeRenderer::Rasterizer functions
+ | Rendering state control functions
  *---------------------------------------------------------------------------*/
+// Depth buffering
 template <>
-RASTERIZER::Rasterizer(RENDERER &r, id_t myID) : Component(r, myID) {
-
-}
-
-// Z-buffering
-template <>
-bool RASTERIZER::isDepthBufferingEnabled() const {
-    if (! IS_CACHE_VALID(bool, DEPTH_TEST))
-        SYNC_BOOL_CACHE_VALUE(DEPTH_TEST, GL_DEPTH_TEST);
-    return GET_CACHE_VALUE(bool, DEPTH_TEST);
+void API::getHardwareState<API::DepthBuffering, bool>(bool & enabled) {
+    GL_GET_BOOLEAN_VALUE(GL_DEPTH_TEST, enabled);
 }
 template <>
-void RASTERIZER::enableDepthBuffering(bool enabled) {
-    ENABLE(DEPTH_TEST, enabled);
+void API::setHardwareState<API::DepthBuffering, bool>(const bool & enabled) {
+    GL_ENABLE(GL_DEPTH_TEST, enabled);
 }
 
 // Alpha blending
 template <>
-bool RASTERIZER::isAlphaBlendingEnabled() const {
-    return CACHE_VALUE(bool, BLEND);
+void API::getHardwareState<API::AlphaBlending, bool>(bool & enabled) {
+    GL_GET_BOOLEAN_VALUE(GL_BLEND, enabled);
 }
 template <>
-void RASTERIZER::enableAlphaBlending(bool enabled) {
-    ENABLE(BLEND, enabled);
+void API::setHardwareState<API::AlphaBlending, bool>(const bool & enabled) {
+    GL_ENABLE(GL_BLEND, enabled);
 }
 
-// Backface (or frontface culling)
+// Polygon face culling
 template <>
-bool RASTERIZER::isFaceCullingEnabled() const {
-
+void API::getHardwareState<API::FaceCulling, bool>(bool & enabled) {
+    GL_GET_BOOLEAN_VALUE(GL_CULL_FACE, enabled);
 }
 template <>
-void RASTERIZER::enableFaceCulling(bool enabled) {
-
+void API::setHardwareState<API::FaceCulling, bool>(const bool & enabled) {
+    GL_ENABLE(GL_CULL_FACE, enabled);
 }
 
-// Illumination
+// Hardware lighting
 template <>
-bool RASTERIZER::isLightingEnabled() const {
-
+void API::getHardwareState<API::Lighting, bool>(bool & enabled) {
+    GL_GET_BOOLEAN_VALUE(GL_LIGHTING, enabled);
 }
 template <>
-void RASTERIZER::enabledLighting(bool enabled) {
-    ENABLE(LIGHTING, enabled);
-}
-
-// Shading mode
-template <>
-ShadingMode RASTERIZER::shadingMode() const {
-
-}
-template <>
-void RASTERIZER::setShadingMode(ShadingMode mode) {
-
+void API::setHardwareState<API::Lighting, bool>(const bool & enabled) {
+    GL_ENABLE(GL_LIGHTING, enabled);
 }
 
 // Point antialiasing
 template <>
-bool RASTERIZER::isPointSmoothingEnabled() const {
-
+void API::getHardwareState<API::PointSmoothing, bool>(bool & enabled) {
+    GL_GET_BOOLEAN_VALUE(GL_POINT_SMOOTH, enabled);
 }
 template <>
-void RASTERIZER::enablePointSmoothing(bool enabled) {
-    ENABLE(POINT_SMOOTHING, enabled);
+void API::setHardwareState<API::PointSmoothing, bool>(const bool & enabled) {
+    GL_ENABLE(GL_POINT_SMOOTH, enabled);
 }
 
 // Line antialiasing
 template <>
-bool isLineSmoothingEnabled() const {
-
+void API::getHardwareState<API::LineSmoothing, bool>(bool & enabled) {
+    GL_GET_BOOLEAN_VALUE(GL_LINE_SMOOTH, enabled);
 }
 template <>
-void enableLineSmoothing(bool enabled) {
-    ENABLE(LINE_SMOOTHING, enabled);
+void API::setHardwareState<API::LineSmoothing, bool>(const bool & enabled) {
+    GL_ENABLE(GL_LINE_SMOOTH, enabled);
 }
 
 // Polygon antialiasing
 template <>
-bool RASTERIZER::isPolygonSmoothingEnabled() const {
-
+void API::getHardwareState<API::PolygonSmoothing, bool>(bool & enabled) {
+    GL_GET_BOOLEAN_VALUE(GL_POLYGON_SMOOTH, enabled);
 }
 template <>
-void RASTERIZER::enablePolygonSmoothing(bool enabled) {
-    ENABLE(POLYGON_SMOOTHING, enabled);
+void API::setHardwareState<API::PolygonSmoothing, bool>(const bool & enabled) {
+    GL_ENABLE(GL_POLYGON_SMOOTH, enabled);
 }
+
+// Shading mode
+template <>
+void API::getHardwareState<API::CurrentShadingModel, ShadingModel>(ShadingModel & model) {
+    GLint result;
+    GL_GET_INTEGER_VALUE(GL_SHADE_MODEL, result);
+    switch (result) {
+        case GL_SMOOTH: model = SmoothShade; break;
+        case GL_FLAT:   model = FlatShade;   break;
+        default:        model = Paint;       break;
+    }
+}
+template <>
+void API::setHardwareState<API::CurrentShadingModel, ShadingModel>(const ShadingModel & model) {
+    switch (model) {
+        case SmoothShade: glShadeModel(GL_SMOOTH); break;
+        case FlatShade:   glShadeModel(GL_FLAT);   break;
+        default:          glShadeModel(GL_SMOOTH); break;
+    }
+}
+
+// Background color
+template <>
+void API::getHardwareState<API::BackgroundColor, RGB>(RGB & color) {
+    GL_GET_ARRAY_VALUE(GL_COLOR_CLEAR_VALUE, color);
+}
+template <>
+void API::setHardwareState<API::BackgroundColor, RGB>(const RGB & color) {
+    glClearColor(color);
+}
+
+// Drawing color
+template <>
+void API::getHardwareState<API::CurrentColor, RGB>(RGB & color) {
+    GL_GET_ARRAY_VALUE(GL_CURRENT_COLOR, color);
+}
+template <>
+void API::setHardwareState<API::CurrentColor, RGB>(const RGB & color) {
+    glColor(color);
+}
+
+// Drawing normal
+template <>
+void API::getHardwareState<API::CurrentNormal, Normal>(Normal & normal) {
+    GL_GET_ARRAY_VALUE(GL_CURRENT_NORMAL, normal);
+}
+template <>
+void API::setHardwareState<API::CurrentNormal, Normal>(const Normal & normal) {
+    glNormal(normal);
+}
+
+// Current texture coordinates
+template <>
+void API::getHardwareState<API::CurrentTexCoord, TexCoord>(TexCoord & texCoord) {
+    GL_GET_ARRAY_VALUE(GL_CURRENT_TEXTURE_COORDS, texCoord);
+}
+template <>
+void API::setHardwareState<API::CurrentTexCoord, TexCoord>(const TexCoord & texCoord) {
+    glTexCoord(texCoord);
+}
+
+// Current edge flag
+template <>
+void API::getHardwareState<API::CurrentEdgeFlag, bool>(bool & edge) {
+    GL_GET_BOOLEAN_VALUE(GL_EDGE_FLAG, edge);
+}
+template <>
+void API::setHardwareState<API::CurrentEdgeFlag, bool>(const bool & edge) {
+    glEdgeFlag(edge);
+}
+
+#if 0
+/*---------------------------------------------------------------------------*
+ | ImmediateModeRenderer::Rasterizer functions
+ *---------------------------------------------------------------------------*/
+
+RASTERIZER::Rasterizer(RENDERER &r, IDType myID) : Component(r, myID) {
+
+}
+
 
 
 /*---------------------------------------------------------------------------*
  | ImmediateModeRenderer::Viewport functions
  *---------------------------------------------------------------------------*/
 template <>
-MATRIX_STACK::Viewport(RENDERER &r, id_t myID) : Component(r, myID) {
+MATRIX_STACK::Viewport(RENDERER &r, IDType myID) : Component(r, myID) {
 
 }
 
@@ -188,7 +247,7 @@ MATRIX_STACK::Viewport(RENDERER &r, id_t myID) : Component(r, myID) {
  *---------------------------------------------------------------------------*/
 // Constructor
 template <>
-MATRIX_STACK::MatrixStack(RENDERER &r, id_t myID)
+MATRIX_STACK::MatrixStack(RENDERER &r, IDType myID)
         : Component(r, myID), depth(1), currentValid(false) {
     // Query the implementation's depth limitation
     switch (id) {
@@ -1166,3 +1225,5 @@ template <> template <>     // Disable specialization for Omitted
 void RENDERER::setEdgeFlagArray<Omitted>(const EdgeFlagArray<Omitted> &efa) {
     glDisableClientState(GL_EDGE_FLAG_ARRAY);
 }
+
+#endif

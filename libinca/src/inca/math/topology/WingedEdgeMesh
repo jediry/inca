@@ -119,6 +119,16 @@ public:
     typedef std::vector<EdgePtr>        EdgePtrList;
     typedef std::vector<FaceVertexPtr>  FaceVertexPtrList;
 
+    // Iterator typedefs
+    typedef typename VertexPtrList::iterator             vertex_iterator;
+    typedef typename VertexPtrList::const_iterator       vertex_const_iterator;
+    typedef typename FacePtrList::iterator               face_iterator;
+    typedef typename FacePtrList::const_iterator         face_const_iterator;
+    typedef typename EdgePtrList::iterator               edge_iterator;
+    typedef typename EdgePtrList::const_iterator         edge_const_iterator;
+    typedef typename FaceVertexPtrList::iterator         face_vertex_iterator;
+    typedef typename FaceVertexPtrList::const_iterator   face_vertex_const_iterator;
+
 protected:
     // Iteration delegate objects used to iterate through part of the mesh:
     // see the documentation in WingedEdgeMesh-iterator for an explanation of
@@ -154,7 +164,7 @@ protected:
     // creating it
     template <class T>
     struct id_create {
-        T * operator() (index_t index) const {
+        T * operator() (IndexType index) const {
             T *ptr = new T();
             ptr->setID(index);
             return ptr;
@@ -177,32 +187,32 @@ protected:
  *---------------------------------------------------------------------------*/
 public:
     // Vertex accessors
-    const VertexPtr vertex(index_t i) const { return vertexList[i]; }
-          VertexPtr vertex(index_t i)       { return vertexList[i]; }
+    const VertexPtr vertex(IndexType i) const { return vertexList[i]; }
+          VertexPtr vertex(IndexType i)       { return vertexList[i]; }
     const VertexPtrList & vertices() const { return vertexList; }
           VertexPtrList & vertices()       { return vertexList; }
-    size_t vertexCount() const { return vertexList.size(); }
+    SizeType vertexCount() const { return vertexList.size(); }
 
     // Face accessors
-    const FacePtr face(index_t i) const { return faceList[i]; }
-          FacePtr face(index_t i)       { return faceList[i]; }
+    const FacePtr face(IndexType i) const { return faceList[i]; }
+          FacePtr face(IndexType i)       { return faceList[i]; }
     const FacePtrList & faces() const { return faceList; }
           FacePtrList & faces()       { return faceList; }
-    size_t faceCount() const { return faceList.size(); }
+    SizeType faceCount() const { return faceList.size(); }
 
     // Edge accessors
-    const EdgePtr edge(index_t i) const { return edgeList[i]; }
-          EdgePtr edge(index_t i)       { return edgeList[i]; }
+    const EdgePtr edge(IndexType i) const { return edgeList[i]; }
+          EdgePtr edge(IndexType i)       { return edgeList[i]; }
     const EdgePtrList & edges() const { return edgeList; }
           EdgePtrList & edges()       { return edgeList; }
-    size_t edgeCount() const { return edgeList.size(); }
+    SizeType edgeCount() const { return edgeList.size(); }
 
     // FaceVertex accessors
-    const FaceVertexPtr faceVertex(index_t i) const { return faceVertexList[i]; }
-          FaceVertexPtr faceVertex(index_t i)       { return faceVertexList[i]; }
+    const FaceVertexPtr faceVertex(IndexType i) const { return faceVertexList[i]; }
+          FaceVertexPtr faceVertex(IndexType i)       { return faceVertexList[i]; }
     const FaceVertexPtrList & faceVertices() const { return faceVertexList; }
           FaceVertexPtrList & faceVertices()       { return faceVertexList; }
-    size_t faceVertexCount() const { return faceVertexList.size(); }
+    SizeType faceVertexCount() const { return faceVertexList.size(); }
 
 protected:
     // Where we get new stuff from

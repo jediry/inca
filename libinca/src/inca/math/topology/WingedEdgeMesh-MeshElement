@@ -26,8 +26,8 @@ MESH_TEMPLATE class inca::math::MESH::MeshElement {
  *---------------------------------------------------------------------------*/
 public:
     // Unique ID for this element
-    index_t id() const { return _id; }
-    void setID(index_t i) { _id = i; }
+    IndexType id() const { return _id; }
+    void setID(IndexType i) { _id = i; }
 
     // Access to the parent mesh object
     MeshPtr mesh() const { return _mesh; }

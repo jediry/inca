@@ -36,7 +36,7 @@ public:
  | Constructors
  *---------------------------------------------------------------------------*/
 public:
-    Viewport(RENDERER &r, id_t myID);
+    Viewport(RENDERER &r, IDType myID);
 
     const Rectangle & bounds() const;
 

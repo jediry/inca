@@ -42,17 +42,19 @@ public:
     // Constructors
     RandomUniform()
         : min(this), max(this) { }
+    RandomUniform(scalar_arg_t maxVal)
+        : min(this), max(this, maxVal) { }
     RandomUniform(scalar_arg_t minVal, scalar_arg_t maxVal)
         : min(this, minVal), max(this, maxVal) { }
 
     // Distribution parameters
-    rw_property(scalar_t, min, 0.0);
-    rw_property(scalar_t, max, 1.0);
+    rw_property(scalar_t, min, scalar_t(0));
+    rw_property(scalar_t, max, scalar_t(1));
 
     // Function-call operator (generator function)
     scalar_t operator()() const {
         scalar_t range = max - min;
-        scalar_t  result = rand() * range / RAND_MAX + min;
+        scalar_t result = rand() * range / RAND_MAX + min;
         return result;
     }
 };

@@ -1,0 +1,50 @@
+
+#ifndef RASTER_LAMBDA_HACK
+#define RASTER_LAMBDA_HACK
+
+#include <inca/math/color.hpp>
+#include <boost/lambda/lambda.hpp>
+
+namespace boost {
+    namespace lambda {
+
+// Color hacks
+        template<class Act, typename Scalar1, typename Scalar2, class ColorSpace>
+        struct plain_return_type_2<arithmetic_action<Act>,
+                                   ::inca::math::Color<Scalar1, ColorSpace>,
+                                   ::inca::math::Color<Scalar2, ColorSpace> > {
+            // First, figure out what the resulting scalar type should be
+            typedef typename return_type_2<arithmetic_action<Act>,
+                                                 Scalar1, Scalar2>::type scalar;
+
+            // Now we can tell you the return type
+            typedef inca::math::Color<scalar, ColorSpace> type;
+        };
+
+        template<class Act, typename Scalar1, typename Scalar2, class ColorSpace>
+        struct plain_return_type_2<arithmetic_action<Act>,
+                                   ::inca::math::Color<Scalar1, ColorSpace>,
+                                   Scalar2> {
+            // First, figure out what the resulting scalar type should be
+            typedef typename return_type_2<arithmetic_action<Act>,
+                                                 Scalar1, Scalar2>::type scalar;
+
+            // Now we can tell you the return type
+            typedef inca::math::Color<scalar, ColorSpace> type;
+        };
+
+        template<class Act, typename Scalar1, typename Scalar2, class ColorSpace>
+        struct plain_return_type_2<arithmetic_action<Act>, Scalar1,
+                                   ::inca::math::Color<Scalar2, ColorSpace> > {
+
+            // First, figure out what the resulting scalar type should be
+            typedef typename return_type_2<arithmetic_action<Act>,
+                                                 Scalar1, Scalar2>::type scalar;
+
+            // Now we can tell you the return type
+            typedef inca::math::Color<scalar, ColorSpace> type;
+        };
+    };
+};
+
+#endif

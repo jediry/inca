@@ -24,24 +24,30 @@ namespace inca {
     };
 };
 
-// Import superclass definition
-#include <boost/array.hpp>
+// Import STL algorithms
+#include <algorithm>
 
-// Import scalar math definition
+// Import scalar math implementation
 #include "../scalar.hpp"
 
-// Import math macros
-#include "../macros.hpp"
+// Import superclass and related class definitions
+#include <inca/util/Array>
+
+// Import multi-dimensional preprocessor metaprogramming macros
+#include <inca/util/multi-dimensional-macros.hpp>
 
 
-template <typename scalar, class colorspace>
-class inca::math::Color : public boost::array<scalar, colorspace::components> {
+template <typename Scalar, class CS>
+class inca::math::Color : public inca::Array<Scalar, CS::channels> {
 /*---------------------------------------------------------------------------*
- | Type/constant declarations
+ | Type & constant declarations
  *---------------------------------------------------------------------------*/
 public:
     // Scalar typedefs
-    INCA_MATH_SCALAR_TYPES(scalar, IS_WITHIN_TEMPLATE);
+    INCA_MATH_SCALAR_TYPES(Scalar, IS_WITHIN_TEMPLATE);
+
+    // What colorspace do I live in?
+    typedef CS ColorSpace;
 
 
 /*---------------------------------------------------------------------------*
@@ -54,12 +60,19 @@ public:
     explicit Color() { }
 
     /**
-     * Initialization from another array type, possibly of a different scalar
-     * type. The argument array must be of the same dimensionality, and its
+     * Initialization from another Color, possibly of a different scalar
+     * type. The argument must be in the same ColorSpace, and its
      * scalar type must be convertible to scalar_t.
      */
-    template <typename scalar2>
-    explicit Color(const boost::array<scalar2, static_size> &arr) {
+    template <typename Scalar2>
+    Color(const Color<Scalar2, ColorSpace> &c) {
+        std::copy(c.begin(), c.end(), begin());
+    }
+
+    /**
+     * Initialization from an Array (or subclass).
+     */
+    explicit Color(const Array<scalar_t, ColorSpace::channels> &arr) {
         std::copy(arr.begin(), arr.end(), begin());
     }
 
@@ -74,9 +87,9 @@ public:
      * C-style array constructor. The element type must be convertible to
      * scalar_t.
      */
-    template <typename scalar2>
-    explicit Color(scalar2 * arr) {
-        std::copy(arr, arr + static_size, begin());
+    template <typename Scalar2>
+    explicit Color(Scalar2 * arr) {
+        std::copy(arr, arr + ColorSpace::channels, begin());
     }
 
     /**
@@ -85,7 +98,16 @@ public:
      * arguments. Attempting to invoke a constructor for a different
      * dimensionality will cause a compile-time failure.
      */
-    PARAM_LIST_CONSTRUCTORS(Color, MIN_DIMENSION, MAX_DIMENSION)
+    #define CREATE_DIMENSIONAL_CONSTRUCTOR(DIM)                             \
+        explicit Color(PARAMS(DIM, scalar_arg_t s))                         \
+            : Array<scalar_t, ColorSpace::channels>(PARAMS(DIM, s)) { }
+    FOR_ALL_DIMS(CREATE_DIMENSIONAL_CONSTRUCTOR);
+    #undef CREATE_DIMENSIONAL_CONSTRUCTOR
+
+    Color<Scalar, ColorSpace> & operator=(const Color<Scalar, ColorSpace> & c) {
+        std::copy(c.begin(), c.end(), begin());
+        return *this;
+    }
 
 
 /*---------------------------------------------------------------------------*
@@ -95,52 +117,14 @@ public:
     // to-string Cast
     operator string() const {
         std::ostringstream str;
-        str << "Color[" << colorSpace << "]: (" << stringifyElements() << ')';
+        str << "Color[" << ColorSpace::name() << "]: (" << stringifyElements() << ')';
         return str.str();
     }
 };
 
-/*
-// Rhs color is the one "on top"
-template <typename scalar, ColorSpace cs, bool hasAlpha>
-Color<scalar, cs, hasAlpha> operator%(const Color<scalar, cs, hasAlpha> &c1,
-                                      const Color<scalar, cs, true> &c2) {
-    // The number of actual "color" channels (excluding alpha)
-    std::size_t components = colorspace_traits<cs, false>::components;
 
-    // Either c1 has alpha, or we assign it an alpha of 1
-    scalar alphaC1 = hasAlpha ? c1[components] : scalar(1);
-    scalar alphaC2 = c2[components];
-    scalar alphaR  = alphaC2 + alphaC1 * (1 - alphaC2);
-
-    Color<scalar, cs, hasAlpha> result;
-
-    // Do the associative color thing
-    for (index_t i = 0; i < index_t(components); i++) {
-        result[i] = (alphaC2 * c2[i]
-                     + (alphaC1 * c1[i]) * (1 - alphaC2)) / alphaR;
-    }
-
-    // If we have an alpha channel, store the new alpha
-    if (hasAlpha)
-        result[components] = alphaR;
-
-    return result;
-}
-
-
-template <typename s, ColorSpace cs, bool alpha>
-std::ostream & operator<<(std::ostream &os, const Color<s, cs, alpha> &c) {
-    os << '<';
-    for (index_t i = 0; i < index_t(c.size) - 1; ++i)
-        os << c[i] << ", ";
-    os << c[c.size - 1] << '>';
-    return os;
-}
-
-*/
 // Clean up the preprocessor's namespace
-#define UNDEFINE_INCA_MATH_MACROS
-#include "../macros.hpp"
+#define UNDEFINE_INCA_MULTI_DIM_MACROS
+#include <inca/util/multi-dimensional-macros.hpp>
 
 #endif

@@ -24,7 +24,7 @@
 #include "Matrix"
 
 // Import math macros
-#include "../macros.hpp"
+#include "../math-macros.hpp"
 
 
 // This is part of the Inca math library
@@ -120,6 +120,6 @@ namespace inca {
 
 // Clean up the preprocessor's namespace
 #define UNDEFINE_INCA_MATH_MACROS
-#include "../macros.hpp"
+#include "../math-macros.hpp"
 
 #endif

@@ -18,6 +18,7 @@
 
 // Import class definition
 #include "GLUTWindow.hpp"
+#include "GLUTApplication.hpp"
 using namespace inca;
 using namespace inca::ui;
 
@@ -26,11 +27,8 @@ using namespace inca::ui;
 
 
 /*---------------------------------------------------------------------------*
- | Static GLUTWindow constants and variables
+ | Window layout defaults
  *---------------------------------------------------------------------------*/
-// GLUT C++ wrapper static initialization
-std::vector<GLUTWindow *> GLUTWindow::windowList;
-
 // Default window parameters
 const string                GLUTWindow::DEFAULT_TITLE("Inca GLUT Window");
 const GLUTWindow::Pixel     GLUTWindow::DEFAULT_POSITION(50, 50);
@@ -48,81 +46,52 @@ const GLUTWindow::Timer::scalar_t GLUTWindow::CLICK_DURATION(0.5f);
  | Static GLUT callbacks -- they just call member functions of the window
  *---------------------------------------------------------------------------*/
 void GLUTWindow::reshapeFunc(int width, int height) {
-    cerr << "Reshaping\n";
-    windowList[glutGetWindow()]->reshape(width, height);
+    WindowPtr w = Application::instance().getWindowForID(glutGetWindow());
+    static_pointer_cast<GLUTWindow>(w)->reshape(width, height);
 }
 void GLUTWindow::entryFunc(int state) {
-    windowList[glutGetWindow()]->entry(state);
+    WindowPtr w = Application::instance().getWindowForID(glutGetWindow());
+    static_pointer_cast<GLUTWindow>(w)->entry(state);
 }
 void GLUTWindow::visibilityFunc(int visible) {
-    windowList[glutGetWindow()]->visibility(visible);
+    WindowPtr w = Application::instance().getWindowForID(glutGetWindow());
+    static_pointer_cast<GLUTWindow>(w)->visibility(visible);
 }
 void GLUTWindow::motionFunc(int x, int y) {
-    windowList[glutGetWindow()]->mouseMotion(x, y);
+    WindowPtr w = Application::instance().getWindowForID(glutGetWindow());
+    static_pointer_cast<GLUTWindow>(w)->mouseMotion(x, y);
 }
 void GLUTWindow::passiveMotionFunc(int x, int y) {
-    windowList[glutGetWindow()]->passiveMotion(x, y);
+    WindowPtr w = Application::instance().getWindowForID(glutGetWindow());
+    static_pointer_cast<GLUTWindow>(w)->passiveMotion(x, y);
 }
 void GLUTWindow::mouseFunc(int button, int state, int x, int y) {
-    windowList[glutGetWindow()]->mouseButton(button, state, x, y);
+    WindowPtr w = Application::instance().getWindowForID(glutGetWindow());
+    static_pointer_cast<GLUTWindow>(w)->mouseButton(button, state, x, y);
 }
 void GLUTWindow::keyboardFunc(unsigned char k, int x, int y) {
-    windowList[glutGetWindow()]->key(k, x, y);
+    WindowPtr w = Application::instance().getWindowForID(glutGetWindow());
+    static_pointer_cast<GLUTWindow>(w)->key(k, x, y);
 }
 void GLUTWindow::specialFunc(int key, int x, int y) {
-    windowList[glutGetWindow()]->special(key, x, y);
+    WindowPtr w = Application::instance().getWindowForID(glutGetWindow());
+    static_pointer_cast<GLUTWindow>(w)->special(key, x, y);
 }
 void GLUTWindow::displayFunc() {
-    windowList[glutGetWindow()]->display();
+    WindowPtr w = Application::instance().getWindowForID(glutGetWindow());
+    static_pointer_cast<GLUTWindow>(w)->display();
 }
 void GLUTWindow::overlayDisplayFunc() {
-    windowList[glutGetWindow()]->overlayDisplay();
+    WindowPtr w = Application::instance().getWindowForID(glutGetWindow());
+    static_pointer_cast<GLUTWindow>(w)->overlayDisplay();
 }
 void GLUTWindow::idleFunc() {
-    windowList[glutGetWindow()]->idle();
+    WindowPtr w = Application::instance().getWindowForID(glutGetWindow());
+    static_pointer_cast<GLUTWindow>(w)->idle();
 }
 
-
-/*---------------------------------------------------------------------------*
- | Constructors and window instance management
- *---------------------------------------------------------------------------*/
-// Default constructor
-GLUTWindow::GLUTWindow(const string &title)
-        : Window(title),
-          position(DEFAULT_POSITION), size(DEFAULT_SIZE),
-          minSize(DEFAULT_MINIMUM_SIZE), maxSize(DEFAULT_MAXIMUM_SIZE),
-          aspectRatio(DEFAULT_ASPECT_RATIO),
-          fullScreen(DEFAULT_IS_FULL_SCREEN), widgetInitialized(false) {
-
-    // Get a new window, with this title
-    createWindow(title);
-}
-
-// Widget-specific constructor
-GLUTWindow::GLUTWindow(WidgetPtr w, const string &title)
-        : Window(title),
-          position(DEFAULT_POSITION), size(DEFAULT_SIZE),
-          minSize(DEFAULT_MINIMUM_SIZE), maxSize(DEFAULT_MAXIMUM_SIZE),
-          aspectRatio(DEFAULT_ASPECT_RATIO),
-          fullScreen(DEFAULT_IS_FULL_SCREEN), widgetInitialized(false) {
-
-    // Get a new window, with this title
-    createWindow(title);
-          
-    // Set our shiny new widget in its place
-    widget = w;
-}
-
-
-// Constructors delegate to this in order to create the actual window
-// and to set up event handlers
-void GLUTWindow::createWindow(const string &title) {
-    // Create a GLUT window and add it to window management
-    windowID = glutCreateWindow(title.c_str());
-    windowList.resize(windowID + 1);                // Make room
-    windowList[windowID] = this;                    // Claim my ID
-
-    // Register callbacks for this window
+void GLUTWindow::registerCallbacks() {
+    // Register our multiplexor functions as callbacks for this window
     glutReshapeFunc(reshapeFunc);
     glutEntryFunc(entryFunc);
     glutVisibilityFunc(visibilityFunc);
@@ -136,12 +105,46 @@ void GLUTWindow::createWindow(const string &title) {
     glutIdleFunc(idleFunc);
 }
 
+
+/*---------------------------------------------------------------------------*
+ | Constructors & destructor
+ *---------------------------------------------------------------------------*/
+// Default constructor
+GLUTWindow::GLUTWindow(const string &title)
+        : Window(title),
+          position(DEFAULT_POSITION), size(DEFAULT_SIZE),
+          minSize(DEFAULT_MINIMUM_SIZE), maxSize(DEFAULT_MAXIMUM_SIZE),
+          aspectRatio(DEFAULT_ASPECT_RATIO),
+          fullScreen(DEFAULT_IS_FULL_SCREEN), widgetInitialized(false) {
+
+    // Get a new window, with this title
+    windowID = glutCreateWindow(title.c_str());
+    
+    // Register to receive events
+    registerCallbacks();
+}
+
+// Widget-specific constructor
+GLUTWindow::GLUTWindow(WidgetPtr w, const string &title)
+        : Window(title),
+          position(DEFAULT_POSITION), size(DEFAULT_SIZE),
+          minSize(DEFAULT_MINIMUM_SIZE), maxSize(DEFAULT_MAXIMUM_SIZE),
+          aspectRatio(DEFAULT_ASPECT_RATIO),
+          fullScreen(DEFAULT_IS_FULL_SCREEN), widgetInitialized(false) {
+
+    // Get a new window, with this title
+    windowID = glutCreateWindow(title.c_str());
+          
+    // Set our shiny new widget in its place
+    widget = w;
+
+    // Register to receive events
+    registerCallbacks();
+}
+
+
 // End the window's pitiful existence
 GLUTWindow::~GLUTWindow() {
-    // Remove us from the list of living windows
-    windowList[windowID] = NULL;
-
-    // Clean up the window instance
     glutDestroyWindow(windowID);
 }
 

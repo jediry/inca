@@ -1,0 +1,266 @@
+/* -*- C++ -*-
+ *
+ * File: wraparound_iterator
+ * 
+ * Author: Ryan L. Saunders
+ *
+ * Copyright 2004, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ *      This file implements STL-compatible iterator types that can be layered
+ *      on top of those created by existing STL containers to provide
+ *      additional functionality.
+ *
+ */
+
+#ifndef INCA_UTIL_WRAPAROUND_ITERATOR
+#define INCA_UTIL_WRAPAROUND_ITERATOR
+
+// Import system configuration
+#include <inca/inca-common.h>
+
+// This is part of the Inca utilities collection
+namespace inca {
+    // Forward declarations
+    template <typename _Iterator> class wraparound_iterator;
+};
+
+// Import the STL's iterator implementation
+#include <iterator>
+
+
+template <typename _Iterator>
+class inca::wraparound_iterator
+    : public std::iterator<     // Inherit the basic STL iterator
+            typename std::iterator_traits<_Iterator>::iterator_category,
+            typename std::iterator_traits<_Iterator>::value_type,
+            typename std::iterator_traits<_Iterator>::difference_type,
+            typename std::iterator_traits<_Iterator>::pointer,
+            typename std::iterator_traits<_Iterator>::reference> {
+private:
+    typedef std::iterator_traits<_Iterator> traits;
+
+public:
+    // Iterator type definitions
+    typedef _Iterator                                   iterator_type;
+    typedef typename traits::value_type                 value_type;
+    typedef typename traits::difference_type            difference_type;
+    typedef typename traits::pointer                    pointer;
+    typedef typename traits::reference                  reference;
+
+
+/*---------------------------------------------------------------------------*
+ | Constructors
+ *---------------------------------------------------------------------------*/
+public:
+    // Default constructor
+    wraparound_iterator() : _done(true) { }
+
+    // Constructor accepting three underlying iterators:
+    //      current:where we begin/end our iteratin' reign of terror
+    //      begin:  where to reset to when end is reached
+    //      end:   where to jump back to start
+    wraparound_iterator(iterator_type start,
+                        iterator_type begin,
+                        iterator_type end)
+        : _start(start),
+          _current(start),
+          _begin(begin),
+          _end(end),
+          _done(false) { }
+
+    // Constructor accepting two underlying iterators and a count
+    //      count:  how many forward from begin to start from (this wraps too)
+    //      begin:  where to reset to when end is reached
+    //      end:   where to jump back to begin
+    wraparound_iterator(SizeType count,
+                        iterator_type begin,
+                        iterator_type end)
+            : _start(begin),
+              _current(begin),
+              _begin(begin),
+              _end(end),
+              _done(false) {
+
+        // Walk forward "count" steps
+        for (SizeType i = 0; i < count; i++)
+            _current = next();
+
+        // This is our new 'start'
+        _start = _current;
+    }
+
+    // Normal copy constructor
+    wraparound_iterator(const wraparound_iterator &iter)
+        : _start(iter.start()),
+          _current(iter.current()),
+          _begin(iter.begin()),
+          _end(iter.end()),
+          _done(false) { }
+
+    // A wraparound iterator can be copied from a similar type (?)
+    template <typename _It>
+    wraparound_iterator(const wraparound_iterator<_It> &iter)
+        : _start(iter.start()),
+          _current(iter.current()),
+          _begin(iter.begin()),
+          _end(iter.end()),
+          _done(false) { }
+
+
+/*---------------------------------------------------------------------------*
+ | Accessors and operators
+ *---------------------------------------------------------------------------*/
+public:
+    // Access to the underlying iterators that do all the work
+    iterator_type current() const { return _current; }
+    iterator_type start()   const { return _start; }
+    iterator_type begin()   const { return _begin; }
+    iterator_type end()    const { return _end; }
+
+    bool done() const { return _done; }
+
+    // Get a reference to the current element
+    reference operator*() { return current().operator*(); }
+
+    // Get a pointer to the current element
+    pointer operator->() { return current().operator->(); }
+
+    // Prefix increment operator
+    wraparound_iterator & operator++() {
+        if (! done()) {
+            _current = next();  // Advance by one
+            if (current() == start())
+                _done = true;   // We've finished the loop
+        }
+        return *this;
+    }
+
+    // Postfix increment operator
+    wraparound_iterator operator++(int) {
+        wraparound_iterator temp = *this;
+        ++current;
+        return temp;
+    }
+
+    // Not implementing the following operations:
+    //      i--
+    //      --i
+    //      i + n, n + i
+    //      i += n
+    //      i - n
+    //      i -= n
+    //      i[n]
+
+protected:
+    // Figure out what the next slot should be in our wrapping iteration
+    iterator_type next() const {
+        iterator_type nx = current();
+        ++nx;
+        if (nx == end())
+            nx = begin();        // Wrap around to the beginning
+        return nx;
+    }
+
+    iterator_type _current; // Our current location in the container
+    iterator_type _start;   // Where we start/end from
+    iterator_type _begin;   // The lower end of our domain
+    iterator_type _end;    // The upper end of our domain
+
+    bool _done;             // Have we completed the loop
+};
+
+
+/*---------------------------------------------------------------------------*
+ | Iterator comparison operators
+ *---------------------------------------------------------------------------*/
+namespace inca {
+    // Iterator equality comparison:
+    //      Two wraparound_iterators are equal if they have the same
+    //      current() value, or if both are done iterating.
+    template <typename _Iterator>
+    inline bool operator==(const wraparound_iterator<_Iterator> &x,
+                           const wraparound_iterator<_Iterator> &y) {
+        if (x.current() == y.current())
+            return true;
+        else if (x.done() && y.done())
+            return true;
+        else
+            return false;
+    }
+
+#if 0
+    // Iterator less-than comparison
+    template <typename _Iterator>
+    inline bool operator<(const wraparound_iterator<_Iterator> &x,
+                          const wraparound_iterator<_Iterator> &y) {
+        return x.current() < y.current();
+    }
+#endif
+    // Underlying iterator equality comparison
+    template <typename _Iterator>
+    inline bool operator==(const wraparound_iterator<_Iterator> &x,
+                           const _Iterator &y) {
+        if (x.done() && y == x.end())
+            return true;                // Both represent "end" in some way
+        else
+            return x.current() == y;    // They might point the same place
+    }
+    template <typename _Iterator>
+    inline bool operator==(const _Iterator &x,
+                           const wraparound_iterator<_Iterator> &y) {
+        return y == x;
+    }
+
+
+    // Iterator non-equality comparison
+    template <typename _Iterator>
+    inline bool operator!=(const wraparound_iterator<_Iterator> &x,
+                           const wraparound_iterator<_Iterator> &y) {
+        return ! (x == y);
+    }
+    template <typename _Iterator>
+    inline bool operator!=(const wraparound_iterator<_Iterator> &x,
+                           const _Iterator &y) {
+        return ! (x == y);
+    }
+    template <typename _Iterator>
+    inline bool operator!=(const _Iterator &x,
+                           const wraparound_iterator<_Iterator> &y) {
+        return ! (x == y);
+    }
+
+#if 0
+    // Iterator greater-than comparison
+    template <typename _Iterator>
+    inline bool operator>(const wraparound_iterator<_Iterator> &x,
+                          const wraparound_iterator<_Iterator> &y) {
+        return (y < x);
+    }
+
+    // Iterator less-than-or-equal comparison
+    template <typename _Iterator>
+    inline bool operator<=(const wraparound_iterator<_Iterator> &x,
+                           const wraparound_iterator<_Iterator> &y) {
+        return ! (y < x);
+    }
+
+    // Iterator greater-than-or-equal comparison
+    template <typename _Iterator>
+    inline bool operator>=(const wraparound_iterator<_Iterator> &x,
+                           const wraparound_iterator<_Iterator> &y) {
+        return ! (x < y);
+    }
+
+    // The number of elements difference between two iterators
+    // XXX MAY BE BROKEN!!!
+    template <typename _Iterator>
+    inline typename wraparound_iterator<_Iterator>::difference_type
+    operator-(const wraparound_iterator<_Iterator> &x,
+              const wraparound_iterator<_Iterator> &y) {
+        return x.current() - y.current();
+    }
+#endif
+};
+
+#endif

@@ -41,7 +41,7 @@ void DirectModelHandler::createVertex(double x, double y, double z) {
 
 // Add a new normal to the mesh
 void DirectModelHandler::createNormal(double i, double j, double k) {
-    index_t index = mesh->createNormal(Vector(i, j, k));
+    IndexType index = mesh->createNormal(Vector(i, j, k));
 
     // Increment our count and record this normal
     _normalCount++;
@@ -53,7 +53,7 @@ void DirectModelHandler::createNormal(double i, double j, double k) {
 
 // Add a new 2D texture coordinate to the mesh
 void DirectModelHandler::createTexCoords(double u, double v) {
-    index_t index = mesh->createTexCoords(TexCoords(u, v, 0.0));
+    IndexType index = mesh->createTexCoords(TexCoords(u, v, 0.0));
 
     // Increment our count and record this tex-coords
     _texCoordsCount++;
@@ -65,7 +65,7 @@ void DirectModelHandler::createTexCoords(double u, double v) {
 
 // Add a new 3D texture coordinate to the mesh
 void DirectModelHandler::createTexCoords(double u, double v, double w) {
-    index_t index = mesh->createTexCoords(TexCoords(u, v, w));
+    IndexType index = mesh->createTexCoords(TexCoords(u, v, w));
 
     // Increment our count and record this tex-coords
     _texCoordsCount++;
@@ -78,8 +78,8 @@ void DirectModelHandler::createTexCoords(double u, double v, double w) {
 // Set the material that will be used for new faces
 void DirectModelHandler::setMaterial(const string &name) {
 //    MaterialMap::const_iterator it = materialMap.find(name);
-    index_t matIndex = 0;
-//    for (index_t i = 0; i < _model->materials().size(); i++)
+    IndexType matIndex = 0;
+//    for (IndexType i = 0; i < _model->materials().size(); i++)
 //        if (_model->material(i)->id == name)
 //            matIndex = i;
     currentMaterial = matIndex;
@@ -101,11 +101,11 @@ void DirectModelHandler::createFace() {
     faceVertices.clear();
 }
 
-void DirectModelHandler::setNormal(index_t vn) {
+void DirectModelHandler::setNormal(IndexType vn) {
     currentNormal = normalMap[vn];
 }
 
-void DirectModelHandler::setTexCoords(index_t vt) {
+void DirectModelHandler::setTexCoords(IndexType vt) {
     currentTexCoords = texCoordsMap[vt];
 }
 

@@ -68,7 +68,7 @@ public:
 
 protected:
     FaceVertexPtr _faceVertex;  // Our first, most beloved FV
-    size_t _edgeCount;  // The number of edges that touch us
+    SizeType _edgeCount;  // The number of edges that touch us
 
 
 /*---------------------------------------------------------------------------*
@@ -77,7 +77,7 @@ protected:
 // Direct accessors
 public:
     // Number of edges
-    size_t edgeCount() const { return _edgeCount; }
+    SizeType edgeCount() const { return _edgeCount; }
 
     // An edge that touches us
     EdgePtr edge() const { return faceVertex()->edgeCCW(); }
