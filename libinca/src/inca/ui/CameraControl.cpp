@@ -16,13 +16,66 @@ using namespace inca;
 using namespace inca::ui;
 
 
-// Constructor
-CameraControl::CameraControl(CameraPtr c) : camera(this, c), 
-    panScale(this), dollyScale(this), lookScale(this), rollScale(this),
-    pitchScale(this), yawScale(this), zoomScale(this) { }
+// Default constructor with optional component name
+CameraControl::CameraControl(const string &nm)
+    : PassThruControl(nm), camera(this), 
+      panScale(this), dollyScale(this), lookScale(this), rollScale(this),
+      pitchScale(this), yawScale(this), zoomScale(this),
+      enablePan(this), enableDolly(this), enableLook(this), enableRoll(this),
+      enablePitch(this), enableYaw(this), enableZoom(this) { }
+
+// Constructor initializing camera
+CameraControl::CameraControl(CameraPtr c, const string &nm)
+    : PassThruControl(nm), camera(this, c), 
+      panScale(this), dollyScale(this), lookScale(this), rollScale(this),
+      pitchScale(this), yawScale(this), zoomScale(this),
+      enablePan(this), enableDolly(this), enableLook(this), enableRoll(this),
+      enablePitch(this), enableYaw(this), enableZoom(this) { }
+
+void CameraControl::panCamera(int dx, int dy) {
+    if (camera && enablePan) {
+        camera->transform->pan(-dx * panScale.get(), -dy * panScale.get());
+        requestRedisplay();
+    }
+}
+
+void CameraControl::dollyCamera(int dz) {
+    if (camera && enableDolly) {
+        camera->transform->dolly(dz * dollyScale.get());
+        requestRedisplay();
+    }
+}
+
+void CameraControl::lookCamera(int ay, int ap) {
+    if (camera && enableLook) {
+        camera->transform->look(-ay * lookScale.get(), -ap * lookScale.get());
+        requestRedisplay();
+    }
+}
+
+void CameraControl::rollCamera(int ar) {
+    if (camera && enableRoll) {
+        camera->transform->roll(ar * rollScale.get());
+        requestRedisplay();
+    }
+}
+
+void CameraControl::pitchCamera(int ap) {
+    if (camera && enablePitch) {
+        camera->transform->pitch(ap * pitchScale.get());
+        requestRedisplay();
+    }
+}
+
+void CameraControl::yawCamera(int ay) {
+    if (camera && enableYaw) {
+        camera->transform->yaw(ay * yawScale.get());
+        requestRedisplay();
+    }
+}
 
 void CameraControl::zoomCamera(int clicks) {
-    if (camera != NULL) {
+    if (camera && enableZoom) {
         if (clicks > 0)
             for (int i = 0; i < clicks; i++)
                 camera->zoom(zoomScale);
@@ -33,73 +86,30 @@ void CameraControl::zoomCamera(int clicks) {
     }
 }
 
-void CameraControl::panCamera(int dx, int dy) {
-    if (camera != NULL) {
-        camera->transform->pan(-dx * panScale.get(), -dy * panScale.get());
-        requestRedisplay();
-    }
-}
-
-void CameraControl::dollyCamera(int dz) {
-    if (camera != NULL) {
-        camera->transform->dolly(dz * dollyScale.get());
-        requestRedisplay();
-    }
-}
-
-void CameraControl::lookCamera(int ay, int ap) {
-    if (camera != NULL) {
-        camera->transform->look(-ay * lookScale.get(), -ap * lookScale.get());
-        requestRedisplay();
-    }
-}
-
-void CameraControl::rollCamera(int ar) {
-    if (camera != NULL) {
-        camera->transform->roll(ar * rollScale.get());
-        requestRedisplay();
-    }
-}
-
-void CameraControl::pitchCamera(int ap) {
-    if (camera != NULL) {
-        camera->transform->pitch(ap * pitchScale.get());
-        requestRedisplay();
-    }
-}
-
-void CameraControl::yawCamera(int ay) {
-    if (camera != NULL) {
-        camera->transform->yaw(ay * yawScale.get());
-        requestRedisplay();
-    }
-}
-
-void CameraControl::mouseDragged(index_t x, index_t y) {
+void CameraControl::mouseDragged(Point p) {
     // Figure out how far we've moved (flipping Y)
-    int dx = x - mouseX,
-        dy = mouseY - y;
+    int dx = p[0] - mousePosition[0],
+        dy = mousePosition[1] - p[1];
 
-    if (controlFlags == (ALT_KEY | LEFT_BUTTON))
+    if (theseFlagsActive(AltModifier | LeftButton))
         lookCamera(dx, dy);
-    else if (controlFlags == (CTRL_KEY | ALT_KEY | LEFT_BUTTON))
+    else if (theseFlagsActive(ControlModifier | AltModifier | LeftButton))
         dollyCamera(dx + dy);
-    else if (controlFlags == (ALT_KEY | MIDDLE_BUTTON))
+    else if (theseFlagsActive(AltModifier | MiddleButton))
         panCamera(dx, dy);
-    else if (controlFlags == (ALT_KEY | RIGHT_BUTTON))
+    else if (theseFlagsActive(AltModifier | RightButton))
         rollCamera(dx + dy);
-    else if (controlFlags == WHEEL_UP)
+    else if (theseFlagsActive(WheelUp))
         zoomCamera(1);
-    else if (controlFlags == WHEEL_DOWN)
+    else if (theseFlagsActive(WheelDown))
         zoomCamera(-1);
 
     // Update our saved coordinates
-    mouseX = x;
-    mouseY = y;
+    mousePosition = p;
 }
 
-void CameraControl::buttonPressed(MouseButton button, index_t x, index_t y) {
+void CameraControl::buttonPressed(MouseButton button, Point p) {
     // Store these as the current mouse coordinates
-    mouseX = x;
-    mouseY = y;
+    mousePosition = p;
 }
+

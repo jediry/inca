@@ -14,8 +14,8 @@
  *      windows and graphics modes.
  */
 
-#ifndef GLUT_WINDOW
-#define GLUT_WINDOW
+#ifndef INCA_INTEGRATION_GLUT_WINDOW
+#define INCA_INTEGRATION_GLUT_WINDOW
 
 // Import system configuration
 #include <inca/inca-common.h>
@@ -25,22 +25,36 @@ namespace inca {
     namespace ui {
         // Forward declarations
         class GLUTWindow;
+
+        // Pointer typedefs
+        typedef shared_ptr<GLUTWindow>       GLUTWindowPtr;
+        typedef shared_ptr<GLUTWindow const> GLUTWindowConstPtr;
     };
 };
 
+// Import superclass definition
+#include <inca/ui/Window.hpp>
 
-// Import GL Utilities Toolkit (GLUT)
-#include <GL/glut.h>
+// Import Timer definition
+#include <inca/util/Timer>
 
 
-/*****************************************************************************
+/**
  * The GLUTWindow class is the superclass for all GLUT windows used by the
  * application. It handles the details of switching between windows, setting
  * up event-handler callbacks, and resizing.
- *****************************************************************************/
-class inca::ui::GLUTWindow {
+ *
+ * This class implements the inca::ui::Window interface and may contain an
+ * Inca Widget, or it may be subclassed and used standalone, in which case
+ * the subclass should override any necessary callbacks (e.g., display). As
+ * long as the "widget" property inherited from Window is NULL, each of the
+ * non-overridden event-handlers will do nothing.
+ */
+class inca::ui::GLUTWindow : public Window {
+/*---------------------------------------------------------------------------*
+ | Static functions to patch thru to the GLUT event-handling mechanism
+ *---------------------------------------------------------------------------*/
 public:
-    // Static functions for C++ wrapper for GLUT callbacks
     static void reshapeFunc(int width, int height);
     static void entryFunc(int state);
     static void visibilityFunc(int visible);
@@ -57,64 +71,141 @@ protected:
     // The list of existing GLUT windows
     static vector<GLUTWindow *> windowList;
 
+    // Defaults for new windows (if unspecified)
+    static const string    DEFAULT_TITLE;
+    static const Point     DEFAULT_POSITION;
+    static const Dimension DEFAULT_SIZE;
+    static const Dimension DEFAULT_MINIMUM_SIZE;
+    static const Dimension DEFAULT_MAXIMUM_SIZE;
+    static const float     DEFAULT_ASPECT_RATIO;
+    static const bool      DEFAULT_IS_FULL_SCREEN;
+
+    // Button click timing
+    static const size_t          SUPPORTED_BUTTONS = 10; // How many buttons?
+    typedef Timer<float, false>  Timer;  // Float scalar, no events produced
+    static const Timer::scalar_t CLICK_DURATION;    // How long can a click be?
+
+
+/*---------------------------------------------------------------------------*
+ | Constructors and window instance management
+ *---------------------------------------------------------------------------*/
 public:
-    // Constructor
-    GLUTWindow(const string &title);
+    // Default Constructor
+    GLUTWindow(const string &title = DEFAULT_TITLE);
+    
+    // Widget-containing Constructor
+    GLUTWindow(WidgetPtr w, const string &title = DEFAULT_TITLE);
 
     // Destructor
-    virtual ~GLUTWindow() { }
+    virtual ~GLUTWindow();
 
-    // Window size functions
-    void setMinimumSize(size_t width, size_t height);
-    void setMaximumSize(size_t width, size_t height);
-    void setSize(size_t width, size_t height);
-    void setSquare(bool square);
-    bool isSquare() const { return keepSquare; }
+protected:
+    void createWindow(const string &title); // This does the real work
+    unsigned int windowID;  // The GLUT window ID that we own
 
-    // Window position functions
-    void centerOnScreen();
-    void setPosition(unsigned int x, unsigned int y);
-    void setFullScreen(bool fs);
-    bool isFullScreen() const { return fullScreen; }
 
-    // GLUT window functions
-    virtual void reshape(int width, int height);    // We implement this
+/*---------------------------------------------------------------------------*
+ | GLUT-specific event-handlers
+ *---------------------------------------------------------------------------*/
+public:
+    // GLUT window callbacks
+    virtual void reshape(int width, int height);
     virtual void entry(int state);
     virtual void visibility(int visible);
 
-    // GLUT input functions
+    // GLUT input callbacks
     virtual void mouseButton(int button, int state, int x, int y);
     virtual void mouseMotion(int x, int y);
     virtual void passiveMotion(int x, int y);
     virtual void key(unsigned char k, int x, int y);
     virtual void special(int key, int x, int y);
 
-    // GLUT display functions
-    virtual void display() = 0;     // All subclasses MUST implement this
+    // GLUT display callbacks
+    virtual void display();
     virtual void overlayDisplay();
 
-    // Force a redisplay
-    void postRedisplay() const;
-
-    // GLUT idle function
+    // GLUT idle callback
     virtual void idle();
 
 protected:
-    // Draw a text string into this window
-    void drawString(GLint x, GLint y, const char *str);
-    void drawString(GLint x, GLint y, const string &str) {
-        drawString(x, y, str.c_str());
-    }
+    // Click timers, to determine whether to send the 'buttonClicked' event
+    Timer buttonTimer[SUPPORTED_BUTTONS];
 
-    unsigned int windowID;				// The GLUT window ID
+    // Whether we've called initializeView on the Widget yet
+    bool widgetInitialized;
 
-    unsigned int windowX, windowY,		// The position of the window
-				 height, width,			// The window's current size
-				 minHeight, minWidth,   // The window's minimum size
-				 maxHeight, maxWidth,   // The window's maximum size
-				 restoreHeight, restoreWidth;   // How big to restore to
-    bool keepSquare;            // Should this window be kept square?
-    bool fullScreen;            // Is this window full-screened?
+
+/*---------------------------------------------------------------------------*
+ | GLUT -> Inca event translation functions
+ *---------------------------------------------------------------------------*/
+    // Translate a GLUT mouse button into an Inca MouseButton
+    MouseButton translateMouseButton(int button);
+
+    // Translate a GLUT key into an Inca KeyCode
+    KeyCode translateNormalKey(unsigned char key);
+    KeyCode translateSpecialKey(int key);
+
+
+/*---------------------------------------------------------------------------*
+ | Window interface functions
+ *---------------------------------------------------------------------------*/
+public:
+    // Window title
+    string getTitle() const { return title; }
+    void setTitle(const string &title);
+
+    // Window visibility state
+    bool isVisible() const { return visible; }
+    void setVisible(bool vis);
+
+    // Window iconification state
+    bool isIconified() const { return iconified; }
+    void setIconified(bool icon);
+
+    // Window full-screen state
+    bool isFullScreen() const { return fullScreen; }
+    void setFullScreen(bool fs);
+
+    // Restore an iconified or full-screened window to its previous state
+    void restore();
+
+    // Window position
+    Point getPosition() const { return position; }
+    void setPosition(Point p);
+
+    // Current size
+    Dimension getSize() const { return size; }
+    void setSize(Dimension d);
+
+    // Minimum allowable size
+    Dimension getMinimumSize() const { return minSize; }
+    void setMinimumSize(Dimension d);
+
+    // Maximum allowable size
+    Dimension getMaximumSize() const { return maxSize; }
+    void setMaximumSize(Dimension d);
+
+    // Force aspect ratio (0.0 to allow unrestricted A/R)
+    float getAspectRatio() const { return aspectRatio; }
+    void setAspectRatio(float ratio);
+
+    // Query screen size
+    Dimension getScreenSize() const;
+
+    // Request redisplay of the entire Window
+    void requestRedisplay();
+
+protected:
+    string title;           // The current window title
+    Point position;         // On-screen postion of the window
+    Dimension size,         // How big it is
+              minSize,      // How small it can be
+              maxSize,      // How big it can be
+              restoreSize;  // How big to restore to from full-screen mode
+    float aspectRatio;      // An aspect ratio to constrain to (or 0.0 for none)
+    bool fullScreen;        // Is this window full-screened?
+    bool iconified;         // Is this window an icon?
+    bool visible;           // Is this window visible?
 };
 
 #endif

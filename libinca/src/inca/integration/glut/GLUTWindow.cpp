@@ -21,20 +21,27 @@
 using namespace inca;
 using namespace inca::ui;
 
-// Default layout parameters
-const int WINDOW_DEFAULT_X = 50;
-const int WINDOW_DEFAULT_Y = 50;
-const int WINDOW_DEFAULT_W = 400;
-const int WINDOW_DEFAULT_H = 400;
+// Import GL Utilities Toolkit (GLUT)
+#include <GL/glut.h>
 
-// Default window constraints
-const int WINDOW_MINIMUM_W = 100;
-const int WINDOW_MINIMUM_H = 100;
-const int WINDOW_MAXIMUM_W = 800;
-const int WINDOW_MAXIMUM_H = 800;
 
+/*---------------------------------------------------------------------------*
+ | Static GLUTWindow constants and variables
+ *---------------------------------------------------------------------------*/
 // GLUT C++ wrapper static initialization
 vector<GLUTWindow *> GLUTWindow::windowList;
+
+// Default window parameters
+const string                GLUTWindow::DEFAULT_TITLE("Inca GLUT Window");
+const GLUTWindow::Point     GLUTWindow::DEFAULT_POSITION(50, 50);
+const GLUTWindow::Dimension GLUTWindow::DEFAULT_SIZE(400, 400);
+const GLUTWindow::Dimension GLUTWindow::DEFAULT_MINIMUM_SIZE(100, 100);
+const GLUTWindow::Dimension GLUTWindow::DEFAULT_MAXIMUM_SIZE(800, 800);
+const float                 GLUTWindow::DEFAULT_ASPECT_RATIO(0.0f);
+const bool                  GLUTWindow::DEFAULT_IS_FULL_SCREEN(false);
+
+// Button click timing
+const GLUTWindow::Timer::scalar_t GLUTWindow::CLICK_DURATION(0.5f);
 
 
 /*---------------------------------------------------------------------------*
@@ -76,28 +83,41 @@ void GLUTWindow::idleFunc() {
 
 
 /*---------------------------------------------------------------------------*
- | Single-window constructor
+ | Constructors and window instance management
  *---------------------------------------------------------------------------*/
+// Default constructor
 GLUTWindow::GLUTWindow(const string &title)
-        : keepSquare(false), fullScreen(false),
-          windowX(WINDOW_DEFAULT_X), windowY(WINDOW_DEFAULT_Y),
-          width(WINDOW_DEFAULT_W), height(WINDOW_DEFAULT_H),
-          minWidth(WINDOW_MINIMUM_W), minHeight(WINDOW_MINIMUM_H),
-          maxWidth(WINDOW_MAXIMUM_W), maxHeight(WINDOW_MAXIMUM_H) {
+        : position(DEFAULT_POSITION), size(DEFAULT_SIZE),
+          minSize(DEFAULT_MINIMUM_SIZE), maxSize(DEFAULT_MAXIMUM_SIZE),
+          aspectRatio(DEFAULT_ASPECT_RATIO),
+          fullScreen(DEFAULT_IS_FULL_SCREEN), widgetInitialized(false) {
 
-    // Zero is not a valid GLUT windowID
-    if (windowList.size() == 0)
-        windowList.push_back(0);    // Prime the list with a dummy
+    // Get a new window, with this title
+    createWindow(title);
+}
 
+// Widget-specific constructor
+GLUTWindow::GLUTWindow(WidgetPtr w, const string &title)
+        : position(DEFAULT_POSITION), size(DEFAULT_SIZE),
+          minSize(DEFAULT_MINIMUM_SIZE), maxSize(DEFAULT_MAXIMUM_SIZE),
+          aspectRatio(DEFAULT_ASPECT_RATIO),
+          fullScreen(DEFAULT_IS_FULL_SCREEN), widgetInitialized(false) {
+
+    // Get a new window, with this title
+    createWindow(title);
+          
+    // Set our shiny new widget in its place
+    widget = w;
+}
+
+
+// Constructors delegate to this in order to create the actual window
+// and to set up event handlers
+void GLUTWindow::createWindow(const string &title) {
     // Create a GLUT window and add it to window management
     windowID = glutCreateWindow(title.c_str());
-    if (windowID != windowList.size()) {    // Then things will go horribly
-        cerr << "Window " << windowID << " doesn't match window list index "
-             << windowList.size() << ". This will royally muck things up."
-             << endl;
-        exit(1);
-    }
-    windowList.push_back(this);
+    windowList.resize(windowID + 1);                // Make room
+    windowList[windowID] = this;                    // Claim my ID
 
     // Register callbacks for this window
     glutReshapeFunc(reshapeFunc);
@@ -113,149 +133,357 @@ GLUTWindow::GLUTWindow(const string &title)
     glutIdleFunc(idleFunc);
 }
 
+// End the window's pitiful existence
+GLUTWindow::~GLUTWindow() {
+    // Remove us from the list of living windows
+    windowList[windowID] = NULL;
+
+    // Clean up the window instance
+    glutDestroyWindow(windowID);
+}
+
+
+/*---------------------------------------------------------------------------*
+ | GLUT-specific event-handlers
+ *---------------------------------------------------------------------------*/
+// GLUT window callbacks
+void GLUTWindow::reshape(int w, int h) {
+    size[0] = w; size[1] = h;           // Update our window dimensions
+    if (widget) {
+        if (! widgetInitialized) {      // We only call initializeView() once
+            widget->initializeView();
+            widgetInitialized = true;
+        }
+        widget->resizeView(size);       // Inform the widget of the change
+    }
+
+    glViewport(0, 0, size[0], size[1]); // Tell GL what we did
+    requestRedisplay();                 // Now go redraw everything
+}
+
+void GLUTWindow::entry(int state) { }
+void GLUTWindow::visibility(int visible) { }
+
+// GLUT input callbacks
+void GLUTWindow::mouseMotion(int x, int y) {
+    // Pass through a mouse movement
+    if (widget) widget->mouseDragged(Point(x, y));
+}
+
+void GLUTWindow::passiveMotion(int x, int y) {
+    // Pass through a mouse movement
+    if (widget) widget->mouseTracked(Point(x, y));
+}
+
+void GLUTWindow::mouseButton(int button, int state, int x, int y) {
+    // Pass through a mouse button press
+    if (widget) {
+        widget->setModifierFlags(glutGetModifiers());
+        MouseButton b = translateMouseButton(button);
+        if (state == GLUT_DOWN) {
+            widget->addButtonFlag(b);
+            widget->buttonPressed(b, Point(x, y));
+            buttonTimer[b].reset();
+            buttonTimer[b].start();
+        } else {
+            widget->removeButtonFlag(b);
+            widget->buttonReleased(b, Point(x, y));
+            buttonTimer[b].stop();
+            if (buttonTimer[b].time() < CLICK_DURATION)
+                widget->buttonClicked(b, Point(x, y));
+        }
+    }
+}
+
+void GLUTWindow::key(unsigned char key, int x, int y) {
+    // Pass through a normal (ASCII) keypress
+    if (widget) {
+        KeyCode k = translateNormalKey(key);
+        widget->setModifierFlags(glutGetModifiers());
+        widget->keyPressed(k, Point(x, y));
+    }
+}
+
+void GLUTWindow::special(int key, int x, int y) {
+    // Pass through a special (control) key
+    if (widget) {
+        KeyCode k = translateSpecialKey(key);
+        widget->setModifierFlags(glutGetModifiers());
+        widget->keyPressed(k, Point(x, y));
+    }
+}
+
+// GLUT display callbacks
+void GLUTWindow::overlayDisplay() { /* Do nothing right now */ }
+void GLUTWindow::display() {
+    if (widget) {
+        widget->renderView();
+        glutSwapBuffers();
+    }
+}
+
+// GLUT idle callback
+void GLUTWindow::idle() { }
+
+
+/*---------------------------------------------------------------------------*
+ | GLUT -> Inca event translation functions
+ *---------------------------------------------------------------------------*/
+// Translate a GLUT mouse button into an Inca MouseButton
+MouseButton GLUTWindow::translateMouseButton(int button) {
+    if (button == GLUT_LEFT_BUTTON)    return LeftButton;
+    if (button == GLUT_MIDDLE_BUTTON)  return MiddleButton;
+    if (button == GLUT_RIGHT_BUTTON)   return RightButton;
+    if (button == 3)                   return WheelUp;
+    if (button == 4)                   return WheelDown;
+    return NoButtons;
+}
+
+KeyCode GLUTWindow::translateNormalKey(unsigned char key) {
+    KeyCode k;
+
+    cerr << "key is " << int(key) << endl;
+
+//    // Since we're handling the Control key separately, we need to remap the
+//    // range '^a'..'^z' (0x01..0x1A) to 'a'..'z', a difference of 64 (0x70)
+//    if (key >= 0x01 && key <= 0x1A)         // Control character
+//        key |= 0x70;
+
+    // Convert from ASCII to Inca KeyCode
+    if (key >= 'A' && key <= 'Z')           // Upper case
+        k = KeyCode((key - 'A') + KeyA);
+    else if (key >= 'a' && key <= 'z')      // Lower case
+        k = KeyCode((key - 'a') + KeyA);
+    else {
+        switch (key) {
+        case '0': case ')':     k = Key0;               break;
+        case '1': case '!':     k = Key1;               break;
+        case '2': case '@':     k = Key2;               break;
+        case '3': case '#':     k = Key3;               break;
+        case '4': case '$':     k = Key4;               break;
+        case '5': case '%':     k = Key5;               break;
+        case '6': case '^':     k = Key6;               break;
+        case '7': case '&':     k = Key7;               break;
+        case '8': case '*':     k = Key8;               break;
+        case '9': case '(':     k = Key9;               break;
+        case '-': case '_':     k = KeyMinus;           break;
+        case '=': case '+':     k = KeyPlus;            break;
+        case '[': case '{':     k = KeyLeftBracket;     break;
+        case ']': case '}':     k = KeyRightBracket;    break;
+        case '\\': case '|':    k = KeyBackwardSlash;   break;
+        case '/': case '?':     k = KeyForwardSlash;    break;
+        case ',': case '<':     k = KeyLessThan;        break;
+        case '.': case '>':     k = KeyGreaterThan;     break;
+        case ';': case ':':     k = KeyColon;           break;
+        case '\'': case '"':    k = KeyQuote;           break;
+        case '`': case '~':     k = KeyTilde;           break;
+        case 0x20:              k = KeySpace;           break;
+        case 0x09:              k = KeyTab;             break;
+        case 0x0D: case 0x0A:   k = KeyEnter;           break;
+        case 0x08:              k = KeyBackspace;       break;
+        case 0x7F:              k = KeyDelete;          break;
+        case 0x1B:              k = KeyEscape;          break;
+        default:
+            logger << "translateNormalKey('" << key << "', 0x"
+                   << std::hex << int(key) << std::dec
+                   << "): Unrecognized keycode";
+            logger.warning();
+            k = InvalidKey;
+        }
+    }
+
+    cerr << "Convert " << (glutGetModifiers() & ShiftModifier ? 'S' : ' ')
+                       << (glutGetModifiers() & ControlModifier ? 'C' : ' ')
+                       << (glutGetModifiers() & AltModifier ? 'C' : ' ')
+                       << int(key) << " -> " << int(k) << endl;
+
+    return k;
+}
+
+KeyCode GLUTWindow::translateSpecialKey(int key) {
+    KeyCode k;
+    switch (key) {
+        case GLUT_KEY_F1:           k = KeyF1;         break;
+        case GLUT_KEY_F2:           k = KeyF2;         break;
+        case GLUT_KEY_F3:           k = KeyF3;         break;
+        case GLUT_KEY_F4:           k = KeyF4;         break;
+        case GLUT_KEY_F5:           k = KeyF5;         break;
+        case GLUT_KEY_F6:           k = KeyF6;         break;
+        case GLUT_KEY_F7:           k = KeyF7;         break;
+        case GLUT_KEY_F8:           k = KeyF8;         break;
+        case GLUT_KEY_F9:           k = KeyF9;         break;
+        case GLUT_KEY_F10:          k = KeyF10;        break;
+        case GLUT_KEY_F11:          k = KeyF11;        break;
+        case GLUT_KEY_F12:          k = KeyF12;        break;
+        case GLUT_KEY_LEFT:         k = KeyLeft;       break;
+        case GLUT_KEY_RIGHT:        k = KeyRight;      break;
+        case GLUT_KEY_UP:           k = KeyUp;         break;
+        case GLUT_KEY_DOWN:         k = KeyDown;       break;
+        case GLUT_KEY_HOME:         k = KeyHome;       break;
+        case GLUT_KEY_END:          k = KeyEnd;        break;
+        case GLUT_KEY_PAGE_UP:      k = KeyPageUp;     break;
+        case GLUT_KEY_PAGE_DOWN:    k = KeyPageDown;   break;
+        case GLUT_KEY_INSERT:       k = KeyInsert;     break;
+        default:
+            logger << "translateSpecialKey(" << key << ", 0x"
+                   << std::hex << key << std::dec
+                   << "): Unrecognized keycode";
+            logger.warning();
+            k = InvalidKey;
+    }
+    cerr << "Convert " << int(key) << " -> " << int(k) << endl;
+
+    return k;
+}
+
 
 /*---------------------------------------------------------------------------*
  | Window control functions
  *---------------------------------------------------------------------------*/
-void GLUTWindow::setMinimumSize(size_t w, size_t h) {
-    minWidth = w;
-    minHeight = h;
-
-    // Reshape the window, if necessary
-    if (minWidth > width || minHeight > height)
-        setSize(w, h);
+void GLUTWindow::setTitle(const string &title) {
+    glutPushWindow();                   // Save the previous window
+        glutSetWindow(windowID);            // Pick this window
+        glutSetWindowTitle(title.c_str());  // Change the title
+    glutPopWindow();                    // Restore the previous window
 }
 
-void GLUTWindow::setMaximumSize(size_t w, size_t h) {
-    maxWidth = w;
-    maxHeight = h;
-
-    // Reshape the window, if necessary
-    if (minWidth > width || minHeight > height)
-        setSize(w, h);
+void GLUTWindow::setVisible(bool vis) {
+    if (! vis && visible) {         // ...then we must make it so
+        visible = false;                // Disappear!
+        glutPushWindow();               // Store the previous window
+            glutSetWindow(windowID);        // Pick this window
+            glutHideWindow();               // Hide it
+        glutPopWindow();                // Restore the previous window
+    } else if (vis && ! visible) {  // ...OK...gotta put it back
+        visible = true;
+        glutPushWindow();               // Store the previous window
+            glutSetWindow(windowID);        // Pick this window
+            glutShowWindow();               // Show it
+        glutPopWindow();                // Restore the previous window
+    }
 }
 
-void GLUTWindow::setSquare(bool square) {
-    keepSquare = square;
-    if (keepSquare && width != height) {
-        size_t max = width > height ? width : height;
-        setSize(max, max);
+void GLUTWindow::setIconified(bool icon) {
+    if (icon && ! iconified) {      // ...then we must make it so
+        iconified = true;               // We're shrinking!
+        restoreSize = size;             // Store the size for later
+        glutPushWindow();               // Store the previous window
+            glutSetWindow(windowID);        // Pick this window
+            glutIconifyWindow();            // Iconify it
+        glutPopWindow();                // Restore the previous window
+    } else if (!icon && iconified) {// ...OK...gotta put it back
+        restore();
     }
 }
 
 void GLUTWindow::setFullScreen(bool fs) {
-#if (GLUT_API_VERSION >= 3)
-    if (fs && ! fullScreen) {
-        fullScreen = true;
-        restoreWidth = width;
-        restoreHeight = height;
-        glutPushWindow();
-            glutSetWindow(windowID);
-            glutFullScreen();
-        glutPopWindow();
-    } else if (!fs && fullScreen) {
-        fullScreen = false;
-        setPosition(windowX, windowY);
-        setSize(restoreWidth, restoreHeight);
+#if (GLUT_API_VERSION >= 3) // This is only supported in later versions of GLUT
+    if (fs && ! fullScreen) {       // ...then we must make it so
+        fullScreen = true;              // We're going full-out
+        restoreSize = size;             // Store the size for later
+        glutPushWindow();               // Store the previous window
+            glutSetWindow(windowID);        // Pick this window
+            glutFullScreen();               // Full-screen-ify it
+        glutPopWindow();                // Restore the previous window
+    } else if (!fs && fullScreen) { // ...OK...gotta put it back
+        restore();
     }
 #else
     cerr << "Full-screen mode is not supported by this version of GLUT\n";
 #endif
 }
 
-void GLUTWindow::centerOnScreen() {
-    cerr << "GLUTWindow::centerWindow() not implemented -- need to get"
-            " screen size" << endl;
-}
-
-void GLUTWindow::setPosition(unsigned int x, unsigned int y) {
-    glutPushWindow();           // Save the previous window
-        glutSetWindow(windowID);    // Pick this window
-        glutPositionWindow(x, y);   // Move it
-    glutPopWindow();            // Restore the previous window
-}
-
-void GLUTWindow::setSize(size_t w, size_t h) {
-    // Clamp the height of the window
-    if (w > maxWidth)       width = maxWidth;
-    else if (w < minWidth)  width = minWidth;
-    else                    width = w;
-
-    // Clamp the height of the window
-    if (h > maxHeight)      height = maxHeight;
-    else if (h < minHeight) height = minHeight;
-    else                    height = h;
-
-    // If this should be square, then make it so
-    if (keepSquare) {
-        if (height > width)
-            width = height;
-        else
-            height = width;
+void GLUTWindow::restore() {
+    if (! visible) {
+        setVisible(true);               // Make ourselves visible again
+    } else if (fullScreen || iconified) {
+        fullScreen = false;             // We're no longer fullscreen
+        iconified = false;              // We're no longer iconified
+        setPosition(position);          // Restore the original window position
+        setSize(restoreSize);           // And restore its size
     }
-
-    glutPushWindow();
-        glutSetWindow(windowID);
-        glutReshapeWindow(width, height);
-    glutPopWindow();
 }
 
-void GLUTWindow::postRedisplay() const {
-    glutPushWindow();
-        glutSetWindow(windowID);
-        glutPostRedisplay();
-    glutPopWindow();
+void GLUTWindow::setPosition(Point p) {
+    glutPushWindow();                   // Save the previous window
+        glutSetWindow(windowID);            // Pick this window
+        glutPositionWindow(p[0], p[1]);     // Move it
+    glutPopWindow();                    // Restore the previous window
 }
 
-void GLUTWindow::drawString(int x, int y, const char *str) {
-    glPushAttrib(GL_LIGHTING);
-    glDisable(GL_LIGHTING);
-    glMatrixMode(GL_PROJECTION);
-    glPushMatrix();  
-    glLoadIdentity();    
-    gluOrtho2D(0.0, width, 0.0, height);
-    glMatrixMode(GL_MODELVIEW);  
-    glPushMatrix();                  
-    glLoadIdentity();                    
-    glRasterPos2f(x, y);                     
- 
-    // Draw the characters                       
-    unsigned int length = strlen(str);               
-    for (unsigned int i = 0; i < length; i++)            
-        glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, str[i]);       
- 
-    // Clean up our mess                                                 
-    glMatrixMode(GL_PROJECTION);                                             
-    glPopMatrix();
-    glMatrixMode(GL_MODELVIEW);
-    glPopMatrix();
-    glPopAttrib();
-} 
+void GLUTWindow::setSize(Dimension d) {
+    // Enforce any aspect ratio constraint
+    if (aspectRatio > 0.0f)
+        d[0] = static_cast<unsigned int>(d[1] * aspectRatio);
 
+    // Clamp the width of the window
+    if (d[0] > maxSize[0])      d[0] = maxSize[0];
+    else if (d[0] < minSize[0]) d[0] = minSize[0];
 
-/*---------------------------------------------------------------------------*
- | Member-function callbacks
- *---------------------------------------------------------------------------*/
-// GLUT window callbacks
-void GLUTWindow::reshape(int w, int h) {
-    width = w;
-    height = h;
-    glViewport(0, 0, width, height);    // Tell GL that we did it
-    glutPostRedisplay();
+    // Clamp the height of the window
+    if (d[1] > maxSize[1])      d[1] = maxSize[1];
+    else if (d[1] < minSize[1]) d[1] = minSize[1];
+
+    // Store this as our new size
+    size = d;
+
+    glutPushWindow();                   // Save the previous window
+        glutSetWindow(windowID);            // Select this window
+        glutReshapeWindow(size[0], size[1]);// Resize it
+    glutPopWindow();                    // Restore the previous window
 }
-void GLUTWindow::entry(int state) { }
-void GLUTWindow::visibility(int visible) { }
 
-// GLUT input callbacks
-void GLUTWindow::mouseMotion(int x, int y) { }
-void GLUTWindow::passiveMotion(int x, int y) { }
-void GLUTWindow::mouseButton(int button, int state, int x, int y) { }
-void GLUTWindow::key(unsigned char k, int x, int y) { }
-void GLUTWindow::special(int key, int x, int y) { }
+void GLUTWindow::setMinimumSize(Dimension d) {
+    // Make this dimension obey our aspect ratio constraint (if we have one)
+    if (aspectRatio > 0.0f)
+        d[0] = static_cast<unsigned int>(d[1] * aspectRatio);
 
-// GLUT display callbacks
-void GLUTWindow::overlayDisplay() { }
-//void GLUTWindow::display() { }        // -- Made abstract in header file
+    // Make sure the size is sane
+    if (d[0] > 0 && d[0] <= maxSize[0] && d[1] > 0 && d[1] <= maxSize[1]) {
+        minSize = d;
 
-// GLUT idle function
-void GLUTWindow::idle() { }
+        // Reshape the window, if necessary
+        if (minSize[0] > size[0] || minSize[1] > size[1])
+            setSize(minSize);
+    }
+}
+
+void GLUTWindow::setMaximumSize(Dimension d) {
+    // Make this dimension obey our aspect ratio constraint (if we have one)
+    if (aspectRatio > 0.0f)
+        d[0] = static_cast<unsigned int>(d[1] * aspectRatio);
+
+    // Make sure the size is sane
+    if (d[0] >= minSize[0] && d[1] >= minSize[1]) {
+        maxSize = d;
+
+        // Reshape the window, if necessary
+        if (maxSize[0] < size[0] || maxSize[1] < size[1])
+            setSize(maxSize);
+    }
+}
+
+void GLUTWindow::setAspectRatio(float ratio) {
+    if (ratio < 0.0f)  // Negative ratios are invalid
+        return; // Bail right now
+
+    aspectRatio = ratio;    // Set our new ratio
+
+    // If we're imposing a constraint (i.e., ratio > 0.0), enforce it
+    if (aspectRatio > 0.0f) {
+        // Set min/max, then make sure by trying to reset the current size
+        minSize[0] = static_cast<unsigned int>(minSize[1] * aspectRatio);
+        maxSize[0] = static_cast<unsigned int>(maxSize[1] * aspectRatio);
+        setSize(size);              // Resize the window
+    }
+}
+
+GLUTWindow::Dimension GLUTWindow::getScreenSize() const {
+    Dimension d;
+    d[0] = glutGet(GLUT_SCREEN_WIDTH);
+    d[1] = glutGet(GLUT_SCREEN_HEIGHT);
+    return d;
+}
+
+void GLUTWindow::requestRedisplay() { glutPostRedisplay(); }
+

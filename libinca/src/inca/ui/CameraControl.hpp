@@ -3,7 +3,7 @@
  * 
  * Author: Ryan L. Saunders
  *
- * Copyright 2003, Ryan L. Saunders. All rights reserved.
+ * Copyright 2004, Ryan L. Saunders. All rights reserved.
  *
  * Description:
  *      The CameraControl class provides simple, interface-level functions
@@ -12,28 +12,36 @@
  *      a subclass.
  */
 
-#ifndef INCA_INTERFACE_GENERIC_CAMERA_CONTROL
-#define INCA_INTERFACE_GENERIC_CAMERA_CONTROL
+#ifndef INCA_UI_CAMERA_CONTROL
+#define INCA_UI_CAMERA_CONTROL
+
+// Import system configuration
+#include <inca/inca-common.h>
+
 
 // This is part of the Inca interface layer
 namespace inca {
     namespace ui {
         // Forward declarations
         class CameraControl;
+
+        // Pointer typedefs
+        typedef shared_ptr<CameraControl>       CameraControlPtr;
+        typedef shared_ptr<CameraControl const> CameraControlConstPtr;
     };
 };
 
-// Import superclass definitions
-#include "Framework.hpp"
+// Import superclass definition
+#include "PassThruControl.hpp"
 
 // Import Camera & Transform definitions
 #include <inca/world/Cameras.hpp>
 
 
-class inca::ui::CameraControl : virtual public Control {
-public:
-    // Convenience typedefs
-    typedef CameraControl ThisType;
+class inca::ui::CameraControl : public PassThruControl {
+private:
+    // Set up this class to own properties
+    PROPERTY_OWNING_OBJECT(CameraControl);
 
     // Math typedefs
     typedef world::Camera                   Camera;
@@ -48,8 +56,16 @@ public:
  | Constructors & Properties
  *---------------------------------------------------------------------------*/
 public:
-    CameraControl(CameraPtr c);
+    // Default constructor with optional component name
+    CameraControl(const string &nm = "");
 
+    // Constructor initializing camera
+    CameraControl(CameraPtr c, const string &nm = "");
+
+    // The camera we're controlling
+    rw_ptr_property(Camera, camera, NULL);
+
+    // Transformation scale factors
     rw_property(scalar_t, panScale, 1.0);
     rw_property(scalar_t, dollyScale, 1.0);
     rw_property(scalar_t, lookScale, math::PI<scalar_t>() / 64.0);
@@ -57,31 +73,39 @@ public:
     rw_property(scalar_t, pitchScale, math::PI<scalar_t>() / 64.0);
     rw_property(scalar_t, yawScale, math::PI<scalar_t>() / 64.0);
     rw_property(scalar_t, zoomScale, 1.01);
-    rw_ptr_property(Camera, camera, /* */);
 
-
-/*---------------------------------------------------------------------------*
- | High-level camera controls (values correspond to pixels)
- *---------------------------------------------------------------------------*/
-public:
-    void zoomCamera(int clicks);
-    void panCamera(int dx, int dy);
-    void dollyCamera(int dz);
-    void lookCamera(int ay, int ap);
-    void rollCamera(int ar);
-    void pitchCamera(int ap);
-    void yawCamera(int ay);
+    // Transformation enabled toggles
+    rw_property(bool, enablePan,   true);
+    rw_property(bool, enableDolly, true);
+    rw_property(bool, enableLook,  true);
+    rw_property(bool, enableRoll,  true);
+    rw_property(bool, enablePitch, true);
+    rw_property(bool, enableYaw,   true);
+    rw_property(bool, enableZoom,  true);
 
 
 /*---------------------------------------------------------------------------*
  | Event-handling functions
  *---------------------------------------------------------------------------*/
 public:
-    void mouseDragged(index_t x, index_t y);
-    void buttonPressed(MouseButton button, index_t x, index_t y);
+    void mouseDragged(Point p);
+    void buttonPressed(MouseButton button, Point p);
 
 protected:
-    index_t mouseX, mouseY;    // Last recorded mouse coordinates
+    Point mousePosition;    // Last recorded mouse coordinates
+
+
+/*---------------------------------------------------------------------------*
+ | High-level camera controls (values correspond to pixels)
+ *---------------------------------------------------------------------------*/
+public:
+    void panCamera(int dx, int dy);
+    void dollyCamera(int dz);
+    void lookCamera(int ay, int ap);
+    void rollCamera(int ar);
+    void pitchCamera(int ap);
+    void yawCamera(int ay);
+    void zoomCamera(int clicks);
 };
 
 #endif
