@@ -40,10 +40,10 @@ private:
 
 protected:
     // Default constructor
-    Widget() { }
+    explicit Widget() { }
 
     // Non-public constructor with component name
-    Widget(const string &nm) { name = nm; }
+    explicit Widget(const string &nm) { name = nm; }
 };
 
 #endif

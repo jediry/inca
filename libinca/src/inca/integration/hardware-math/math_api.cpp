@@ -17,7 +17,10 @@ using namespace inca::math;
 #include <math.h>
 
 // Make some nice aliases for the template classes we'll be filling out
+typedef scalar_arithmetic_api<int>              i_arith_api;
+typedef scalar_arithmetic_api<unsigned int>     ui_arith_api;
 typedef scalar_arithmetic_api<long>             l_arith_api;
+typedef scalar_arithmetic_api<unsigned long>    ul_arith_api;
 typedef scalar_arithmetic_api<float>            f_arith_api;
 typedef scalar_arithmetic_api<double>           d_arith_api;
 typedef scalar_arithmetic_api<long double>      ld_arith_api;
@@ -33,7 +36,13 @@ typedef scalar_transcendental_api<long double>  ld_trans_api;
  | Integer absolute value
  *---------------------------------------------------------------------------*/
 template<>
+int i_arith_api::abs(arg_type s) { return ::abs(s); }
+template<>
+unsigned int ui_arith_api::abs(arg_type s) { return s; }
+template<>
 long l_arith_api::abs(arg_type s) { return ::abs(s); }
+template<>
+unsigned long ul_arith_api::abs(arg_type s) { return s; }
 
 
 /*---------------------------------------------------------------------------*

@@ -37,6 +37,8 @@
 
 // Import Boost preprocessor metaprogramming library
 #include <boost/preprocessor/punctuation/comma_if.hpp>
+#include <boost/mpl/minus.hpp>
+
 
 // Import Inca's template metaprogramming utilities
 #include <inca/util/metaprogramming>
@@ -72,8 +74,8 @@
 #define Q           Quaternion<scalar>          // thingies
 #define M(D1,D2,O)  Matrix<scalar, dim ## D1, dim ## D2, order ## O>
 
-#define POINT(D)    Point<scalar, D>
-#define VECTOR(D)   Vector<scalar, D>
+#define POINT(D)    Point<scalar, D >
+#define VECTOR(D)   Vector<scalar, D >
 
 #define OSTREAM_OP_L(RHS)                                                   \
     ostream & operator<<(ostream &o, const RHS & rhs) {                     \
@@ -607,10 +609,14 @@ namespace inca {
 
         // Right multiplication of a Matrix by a point (column vector with
         // implicit homogeneous coordinate w == 1)
+//        TEMPLATE(2, 1)
+//        POINT( M(0,1,0)::cols-1 )
+//        operator%(const M(0,1,0) &m, const POINT( M(0,1,0)::cols-1 ) &p) {
+//            POINT( M(0,1,0)::cols-1 ) result;
         TEMPLATE(2, 1)
-        POINT( M(0,1,0)::cols-1 )
-        operator%(const M(0,1,0) &m, const POINT( M(0,1,0)::cols-1 ) &p) {
-            POINT( M(0,1,0)::cols-1 ) result;
+        POINT( ( boost::mpl::minus<boost::mpl::integral_c<unsigned int, dim1>, boost::mpl::integral_c<unsigned int, 1> >::type::value ) )
+        operator%(const M(0,1,0) &m, const POINT( ( boost::mpl::minus<boost::mpl::integral_c<unsigned int, dim1>, boost::mpl::integral_c<unsigned int, 1> >::type::value ) ) &p) {
+            POINT( ( boost::mpl::minus<boost::mpl::integral_c<unsigned int, dim1>, boost::mpl::integral_c<unsigned int, 1> >::type::value ) ) result;
 
             // Calculate the normal multiplication of matrix by column vector
             for (index_t r = 0; r < m.rows - 1; r++) {

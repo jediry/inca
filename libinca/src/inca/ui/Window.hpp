@@ -52,11 +52,12 @@ private:
  *---------------------------------------------------------------------------*/
 public:
     // Default constructor with optional component name
-    Window(const string &nm = "") : WidgetPartContainer(nm), widget(this) { }
+    explicit Window(const string &nm = "")
+        : widget(this) { name = nm; }
 
     // Constructor specifying the Widget to display
-    Window(WidgetPtr w, const string &nm = "")
-        : WidgetPartContainer(nm), widget(this, w) { }
+    explicit Window(WidgetPtr w, const string &nm = "")
+        : widget(this, w) { name = nm; }
 
     // This is the widget that we're displaying
     rw_ptr_property_custom_set(Widget, widget, NULL);
@@ -67,6 +68,17 @@ public:
         _widget = value;            // ...get the new guy...
         acquireWidgetPart(_widget); // ...and tell him that he's ours
     }
+
+
+/*---------------------------------------------------------------------------*
+ | WidgetPartContainer functions
+ *---------------------------------------------------------------------------*/
+public:
+    // Pass redisplay requests up to my parent
+    void redisplay(WidgetPartConstPtr w) const { requestRedisplay(); }
+    
+    // My sub-widget has same dimensions as me
+    Dimension getSize(WidgetPartConstPtr w) const { return getSize(); }
 
 
 /*---------------------------------------------------------------------------*
@@ -93,13 +105,13 @@ public:
     virtual void restore() = 0;
 
     // Window position
-    virtual Point getPosition() const = 0;
-    virtual void setPosition(Point p) = 0;
-    void setPosition(index_t x, index_t y) { setPosition(Point(x, y)); }
+    virtual Pixel getPosition() const = 0;
+    virtual void setPosition(Pixel p) = 0;
+    void setPosition(index_t x, index_t y) { setPosition(Pixel(x, y)); }
     virtual void centerOnScreen() {
         Dimension scr = getScreenSize();
         Dimension sz = getSize();
-        setPosition(Point((scr[0] - sz[0]) / 2, (scr[1] - sz[1]) / 2));
+        setPosition(Pixel((scr[0] - sz[0]) / 2, (scr[1] - sz[1]) / 2));
     }
 
     // Current size
@@ -125,8 +137,7 @@ public:
     virtual Dimension getScreenSize() const = 0;
 
     // Request redisplay of the entire Window
-    virtual void requestRedisplay() = 0;
-    virtual void redisplay(WidgetPartPtr w) { requestRedisplay(); }
+    virtual void requestRedisplay() const = 0;
 };
 
 #endif

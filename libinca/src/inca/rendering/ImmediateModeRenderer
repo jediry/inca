@@ -83,12 +83,17 @@ namespace inca {
 template <typename RenderingAPI>
 class inca::rendering::ImmediateModeRenderer : public Renderer {
 public:
-    // Implementation traits definitions
+    // Implementation traits typedef
     typedef immediate_mode_rendering_api<RenderingAPI> api;
 
     // Rendering statistics counter defintion
     typedef RenderStatistics<float, ALL_PRIMITIVE_TYPES, ALL_RENDER_PASSES>
         RenderStatistics;
+
+    // Geometric type definitions
+    typedef typename api::Point2D    Point2D;
+    typedef typename api::Vector2D   Vector2D;
+    typedef typename api::Matrix     Matrix;
 
 
 /*---------------------------------------------------------------------------*
@@ -114,6 +119,8 @@ public:
         _frameStats.reset();
         _totalStats.reset();
     }
+
+    void checkForError() { api::check_for_error(); }
 
 
 /*---------------------------------------------------------------------------*
@@ -160,9 +167,8 @@ public:
     }
 
     void enableDepthBuffering(bool enabled) { api::enable_z_buffer(false); }
-    
-    void setPointSize(float size)  { api::set_point_size(size); }
-    void setLineWidth(float width) { api::set_line_width(width); }
+    void setPointDiameter(float size) { api::set_point_size(size); }
+    void setLineWidth(float width)    { api::set_line_width(width); }
     void enablePointSmoothing(bool enabled) { api::enable_point_smoothing(enabled); }
     void enableLineSmoothing(bool enabled)  { api::enable_line_smoothing(enabled); }
     void enableAlphaBlending(bool enabled)  { api::enable_alpha_blending(enabled); }
@@ -193,30 +199,48 @@ public:
 /*---------------------------------------------------------------------------*
  | Transformation matrix functions (TI)
  *---------------------------------------------------------------------------*/
-    void resetTransform() {
+    void resetTransformMatrix() {
         api::select_transformation_matrix();
-        api::reset_selected_matrix();
+        api::reset_matrix();
     }
-    void resetCameraProjection() {
+    void saveTransformMatrix(Matrix &m) {
+        api::save_transformation_matrix(m);
+    }
+    void loadTransformMatrix(const Matrix &m) {
+        api::load_transformation_matrix(m);
+    }
+    void resetProjectionMatrix() {
         api::select_projection_matrix();
-        api::reset_selected_matrix();
+        api::reset_matrix();
         api::select_transformation_matrix();
+    }
+    void saveProjectionMatrix(Matrix &m) {
+        api::save_projection_matrix(m);
+    }
+    void loadProjectionMatrix(const Matrix &m) {
+        api::load_projection_matrix(m);
     }
     void pushTransform() {
         api::push_matrix();
     }
-    void pushTransform(world::TransformPtr xform) {
+    void pushTransform(world::TransformConstPtr xform) {
         api::push_matrix();
         applyTransform(xform);  // Just call my buddy!
     }
     void popTransform() {
         api::pop_matrix();
     }
-    void applyCameraProjection(world::CameraPtr cam) {
-        // Make life simpler
-        typedef world::Camera::scalar_t     scalar_t;
-        typedef math::Vector<scalar_t, 2>   Vector;
-
+    void applyMatrixProjection(const Matrix &m) {
+        api::select_projection_matrix();
+        api::multiply_matrix(m);
+        api::select_transformation_matrix();
+    }
+    void applyPickingProjection(const Point2D &center, const Vector2D &size) {
+        api::select_projection_matrix();
+        api::apply_picking_projection(center, size);
+        api::select_transformation_matrix();
+    }
+    void applyCameraProjection(world::CameraConstPtr cam) {
         // Make sure we're not crazy here...
         if (! cam) {
             logger << "applyCameraProjection(CameraPtr): NULL pointer";
@@ -225,16 +249,15 @@ public:
         }
 
         // See if this is a perspective camera
-        world::PerspectiveCameraPtr pCam
-            = dynamic_pointer_cast<world::PerspectiveCamera>(cam);
+        world::PerspectiveCameraConstPtr pCam
+            = dynamic_pointer_cast<world::PerspectiveCamera const>(cam);
         if (pCam) {
-            cerr << "Uhhh...Perspective???\n";
             // Extract camera view parameters
-            Vector angles, clipping;
-            angles[0] = scalar_t(pCam->horizViewAngle);
-            angles[1] = scalar_t(pCam->vertViewAngle);
-            clipping[0] = scalar_t(pCam->nearClip);
-            clipping[1] = scalar_t(pCam->farClip);
+            Vector2D angles, clipping;
+            angles[0] = pCam->horizViewAngle();
+            angles[1] = pCam->vertViewAngle();
+            clipping[0] = pCam->nearClip();
+            clipping[1] = pCam->farClip();
 
             // Multiply in the projection matrix
             api::select_projection_matrix();
@@ -244,16 +267,15 @@ public:
         }
 
         // See if this is an orthographic camera
-        world::OrthographicCameraPtr oCam
-            = dynamic_pointer_cast<world::OrthographicCamera>(cam);
+        world::OrthographicCameraConstPtr oCam
+            = dynamic_pointer_cast<world::OrthographicCamera const>(cam);
         if (oCam) {
-            cerr << "Yay! Ortho cam\n";
             // Extract camera view parameters
-            Vector extents, clipping;
-            extents[0] = scalar_t(oCam->viewWidth);
-            extents[1] = scalar_t(oCam->viewHeight);
-            clipping[0] = scalar_t(oCam->nearClip);
-            clipping[1] = scalar_t(oCam->farClip);
+            Vector2D extents, clipping;
+            extents[0] = oCam->viewWidth();
+            extents[1] = oCam->viewHeight();
+            clipping[0] = oCam->nearClip();
+            clipping[1] = oCam->farClip();
 
             // Multiply in the projection matrix
             api::select_projection_matrix();
@@ -267,25 +289,79 @@ public:
                << typeid(cam).name();
         logger.warning();
     }
-    void applyCameraTransform(world::CameraPtr cam) {
+    void applyCameraTransform(world::CameraConstPtr cam) {
         // Since camera transformation is effectively the inverse model
         // transformation, we just need to send the camera's xform thru backwards
         unapplyTransform(cam->transform);
     }
 
-    void applyTransform(world::TransformPtr xform) {
+    void applyTransform(world::TransformConstPtr xform) {
         // Translate, rotate, and scale
-        apply_translation(xform->position());
-        apply_rotation(xform->rotation());
-        apply_scaling(xform->scaling());
+        applyTranslation(xform->position());
+        applyRotation(xform->rotation());
+        applyScaling(xform->scaling());
     }
-    void unapplyTransform(world::TransformPtr xform) {
+    void unapplyTransform(world::TransformConstPtr xform) {
         // Unscale, unrotate, and untranslate
-        api::unapply_scaling(xform->scaling());
-        api::unapply_rotation(xform->rotation());
-        api::unapply_translation(xform->position());
+        unapplyScaling(xform->scaling());
+        unapplyRotation(xform->rotation());
+        unapplyTranslation(xform->position());
+    }
+    
+    void applyTranslation(const world::Transform::Point &t) {
+        api::apply_translation(t);
+    }
+    void unapplyTranslation(const world::Transform::Point &t) {
+        api::unapply_translation(t);
     }
 
+    void applyRotation(const world::Transform::Quaternion &q) {
+        api::apply_rotation(q);
+    }
+    void unapplyRotation(const world::Transform::Quaternion &q) {
+        api::unapply_rotation(q);
+    }
+
+    void applyScaling(const world::Transform::Vector &s) {
+        api::apply_scaling(s);
+    }
+    void unapplyScaling(const world::Transform::Vector &s) {
+        api::unapply_scaling(s);
+    }
+
+    // Transform a world-space coordinate into local space, and back
+    world::Transform::Point transform(const world::Transform::Point &world) const {
+        world::Transform::Point local;
+        api::transform(world, local);
+        return local;
+    }
+    world::Transform::Point untransform(const world::Transform::Point &local) const {
+        world::Transform::Point world;
+        api::untransform(local, world);
+        return world;
+    }
+
+    // Transform a world-space coordinate into screen-space, and back
+    world::Transform::Point project(const world::Transform::Point &world) const {
+        world::Transform::Point screen;
+        api::project(world, screen);
+        return screen;
+    }
+    world::Transform::Point unproject(const world::Transform::Point &screen) const {
+        world::Transform::Point world;
+        api::unproject(screen, world);
+        return world;
+    }
+
+
+/*---------------------------------------------------------------------------*
+ | Selection functions (TI)
+ *---------------------------------------------------------------------------*/
+public:
+    void setSelectionID(unsigned int id)  { api::set_selection_id(id); }
+    void pushSelectionID(unsigned int id) { api::push_selection_id(id); }
+    void popSelectionID()                 { api::pop_selection_id(); }
+    void getSelectedIDs(world::SelectionSet &s) { api::load_selected_ids(s); }
 
 
 /*---------------------------------------------------------------------------*
@@ -327,7 +403,8 @@ public:
             api::enable_culling(false);         // Don't cull faces
             break;
         case Selection:
-            //api::enable_selection_mode(true);   // Enter selection mode
+            api::enable_selection_mode(true);   // Enter selection mode
+            api::clear_selection_id_stack();    // Start from scratch
             break;
         default:
             logger << "IMR::initializeRenderPass(" << pass << "): not supported";
@@ -340,7 +417,7 @@ public:
     void endRenderPass() {
         switch (_currentRenderPass) {
         case Selection:
-//            api::enable_selection_mode(false);  // Finish out the selection
+            api::enable_selection_mode(false);  // Finish out the selection
             break;
         }
         _frameStats.endRenderPass(_currentRenderPass);
@@ -366,7 +443,7 @@ public:
     }
 
 protected:
-    RenderPass _currentRenderPass;
+    RenderPass    _currentRenderPass;
     PrimitiveType _currentPrimitiveType;
 
 

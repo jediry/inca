@@ -73,7 +73,7 @@ protected:
 
     // Defaults for new windows (if unspecified)
     static const string    DEFAULT_TITLE;
-    static const Point     DEFAULT_POSITION;
+    static const Pixel     DEFAULT_POSITION;
     static const Dimension DEFAULT_SIZE;
     static const Dimension DEFAULT_MINIMUM_SIZE;
     static const Dimension DEFAULT_MAXIMUM_SIZE;
@@ -170,8 +170,8 @@ public:
     void restore();
 
     // Window position
-    Point getPosition() const { return position; }
-    void setPosition(Point p);
+    Pixel getPosition() const { return position; }
+    void setPosition(Pixel p);
 
     // Current size
     Dimension getSize() const { return size; }
@@ -193,11 +193,11 @@ public:
     Dimension getScreenSize() const;
 
     // Request redisplay of the entire Window
-    void requestRedisplay();
+    void requestRedisplay() const;
 
 protected:
     string title;           // The current window title
-    Point position;         // On-screen postion of the window
+    Pixel position;         // On-screen postion of the window
     Dimension size,         // How big it is
               minSize,      // How small it can be
               maxSize,      // How big it can be

@@ -16,6 +16,7 @@
 // Import related Window subclass
 #include "GLUTWindow.hpp"
 using namespace inca::ui;
+using namespace inca;
 
 // Import GLUT
 #include <GL/glut.h>

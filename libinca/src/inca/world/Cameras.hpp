@@ -26,9 +26,12 @@ namespace inca {
         class OrthographicCamera;
 
         // Pointer typedefs
-        typedef shared_ptr<Camera> CameraPtr;
-        typedef shared_ptr<PerspectiveCamera> PerspectiveCameraPtr;
-        typedef shared_ptr<OrthographicCamera> OrthographicCameraPtr;
+        typedef shared_ptr<Camera>       CameraPtr;
+        typedef shared_ptr<Camera const> CameraConstPtr;
+        typedef shared_ptr<PerspectiveCamera>       PerspectiveCameraPtr;
+        typedef shared_ptr<PerspectiveCamera const> PerspectiveCameraConstPtr;
+        typedef shared_ptr<OrthographicCamera>       OrthographicCameraPtr;
+        typedef shared_ptr<OrthographicCamera const> OrthographicCameraConstPtr;
     };
 };
 

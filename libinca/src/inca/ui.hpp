@@ -80,6 +80,9 @@
 #include "ui/Application.hpp"
 
 // Import basic widget subclasses
+#include "ui/BasicView.hpp"
+#include "ui/BasicControl.hpp"
+#include "ui/BasicWidget.hpp"
 #include "ui/PassThruView.hpp"
 #include "ui/PassThruControl.hpp"
 #include "ui/PassThruWidget.hpp"

@@ -50,7 +50,7 @@ void WidgetPart::resumedBy(WidgetPartContainerPtr w) {
 // Default implementation of WidgetPart function to request a redisplay from
 // any WidgetPartContainers who are currently containing it (in an interested
 // fashion).
-void WidgetPart::requestRedisplay() {
+void WidgetPart::requestRedisplay() const {
     WidgetPartContainerSet::iterator i;
     for (i = containers.begin(); i != containers.end(); ++i) {
         WidgetPartContainerPtr w = *i;

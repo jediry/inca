@@ -359,7 +359,9 @@ protected:
         VertexPtr v = vertexPool.acquire();
         v->setMesh(this);
         vertexList.push_back(v);
-        while (v->getID() >= locationList.size())   // Make sure we have storage
+
+        // Make sure we have storage
+        while (size_t(v->getID()) >= locationList.size())
             locationList.push_back(Point());
         v->setLocationIndex(v->getID());
         return v;
@@ -618,7 +620,7 @@ public:
 
             // Now orbit the face, CCW, linking all the edges (we get the
             // first edge on the last iteration)
-            for (index_t i = 1; i <= vertexCount; i++) {
+            for (index_t i = 1; i <= index_t(vertexCount); i++) {
                 // Stick the current edge into our list
                 faceEdges.push_back(currentEdge);
 
@@ -639,11 +641,11 @@ public:
             face->setLinkEdge(faceEdges[0]);
             
             // Link it into the edges...
-            for (index_t i = 0; i < vertexCount; i++)
+            for (index_t i = 0; i < index_t(vertexCount); i++)
                 faceEdges[i]->setAvailableFace(face);
 
             // ...and the face-vertices
-            for (index_t i = 0; i < vertexCount; i++) {
+            for (index_t i = 0; i < index_t(vertexCount); i++) {
                 index_t nextI = (i + 1) % vertexCount;
                 FaceVertexPtr fv = faceVertices[nextI];
                 fv->insertBetween(fv->getVertex(), faceEdges[i], faceEdges[nextI]);
@@ -652,11 +654,11 @@ public:
         // In case something goes horribly, horribly wrong...
         } catch (GeometryException &e) {
             // Delete all the face-vertices
-            for (index_t i = 0; i < faceVertices.size(); i++)
+            for (index_t i = 0; i < index_t(faceVertices.size()); i++)
                 deleteFaceVertex(faceVertices[i]);
 
             // Delete any edges that don't have family yet
-            for (index_t i = 0; i < faceEdges.size(); i++)
+            for (index_t i = 0; i < index_t(faceEdges.size()); i++)
                 if (faceEdges[i]->getFaceCount() == 0)
                     deleteEdge(faceEdges[i]);
 

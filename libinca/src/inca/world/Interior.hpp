@@ -21,7 +21,8 @@ namespace inca {
         class Interior;
 
         // Pointer typedefs
-        typedef shared_ptr<Interior> InteriorPtr;
+        typedef shared_ptr<Interior>        InteriorPtr;
+        typedef shared_ptr<Interior const>  InteriorConstPtr;
     };
 };
 

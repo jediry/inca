@@ -33,10 +33,10 @@ namespace inca {
 };
 
 // Import superclass definition
-#include "Control.hpp"
+#include "BasicControl.hpp"
 
 
-class inca::ui::PassThruControl : virtual public Control,
+class inca::ui::PassThruControl : public BasicControl,
                                   virtual public WidgetPartContainer {
 private:
     // Set this class up to contain properties
@@ -47,19 +47,12 @@ private:
  | Constructors & Properties
  *---------------------------------------------------------------------------*/
 public:
-    // Default constructor
-    PassThruControl() : control(this) { }
-
-    // Constructor with initialization of Control
-    PassThruControl(ControlPtr c)
-        : control(this, c) { }
-
-    // Constructor with initialization of component name
-    PassThruControl(const string &nm)
+    // Default constructor with optional component name
+    explicit PassThruControl(const string &nm = "")
         : control(this) { name = nm; }
 
-    // Constructor with Control and component name
-    PassThruControl(ControlPtr c, const string &nm)
+    // Constructor with initialization of Control
+    explicit PassThruControl(ControlPtr c, const string &nm = "")
         : control(this, c) { name = nm; }
 
     // The Control that we're wrapping
@@ -74,48 +67,57 @@ public:
 
 
 /*---------------------------------------------------------------------------*
- | WidgetPartContainer function to propagate redisplay requests
+ | WidgetPartContainer functions
  *---------------------------------------------------------------------------*/
 public:
     // Pass redisplay requests up to my parent
-    void redisplay(WidgetPartPtr w) { requestRedisplay(); }
+    void redisplay(WidgetPartConstPtr w) const { requestRedisplay(); }
+
+    // My sub-widget has same dimensions as me
+    Dimension getSize(WidgetPartConstPtr wp) const { return size; }
 
 
 /*---------------------------------------------------------------------------*
  | Control-related events (passed-thru to the wrapped Control, if there is one)
  *---------------------------------------------------------------------------*/
 public:
-    void keyPressed(KeyCode k, Point p) {
+    void keyPressed(KeyCode k, Pixel p) {
+        BasicControl::keyPressed(k, p);
         if (control) {
             control->setControlFlags(getControlFlags());    // Pass in my flags
             control->keyPressed(k, p);
         }
     }
-    void mouseTracked(Point p) {
+    void mouseTracked(Pixel p) {
+        BasicControl::mouseTracked(p);
         if (control) {
             control->setControlFlags(getControlFlags());    // Pass in my flags
             control->mouseTracked(p);
         }
     }
-    void mouseDragged(Point p) {
+    void mouseDragged(Pixel p) {
+        BasicControl::mouseDragged(p);
         if (control) {
             control->setControlFlags(getControlFlags());    // Pass in my flags
             control->mouseDragged(p);
         }
     }
-    void buttonPressed(MouseButton b, Point p) {
+    void buttonPressed(MouseButton b, Pixel p) {
+        BasicControl::buttonPressed(b, p);
         if (control) {
             control->setControlFlags(getControlFlags());    // Pass in my flags
             control->buttonPressed(b, p);
         }
     }
-    void buttonReleased(MouseButton b, Point p) {
+    void buttonReleased(MouseButton b, Pixel p) {
+        BasicControl::buttonReleased(b, p);
         if (control) {
             control->setControlFlags(getControlFlags());    // Pass in my flags
             control->buttonReleased(b, p);
         }
     }
-    void buttonClicked(MouseButton b, Point p) {
+    void buttonClicked(MouseButton b, Pixel p) {
+        BasicControl::buttonClicked(b, p);
         if (control) {
             control->setControlFlags(getControlFlags());    // Pass in my flags
             control->buttonClicked(b, p);

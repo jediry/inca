@@ -33,7 +33,7 @@ vector<GLUTWindow *> GLUTWindow::windowList;
 
 // Default window parameters
 const string                GLUTWindow::DEFAULT_TITLE("Inca GLUT Window");
-const GLUTWindow::Point     GLUTWindow::DEFAULT_POSITION(50, 50);
+const GLUTWindow::Pixel     GLUTWindow::DEFAULT_POSITION(50, 50);
 const GLUTWindow::Dimension GLUTWindow::DEFAULT_SIZE(400, 400);
 const GLUTWindow::Dimension GLUTWindow::DEFAULT_MINIMUM_SIZE(100, 100);
 const GLUTWindow::Dimension GLUTWindow::DEFAULT_MAXIMUM_SIZE(800, 800);
@@ -167,12 +167,12 @@ void GLUTWindow::visibility(int visible) { }
 // GLUT input callbacks
 void GLUTWindow::mouseMotion(int x, int y) {
     // Pass through a mouse movement
-    if (widget) widget->mouseDragged(Point(x, y));
+    if (widget) widget->mouseDragged(Pixel(x, y));
 }
 
 void GLUTWindow::passiveMotion(int x, int y) {
     // Pass through a mouse movement
-    if (widget) widget->mouseTracked(Point(x, y));
+    if (widget) widget->mouseTracked(Pixel(x, y));
 }
 
 void GLUTWindow::mouseButton(int button, int state, int x, int y) {
@@ -182,15 +182,15 @@ void GLUTWindow::mouseButton(int button, int state, int x, int y) {
         MouseButton b = translateMouseButton(button);
         if (state == GLUT_DOWN) {
             widget->addButtonFlag(b);
-            widget->buttonPressed(b, Point(x, y));
-            buttonTimer[b].reset();
-            buttonTimer[b].start();
+            widget->buttonPressed(b, Pixel(x, y));
+            buttonTimer[button].reset();
+            buttonTimer[button].start();
         } else {
             widget->removeButtonFlag(b);
-            widget->buttonReleased(b, Point(x, y));
-            buttonTimer[b].stop();
-            if (buttonTimer[b].time() < CLICK_DURATION)
-                widget->buttonClicked(b, Point(x, y));
+            widget->buttonReleased(b, Pixel(x, y));
+            buttonTimer[button].stop();
+            if (buttonTimer[button].time() < CLICK_DURATION)
+                widget->buttonClicked(b, Pixel(x, y));
         }
     }
 }
@@ -200,7 +200,7 @@ void GLUTWindow::key(unsigned char key, int x, int y) {
     if (widget) {
         KeyCode k = translateNormalKey(key);
         widget->setModifierFlags(glutGetModifiers());
-        widget->keyPressed(k, Point(x, y));
+        widget->keyPressed(k, Pixel(x, y));
     }
 }
 
@@ -209,7 +209,7 @@ void GLUTWindow::special(int key, int x, int y) {
     if (widget) {
         KeyCode k = translateSpecialKey(key);
         widget->setModifierFlags(glutGetModifiers());
-        widget->keyPressed(k, Point(x, y));
+        widget->keyPressed(k, Pixel(x, y));
     }
 }
 
@@ -242,7 +242,7 @@ MouseButton GLUTWindow::translateMouseButton(int button) {
 KeyCode GLUTWindow::translateNormalKey(unsigned char key) {
     KeyCode k;
 
-    cerr << "key is " << int(key) << endl;
+//    cerr << "key is " << int(key) << endl;
 
 //    // Since we're handling the Control key separately, we need to remap the
 //    // range '^a'..'^z' (0x01..0x1A) to 'a'..'z', a difference of 64 (0x70)
@@ -292,10 +292,10 @@ KeyCode GLUTWindow::translateNormalKey(unsigned char key) {
         }
     }
 
-    cerr << "Convert " << (glutGetModifiers() & ShiftModifier ? 'S' : ' ')
-                       << (glutGetModifiers() & ControlModifier ? 'C' : ' ')
-                       << (glutGetModifiers() & AltModifier ? 'C' : ' ')
-                       << int(key) << " -> " << int(k) << endl;
+//    cerr << "Convert " << (glutGetModifiers() & ShiftModifier ? 'S' : ' ')
+//                       << (glutGetModifiers() & ControlModifier ? 'C' : ' ')
+//                       << (glutGetModifiers() & AltModifier ? 'C' : ' ')
+//                       << int(key) << " -> " << int(k) << endl;
 
     return k;
 }
@@ -331,7 +331,7 @@ KeyCode GLUTWindow::translateSpecialKey(int key) {
             logger.warning();
             k = InvalidKey;
     }
-    cerr << "Convert " << int(key) << " -> " << int(k) << endl;
+//    cerr << "Convert " << int(key) << " -> " << int(k) << endl;
 
     return k;
 }
@@ -404,7 +404,7 @@ void GLUTWindow::restore() {
     }
 }
 
-void GLUTWindow::setPosition(Point p) {
+void GLUTWindow::setPosition(Pixel p) {
     glutPushWindow();                   // Save the previous window
         glutSetWindow(windowID);            // Pick this window
         glutPositionWindow(p[0], p[1]);     // Move it
@@ -485,5 +485,5 @@ GLUTWindow::Dimension GLUTWindow::getScreenSize() const {
     return d;
 }
 
-void GLUTWindow::requestRedisplay() { glutPostRedisplay(); }
+void GLUTWindow::requestRedisplay() const { glutPostRedisplay(); }
 

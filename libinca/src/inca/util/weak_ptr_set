@@ -73,8 +73,10 @@ public:
  | Iterator access
  *---------------------------------------------------------------------------*/
     // Why iterator and not const_iterator?
-    iterator begin() const { return iterator(container_type::begin()); }
-    iterator end()   const { return iterator(container_type::end()); }
+    iterator begin()       { return iterator(container_type::begin()); }
+    iterator end()         { return iterator(container_type::end()); }
+    iterator begin() const { return const_iterator(container_type::begin()); }
+    iterator end()   const { return const_iterator(container_type::end()); }
 
 
 /*---------------------------------------------------------------------------*
@@ -103,7 +105,7 @@ public:
     }
 
     size_type erase(shared_pointer ptr) {
-        container_type::erase(weak_pointer(ptr));
+        return container_type::erase(weak_pointer(ptr));
     }
 
     void erase(iterator first, iterator last) {

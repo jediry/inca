@@ -38,10 +38,10 @@ private:
 
 protected:
     // Non-public default constructor
-    View() { }
+    explicit View() { }
 
     // Non-public constructor with component name
-    View(const string &nm) { name = nm; }
+    explicit View(const string &nm) { name = nm; }
 
 public:
     // View callbacks

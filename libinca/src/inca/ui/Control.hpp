@@ -50,10 +50,10 @@ private:
  *---------------------------------------------------------------------------*/
 protected:
     // Non-public default constructor
-    Control() : controlFlags(0x0000) { }
+    explicit Control() : controlFlags(0x0000) { }
 
     // Non-public constructor with component name
-    Control(const string &nm) : controlFlags(0x0000) { name = nm; }
+    explicit Control(const string &nm) : controlFlags(0x0000) { name = nm; }
 
 
 /*---------------------------------------------------------------------------*
@@ -76,12 +76,12 @@ protected:
  | control flags before calling the event handler.
  *---------------------------------------------------------------------------*/
 public:
-    virtual void keyPressed(KeyCode keycode, Point p) { }
-    virtual void mouseTracked(Point p) { }
-    virtual void mouseDragged(Point p) { }
-    virtual void buttonPressed(MouseButton b, Point p) { }
-    virtual void buttonReleased(MouseButton b, Point p) { }
-    virtual void buttonClicked(MouseButton b, Point p) { }
+    virtual void keyPressed(KeyCode keycode, Pixel p) = 0;
+    virtual void mouseTracked(Pixel p) = 0;
+    virtual void mouseDragged(Pixel p) = 0;
+    virtual void buttonPressed(MouseButton b, Pixel p) = 0;
+    virtual void buttonReleased(MouseButton b, Pixel p) = 0;
+    virtual void buttonClicked(MouseButton b, Pixel p) = 0;
 
 
 /*---------------------------------------------------------------------------*
@@ -112,11 +112,11 @@ public:
     bool allFlagsActive(ControlFlags f) const { return (f & ~controlFlags) == 0; }
     bool anyFlagsActive(ControlFlags f) const { return (f & controlFlags) != 0; }
     bool theseButtonsActive(ControlFlags f) const { return (f & AllButtons) == (controlFlags & AllButtons); }
-    bool allButtonsActive(ControlFlags f) const { return (f & ~controlFlags) & AllButtons == 0; }
-    bool anyButtonsActive(ControlFlags f) const { return (f & controlFlags) & AllButtons != 0; }
+    bool allButtonsActive(ControlFlags f) const { return ((f & ~controlFlags) & AllButtons) == 0; }
+    bool anyButtonsActive(ControlFlags f) const { return ((f & controlFlags) & AllButtons) != 0; }
     bool theseModifiersActive(ControlFlags f) const { return (f & AllModifiers) == (controlFlags & AllModifiers); }
-    bool allModifiersActive(ControlFlags f) const { return (f & ~controlFlags) & AllModifiers == 0; }
-    bool anyModifiersActive(ControlFlags f) const { return (f & controlFlags) & AllModifiers != 0; }
+    bool allModifiersActive(ControlFlags f) const { return ((f & ~controlFlags) & AllModifiers) == 0; }
+    bool anyModifiersActive(ControlFlags f) const { return ((f & controlFlags) & AllModifiers) != 0; }
 
     // Get a string representations of the active flags
     string printActiveFlags() const { return '[' + buttonFlagsString(controlFlags) + '-' + modifierFlagsString(controlFlags) + ']'; }

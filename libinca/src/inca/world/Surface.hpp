@@ -21,7 +21,8 @@ namespace inca {
         class Surface;
 
         // Pointer typedefs
-        typedef shared_ptr<Surface> SurfacePtr;
+        typedef shared_ptr<Surface>       SurfacePtr;
+        typedef shared_ptr<Surface const> SurfaceConstPtr;
     };
 };
 

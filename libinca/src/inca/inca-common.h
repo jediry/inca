@@ -79,12 +79,14 @@ namespace inca {
 // Include C++ STL and Boost containers
 #include <vector>
 #include <list>
+#include <set>
 #include <boost/multi_array.hpp>
 #include <inca/util/hash_container>     // Hash containers are non-standard
 namespace inca {
     using std::pair;
     using std::vector;
     using std::list;
+    using std::set;
     using boost::multi_array;
 
     // Import hash containers from whatever namespace they live in

@@ -20,7 +20,7 @@ namespace inca {
     template <bool cond, typename type = int> struct constraint {
         typedef type satisfied;
     };
-    template <> struct constraint<false> {
+    template <typename type> struct constraint<false, type> {
         /* No typedef, causes substitution failure */
     };
 

@@ -33,11 +33,11 @@ namespace inca {
 };
 
 // Import superclass definition
-#include "Widget.hpp"
+#include "BasicWidget.hpp"
 
 
-class inca::ui::PassThruWidget : public Widget,
-                                 public WidgetPartContainer {
+class inca::ui::PassThruWidget : public BasicWidget,
+                                 virtual public WidgetPartContainer {
 private:
     // Set this class up to contain properties
     PROPERTY_OWNING_OBJECT(PassThruWidget);
@@ -48,12 +48,12 @@ private:
  *---------------------------------------------------------------------------*/
 public:
     // Default constructor with an optional component name
-    PassThruWidget(const string &nm = "")
-        : Widget(nm), widget(this) { }
+    explicit PassThruWidget(const string &nm = "")
+        : widget(this) { name = nm; }
 
     // Constructor with explicit initialization of Widget
-    PassThruWidget(WidgetPtr w, const string &nm = "")
-        : Widget(nm), widget(this, w) { }
+    explicit PassThruWidget(WidgetPtr w, const string &nm = "")
+        : widget(this, w) { name = nm; }
 
     // The Widget that we're wrapping
     rw_ptr_property_custom_set(Widget, widget, NULL);
@@ -63,15 +63,21 @@ public:
         releaseWidgetPart(_widget); // Let the old Widget go
         _widget = value;            // Set the new Widget
         acquireWidgetPart(_widget); // Tell him we got 'im
+
+        // Make sure the widget knows what size he is
+        if (_widget) _widget->resizeView(size);
     }
 
 
 /*---------------------------------------------------------------------------*
- | WidgetPartContainer function to propagate redisplay requests
+ | WidgetPartContainer functions
  *---------------------------------------------------------------------------*/
 public:
     // Pass redisplay requests up to my parent
-    void redisplay(WidgetPartPtr w) { requestRedisplay(); }
+    void redisplay(WidgetPartConstPtr w) const { requestRedisplay(); }
+    
+    // My sub-widget has same dimensions as me
+    Dimension getSize(WidgetPartConstPtr w) const { return size; }
 
 
 /*---------------------------------------------------------------------------*
@@ -80,47 +86,56 @@ public:
 public:
     // View-inherited events
     void initializeView() {
+        BasicWidget::initializeView();
         if (widget) widget->initializeView();
     }
     void resizeView(Dimension size) {
+        BasicWidget::resizeView(size);
         if (widget) widget->resizeView(size);
     }
     void renderView() {
+        BasicWidget::renderView();
         if (widget) widget->renderView();
     }
 
     // Control-inherited events
-    void keyPressed(KeyCode k, Point p) {
+    void keyPressed(KeyCode k, Pixel p) {
+        BasicWidget::keyPressed(k, p);
         if (widget) {
             widget->setControlFlags(getControlFlags());    // Pass in my flags
             widget->keyPressed(k, p);
         }
     }
-    void mouseTracked(Point p) {
+    void mouseTracked(Pixel p) {
+        BasicWidget::mouseTracked(p);
         if (widget) {
             widget->setControlFlags(getControlFlags());    // Pass in my flags
             widget->mouseTracked(p);
         }
     }
-    void mouseDragged(Point p) {
+    void mouseDragged(Pixel p) {
+        BasicWidget::mouseDragged(p);
         if (widget) {
             widget->setControlFlags(getControlFlags());    // Pass in my flags
             widget->mouseDragged(p);
         }
     }
-    void buttonPressed(MouseButton b, Point p) {
+    void buttonPressed(MouseButton b, Pixel p) {
+        BasicWidget::buttonPressed(b, p);
         if (widget) {
             widget->setControlFlags(getControlFlags());    // Pass in my flags
             widget->buttonPressed(b, p);
         }
     }
-    void buttonReleased(MouseButton b, Point p) {
+    void buttonReleased(MouseButton b, Pixel p) {
+        BasicWidget::buttonReleased(b, p);
         if (widget) {
             widget->setControlFlags(getControlFlags());    // Pass in my flags
             widget->buttonReleased(b, p);
         }
     }
-    void buttonClicked(MouseButton b, Point p) {
+    void buttonClicked(MouseButton b, Pixel p) {
+        BasicWidget::buttonClicked(b, p);
         if (widget) {
             widget->setControlFlags(getControlFlags());    // Pass in my flags
             widget->buttonClicked(b, p);

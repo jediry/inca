@@ -46,20 +46,42 @@ class inca::ui::CompositeWidget : public Widget,
                                   public PassThruControl {
 public:
     // Default constructor with an optional component name
-    CompositeWidget(const string &nm = "")
+    explicit CompositeWidget(const string &nm = "")
         : Widget(nm) { }
 
     // Constructor with explicit initialization of View/Control
-    CompositeWidget(ViewPtr v, ControlPtr c, const string &nm = "")
+    explicit CompositeWidget(ViewPtr v, ControlPtr c, const string &nm = "")
         : PassThruView(v), PassThruControl(c), Widget(nm) { }
 
 
 /*---------------------------------------------------------------------------*
- | WidgetPartContainer function to propagate redisplay requests
+ | WidgetPartContainer functions
  *---------------------------------------------------------------------------*/
 public:
     // Pass redisplay requests up to my parent
-    void redisplay(WidgetPartPtr w) { requestRedisplay(); }
+    void redisplay(WidgetPartConstPtr w) const { requestRedisplay(); }
+
+    // My sub-widget has same dimensions as me
+    Dimension getSize(WidgetPartConstPtr wp) const { return BasicView::size; }
+
+
+/*---------------------------------------------------------------------------*
+ | Event-handling is passed up to the PassThru* superclasses (Widget is only
+ | around so that this can be used as a Widget subclass).
+ *---------------------------------------------------------------------------*/
+public:
+    // Things handled by PassThruView
+    void initializeView()           { PassThruView::initializeView(); }
+    void resizeView(Dimension size) { PassThruView::resizeView(size); }
+    void renderView()               { PassThruView::renderView(); }
+
+    // Things handled by PassThruControl
+    void keyPressed(KeyCode key, Pixel p) { PassThruControl::keyPressed(key, p); }
+    void mouseTracked(Pixel p) { PassThruControl::mouseTracked(p); }
+    void mouseDragged(Pixel p) { PassThruControl::mouseDragged(p); }
+    void buttonPressed(MouseButton b, Pixel p)  { PassThruControl::buttonPressed(b, p); }
+    void buttonReleased(MouseButton b, Pixel p) { PassThruControl::buttonReleased(b, p); }
+    void buttonClicked(MouseButton b, Pixel p)  { PassThruControl::buttonClicked(b, p); }
 };
 
 #endif

@@ -57,10 +57,10 @@ private:
  *---------------------------------------------------------------------------*/
 public:
     // Default constructor with optional component name
-    CameraControl(const string &nm = "");
+    explicit CameraControl(const string &nm = "");
 
     // Constructor initializing camera
-    CameraControl(CameraPtr c, const string &nm = "");
+    explicit CameraControl(CameraPtr c, const string &nm = "");
 
     // The camera we're controlling
     rw_ptr_property(Camera, camera, NULL);
@@ -88,11 +88,11 @@ public:
  | Event-handling functions
  *---------------------------------------------------------------------------*/
 public:
-    void mouseDragged(Point p);
-    void buttonPressed(MouseButton button, Point p);
+    void mouseDragged(Pixel p);
+    void buttonPressed(MouseButton button, Pixel p);
 
 protected:
-    Point mousePosition;    // Last recorded mouse coordinates
+    Pixel mousePosition;    // Last recorded mouse coordinates
 
 
 /*---------------------------------------------------------------------------*

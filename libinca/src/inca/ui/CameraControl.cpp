@@ -86,30 +86,40 @@ void CameraControl::zoomCamera(int clicks) {
     }
 }
 
-void CameraControl::mouseDragged(Point p) {
+void CameraControl::mouseDragged(Pixel p) {
     // Figure out how far we've moved (flipping Y)
     int dx = p[0] - mousePosition[0],
         dy = mousePosition[1] - p[1];
 
-    if (theseFlagsActive(AltModifier | LeftButton))
-        lookCamera(dx, dy);
-    else if (theseFlagsActive(ControlModifier | AltModifier | LeftButton))
-        dollyCamera(dx + dy);
-    else if (theseFlagsActive(AltModifier | MiddleButton))
-        panCamera(dx, dy);
-    else if (theseFlagsActive(AltModifier | RightButton))
-        rollCamera(dx + dy);
-    else if (theseFlagsActive(WheelUp))
-        zoomCamera(1);
-    else if (theseFlagsActive(WheelDown))
-        zoomCamera(-1);
-
     // Update our saved coordinates
     mousePosition = p;
+
+    if (theseFlagsActive(ControlModifier | LeftButton)) {
+        lookCamera(dx, dy);
+        return;
+    } else if (theseFlagsActive(ControlModifier | AltModifier | LeftButton)) {
+        dollyCamera(dx + dy);
+        return;
+    } else if (theseFlagsActive(ControlModifier | MiddleButton)) {
+        panCamera(dx, dy);
+        return;
+    } else if (theseFlagsActive(ControlModifier | RightButton)) {
+        rollCamera(dx + dy);
+        return;
+    } else if (theseFlagsActive(ControlModifier | LeftButton | MiddleButton)) {
+        zoomCamera(dx + dy);
+        return;
+    }
+    
+    // If we got here, pass along the event
+    PassThruControl::mouseDragged(p);
 }
 
-void CameraControl::buttonPressed(MouseButton button, Point p) {
+void CameraControl::buttonPressed(MouseButton button, Pixel p) {
     // Store these as the current mouse coordinates
     mousePosition = p;
+    
+    // Let the superclass do its thing
+    PassThruControl::buttonPressed(button, p);
 }
 

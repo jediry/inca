@@ -23,7 +23,8 @@ namespace inca {
         class Scene;
 
         // Pointer typedefs
-        typedef shared_ptr<Scene> ScenePtr;
+        typedef shared_ptr<Scene>       ScenePtr;
+        typedef shared_ptr<Scene const> SceneConstPtr;
     };
 };
 

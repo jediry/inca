@@ -26,10 +26,14 @@ namespace inca {
         class SpotLight;
 
         // Pointer typedefs
-        typedef shared_ptr<Light>           LightPtr;
-        typedef shared_ptr<AmbientLight>    AmbientLightPtr;
-        typedef shared_ptr<PointLight>      PointLightPtr;
-        typedef shared_ptr<SpotLight>       SpotLightPtr;
+        typedef shared_ptr<Light>               LightPtr;
+        typedef shared_ptr<Light const>         LightConstPtr;
+        typedef shared_ptr<AmbientLight>        AmbientLightPtr;
+        typedef shared_ptr<AmbientLight const>  AmbientLightConstPtr;
+        typedef shared_ptr<PointLight>          PointLightPtr;
+        typedef shared_ptr<PointLight const>    PointLightConstPtr;
+        typedef shared_ptr<SpotLight>           SpotLightPtr;
+        typedef shared_ptr<SpotLight const>     SpotLightConstPtr;
     };
 };
 

@@ -33,10 +33,10 @@ namespace inca {
 };
 
 // Import superclass definition
-#include "View.hpp"
+#include "BasicView.hpp"
 
 
-class inca::ui::PassThruView : virtual public View,
+class inca::ui::PassThruView : public BasicView,
                                virtual public WidgetPartContainer {
 private:
     // Set this class up to contain properties
@@ -47,19 +47,12 @@ private:
  | Constructors & Properties
  *---------------------------------------------------------------------------*/
 public:
-    // Default constructor
-    PassThruView() : view(this) { }
-
-    // Constructor with initialization of View
-    PassThruView(ViewPtr v)
-        : view(this, v) { }
-
-    // Constructor with initialization of component name
-    PassThruView(const string &nm)
+    // Default constructor with optional component name
+    explicit PassThruView(const string &nm = "")
         : view(this) { name = nm; }
 
-    // Constructor with View and component name
-    PassThruView(ViewPtr v, const string &nm)
+    // Constructor with explicit initialization of View
+    explicit PassThruView(ViewPtr v, const string &nm = "")
         : view(this, v) { name = nm; }
 
     // The View that we're wrapping
@@ -74,11 +67,14 @@ public:
 
 
 /*---------------------------------------------------------------------------*
- | WidgetPartContainer function to propagate redisplay requests
+ | WidgetPartContainer functions
  *---------------------------------------------------------------------------*/
 public:
     // Pass redisplay requests up to my parent
-    void redisplay(WidgetPartPtr w) { requestRedisplay(); }
+    void redisplay(WidgetPartConstPtr w) const { requestRedisplay(); }
+
+    // My sub-widget has same dimensions as me
+    Dimension getSize(WidgetPartConstPtr wp) const { return size; }
 
 
 /*---------------------------------------------------------------------------*
@@ -86,13 +82,16 @@ public:
  *---------------------------------------------------------------------------*/
 public:
     void initializeView() {
-        if (view) view->initializeView();
+        BasicView::initializeView();        // Call base class implementation
+        if (view) view->initializeView();   // ...and pass along to sub-view
     }
     void resizeView(Dimension size) {
-        if (view) view->resizeView(size);
+        BasicView::resizeView(size);        // Call base class implementation
+        if (view) view->resizeView(size);   // ...and pass along to sub-view
     }
     void renderView() {
-        if (view) view->renderView();
+        BasicView::renderView();            // Getting tired of hearing this
+        if (view) view->renderView();       // yet? I could keep going...
     }
 };
 

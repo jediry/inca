@@ -118,6 +118,10 @@ namespace inca {
 #include <boost/preprocessor/repetition/repeat_from_to.hpp>
 #include <boost/preprocessor/repetition/enum_params.hpp>
 
+// Import template metaprogramming constraints
+#include <boost/type_traits.hpp>
+#include <inca/util/metaprogramming>
+
 // Import scalar_traits definition
 #include "scalar_types"
 
@@ -195,7 +199,7 @@ public:
         ostringstream ss;
         for (index_t i = start; i < end; i += stride) {
             ss << elements[i];
-            if (i + stride < end)  ss << ", ";
+            if (index_t(i + stride) < end)  ss << ", ";
         }
         return ss.str();
     }
@@ -269,107 +273,137 @@ public:
 };
 
 
-// This macro is used by the variable-arg-count constructors
+// These macros are used to instantiate the variable-arg-count constructors
 #define ASSIGN_ARG(Z, IDX, JUNK) elements[IDX] = e ## IDX;
-
-
-// This macro expands to create a partial template specialization of Point
-// with the dimension fixed. This trick is necessary to create ONLY the
-// appropriate scalar_t argument list constructors.
-#define INCA_MATH_POINT_TEMPLATE(Z, DIM, JUNK)                              \
-template <typename scalar>                                                  \
-class Point<scalar, DIM> : public ScalarList<scalar, DIM> {                 \
-public:                                                                     \
-    /* Scalar implementation typedefs */                                    \
-    INCA_MATH_SCALAR_TYPEDEFS(scalar, IS_WITHIN_TEMPLATE, /* */, /* */);    \
+#define PARAM_LIST_CONSTRUCTOR(Z, DIM, CLASS)                               \
+    explicit CLASS(BOOST_PP_ENUM_PARAMS(DIM, scalar_arg_t e)) {             \
+        /* Cause a compile-time failure if this constructor is used with    \
+         * an instance of the wrong dimensionality.                         \
+         */                                                                 \
+        BOOST_STATIC_ASSERT(DIM == dim);                                    \
                                                                             \
-    /** Default (no initialization) constructor. */                         \
-    explicit Point() { }                                                    \
-                                                                            \
-    /** Initialization from another list type */                            \
-    explicit Point(const ScalarList<scalar, DIM> &lst)                 \
-        : ScalarList<scalar, DIM>(lst) { }                             \
-                                                                            \
-    /** Constant initialization constructor. */                             \
-    explicit Point(scalar_arg_t e) {                                        \
-        for (index_t i = 0; i < size; i++)                                  \
-            elements[i] = e;                                                \
-    }                                                                       \
-                                                                            \
-    /** scalar_t array constructor. */                                      \
-    Point(scalar_t e[size]) {                                               \
-        for (index_t i = 0; i < size; i++)                                  \
-            elements[i] = e[i];                                             \
-    }                                                                       \
-                                                                            \
-    /**                                                                     \
-     * scalar_t argument list constructor. This constructor takes the       \
-     * same number of arguments as there are elements in the Vector.        \
-     */                                                                     \
-    explicit Point(BOOST_PP_ENUM_PARAMS(DIM, scalar_arg_t e)) {             \
+        /* Copy each paramter to its slot in the array */                   \
         BOOST_PP_REPEAT(DIM, ASSIGN_ARG, BOOST_PP_EMPTY);                   \
-    }                                                                       \
-                                                                            \
-    /**                                                                     \
-     * Cast to string representation.                                       \
-     * \returns a string like "(1.4, 3.5)"                                  \
-     */                                                                     \
-    operator std::string() const {                                          \
-        return string("(") + stringifyElements() + ")";                     \
-    }                                                                       \
+    }
+
+// This macro is a shortcut for a function constraint specifying that the first
+// type must be convertible to the second
+#define IS_CONVERTIBLE(T1, T2) typename constraint<boost::is_convertible<T1, T2>::satisfied = 0
+
+
+template <typename scalar, size_t dim>
+class inca::math::Point<scalar, dim> : public ScalarList<scalar, dim> {
+public:
+    /* Scalar implementation typedefs */
+    INCA_MATH_SCALAR_TYPEDEFS(scalar, IS_WITHIN_TEMPLATE, /* */, /* */);
+
+    /** Default (no initialization) constructor. */
+    explicit Point() { }
+
+    /** Initialization from another list type */
+    explicit Point(const ScalarList<scalar, dim> &lst)
+        : ScalarList<scalar, dim>(lst) { }
+
+    /** Constant initialization constructor. */
+    explicit Point(scalar_arg_t e) {
+        for (index_t i = 0; i < size; i++)
+            elements[i] = e;
+    }
+ 
+    /** scalar_t array constructor. */
+    Point(scalar_t e[size]) {
+        for (index_t i = 0; i < size; i++)
+            elements[i] = e[i];
+    }
+
+    /**
+     * scalar_t argument list constructors. Each of these is intended to be used
+     * only with instances of the same dimensionality as there are arguments.
+     * Attempting to invoke a constructor for a different dimensionality will
+     * cause a compile-time failure.
+     */
+    BOOST_PP_REPEAT_FROM_TO(2, 9, PARAM_LIST_CONSTRUCTOR, Point);
+
+    /**
+     * Cross-scalar assignment constructor. This constructor accepts a Point of
+     * a different scalar type, provided that it has the same dimensionality
+     * and that its scalar type is convertible to this Point's type.
+     * FIXME This doesn't check compatibility of type!
+     */
+    template <typename scalar2>
+    Point(const Point<scalar2, dim> &p) {
+        for (index_t i = 0; i < size; ++i)
+            elements[i] = p[i];
+    }
+
+    /**
+     * Cast to string representation.
+     * \returns a string like "(1.4, 3.5)"
+     */
+    operator string() const {
+        return '(' + stringifyElements() + ')';
+    }
 };
 
 
-// This macro expands to create a partial template specialization of Vector
-// with the dimension fixed. This trick is necessary to create ONLY the
-// appropriate scalar_t argument list constructors.
-#define INCA_MATH_VECTOR_TEMPLATE(Z, DIM, JUNK)                             \
-template <typename scalar>                                                  \
-class Vector<scalar, DIM> : public ScalarList<scalar, DIM> {                \
-public:                                                                     \
-    /* Scalar implementation typedefs */                                    \
-    INCA_MATH_SCALAR_TYPEDEFS(scalar, IS_WITHIN_TEMPLATE, /* */, /* */);    \
-                                                                            \
-    /** Default (no initialization) constructor. */                         \
-    explicit Vector() { }                                                   \
-                                                                            \
-    /** Initialization from another list type */                            \
-    explicit Vector(const ScalarList<scalar, DIM> &lst)                     \
-        : ScalarList<scalar, DIM>(lst) { }                                  \
-                                                                            \
-    /** Initialization from another list type */                            \
-    explicit Vector(const Quaternion<scalar> &q) {                          \
-        /* We should complain bitterly if the dimension != 3 */             \
-        elements[0] = q[1]; elements[1] = q[2]; elements[2] = q[3];         \
-    }                                                                       \
-                                                                            \
-    /** Constant initialization constructor. */                             \
-    explicit Vector(scalar_arg_t e) {                                       \
-        for (index_t i = 0; i < size; i++)                                  \
-            elements[i] = e;                                                \
-    }                                                                       \
-                                                                            \
-    /** scalar_t array constructor. */                                      \
-    Vector(scalar_t e[size]) {                                              \
-        for (index_t i = 0; i < size; i++)                                  \
-            elements[i] = e[i];                                             \
-    }                                                                       \
-                                                                            \
-    /**                                                                     \
-     * scalar_t argument list constructor. This constructor takes the       \
-     * same number of arguments as there are elements in the Vector.        \
-     */                                                                     \
-    explicit Vector(BOOST_PP_ENUM_PARAMS(DIM, scalar_arg_t e)) {            \
-        BOOST_PP_REPEAT(DIM, ASSIGN_ARG, BOOST_PP_EMPTY);                   \
-    }                                                                       \
-                                                                            \
-    /**                                                                     \
-     * Cast to string representation.                                       \
-     * \returns a string like "(1.4, 3.5)"                                  \
-     */                                                                     \
-    operator std::string() const {                                          \
-        return string("(") + stringifyElements() + ")";                     \
-    }                                                                       \
+template <typename scalar, size_t dim>
+class inca::math::Vector<scalar, dim> : public ScalarList<scalar, dim> {
+public:
+    /* Scalar implementation typedefs */
+    INCA_MATH_SCALAR_TYPEDEFS(scalar, IS_WITHIN_TEMPLATE, /* */, /* */);
+
+    /** Default (no initialization) constructor. */
+    explicit Vector() { }
+
+    /** Initialization from another list type */
+    explicit Vector(const ScalarList<scalar, dim> &lst)
+        : ScalarList<scalar, dim>(lst) { }
+
+    /** Constant initialization constructor. */
+    explicit Vector(scalar_arg_t e) {
+        for (index_t i = 0; i < size; i++)
+            elements[i] = e;
+    }
+ 
+    /** scalar_t array constructor. */
+    Vector(scalar_t e[size]) {
+        for (index_t i = 0; i < size; i++)
+            elements[i] = e[i];
+    }
+
+    /** Initialization from another list type */
+    explicit Vector(const Quaternion<scalar> &q) {
+        /* We should complain bitterly if the dimension != 3 */
+        elements[0] = q[1]; elements[1] = q[2]; elements[2] = q[3];
+    }
+
+    /**
+     * scalar_t argument list constructors. Each of these is intended to be used
+     * only with instances of the same dimensionality as there are arguments.
+     * Attempting to invoke a constructor for a different dimensionality will
+     * cause a compile-time failure.
+     */
+    BOOST_PP_REPEAT_FROM_TO(2, 9, PARAM_LIST_CONSTRUCTOR, Vector);
+
+    /**
+     * Cross-scalar assignment constructor. This constructor accepts a Vector of
+     * a different scalar type, provided that it has the same dimensionality
+     * and that its scalar type is convertible to this Vector's type.
+     * FIXME This doesn't check compatibility of type!
+     */
+    template <typename scalar2>
+    Vector(const Vector<scalar2, dim> &p) {
+        for (index_t i = 0; i < size; ++i)
+            elements[i] = p[i];
+    }
+
+    /**
+     * Cast to string representation.
+     * \returns a string like "(1.4, 3.5)"
+     */
+    operator string() const {
+        return '(' + stringifyElements() + ')';
+    }
 };
 
 
@@ -612,10 +646,6 @@ public:                                                                     \
 // namespace block, due to a bug in GCC
 namespace inca {
     namespace math {
-        BOOST_PP_REPEAT_FROM_TO(MIN_DIMENSION, BOOST_PP_INC(MAX_DIMENSION),
-                                 INCA_MATH_POINT_TEMPLATE, BOOST_PP_EMPTY);
-        BOOST_PP_REPEAT_FROM_TO(MIN_DIMENSION, BOOST_PP_INC(MAX_DIMENSION),
-                                INCA_MATH_VECTOR_TEMPLATE, BOOST_PP_EMPTY);
         BOOST_PP_REPEAT_FROM_TO(MIN_DIMENSION, BOOST_PP_INC(MAX_DIMENSION),
                                 INCA_MATH_RAY_TEMPLATE, BOOST_PP_EMPTY);
 //        BOOST_PP_REPEAT_FROM_TO(MIN_DIMENSION, BOOST_PP_INC(MAX_DIMENSION),

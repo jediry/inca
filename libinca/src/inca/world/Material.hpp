@@ -25,7 +25,8 @@ namespace inca {
         class Material;
 
         // Pointer typedefs
-        typedef shared_ptr<Material> MaterialPtr;
+        typedef shared_ptr<Material>        MaterialPtr;
+        typedef shared_ptr<Material const>  MaterialConstPtr;
     };
 };
 

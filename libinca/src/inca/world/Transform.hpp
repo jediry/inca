@@ -35,7 +35,8 @@ namespace inca {
         class Transform;
 
         // Pointer typedefs
-        typedef shared_ptr<Transform> TransformPtr;
+        typedef shared_ptr<Transform>       TransformPtr;
+        typedef shared_ptr<Transform const> TransformConstPtr;
     };
 };
 

@@ -59,12 +59,12 @@ private:
 
 public:
     // Screen geometry typedefs
-    typedef math::Point<index_t, 2> Point;      // X,Y pair of integer coords
+    typedef math::Point<index_t, 2> Pixel;      // X,Y pair of integer coords
     typedef math::Vector<size_t, 2> Dimension;  // W,H pair of unsigned dims
 
 protected:
     // Default constructor
-    UIComponent();
+    explicit UIComponent();
 
 public:
     // Virtual destructor to ensure proper destruction of subclasses

@@ -80,7 +80,9 @@
         typedef TYPE &              reference;                              \
         typedef const TYPE &        const_reference;                        \
         typedef TYPE *              pointer;                                \
+        typedef TYPE const *        const_pointer;                          \
         typedef shared_ptr<TYPE>    shared_pointer;                         \
+        typedef shared_ptr<TYPE const> const_shared_pointer;                \
         typedef ThisType            Owner;
 
 
@@ -183,13 +185,24 @@
 
 #define PTR_PROPERTY_ACCESSORS(NAME)                                        \
     /* Getter operators and function */                                     \
-    operator shared_pointer()   const { return get(); }                     \
-    operator pointer()          const { return get().get(); }               \
-    pointer operator->()        const { return get().get(); }               \
-    operator const_reference()  const { return *get(); }                    \
+    operator shared_pointer()             { return get(); }                 \
+    operator const_shared_pointer() const { return get(); }                 \
+    operator pointer()                { return get().get(); }               \
+    operator const_pointer()    const { return get().get(); }               \
+    pointer       operator->()        { return get().get(); }               \
+    const_pointer operator->()  const { return get().get(); }               \
     operator       reference()        { return *get(); }                    \
-    shared_pointer operator()() const { return get(); }                     \
-    shared_pointer get() const {                                            \
+    operator const_reference()  const { return *get(); }                    \
+    shared_pointer       operator()()       { return get(); }               \
+    const_shared_pointer operator()() const { return get(); }               \
+    shared_pointer get() {                                                  \
+        if (!initialized) {    /* Handle the default argument */            \
+            initialized = true;                                             \
+            owner.set_ ## NAME(defaultValue);                               \
+        }                                                                   \
+        return owner.get_ ## NAME();                                        \
+    }                                                                       \
+    const_shared_pointer get() const {                                      \
         if (!initialized) {    /* Handle the default argument */            \
             initialized = true;                                             \
             owner.set_ ## NAME(defaultValue);                               \

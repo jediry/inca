@@ -10,9 +10,10 @@
 
 // Import class definition
 #include <inca/rendering.hpp>
-using namespace inca::rendering;
+#include <inca/world.hpp>
 using namespace inca::math;
 using namespace inca::imaging;
+using namespace inca::rendering;
 using namespace inca::world;
 
 
@@ -56,6 +57,14 @@ void OPEN_GL_API initialize() {
 //    glEnable(GL_RESCALE_NORMAL);
 }
 #endif
+
+void OPEN_GL_API check_for_error() {
+    GLenum code = glGetError();
+    if (code != GL_NO_ERROR)
+        cerr << gluErrorString(code) << endl;
+}
+
+
 /*---------------------------------------------------------------------------*
  | Framebuffer control functions
  *---------------------------------------------------------------------------*/
@@ -84,7 +93,6 @@ void OPEN_GL_API framebuffer(index_t x, index_t y) const {
 void OPEN_GL_API resize_framebuffer(size_t w, size_t h) {
     // Set up the clipping rectangle accordingly
     glViewport(0, 0, w, h);
-    cerr << "new viewport size " << w << 'x' << h << endl;
 }
 
 
@@ -203,22 +211,61 @@ FillMode OPEN_GL_API fill_mode() {
 
 
 /*---------------------------------------------------------------------------*
- | Transformation matrix functions (TI)
+ | Transformation matrix functions
  *---------------------------------------------------------------------------*/
 template <>
 void OPEN_GL_API select_projection_matrix() { glMatrixMode(GL_PROJECTION); }
 template <>
 void OPEN_GL_API select_transformation_matrix() { glMatrixMode(GL_MODELVIEW); }
 template <>
-void OPEN_GL_API reset_selected_matrix() { glLoadIdentity(); }
+void OPEN_GL_API reset_matrix() { glLoadIdentity(); }
 template <>
 void OPEN_GL_API push_matrix() { glPushMatrix(); }
 template <>
 void OPEN_GL_API pop_matrix() { glPopMatrix(); }
 
+template <>
+void OPEN_GL_API multiply_matrix(const Matrix &m) {
+    glMultMatrixd(m.contents());
+}
+
+template <>
+void OPEN_GL_API save_projection_matrix(Matrix &m) {
+    glGetDoublev(GL_PROJECTION_MATRIX, m.contents());
+}
+//void load_projection_matrix(const Matrix &m) {
+//    select_projection_matrix
+//void save_transformation_matrix(Matrix &m);
+//void load_transformation_matrix(const Matrix &m);
+
+template <>
+void OPEN_GL_API apply_orthographic_projection(const Vector2D &extents,
+                                               const Vector2D &clipping) {
+    scalar_t dx = extents[0] / 2.0,
+             dy = extents[1] / 2.0;
+    glOrtho(-dx, dx, -dy, dy, clipping[0], clipping[1]);
+}
+
+template <>
+void OPEN_GL_API apply_perspective_projection(const Vector2D &angles,
+                                              const Vector2D &clipping) {
+    scalar_t aspectRatio = angles[1] / angles[0];
+    gluPerspective(radiansToDegrees(angles[1]), aspectRatio,
+                   clipping[0], clipping[1]);
+}
+
+template <>
+void OPEN_GL_API apply_picking_projection(const Point2D &center,
+                                          const Vector2D &size) {
+    // Get the viewport extents
+    math::Vector<GLint, 4> viewport;
+    glGetIntegerv(GL_VIEWPORT, viewport.contents());
+
+    gluPickMatrix(center[0], center[1], size[0], size[1], viewport.contents());
+}
+
 template <> template <>
-void immediate_mode_rendering_api<inca::rendering::OpenGL>
-    ::apply_translation<float, 3>(const ScalarList<float, 3> &t) {
+void OPEN_GL_API apply_translation<float, 3>(const ScalarList<float, 3> &t) {
         glTranslatef(t[0], t[1], t[2]);
 }
 
@@ -279,45 +326,130 @@ void OPEN_GL_API unapply_scaling<double, 3>(const ScalarList<double, 3> &s) {
 }
 
 template <> template <>
-void OPEN_GL_API apply_orthographic_projection<float>(
-                const math::Vector<float, 2> &extents,
-                const math::Vector<float, 2> &clipping) {
-    float dx = extents[0] / 2.0f,
-          dy = extents[1] / 2.0f;
-    glOrtho(-dx, dx, -dy, dy, clipping[0], clipping[1]);
+void OPEN_GL_API transform(const math::Point<double, 3> &world,
+                                 math::Point<double, 3> &local) {
+
 }
 
 template <> template <>
-void OPEN_GL_API apply_orthographic_projection<double>(
-                const math::Vector<double, 2> &extents,
-                const math::Vector<double, 2> &clipping) {
-    double dx = extents[0] / 2.0,
-           dy = extents[1] / 2.0;
-    cerr << "OpenGL ortho projection (" << -dx << ", " << dx << ", " << -dy << ", " << dy << ", " << clipping[0] << ", " << clipping[1] << endl;
-    glOrtho(-dx, dx, -dy, dy, clipping[0], clipping[1]);
+void OPEN_GL_API untransform(const math::Point<double, 3> &local,
+                                   math::Point<double, 3> &world) {
+
 }
 
 template <> template <>
-void OPEN_GL_API apply_perspective_projection<float>(
-                const math::Vector<float, 2> &angles,
-                const math::Vector<float, 2> &clipping) {
-    float aspectRatio = angles[1] / angles[0];
-    gluPerspective(radiansToDegrees(angles[1]), aspectRatio,
-                   clipping[0], clipping[1]);
+void OPEN_GL_API project(const math::Point<double, 3> &world,
+                               math::Point<double, 3> &screen) {
+
+    // Get ahold of the projection & modelview matrices from GL
+    math::Matrix<GLdouble, 4, 4, false> projection, modelview;
+    glGetDoublev(GL_MODELVIEW_MATRIX, modelview.contents());
+    glGetDoublev(GL_PROJECTION_MATRIX, projection.contents());
+    
+    // Get the viewport extents
+    math::Vector<GLint, 4> viewport;
+    glGetIntegerv(GL_VIEWPORT, viewport.contents());
+
+    // Project the point
+    gluProject(world[0], world[1], world[2],
+               modelview.contents(), projection.contents(),
+               viewport.contents(),
+               &(screen[0]), &(screen[1]), &(screen[2]));
 }
 
 template <> template <>
-void OPEN_GL_API apply_perspective_projection<double>(
-                const math::Vector<double, 2> &angles,
-                const math::Vector<double, 2> &clipping) {
-    double aspectRatio = angles[1] / angles[0];
-    gluPerspective(radiansToDegrees(angles[1]), aspectRatio,
-                   clipping[0], clipping[1]);
+void OPEN_GL_API unproject(const math::Point<double, 3> &screen,
+                                 math::Point<double, 3> &world) {
+
+    // Get ahold of the projection & modelview matrices from GL
+    math::Matrix<GLdouble, 4, 4, false> projection, modelview;
+    glGetDoublev(GL_MODELVIEW_MATRIX, modelview.contents());
+    glGetDoublev(GL_PROJECTION_MATRIX, projection.contents());
+    
+    // Get the viewport extents
+    math::Vector<GLint, 4> viewport;
+    glGetIntegerv(GL_VIEWPORT, viewport.contents());
+
+    // Unproject the point
+    gluUnProject(screen[0], screen[1], screen[2],
+                 modelview.contents(), projection.contents(),
+                 viewport.contents(),
+                 &(world[0]), &(world[1]), &(world[2]));
 }
 
 
 /*---------------------------------------------------------------------------*
- | True-immediate mode rendering functions (TI)
+ | Selection functions
+ *---------------------------------------------------------------------------*/
+// TODO: figure out how to do selection in a general way...
+const size_t thsb_size = 1000;
+GLuint totally_hacked_selection_buffer[thsb_size];
+GLint num_hit_records = 0;
+
+template <>
+void OPEN_GL_API enable_selection_mode(bool enabled) {
+    if (enabled) {
+        glSelectBuffer(thsb_size, totally_hacked_selection_buffer);
+        glRenderMode(GL_SELECT);    // Enter selection mode
+        cerr << "Enabling: ";
+        check_for_error();
+        cerr << endl;
+    } else
+        num_hit_records = glRenderMode(GL_RENDER);
+}
+
+template <>
+bool OPEN_GL_API is_selection_mode_enabled() {
+    GLint value;
+    glGetIntegerv(GL_RENDER_MODE, &value);
+    return (value == GL_SELECT);
+}
+
+template <>
+void OPEN_GL_API load_selected_ids(SelectionSet &s) {
+    if (num_hit_records < 0)
+        cerr << "Ack! selection buffer overflowed!\n";
+    else {
+        cerr << "There were " << num_hit_records << " hits\n";
+        for (index_t i = 0; i < 10; ++i)
+            cerr << totally_hacked_selection_buffer[i] << ' ';
+        cerr << endl;
+    }
+
+    check_for_error();
+    index_t recordStart = 0;  // Gives the base of the next hit record
+    for (index_t record = 0; record < num_hit_records; ++record) {
+        size_t count = totally_hacked_selection_buffer[recordStart];
+        if (count != 1)
+            cerr << "- Uh oh! hierarchical selection not supported: "
+                 << count << " names on stack!\n";
+        else
+            cerr << "+ Selected: " << totally_hacked_selection_buffer[recordStart + 3] << endl;
+        s.select(totally_hacked_selection_buffer[recordStart + 3]);
+        recordStart += 3 + count;
+    }
+    cerr << endl;
+    check_for_error();
+}
+
+template <>
+void OPEN_GL_API clear_selection_id_stack() {
+    glInitNames();
+    glPushName(0);
+}
+
+template <>
+void OPEN_GL_API set_selection_id(unsigned int id) { glLoadName(id); }
+
+template <>
+void OPEN_GL_API push_selection_id(unsigned int id) { glPushName(id); }
+
+template <>
+void OPEN_GL_API pop_selection_id() { glPopName(); }
+
+
+/*---------------------------------------------------------------------------*
+ | True-immediate mode rendering functions
  *---------------------------------------------------------------------------*/
 template <>
 void OPEN_GL_API begin_render_immediate(PrimitiveType type) {

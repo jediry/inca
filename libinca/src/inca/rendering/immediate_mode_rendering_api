@@ -36,12 +36,29 @@ namespace inca {
 
 template <typename api>
 struct inca::rendering::immediate_mode_rendering_api {
-    // Framebuffer control functions
+public:
+    // Geometric typedefs
+    INCA_MATH_SCALAR_TYPEDEFS(double, IS_WITHIN_TEMPLATE, /* */, /* */);
+    typedef inca::math::Point<scalar_t, 2>          Point2D;
+    typedef inca::math::Vector<scalar_t, 2>         Vector2D;
+    typedef inca::math::Matrix<double, 4, 4, false> Matrix;
+
+    static void check_for_error();
+
+
+/*---------------------------------------------------------------------------*
+ | Framebuffer control functions
+ *---------------------------------------------------------------------------*/
+public:
     static void allocate_offscreen_framebuffer();
     static void clear_framebuffer();
     static void resize_framebuffer(size_t w, size_t h);
 
-    // Rendering state control functions
+
+/*---------------------------------------------------------------------------*
+ | Rendering-state control functions
+ *---------------------------------------------------------------------------*/
+public:
     static void lock_z_buffer(bool locked);
     static bool is_z_buffer_locked();
     static void enable_z_buffer(bool enabled);
@@ -78,12 +95,29 @@ struct inca::rendering::immediate_mode_rendering_api {
     template <typename scalar_t, size_t dim>
     static void set_texture_coordinates(const math::Point<scalar_t, dim> &t);
 
-    // Transform functions
+
+/*---------------------------------------------------------------------------*
+ | Transformation matrix functions
+ *---------------------------------------------------------------------------*/
+public:
     static void select_projection_matrix();
     static void select_transformation_matrix();
-    static void reset_selected_matrix();
+    static void reset_matrix();
     static void push_matrix();
     static void pop_matrix();
+    static void multiply_matrix(const Matrix &m);
+
+    static void save_projection_matrix(Matrix &m);
+    static void load_projection_matrix(const Matrix &m);
+    static void save_transformation_matrix(Matrix &m);
+    static void load_transformation_matrix(const Matrix &m);
+
+    static void apply_orthographic_projection(const Vector2D &extents,
+                                              const Vector2D &clip);
+    static void apply_perspective_projection(const Vector2D &angles,
+                                             const Vector2D &clip);
+    static void apply_picking_projection(const Point2D &center,
+                                         const Vector2D &size);
 
     template <typename scalar_t, size_t dim>
     static void apply_translation(const math::ScalarList<scalar_t, dim> &t);
@@ -98,17 +132,41 @@ struct inca::rendering::immediate_mode_rendering_api {
     template <typename scalar_t, size_t dim>
     static void unapply_scaling(const math::ScalarList<scalar_t, dim> &s);
 
-    template <typename scalar_t>
-    static void apply_orthographic_projection(
-            const math::Vector<scalar_t, 2> &extents,
-            const math::Vector<scalar_t, 2> &clip);
+    template <typename scalar_t, size_t dim>
+    static void transform(const math::Point<scalar_t, dim> &world,
+                                math::Point<scalar_t, dim> &local);
 
-    template <typename scalar_t>
-    static void apply_perspective_projection(
-            const math::Vector<scalar_t, 2> &angles,
-            const math::Vector<scalar_t, 2> &clip);
+    template <typename scalar_t, size_t dim>
+    static void untransform(const math::Point<scalar_t, dim> &local,
+                                  math::Point<scalar_t, dim> &world);
 
-    // Rendering functions
+    template <typename scalar_t, size_t dim>
+    static void project(const math::Point<scalar_t, dim> &world,
+                              math::Point<scalar_t, dim> &screen);
+
+    template <typename scalar_t, size_t dim>
+    static void unproject(const math::Point<scalar_t, dim> &screen,
+                                math::Point<scalar_t, dim> &world);
+
+
+/*---------------------------------------------------------------------------*
+ | Selection functions
+ *---------------------------------------------------------------------------*/
+public:
+    static void enable_selection_mode(bool selection);
+    static bool is_selection_mode_enabled();
+    static void load_selected_ids(inca::world::SelectionSet &s);
+
+    static void clear_selection_id_stack();
+    static void set_selection_id(unsigned int id);
+    static void push_selection_id(unsigned int id);
+    static void pop_selection_id();
+
+
+/*---------------------------------------------------------------------------*
+ | Rendering functions
+ *---------------------------------------------------------------------------*/
+public:
     static void begin_render_immediate(PrimitiveType type);
     static void end_render_immediate();
 

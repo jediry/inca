@@ -13,8 +13,8 @@
 	<Configurations>
 		<Configuration
 			Name="Debug|Win32"
-			OutputDirectory="H:\lib"
-			IntermediateDirectory="C:\temp"
+			OutputDirectory="$(SolutionDir)\lib"
+			IntermediateDirectory="C:\Temp"
 			ConfigurationType="4"
 			CharacterSet="2"
 			ManagedExtensions="FALSE"
@@ -57,11 +57,12 @@
 		</Configuration>
 		<Configuration
 			Name="Release|Win32"
-			OutputDirectory="$(SolutionDir)$(ConfigurationName)"
-			IntermediateDirectory="$(ConfigurationName)"
+			OutputDirectory="$(SolutionDir)\lib"
+			IntermediateDirectory="C:\Temp"
 			ConfigurationType="4"
 			CharacterSet="2"
-			ManagedExtensions="TRUE">
+			ManagedExtensions="FALSE"
+			WholeProgramOptimization="TRUE">
 			<Tool
 				Name="VCCLCompilerTool"
 				AdditionalIncludeDirectories=".\src;.\3rd_party"
@@ -74,7 +75,8 @@
 			<Tool
 				Name="VCCustomBuildTool"/>
 			<Tool
-				Name="VCLibrarianTool"/>
+				Name="VCLibrarianTool"
+				AdditionalLibraryDirectories="H:\lib"/>
 			<Tool
 				Name="VCMIDLTool"/>
 			<Tool
@@ -132,7 +134,10 @@
 				Name="glut"
 				Filter="">
 				<File
-					RelativePath=".\src\inca\integration\glut\GLUTFramework.hpp">
+					RelativePath=".\src\inca\integration\glut\GLUTApplication.cpp">
+				</File>
+				<File
+					RelativePath=".\src\inca\integration\glut\GLUTApplication.hpp">
 				</File>
 				<File
 					RelativePath=".\src\inca\integration\glut\GLUTWindow.cpp">
@@ -236,9 +241,6 @@
 				RelativePath=".\src\inca\rendering\ImmediateModeRenderer">
 			</File>
 			<File
-				RelativePath=".\src\inca\rendering\Primitive.hpp">
-			</File>
-			<File
 				RelativePath=".\src\inca\rendering\Renderer.hpp">
 			</File>
 			<File
@@ -252,16 +254,70 @@
 			Name="ui"
 			Filter="">
 			<File
+				RelativePath=".\src\inca\ui\Application.cpp">
+			</File>
+			<File
+				RelativePath=".\src\inca\ui\Application.hpp">
+			</File>
+			<File
+				RelativePath=".\src\inca\ui\BasicControl.hpp">
+			</File>
+			<File
+				RelativePath=".\src\inca\ui\BasicView.hpp">
+			</File>
+			<File
+				RelativePath=".\src\inca\ui\BasicWidget.hpp">
+			</File>
+			<File
 				RelativePath=".\src\inca\ui\CameraControl.cpp">
 			</File>
 			<File
 				RelativePath=".\src\inca\ui\CameraControl.hpp">
 			</File>
 			<File
-				RelativePath=".\src\inca\ui\Framework.cpp">
+				RelativePath=".\src\inca\ui\CompositeWidget.hpp">
 			</File>
 			<File
-				RelativePath=".\src\inca\ui\Framework.hpp">
+				RelativePath=".\src\inca\ui\Control.hpp">
+			</File>
+			<File
+				RelativePath=".\src\inca\ui\event_types.hpp">
+			</File>
+			<File
+				RelativePath=".\src\inca\ui\MultiplexorWidget.cpp">
+			</File>
+			<File
+				RelativePath=".\src\inca\ui\MultiplexorWidget.hpp">
+			</File>
+			<File
+				RelativePath=".\src\inca\ui\PassThruControl.hpp">
+			</File>
+			<File
+				RelativePath=".\src\inca\ui\PassThruView.hpp">
+			</File>
+			<File
+				RelativePath=".\src\inca\ui\PassThruWidget.hpp">
+			</File>
+			<File
+				RelativePath=".\src\inca\ui\UIComponent.cpp">
+			</File>
+			<File
+				RelativePath=".\src\inca\ui\UIComponent.hpp">
+			</File>
+			<File
+				RelativePath=".\src\inca\ui\View.hpp">
+			</File>
+			<File
+				RelativePath=".\src\inca\ui\Widget.hpp">
+			</File>
+			<File
+				RelativePath=".\src\inca\ui\WidgetPart.cpp">
+			</File>
+			<File
+				RelativePath=".\src\inca\ui\WidgetPart.hpp">
+			</File>
+			<File
+				RelativePath=".\src\inca\ui\Window.hpp">
 			</File>
 		</Filter>
 		<Filter
@@ -272,9 +328,6 @@
 			</File>
 			<File
 				RelativePath=".\src\inca\util\IncaException.hpp">
-			</File>
-			<File
-				RelativePath=".\src\inca\util\ListenerNotifier">
 			</File>
 			<File
 				RelativePath=".\src\inca\util\Logger.hpp">
@@ -305,9 +358,24 @@
 			</File>
 			<File
 				RelativePath=".\src\inca\util\ustring.cpp">
+				<FileConfiguration
+					Name="Debug|Win32">
+					<Tool
+						Name="VCCLCompilerTool"
+						GeneratePreprocessedFile="0"/>
+				</FileConfiguration>
 			</File>
 			<File
 				RelativePath=".\src\inca\util\ustring.hpp">
+			</File>
+			<File
+				RelativePath=".\src\inca\util\weak_ptr_iterator">
+			</File>
+			<File
+				RelativePath=".\src\inca\util\weak_ptr_set">
+			</File>
+			<File
+				RelativePath=".\src\inca\util\wraparound_iterator">
 			</File>
 		</Filter>
 		<Filter
@@ -333,6 +401,12 @@
 			</File>
 			<File
 				RelativePath=".\src\inca\world\Scene.hpp">
+			</File>
+			<File
+				RelativePath=".\src\inca\world\SelectionSet.cpp">
+			</File>
+			<File
+				RelativePath=".\src\inca\world\SelectionSet.hpp">
 			</File>
 			<File
 				RelativePath=".\src\inca\world\Surface.hpp">
@@ -370,6 +444,9 @@
 		</File>
 		<File
 			RelativePath=".\src\inca\rendering.hpp">
+		</File>
+		<File
+			RelativePath=".\src\inca\ui.hpp">
 		</File>
 		<File
 			RelativePath=".\src\inca\world.hpp">

@@ -49,8 +49,8 @@ namespace inca {
 class inca::ui::WidgetPart : virtual public UIComponent {
 public:
     // Container typedefs
-    typedef weak_ptr_set<WidgetPartContainer>       WidgetPartContainerSet;
-    typedef hash_map<WidgetPartContainer *, bool>   WidgetPartContainerBoolMap;
+    typedef weak_ptr_set<WidgetPartContainer>     WidgetPartContainerSet;
+    typedef hash_map<WidgetPartContainer *, bool> WidgetPartContainerBoolMap;
 
 private:
     // self() function to get a shared_ptr to myself of the appropriate type
@@ -58,7 +58,7 @@ private:
 
 protected:
     // Protected constructor -- only allow subclasses
-    WidgetPart() { }
+    explicit WidgetPart() { }
 
 
 /*---------------------------------------------------------------------------*
@@ -73,14 +73,14 @@ public:
     void resumedBy(WidgetPartContainerPtr w);
 
     // This tells each container that we've changed and need displayin'
-    void requestRedisplay();
+    void requestRedisplay() const;
 
 protected:
     // Weak pointers to the Widgets who own me
-    WidgetPartContainerSet containers;
+    mutable WidgetPartContainerSet containers;// XXX This shouldn't have to be mutable!!
 
     // Whether I am an active WidgetPart in each Widget who owns me
-    WidgetPartContainerBoolMap isActiveIn;
+    mutable WidgetPartContainerBoolMap isActiveIn;
 };
 
 
@@ -91,10 +91,10 @@ private:
 
 protected:
     // Non-public default constructor
-    WidgetPartContainer() { }
+    explicit WidgetPartContainer() { }
 
     // Non-public constructor with component name
-    WidgetPartContainer(const string &nm) { name = nm; }
+    explicit WidgetPartContainer(const string &nm) { name = nm; }
 
     // WidgetPart event-firing functions for notifying WidgetParts when and how
     // we are using them.
@@ -107,7 +107,11 @@ protected:
 public:
     // This is called by the contained WidgetParts when they want to be
     // redisplayed by us. Subclasses must implement this.
-    virtual void redisplay(WidgetPartPtr wp) = 0;
+    virtual void redisplay(WidgetPartConstPtr wp) const = 0;
+    
+    // This is called by the WidgetParts in order to figure out the
+    // dimensions of the display area allotted to them.
+    virtual Dimension getSize(WidgetPartConstPtr wp) const = 0;
 };
 
 #endif

@@ -78,7 +78,7 @@ protected:
  *---------------------------------------------------------------------------*/
 public:
     // Constructor
-    Application();
+    explicit Application();
 
     // Call all of the other initialization functions
     void initialize(int &argc, char **argv);

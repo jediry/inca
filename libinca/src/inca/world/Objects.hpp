@@ -25,7 +25,8 @@ namespace inca {
         class Object;
 
         // Pointer typedefs
-        typedef shared_ptr<Object> ObjectPtr;
+        typedef shared_ptr<Object>       ObjectPtr;
+        typedef shared_ptr<Object const> ObjectConstPtr;
     };
 };
 
