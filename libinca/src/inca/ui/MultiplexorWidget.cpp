@@ -40,7 +40,7 @@ IndexType MultiplexorWidget::indexOf(WidgetConstPtr w) const {
 }
 
 // Return the index in the list of the first occurance of a Widget named 'nm'
-IndexType MultiplexorWidget::indexOf(const string &nm) const {
+IndexType MultiplexorWidget::indexOf(const std::string & nm) const {
     // Try to find the first occurance of this Widget
     for (IndexType i = 0; i < IndexType(widgets.size()); ++i)
         if (widgets[i] != NULL && widgets[i]->name() == nm)
@@ -104,7 +104,7 @@ bool MultiplexorWidget::removeWidget(WidgetPtr w) {
 }
 
 // Remove the first Widget named 'nm' (true means success)
-bool MultiplexorWidget::removeWidget(const string &nm) {
+bool MultiplexorWidget::removeWidget(const std::string & nm) {
     return removeWidget(indexOf(nm));
 }
 
@@ -139,8 +139,8 @@ bool MultiplexorWidget::selectWidget(WidgetConstPtr w) {
 }
 
 // Select a widget by name (if there are duplicates, select the first)
-bool MultiplexorWidget::selectWidget(const string &name) {
-    return selectWidget(indexOf(name));
+bool MultiplexorWidget::selectWidget(const std::string & nm) {
+    return selectWidget(indexOf(nm));
 }
 
 // Jump straight to a widget

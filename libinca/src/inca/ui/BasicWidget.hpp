@@ -31,14 +31,14 @@ namespace inca {
 #include "Widget.hpp"
 
 
-class inca::ui::BasicWidget : virtual public Widget {
+class inca::ui::BasicWidget : public Widget {
 private:
     // self() function to get a shared_ptr to myself of the appropriate type
     SHARED_PTR_TO_SELF(BasicWidget);
 
 public:
     // Default constructor with optional component name
-    explicit BasicWidget(const string &nm = "")
+    explicit BasicWidget(const std::string & nm = "")
         : size(0, 0) { name = nm; }
 
 

@@ -25,6 +25,8 @@
 // Import augmented enum mechanism
 #include <inca/util/Enumeration.hpp>
 
+#include <inca/math/scalar.hpp>
+
 // Import metaprogramming tools
 #include <inca/util/metaprogramming/is_collection.hpp>
 #include <inca/util/multi-dimensional-macros.hpp>
@@ -92,7 +94,7 @@ namespace inca {
 
             ElementType evaluate() const {
                 ElementType tmp = _elements[0];
-                for (IndexType i = 1; i < _elements.size(); ++i)
+                for (IndexType i = 1; i < IndexType(_elements.size()); ++i)
                     tmp += _elements[i];
                 return tmp / _elements.size();
             }
@@ -252,6 +254,11 @@ namespace inca {
 
                         return magnifier[d].evaluate();
                     }
+                    default:
+                        INCA_ERROR("ResampleOperatorRaster::evaluate(): "
+                                   "Unknown operation " << operation[d]
+                                   << " along dimension " << d)
+                        return ElementType();
                 }
             }
 

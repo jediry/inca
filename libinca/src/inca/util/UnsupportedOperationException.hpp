@@ -29,7 +29,7 @@ namespace inca {
     class UnsupportedOperationException : public StreamException {
     public:
         // Constructors
-        explicit UnsupportedOperationException(const string &msg = "")
+        explicit UnsupportedOperationException(const std::string & msg = "")
             : StreamException(msg) { }
     };
 }

@@ -113,7 +113,7 @@ class RasterIndexingFacet {
 
 template <class Derived, class Tags, class Types>
 class RasterIndexingFacet<Derived, Tags, Types,
-        ENABLE_IF_C( ! Tags::doValidityChecks ) > {
+        ENABLE_IF( NOT( BOOLEAN(Tags::doValidityChecks) ) ) > {
 /*---------------------------------------------------------------------------*
  | Type & constant declarations
  *---------------------------------------------------------------------------*/
@@ -159,8 +159,8 @@ protected:
 // The Derived class is not required to implement any functions.
 template <class Derived, class Tags, class Types>
 class RasterIndexingFacet <Derived, Tags, Types,
-        ENABLE_IF_C( Tags::doValidityChecks &&
-                   ! Tags::doCustomValidityChecks ) > {
+        ENABLE_IF( AND2( BOOLEAN(Tags::doValidityChecks),
+                         NOT( BOOLEAN(Tags::doCustomValidityChecks) ) ) ) > {
 /*---------------------------------------------------------------------------*
  | Type & constant declarations
  *---------------------------------------------------------------------------*/
@@ -268,8 +268,8 @@ protected:
 //          ValueType getValueForInvalidIndices(const IndexList & indices) const
 template <class Derived, class Tags, class Types>
 class RasterIndexingFacet <Derived, Tags, Types,
-        ENABLE_IF_C( Tags::doValidityChecks &&
-                     Tags::doCustomValidityChecks ) > {
+        ENABLE_IF( AND2( BOOLEAN(Tags::doValidityChecks),
+                         BOOLEAN(Tags::doCustomValidityChecks) ) ) > {
 /*---------------------------------------------------------------------------*
  | Type & constant declarations
  *---------------------------------------------------------------------------*/

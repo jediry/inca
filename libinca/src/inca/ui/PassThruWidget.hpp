@@ -51,11 +51,11 @@ private:
  *---------------------------------------------------------------------------*/
 public:
     // Default constructor with an optional component name
-    explicit PassThruWidget(const string &nm = "")
+    explicit PassThruWidget(const std::string & nm = "")
         : widget(this) { name = nm; }
 
     // Constructor with explicit initialization of Widget
-    explicit PassThruWidget(WidgetPtr w, const string &nm = "")
+    explicit PassThruWidget(WidgetPtr w, const std::string & nm = "")
         : widget(this, w) { name = nm; }
 
     // The Widget that we're wrapping

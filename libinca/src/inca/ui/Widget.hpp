@@ -43,7 +43,7 @@ protected:
     explicit Widget() { }
 
     // Non-public constructor with component name
-    explicit Widget(const string &nm) { name = nm; }
+    explicit Widget(const std::string & nm) { name = nm; }
 };
 
 #endif

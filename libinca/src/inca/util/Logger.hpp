@@ -73,9 +73,9 @@ public:
     #endif
 
     // Constructors
-    explicit Logger() : target(cout), indentLevel(0) { }
-    Logger(const Logger &l) : target(l.target), indentLevel(l.indentLevel) { }
-    explicit Logger(ostream &o) : target(o), indentLevel(0) { }
+    explicit Logger() : target(std::cout), indentLevel(0) { }
+    Logger(const Logger & l) : target(l.target), indentLevel(l.indentLevel) { }
+    explicit Logger(std::ostream & o) : target(o), indentLevel(0) { }
 
     // Functions for indenting nicely
     void increaseIndentLevel() { indentLevel++; }
@@ -84,17 +84,17 @@ public:
     void setIndentLevel(int level) { indentLevel = level; }
 
     // Function call trace functions
-    void traceCall(const string &function) {
+    void traceCall(const std::string & function) {
         if (loggerLevel >= Trace)
             target << "CALL   " << function << endl;
     }
 
-    void traceReturn(const string &function) {
+    void traceReturn(const std::string & function) {
         if (loggerLevel >= Trace)
             target << "RETURN " << function << endl;
     }
     
-    void traceThrow(const string &function) {
+    void traceThrow(const std::string & function) {
         if (loggerLevel >= Trace)
             target << "THROW  " << function << endl;
     }
@@ -141,7 +141,7 @@ public:
     }
 
 protected:
-    ostream & target;
+    std::ostream & target;
     int indentLevel;
 
 private:

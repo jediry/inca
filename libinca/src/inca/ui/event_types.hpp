@@ -79,8 +79,8 @@ namespace inca {
         // active modifiers and buttons.
         typedef unsigned short ControlFlags;
 
-        inline string buttonFlagsString(ControlFlags cf) {
-            string s("    ");   // Default to string of spaces
+        inline std::string buttonFlagsString(ControlFlags cf) {
+            std::string s("    ");   // Default to string of spaces
 
             // Fill in slots corresponding to active buttons
             if (cf & LeftButton)        s[0] = 'L';
@@ -92,8 +92,8 @@ namespace inca {
             return s;           // Report back to HQ
         }
 
-        inline string modifierFlagsString(ControlFlags cf) {
-            string s("   ");    // Default to string of spaces
+        inline std::string modifierFlagsString(ControlFlags cf) {
+            std::string s("   ");    // Default to string of spaces
 
             // Fill in slots corresponding to active modifier keys
             if (cf & ShiftModifier)     s[0] = 'S';
@@ -102,7 +102,7 @@ namespace inca {
 
             return s;           // Report back to HQ
         }
-    };
-};
+    }
+}
 
 #endif

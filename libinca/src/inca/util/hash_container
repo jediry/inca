@@ -101,9 +101,9 @@
         };
         
         template <>     // Lexical equality for C++-style strings
-        struct equal_to<string>
-                : public binary_function<string, string, bool> {
-            bool operator() (const string & s1, const string & s2) const {
+        struct equal_to<std::string>
+                : public binary_function<std::string, std::string, bool> {
+            bool operator() (const std::string & s1, const std::string & s2) const {
                 return s1 == s2;
             }
         };

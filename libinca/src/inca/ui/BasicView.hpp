@@ -38,7 +38,7 @@ private:
 
 public:
     // Default constructor with optional component name
-    explicit BasicView(const string &nm = "")
+    explicit BasicView(const std::string & nm = "")
         : size(0, 0) { name = nm; }
 
 

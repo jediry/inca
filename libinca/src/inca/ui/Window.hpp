@@ -6,6 +6,9 @@
  * Copyright 2004, Ryan L. Saunders. All rights reserved.
  *
  * Description:
+ *
+ * FIXME: you CANNOT add widgets inside the subclass constructor, since no
+ * shared_ptr has been constructed yet, and the self() function is not valid.
  */
 
 #ifndef INCA_UI_WINDOW
@@ -55,11 +58,11 @@ private:
  *---------------------------------------------------------------------------*/
 public:
     // Default constructor with optional component name
-    explicit Window(const string &nm = "")
+    explicit Window(const std::string & nm = "")
         : widget(this) { name = nm; }
 
     // Constructor specifying the Widget to display
-    explicit Window(WidgetPtr w, const string &nm = "")
+    explicit Window(WidgetPtr w, const std::string & nm = "")
         : widget(this, w) { name = nm; }
 
     // This is the widget that we're displaying
@@ -67,9 +70,9 @@ public:
 
     // Custom setter for property "widget"
     void ptr_property_set(Widget, widget) {
-        releaseWidgetPart(_widget); // Tell the old guy we're leaving him...
+//        releaseWidgetPart(_widget); // Tell the old guy we're leaving him...
         _widget = value;            // ...get the new guy...
-        acquireWidgetPart(_widget); // ...and tell him that he's ours
+//        acquireWidgetPart(_widget); // ...and tell him that he's ours
 
         // Tell the child Widget about its context
         if (_widget) {
@@ -119,8 +122,8 @@ public:
     virtual IDType getID() const = 0;
 
     // Window title
-    virtual string getTitle() const = 0;
-    virtual void setTitle(const string &title) = 0;
+    virtual std::string getTitle() const = 0;
+    virtual void setTitle(const std::string & title) = 0;
 
     // Window visibility state
     virtual bool isVisible() const = 0;

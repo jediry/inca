@@ -13,11 +13,11 @@
 	<Configurations>
 		<Configuration
 			Name="Debug|Win32"
-			OutputDirectory="C:\temp\Build\$(ConfigurationName)"
-			IntermediateDirectory="C:\temp\Build\$(ConfigurationName)"
+			OutputDirectory="C:\Temp\Build\$(ConfigurationName)"
+			IntermediateDirectory="C:\Temp\Build\$(ConfigurationName)\intermediate"
 			ConfigurationType="4"
 			CharacterSet="2"
-			ManagedExtensions="FALSE"
+			ManagedExtensions="TRUE"
 			WholeProgramOptimization="FALSE">
 			<Tool
 				Name="VCCLCompilerTool"
@@ -29,8 +29,9 @@
 				RuntimeLibrary="1"
 				ForceConformanceInForLoopScope="TRUE"
 				RuntimeTypeInfo="TRUE"
-				UsePrecompiledHeader="2"
+				UsePrecompiledHeader="0"
 				PrecompiledHeaderThrough="inca-common.h"
+				ProgramDataBaseFileName="$(OutDir)/vc70.pdb"
 				WarningLevel="3"
 				DebugInformationFormat="3"/>
 			<Tool
@@ -38,6 +39,7 @@
 			<Tool
 				Name="VCLibrarianTool"
 				AdditionalOptions="/LTCG"
+				OutputFile="$(OutDir)/$(ProjectName).lib"
 				AdditionalLibraryDirectories=""/>
 			<Tool
 				Name="VCMIDLTool"/>
@@ -60,12 +62,12 @@
 		</Configuration>
 		<Configuration
 			Name="Release|Win32"
-			OutputDirectory="C:\temp\Build\$(ConfigurationName)"
-			IntermediateDirectory="C:\temp\Build\$(ConfigurationName)"
+			OutputDirectory="C:\Temp\Build\$(ConfigurationName)"
+			IntermediateDirectory="C:\Temp\Build\$(ConfigurationName)\intermediate"
 			ConfigurationType="4"
 			CharacterSet="2"
-			ManagedExtensions="FALSE"
-			WholeProgramOptimization="TRUE">
+			ManagedExtensions="TRUE"
+			WholeProgramOptimization="FALSE">
 			<Tool
 				Name="VCCLCompilerTool"
 				GlobalOptimizations="TRUE"
@@ -78,6 +80,7 @@
 				RuntimeTypeInfo="TRUE"
 				UsePrecompiledHeader="0"
 				PrecompiledHeaderThrough=""
+				ProgramDataBaseFileName="$(OutDir)/vc70.pdb"
 				WarningLevel="3"
 				DebugInformationFormat="3"/>
 			<Tool
@@ -117,20 +120,23 @@
 			Name="raster"
 			Filter="">
 			<File
-				RelativePath=".\src\inca\raster\algorithms">
-			</File>
-			<File
-				RelativePath=".\src\inca\raster\concepts">
+				RelativePath=".\src\inca\raster\concepts.hpp">
 			</File>
 			<File
 				RelativePath=".\src\inca\raster\MultiArrayRaster">
 			</File>
 			<File
-				RelativePath=".\src\inca\raster\Raster">
+				RelativePath=".\src\inca\raster\MultiArrayViewRaster">
+			</File>
+			<File
+				RelativePath=".\src\inca\raster\RasterFacade">
 			</File>
 			<Filter
 				Name="operators"
 				Filter="">
+				<File
+					RelativePath=".\src\inca\raster\operators\angle">
+				</File>
 				<File
 					RelativePath=".\src\inca\raster\operators\arithmetic">
 				</File>
@@ -138,13 +144,16 @@
 					RelativePath=".\src\inca\raster\operators\blur">
 				</File>
 				<File
+					RelativePath=".\src\inca\raster\operators\clamp">
+				</File>
+				<File
 					RelativePath=".\src\inca\raster\operators\complex">
 				</File>
 				<File
-					RelativePath=".\src\inca\raster\operators\Dft">
+					RelativePath=".\src\inca\raster\operators\derivative">
 				</File>
 				<File
-					RelativePath=".\src\inca\raster\operators\gaussian">
+					RelativePath=".\src\inca\raster\operators\fourier">
 				</File>
 				<File
 					RelativePath=".\src\inca\raster\operators\gradient">
@@ -153,19 +162,122 @@
 					RelativePath=".\src\inca\raster\operators\hacked_in_lambda">
 				</File>
 				<File
+					RelativePath=".\src\inca\raster\operators\linear_map">
+				</File>
+				<File
+					RelativePath=".\src\inca\raster\operators\magnitude">
+				</File>
+				<File
 					RelativePath=".\src\inca\raster\operators\masking">
 				</File>
 				<File
-					RelativePath=".\src\inca\raster\operators\operator-bases">
+					RelativePath=".\src\inca\raster\operators\OperatorRasterBase">
 				</File>
 				<File
-					RelativePath=".\src\inca\raster\operators\selection">
+					RelativePath=".\src\inca\raster\operators\resample">
+				</File>
+				<File
+					RelativePath=".\src\inca\raster\operators\rotate">
+				</File>
+				<File
+					RelativePath=".\src\inca\raster\operators\select">
 				</File>
 				<File
 					RelativePath=".\src\inca\raster\operators\statistic">
 				</File>
+			</Filter>
+			<Filter
+				Name="generators"
+				Filter="">
 				<File
-					RelativePath=".\src\inca\raster\operators\transformation">
+					RelativePath=".\src\inca\raster\generators\array">
+				</File>
+				<File
+					RelativePath=".\src\inca\raster\generators\constant">
+				</File>
+				<File
+					RelativePath=".\src\inca\raster\generators\gaussian">
+				</File>
+				<File
+					RelativePath=".\src\inca\raster\generators\GeneratorRasterBase">
+				</File>
+				<File
+					RelativePath=".\src\inca\raster\generators\linear_fade">
+				</File>
+			</Filter>
+			<Filter
+				Name="algorithms"
+				Filter="">
+				<File
+					RelativePath=".\src\inca\raster\algorithms\apply">
+				</File>
+				<File
+					RelativePath=".\src\inca\raster\algorithms\copy">
+				</File>
+				<File
+					RelativePath=".\src\inca\raster\algorithms\fill">
+				</File>
+				<File
+					RelativePath=".\src\inca\raster\algorithms\find_edges">
+				</File>
+				<File
+					RelativePath=".\src\inca\raster\algorithms\find_isosurface_intersection">
+				</File>
+				<File
+					RelativePath=".\src\inca\raster\algorithms\find_ridges">
+				</File>
+				<File
+					RelativePath=".\src\inca\raster\algorithms\flood_fill">
+				</File>
+				<File
+					RelativePath=".\src\inca\raster\algorithms\scale_space_project">
+				</File>
+			</Filter>
+			<Filter
+				Name="concepts"
+				Filter="">
+				<File
+					RelativePath=".\src\inca\raster\concepts\ArbitrarySizeRasterConcept">
+				</File>
+				<File
+					RelativePath=".\src\inca\raster\concepts\FixedSizeRasterConcept">
+				</File>
+				<File
+					RelativePath=".\src\inca\raster\concepts\MovableRasterConcept">
+				</File>
+				<File
+					RelativePath=".\src\inca\raster\concepts\MutableSizeRasterConcept">
+				</File>
+				<File
+					RelativePath=".\src\inca\raster\concepts\RasterConcept">
+				</File>
+				<File
+					RelativePath=".\src\inca\raster\concepts\ReadableRasterConcept">
+				</File>
+				<File
+					RelativePath=".\src\inca\raster\concepts\ReadWriteRasterConcept">
+				</File>
+				<File
+					RelativePath=".\src\inca\raster\concepts\StationaryRasterConcept">
+				</File>
+				<File
+					RelativePath=".\src\inca\raster\concepts\WritableRasterConcept">
+				</File>
+			</Filter>
+			<Filter
+				Name="facets"
+				Filter="">
+				<File
+					RelativePath=".\src\inca\raster\facets\RasterAccessFacet">
+				</File>
+				<File
+					RelativePath=".\src\inca\raster\facets\RasterAssignmentFacet">
+				</File>
+				<File
+					RelativePath=".\src\inca\raster\facets\RasterBoundsFacet">
+				</File>
+				<File
+					RelativePath=".\src\inca\raster\facets\RasterIndexingFacet">
 				</File>
 			</Filter>
 		</Filter>
@@ -379,6 +491,16 @@
 					RelativePath=".\src\inca\math\linalg\Vector">
 				</File>
 			</Filter>
+			<Filter
+				Name="statistics"
+				Filter="">
+				<File
+					RelativePath=".\src\inca\math\statistics\ProbabilityMass">
+				</File>
+				<File
+					RelativePath=".\src\inca\math\statistics\Statistics">
+				</File>
+			</Filter>
 		</Filter>
 		<Filter
 			Name="rendering"
@@ -452,10 +574,7 @@
 				RelativePath=".\src\inca\ui\BasicWidget.hpp">
 			</File>
 			<File
-				RelativePath=".\src\inca\ui\CameraControl.cpp">
-			</File>
-			<File
-				RelativePath=".\src\inca\ui\CameraControl.hpp">
+				RelativePath=".\src\inca\ui\CameraNavigationWidget.cpp">
 			</File>
 			<File
 				RelativePath=".\src\inca\ui\CameraNavigationWidget.hpp">
@@ -513,6 +632,15 @@
 				RelativePath=".\src\inca\util\Array">
 			</File>
 			<File
+				RelativePath=".\src\inca\util\Enumeration.hpp">
+			</File>
+			<File
+				RelativePath=".\src\inca\util\FlagSet">
+			</File>
+			<File
+				RelativePath=".\src\inca\util\GeneticAlgorithm">
+			</File>
+			<File
 				RelativePath=".\src\inca\util\hash_container">
 			</File>
 			<File
@@ -522,19 +650,25 @@
 				RelativePath=".\src\inca\util\multi-dimensional-macros.hpp">
 			</File>
 			<File
+				RelativePath=".\src\inca\util\multi_dimensional_iterator_facade.hpp">
+			</File>
+			<File
 				RelativePath=".\src\inca\util\MultiArray">
 			</File>
 			<File
-				RelativePath=".\src\inca\util\new_property.h">
+				RelativePath=".\src\inca\util\object_pool">
 			</File>
 			<File
-				RelativePath=".\src\inca\util\object_pool">
+				RelativePath=".\src\inca\util\OutOfBoundsException.hpp">
 			</File>
 			<File
 				RelativePath=".\src\inca\util\property">
 			</File>
 			<File
 				RelativePath=".\src\inca\util\random_access_list">
+			</File>
+			<File
+				RelativePath=".\src\inca\util\Region">
 			</File>
 			<File
 				RelativePath=".\src\inca\util\StreamException.hpp">
@@ -546,9 +680,6 @@
 				RelativePath=".\src\inca\util\StreamTokenizer.hpp">
 			</File>
 			<File
-				RelativePath=".\src\inca\util\template-metaprogramming-macros.hpp">
-			</File>
-			<File
 				RelativePath=".\src\inca\util\Timer">
 			</File>
 			<File
@@ -556,12 +687,6 @@
 			</File>
 			<File
 				RelativePath=".\src\inca\util\ustring.cpp">
-				<FileConfiguration
-					Name="Debug|Win32">
-					<Tool
-						Name="VCCLCompilerTool"
-						GeneratePreprocessedFile="0"/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath=".\src\inca\util\ustring.hpp">
@@ -592,6 +717,19 @@
 				</File>
 				<File
 					RelativePath=".\src\inca\util\iterators\WraparoundIteratorAdapter">
+				</File>
+			</Filter>
+			<Filter
+				Name="metaprogramming"
+				Filter="">
+				<File
+					RelativePath=".\src\inca\util\metaprogramming\is_collection.hpp">
+				</File>
+				<File
+					RelativePath=".\src\inca\util\metaprogramming\macros.hpp">
+				</File>
+				<File
+					RelativePath=".\src\inca\util\metaprogramming\Nothing.hpp">
 				</File>
 			</Filter>
 		</Filter>
@@ -649,9 +787,6 @@
 		</File>
 		<File
 			RelativePath=".\src\inca\globals.cpp">
-		</File>
-		<File
-			RelativePath=".\src\inca\imaging.hpp">
 		</File>
 		<File
 			RelativePath=".\src\inca\inca-common.h">

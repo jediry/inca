@@ -220,7 +220,7 @@ ustring::operator double() const {
 
 //ustring::operator const char*() const { return ascii.c_str(); }
 
-ustring::operator string() const { return ascii; }
+ustring::operator const std::string &() const { return ascii; }
 
 ustring::operator const Unicode*() const {
     regenerateUnicode();
@@ -264,7 +264,7 @@ const ustring ustring::operator+(double d) const {
     sprintf(temp, "%f", d); // Convert to a char * string
     return ustring(ascii + temp);
 }
-const ustring ustring::operator+(const string &s) const {
+const ustring ustring::operator+(const std::string & s) const {
     return ustring(ascii + s);
 }
 const ustring ustring::operator+(const char * const s) const {
@@ -273,7 +273,7 @@ const ustring ustring::operator+(const char * const s) const {
 const ustring ustring::operator+(const Unicode * const s) const {
     return ustring((unicode + s).c_str());
 }
-const ustring ustring::operator+(const ustring &s) const {
+const ustring ustring::operator+(const ustring & s) const {
     return ustring(ascii + s.ascii);
 }
 
@@ -296,7 +296,7 @@ bool ustring::operator==(double d) const {
     return (d == number);
 }
 
-bool ustring::operator==(const string &s) const {
+bool ustring::operator==(const std::string & s) const {
     return (ascii == s);
 }
 
@@ -308,7 +308,7 @@ bool ustring::operator==(const Unicode *const s) const {
     return (*this == ustring(s));
 }
 
-bool ustring::operator==(const ustring &s) const {
+bool ustring::operator==(const ustring & s) const {
     return (ascii == s.ascii);
 }
 

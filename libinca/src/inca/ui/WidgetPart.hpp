@@ -116,14 +116,14 @@ protected:
     explicit WidgetPartContainer() { }
 
     // Non-public constructor with component name
-    explicit WidgetPartContainer(const string &nm) { name = nm; }
+    explicit WidgetPartContainer(const std::string & nm) { name = nm; }
 
     // WidgetPart event-firing functions for notifying WidgetParts when and how
     // we are using them.
-    void acquireWidgetPart(WidgetPartPtr wp) { if (wp) wp->acquired(self()); }
-    void releaseWidgetPart(WidgetPartPtr wp) { if (wp) wp->released(); }
-    void activateWidgetPart(WidgetPartPtr wp){ if (wp) wp->activated(); }
-    void suspendWidgetPart(WidgetPartPtr wp) { if (wp) wp->suspended(); }
+    void acquireWidgetPart(WidgetPartPtr wp)  { if (wp) wp->acquired(self()); }
+    void releaseWidgetPart(WidgetPartPtr wp)  { if (wp) wp->released(); }
+    void activateWidgetPart(WidgetPartPtr wp) { if (wp) wp->activated(); }
+    void suspendWidgetPart(WidgetPartPtr wp)  { if (wp) wp->suspended(); }
 
 public:
     // This is called by the contained WidgetParts when they want to be

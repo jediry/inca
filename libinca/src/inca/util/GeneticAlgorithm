@@ -54,7 +54,7 @@ namespace inca {
  * The listener interface that objects wishing to be informed of the progress
  * of the GA must implement.
  */
-class terrainosaurus::GeneticAlgorithmListener { };
+class inca::GeneticAlgorithmListener { };
 
 
 /**
@@ -129,7 +129,7 @@ public:
 
     // Sentinel value indicating that an operator should share any
     // unclaimed probability (the default for added operators)
-    static const Scalar REMAINDER = PMF::REMAINDER;
+    static const int REMAINDER = PMF::REMAINDER;
 
     // Comparison functor for sorting a FitnessMap by fitness
     struct FitnessMapGreaterThan {
@@ -776,7 +776,7 @@ public:
         IndexType mateIndex;
         do {
             mateIndex = randomIndex();
-        } while(mateIndex != index);
+        } while(mateIndex == index);
         return chromosome(mateIndex);
     }
 

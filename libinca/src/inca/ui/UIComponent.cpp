@@ -21,3 +21,8 @@ UIComponent::UIComponent() : name(this) {
     Application::instance().registerComponent(UIComponentPtr(this));
 }
 
+bool UIComponent::selfPointerValid() const {
+    INCA_DEBUG("Use count " << this->_internal_weak_this.use_count())
+    INCA_DEBUG("Testing self? " << int(! this->_internal_weak_this.expired()))
+    return ! this->_internal_weak_this.expired();
+}

@@ -44,7 +44,7 @@ public:
     }
 
     // Input methods XXX
-    void setType(const string &s);
+    void setType(const std::string &s);
     void setIOR(GeometricScalar::arg_type _ior) { ior = _ior; }
     scalar_t getIOR() const { return ior; }
 
@@ -102,7 +102,7 @@ protected:
         reflectivity << *zero;
         transparency << *zero;
 
-/*        string initialSetup =
+/*        std::string initialSetup =
             // Our material is medium gray
             "illuminatedColor = [0.5, 0.5, 0.5, 1.0];\n"
             // Shadow area is the same hue

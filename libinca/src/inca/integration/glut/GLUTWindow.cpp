@@ -30,7 +30,7 @@ using namespace inca::ui;
  | Window layout defaults
  *---------------------------------------------------------------------------*/
 // Default window parameters
-const string                GLUTWindow::DEFAULT_TITLE("Inca GLUT Window");
+const std::string           GLUTWindow::DEFAULT_TITLE("Inca GLUT Window");
 const GLUTWindow::Pixel     GLUTWindow::DEFAULT_POSITION(50, 50);
 const GLUTWindow::Dimension GLUTWindow::DEFAULT_SIZE(400, 400);
 const GLUTWindow::Dimension GLUTWindow::DEFAULT_MINIMUM_SIZE(100, 100);
@@ -110,7 +110,7 @@ void GLUTWindow::registerCallbacks() {
  | Constructors & destructor
  *---------------------------------------------------------------------------*/
 // Default constructor
-GLUTWindow::GLUTWindow(const string &title)
+GLUTWindow::GLUTWindow(const std::string & title)
         : Window(title),
           position(DEFAULT_POSITION), size(DEFAULT_SIZE),
           minSize(DEFAULT_MINIMUM_SIZE), maxSize(DEFAULT_MAXIMUM_SIZE),
@@ -125,7 +125,7 @@ GLUTWindow::GLUTWindow(const string &title)
 }
 
 // Widget-specific constructor
-GLUTWindow::GLUTWindow(WidgetPtr w, const string &title)
+GLUTWindow::GLUTWindow(WidgetPtr w, const std::string & title)
         : Window(title),
           position(DEFAULT_POSITION), size(DEFAULT_SIZE),
           minSize(DEFAULT_MINIMUM_SIZE), maxSize(DEFAULT_MAXIMUM_SIZE),
@@ -224,10 +224,12 @@ void GLUTWindow::special(int key, int x, int y) {
 // GLUT display callbacks
 void GLUTWindow::overlayDisplay() { /* Do nothing right now */ }
 void GLUTWindow::display() {
-    if (widget) {
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    INCA_DEBUG("Widget is now " << _widget.get() << ": " << _widget.use_count())
+    if (_widget) {
         renderer().beginFrame();
 
-            widget->renderView();
+            _widget->renderView();
 
         renderer().endFrame();
         glutSwapBuffers();
@@ -350,7 +352,7 @@ KeyCode GLUTWindow::translateSpecialKey(int key) {
 /*---------------------------------------------------------------------------*
  | Window control functions
  *---------------------------------------------------------------------------*/
-void GLUTWindow::setTitle(const string &title) {
+void GLUTWindow::setTitle(const std::string & title) {
     glutPushWindow();                   // Save the previous window
         glutSetWindow(windowID);            // Pick this window
         glutSetWindowTitle(title.c_str());  // Change the title

@@ -23,7 +23,7 @@ using namespace inca::math;
 
 
 // Default constructor with optional component name
-CameraNavigationWidget::CameraNavigationWidget(const string &nm)
+CameraNavigationWidget::CameraNavigationWidget(const std::string & nm)
     : PassThruWidget(nm), camera(this),
       lateralMotionScale(this), longitudinalMotionScale(this), verticalMotionScale(this),
       panScale(this), dollyScale(this), lookScale(this), zoomScale(this),
@@ -33,7 +33,8 @@ CameraNavigationWidget::CameraNavigationWidget(const string &nm)
       enablePitch(this), enableYaw(this), enableZoom(this) { }
 
 // Constructor initializing camera
-CameraNavigationWidget::CameraNavigationWidget(CameraPtr c, const string &nm)
+CameraNavigationWidget::CameraNavigationWidget(CameraPtr c,
+                                               const std::string & nm)
     : PassThruWidget(nm), camera(this, c),
       lateralMotionScale(this), longitudinalMotionScale(this), verticalMotionScale(this),
       panScale(this), dollyScale(this), lookScale(this), zoomScale(this),

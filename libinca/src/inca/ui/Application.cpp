@@ -9,7 +9,7 @@
  */
 
 // Import class definition
-#include "Application.hpp"
+#include <inca/ui/Application.hpp>
 using namespace inca;
 using namespace inca::ui;
 
@@ -75,7 +75,7 @@ void Application::initialize(int &argc, char **argv) {
  | Toolkit-integration functions
  *---------------------------------------------------------------------------*/
 // Cause the application to terminate
-void Application::exit(int status, const string &msg) {
+void Application::exit(int status, const std::string & msg) {
     std::cerr << msg << endl;   // Print out the message...
     ::exit(status);             // ...and bail out of the program
 };
@@ -107,8 +107,8 @@ void Application::destroyWindow(IDType id) {
  | Utility functions
  *---------------------------------------------------------------------------*/
 // Pull off the first command-line argument and remove it from the list
-string Application::shift(int &argc, char **&argv) {
-    string result;
+std::string Application::shift(int & argc, char ** & argv) {
+    std::string result;
     if (argc > 1) {
         result = argv[1];   // Save the first argument into a string
         for (IndexType i = 1; i < argc; ++i)  // Shuffle pointers for other args

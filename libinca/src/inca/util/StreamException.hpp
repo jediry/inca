@@ -35,7 +35,7 @@ namespace inca {
         virtual ~StreamException() throw() { }
 
         // Accessors
-        string message() const { return ss.str(); }
+        std::string message() const { return ss.str(); }
         const char * what() const throw() { return message().c_str(); }
 
         // << operator implementations

@@ -90,7 +90,7 @@ public:
      * \returns a string like "(1.4, 3.5) ->(0.0, 3.0)"
      */
     operator std::string() const {
-        return string(_position) + " ->" + _direction;
+        return std::string(_position) + " ->" + _direction;
     }
 
 protected:

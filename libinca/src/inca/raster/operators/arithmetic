@@ -149,7 +149,7 @@
     /* Two-raster operator overload */                                      \
     template <typename R0, typename R1>                                     \
     ENABLE_IF_T( AND2( is_writable_raster<R0>, is_raster<R1> ),             \
-    R0 & ) operator OP ## =(R0 r0, const R1 & r1) {                         \
+    R0 & ) operator OP ## =(R0 & r0, const R1 & r1) {                       \
         apply(CLASS ##_Raster<typename R0::WritableElementType,             \
                               typename R1::ReadableElementType>(), r0, r1); \
         return r0;                                                          \

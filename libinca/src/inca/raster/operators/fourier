@@ -89,7 +89,7 @@ namespace inca {
         // Time/space domain => frequency domain transformation operator
         INCA_RASTER_OPERATOR_CLASS_HEADER(DFTOperatorRaster,
                                           1, NIL,
-                                          std::complex<typename R0::ElementType> ) {
+                                          std::complex< typename R0::ElementType > ) {
         public:
             // We do NOT know how to work with an ArbitrarySizeRaster, so
             // scream "bloody murder" if we're instantiated with one.

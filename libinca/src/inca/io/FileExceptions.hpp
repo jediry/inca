@@ -48,26 +48,27 @@ namespace inca {
 class inca::io::FileException : public StreamException {
 public:
     // Constructors
-    explicit FileException(const string &file, const string &msg = "")
+    explicit FileException(const std::string & file,
+                           const std::string & msg = "")
         : StreamException(msg), _filename(file) { }
 
     // Destructor
     ~FileException() throw() { }
 
     // Accessors
-    const string & filename() const { return _filename; }
+    const std::string & filename() const { return _filename; }
 
 protected:
-    string _filename;
+    std::string _filename;
 };
 
 
 class inca::io::InvalidReferenceException : public FileException {
 public:
     // Constructors
-    explicit InvalidReferenceException(const string &file,
-                                       const string &ID,
-                                       const string &msg = "")
+    explicit InvalidReferenceException(const std::string & file,
+                                       const std::string & ID,
+                                       const std::string & msg = "")
                         : FileException(file, msg), _id(ID) {
         _reference = filename() + '#' + id();
 //        *this << reference << ": " << message;
@@ -77,19 +78,20 @@ public:
     ~InvalidReferenceException() throw() { }
 
     // Accessors
-    const string & reference() const { return _reference; }
-    const string & id() const { return _id; }
+    const std::string & reference() const { return _reference; }
+    const std::string & id() const { return _id; }
 
 protected:
-    string _id, _reference;
+    std::string _id, _reference;
 };
 
 
 class inca::io::FileFormatException : public FileException {
 public:
     // Constructors
-    explicit FileFormatException(const string &file, int lNo = 1, int cNo = 1,
-                                 const string &msg = "")
+    explicit FileFormatException(const std::string & file,
+                                 int lNo = 1, int cNo = 1,
+                                 const std::string & msg = "")
         : FileException(file, msg), _line(lNo), _column(cNo) { }
 
     // Destructor
@@ -109,8 +111,8 @@ protected:
 class inca::io::InvalidFileTypeException : public FileException {
 public:
     // Constructors
-    explicit InvalidFileTypeException(const string &file,
-                                      const string &msg = "")
+    explicit InvalidFileTypeException(const std::string & file,
+                                      const std::string & msg = "")
         : FileException(file, msg) { }
 
     // Destructor
@@ -121,7 +123,8 @@ public:
 class inca::io::FileAccessException : public FileException {
 public:
     // Constructors
-    explicit FileAccessException(const string &file, const string &msg = "")
+    explicit FileAccessException(const std::string & file, 
+                                 const std::string & msg = "")
         : FileException(file, msg) { }
 
     // Destructor

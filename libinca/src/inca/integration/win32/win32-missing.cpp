@@ -16,6 +16,11 @@
 
 // Import standard math functions
 #include <cmath>
+#include <float.h>
+
+bool std::isnan(float x)       { return _isnan(x) != 0; }
+bool std::isnan(double x)      { return _isnan(x) != 0; }
+bool std::isnan(long double x) { return _isnan(x) != 0; }
 
 // Windows doesn't have the appropriate round function for floats
 float roundf(float x) {

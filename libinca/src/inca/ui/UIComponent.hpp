@@ -77,7 +77,9 @@ public:
     virtual ~UIComponent() { }
 
     // This component's name
-    rw_property(string, name, "");
+    rw_property(std::string, name, "");
+
+    bool selfPointerValid() const;
 };
 
 #endif

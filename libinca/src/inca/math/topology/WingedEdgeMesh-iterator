@@ -280,7 +280,6 @@ namespace inca {
             result_type forward(pointer start, pointer current,
                                 edge_pointer edge, orbit_pointer orbit) {
                 // Advance, then see if we've hit the end
-                edge_pointer tempE;
                 edge_pointer nextE  = edge->edgeCCW(orbit);
                      pointer nextFV = edge->faceVertexCCW(orbit);
                 if (nextFV == start) return result_type(NULL, NULL);

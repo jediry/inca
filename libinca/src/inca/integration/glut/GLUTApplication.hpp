@@ -49,13 +49,13 @@ public:
  *---------------------------------------------------------------------------*/
 public:
     // Initialize the application
-    void initializeToolkit(int &argc, char **argv);
+    void initializeToolkit(int & argc, char ** argv);
 
     // Launch the application
     int run();
 
     // Exit the application
-    void exit(int status, const string &msg);
+    void exit(int status, const std::string & msg);
 };
 
 #endif

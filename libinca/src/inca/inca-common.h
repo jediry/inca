@@ -64,7 +64,7 @@ namespace inca {
 #include <iostream>
 #include <iomanip>
 namespace inca {
-    using std::string;
+//    using std::string;
     using std::cin;     using std::endl;
     using std::cout;    using std::dec;
     using std::cerr;    using std::hex;

@@ -56,16 +56,17 @@ namespace inca {
         protected:
             // Element evaluator function
             INCA_RASTER_OPERATOR_GET_ELEMENT_HEADER(indices) {
-/*                IndexArray idx(indices);
                 ElementType result;
+                IndexArray idx(indices);
+
+#if FWD_DIFF
                 typename R0::ElementType center = operand0(idx);   // cell at idx
                 for (IndexType d = 0; d < dimensionality; ++d) {
                     idx[d]++;       // Move to adjacent element along this dim
                     result[d] = (operand0(idx) - center) * scaleFactors[d];
                     idx[d]--;       // Return to center element
-                }*/
-                IndexArray idx(indices);
-                ElementType result;
+                }
+#elif SYMM_DIFF
                 for (IndexType d = 0; d < dimensionality; ++d) {
                     ++idx[d];       // Move to up-adjacent element along this dim
                     result[d] = operand0(idx);
@@ -74,6 +75,9 @@ namespace inca {
                     result[d] *= scaleFactors[d];
                     ++idx[d];       // Return to the center
                 }
+#else
+                result = ElementType(0);
+#endif
                 return result;
             }
 

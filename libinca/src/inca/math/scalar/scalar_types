@@ -111,7 +111,7 @@ public:
     typedef scalar_simple_specialization<scalar>    ss;
 
     // A human-readable string that identifies this scalar type
-    static string name() { return ss::name(); }
+    static std::string name() { return ss::name(); }
 
     // Scalar typedefs
     typedef scalar          value_type;     // The plain type
@@ -156,8 +156,8 @@ namespace inca {
     namespace math {
         // Default implementation
         template <typename scalar> struct scalar_simple_specialization {
-            static string name() {
-                return string("Unknown scalar type (")
+            static std::string name() {
+                return std::string("Unknown scalar type (")
                         + typeid(scalar).name() + ')';
             }
 
@@ -184,7 +184,7 @@ namespace inca {
 #define BUILTIN_TYPE_SPECIALIZATION(SCALAR, TOLERANCE)                      \
         template <> struct scalar_simple_specialization<SCALAR> {           \
             typedef ::std::numeric_limits<SCALAR> nl;                       \
-            static string name() { return #SCALAR; }                        \
+            static std::string name() { return #SCALAR; }                   \
             static SCALAR absolute_tolerance() { return (SCALAR)(TOLERANCE); }\
             static SCALAR relative_tolerance() { return (SCALAR)(TOLERANCE); }\
             static const bool pass_by_value = true;                         \

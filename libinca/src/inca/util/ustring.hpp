@@ -37,7 +37,7 @@ public:
     ustring(bool b);
     ustring(int i);
     ustring(double d);
-    ustring(const string &s);
+    ustring(const std::string &s);
     ustring(const char * const s);
     ustring(const Unicode * const s);
 
@@ -50,7 +50,7 @@ public:
     operator int() const;
     operator double() const;
 //    operator const char*() const;
-    operator string() const;
+    operator const std::string &() const;
     operator const Unicode*() const;
 
 protected:
@@ -66,7 +66,7 @@ public:
     const ustring operator+(bool b) const ;
     const ustring operator+(int i) const;
     const ustring operator+(double d) const;
-    const ustring operator+(const string &s) const;
+    const ustring operator+(const std::string &s) const;
     const ustring operator+(const char * const s) const;
     const ustring operator+(const Unicode * const s) const;
     const ustring operator+(const ustring &s) const;
@@ -79,15 +79,15 @@ public:
     bool operator==(bool b) const;
     bool operator==(int i) const;
     bool operator==(double d) const;
-    bool operator==(const string &s) const;
+    bool operator==(const std::string & s) const;
     bool operator==(const char * const s) const;
     bool operator==(const Unicode * const s) const;
-    bool operator==(const ustring &s) const;
+    bool operator==(const ustring & s) const;
 
     bool operator!=(bool b) const { return ! operator==(b); }
     bool operator!=(int i) const { return ! operator==(i); }
     bool operator!=(double d) const { return ! operator==(d); }
-    bool operator!=(const string &s) const { return ! operator==(s); }
+    bool operator!=(const std::string & s) const { return ! operator==(s); }
     bool operator!=(const char * const s) const { return ! operator==(s); }
     bool operator!=(const Unicode * const s) const {
         return ! operator==(s);
@@ -95,7 +95,7 @@ public:
     bool operator!=(const ustring &s) const { return ! operator==(s); }
 
 private:
-    string ascii;               // This is the "master" ascii
+    std::string ascii;          // This is the "master" ascii string
 
     mutable std::basic_string<Unicode> unicode;
     mutable double number;      // These are declared 'mutable' so that they

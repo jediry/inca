@@ -153,8 +153,8 @@
 
 
 #define OSTREAM_OP_A(RHS)                                                   \
-    ostream & operator<<(ostream &o, const RHS & rhs) {                     \
-        return o << string(rhs);                                            \
+    std::ostream & operator<<(std::ostream &o, const RHS & rhs) {           \
+        return o << std::string(rhs);                                       \
     }
 
 #define A_ASSIGN_A(LHS, OP, RHS)                                            \

@@ -80,7 +80,7 @@ namespace inca {
 
             // Calculate the differentials between scale levels (usually non-linear)
             ScaleList scaleDiffs(scales);
-            for (IndexType s = 0; s < scaleDiffs.size() - 1; ++s)
+            for (IndexType s = 0; s < IndexType(scaleDiffs.size() - 1); ++s)
                 scaleDiffs[s] = scaleDiffs[s + 1] - scaleDiffs[s];
             scaleDiffs[scaleDiffs.size() - 1] = scaleDiffs[scaleDiffs.size() - 2];
             ArrayGeneratorRaster<ScaleList, dimensionality>

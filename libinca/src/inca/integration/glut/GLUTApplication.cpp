@@ -32,7 +32,7 @@ GLUTApplication::GLUTApplication() { }
 GLUTApplication::~GLUTApplication() { }
 
 // Initialize GLUT
-void GLUTApplication::initializeToolkit(int &argc, char **argv) {
+void GLUTApplication::initializeToolkit(int & argc, char ** argv) {
     //Initialize GLUT
     glutInit(&argc, argv);
     glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA | GLUT_DEPTH);
@@ -45,7 +45,7 @@ int GLUTApplication::run() {
 }
 
 // Exit the application
-void GLUTApplication::exit(int status, const string &msg) {
-    cerr << msg << endl;
+void GLUTApplication::exit(int status, const std::string & msg) {
+    std::cerr << msg << endl;
     ::exit(status);
 }

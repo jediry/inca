@@ -77,7 +77,7 @@ public:
 
     // Hack me! Hack me!
 //    rw_ptr_property(Image, image, NULL);
-    void setImage(const string &filename);
+    void setImage(const std::string & filename);
 };
 
 #endif

@@ -40,7 +40,7 @@ public:
 
     // Special "don't care" value, indicating that this element evenly divides
     // any unclaimed probability mass with the other "don't care" elements
-    static const Scalar REMAINDER = -1;
+    static const int REMAINDER = -1;
 
     // Default (no-init) constructor
     explicit ProbabilityMass() : _isValid(false) { }

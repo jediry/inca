@@ -17,6 +17,9 @@
 #ifndef INCA_RASTER_CONCEPTS
 #define INCA_RASTER_CONCEPTS
 
+// Import system configuration
+#include <inca/inca-common.h>
+
 
 // Import Raster concept definitions and associated tags
 #include "concepts/RasterConcept"
@@ -55,6 +58,7 @@ namespace inca {
             typedef SizeType value_type;
             static const SizeType value = NothingValue;
         };
+#if 0
         template <typename T>
         struct raster_dimensionality<T, -1, ENABLE_IF( is_raster<T> ) > {
             // Specialization for raster (default NothingValue)
@@ -63,6 +67,7 @@ namespace inca {
             typedef SizeType value_type;
             static const SizeType value = T::dimensionality;
         };
+#endif
         template <typename T, inca::SizeType NothingValue>
         struct raster_dimensionality<T, NothingValue, ENABLE_IF( is_raster<T> ) > {
             // Specialization for raster (specifying NothingValue)
@@ -70,15 +75,6 @@ namespace inca {
             typedef raster_dimensionality type;
             typedef SizeType value_type;
             static const SizeType value = T::dimensionality;
-        };
-        template <typename T>
-        struct raster_dimensionality<T, -1,
-                ENABLE_IF( AND2( NOT( is_raster<T> ), NOT( is_nothing<T> ) ) ) > {
-            // Specialization for non-raster (default NothingValue)
-            typedef ::boost::mpl::integral_c_tag tag;
-            typedef raster_dimensionality type;
-            typedef SizeType value_type;
-            static const SizeType value = 0;
         };
         template <typename T, inca::SizeType NothingValue>
         struct raster_dimensionality<T, NothingValue,

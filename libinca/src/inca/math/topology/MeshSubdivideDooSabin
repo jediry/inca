@@ -89,10 +89,10 @@ public:
             typename Mesh::VertexPtrArray newVertices;
             typename Mesh::VertexPtr v;
             
-            string startID = oldEdges[i]->startVertex->getID();
-            string endID = oldEdges[i]->endVertex->getID();
+            std::string startID = oldEdges[i]->startVertex->getID();
+            std::string endID = oldEdges[i]->endVertex->getID();
             
-            ostringstream id1(ostringstream::out);
+            std::ostringstream id1(std::ostringstream::out);
             id1 << startID << "_" << oldEdges[i]->positiveFace->id;
             v = getCachedVertex(id1.str());
             cerr << "Got id(" << id1.str() << ") -> " << v->id << endl;
@@ -150,11 +150,11 @@ public:
 protected:
     // XXX Temp hack for Dr. Keyser's class
     typename Mesh::VertexPtrArray cache;
-    void cacheVertex(const string &id, typename Mesh::Vertex *v) {
+    void cacheVertex(const std::string & id, typename Mesh::Vertex *v) {
         v->setID(id);
         cache += v;
     }
-    typename Mesh::VertexPtr getCachedVertex(const string &ref) {
+    typename Mesh::VertexPtr getCachedVertex(const std::string &vref) {
         typename Mesh::VertexPtr v = NULL;
         for (int i = 0; i < cache.size(); i++) {
             if (cache[i]->getID() == ref) {

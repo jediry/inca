@@ -145,100 +145,120 @@ public:
 #define BOOL_RETURN     ENABLE_IF_T( AND2( IS_A( SEL_LHS, inca::world::SelectionSet), IS_SAME(SEL_LHS, SEL_RHS)), bool )
 
 
-/*---------------------------------------------------------------------------*
- | Mutating (computed assignment) set operators
- *---------------------------------------------------------------------------*/
-// Union-with operator
-SEL_2_TEMPLATE SEL_2_RETURN & operator+=(SEL_LHS & s1, const SEL_RHS & s2) {
-    s1.unionWith(s2);
-    return s1;
-}
+namespace inca {
+    namespace world {
+        /*-------------------------------------------------------------------*
+         | Mutating (computed assignment) set operators
+         *-------------------------------------------------------------------*/
+        // Union-with operator
+        SEL_2_TEMPLATE
+        SEL_2_RETURN & operator+=(SEL_LHS & s1, const SEL_RHS & s2) {
+            s1.unionWith(s2);
+            return s1;
+        }
 
-// Intersection-with operator
-SEL_2_TEMPLATE SEL_2_RETURN & operator^=(SEL_LHS & s1, const SEL_RHS & s2) {
-    s1.intersectWith(s2);
-    return s1;
-}
+        // Intersection-with operator
+        SEL_2_TEMPLATE
+        SEL_2_RETURN & operator^=(SEL_LHS & s1, const SEL_RHS & s2) {
+            s1.intersectWith(s2);
+            return s1;
+        }
 
-// Difference-with operator
-SEL_2_TEMPLATE SEL_2_RETURN & operator-=(SEL_LHS & s1, const SEL_RHS & s2) {
-    s1.differenceWith(s2);
-    return s1;
-}
+        // Difference-with operator
+        SEL_2_TEMPLATE
+        SEL_2_RETURN & operator-=(SEL_LHS & s1, const SEL_RHS & s2) {
+            s1.differenceWith(s2);
+            return s1;
+        }
 
-// Symmetric-difference-with operator
-SEL_2_TEMPLATE SEL_2_RETURN & operator%=(SEL_LHS & s1, const SEL_RHS & s2) {
-    s1.symmetricDifferenceWith(s2);
-    return s1;
-}
+        // Symmetric-difference-with operator
+        SEL_2_TEMPLATE
+        SEL_2_RETURN & operator%=(SEL_LHS & s1, const SEL_RHS & s2) {
+            s1.symmetricDifferenceWith(s2);
+            return s1;
+        }
 
 
-/*---------------------------------------------------------------------------*
- | Non-mutating set operators
- *---------------------------------------------------------------------------*/
-// Union operator
-SEL_2_TEMPLATE SEL_2_RETURN & operator+(const SEL_LHS & s1, const SEL_RHS & s2) {
-    SEL_RHS s3(s1);
-    return s3 += s2;
-}
+        /*-------------------------------------------------------------------*
+         | Non-mutating set operators
+         *-------------------------------------------------------------------*/
+        // Union operator
+        SEL_2_TEMPLATE
+        SEL_2_RETURN operator+(const SEL_LHS & s1, const SEL_RHS & s2) {
+            SEL_RHS s3(s1);
+            return s3 += s2;
+        }
 
-// Intersection operator
-SEL_2_TEMPLATE SEL_2_RETURN operator^(const SEL_LHS & s1, const SEL_RHS & s2) {
-    SEL_RHS s3(s1);
-    return s3 ^= s2;
-}
+        // Intersection operator
+        SEL_2_TEMPLATE
+        SEL_2_RETURN operator^(const SEL_LHS & s1, const SEL_RHS & s2) {
+            SEL_RHS s3(s1);
+            return s3 ^= s2;
+        }
 
-// Difference operator
-SEL_2_TEMPLATE SEL_2_RETURN operator-(const SEL_LHS & s1, const SEL_RHS & s2) {
-    SEL_RHS s3(s1);
-    return s3 -= s2;
-}
+        // Difference operator
+        SEL_2_TEMPLATE
+        SEL_2_RETURN operator-(const SEL_LHS & s1, const SEL_RHS & s2) {
+            SEL_RHS s3(s1);
+            return s3 -= s2;
+        }
 
-// Symmetric-difference operator
-SEL_2_TEMPLATE SEL_2_RETURN operator%(const SEL_LHS & s1, const SEL_RHS & s2) {
-    SEL_RHS s3(s1);
-    return s3 %= s2;
-}
-// Set complement operator
-#if 0   // VS can't hack it!
-SEL_1_TEMPLATE SEL_1_RETURN operator~(const SEL_RHS &s2) {
-    SEL_RHS s3(s2);
-    s3.complement();
-    return s3;
-}
-#endif
+        // Symmetric-difference operator
+        SEL_2_TEMPLATE
+        SEL_2_RETURN operator%(const SEL_LHS & s1, const SEL_RHS & s2) {
+            SEL_RHS s3(s1);
+            return s3 %= s2;
+        }
 
-/*---------------------------------------------------------------------------*
- | Set test operators
- *---------------------------------------------------------------------------*/
-// Set equality test
-SEL_2_TEMPLATE BOOL_RETURN operator==(const SEL_LHS & s1, const SEL_RHS & s2) {
-    return s1.isEqualTo(s2);
-}
+        // Set complement operator
+        #if 0   // VS can't hack it!
+        SEL_1_TEMPLATE SEL_1_RETURN operator~(const SEL_RHS &s2) {
+            SEL_RHS s3(s2);
+            s3.complement();
+            return s3;
+        }
+        #endif
 
-// Set inequality test
-SEL_2_TEMPLATE BOOL_RETURN operator!=(const SEL_LHS & s1, const SEL_RHS & s2) {
-    return s1.isUnequalTo(s2);
-}
 
-// Superset test
-SEL_2_TEMPLATE BOOL_RETURN operator>=(const SEL_LHS & s1, const SEL_RHS & s2) {
-    return s1.isSupersetOf(s2);
-}
+        /*-------------------------------------------------------------------*
+         | Set test operators
+         *-------------------------------------------------------------------*/
+        // Set equality test
+        SEL_2_TEMPLATE
+        BOOL_RETURN operator==(const SEL_LHS & s1, const SEL_RHS & s2) {
+            return s1.isEqualTo(s2);
+        }
 
-// Subset test
-SEL_2_TEMPLATE BOOL_RETURN operator<=(const SEL_LHS & s1, const SEL_RHS & s2) {
-    return s1.isSubsetOf(s2);
-}
+        // Set inequality test
+        SEL_2_TEMPLATE
+        BOOL_RETURN operator!=(const SEL_LHS & s1, const SEL_RHS & s2) {
+            return s1.isUnequalTo(s2);
+        }
 
-// Strict superset test
-SEL_2_TEMPLATE BOOL_RETURN operator>(const SEL_LHS & s1, const SEL_RHS & s2) {
-    return s1.isStrictSupersetOf(s2);
-}
+        // Superset test
+        SEL_2_TEMPLATE
+        BOOL_RETURN operator>=(const SEL_LHS & s1, const SEL_RHS & s2) {
+            return s1.isSupersetOf(s2);
+        }
 
-// Strict subset test
-SEL_2_TEMPLATE BOOL_RETURN operator<(const SEL_LHS & s1, const SEL_RHS & s2) {
-    return s1.isStrictSubsetOf(s2);
+        // Subset test
+        SEL_2_TEMPLATE
+        BOOL_RETURN operator<=(const SEL_LHS & s1, const SEL_RHS & s2) {
+            return s1.isSubsetOf(s2);
+        }
+
+        // Strict superset test
+        SEL_2_TEMPLATE
+        BOOL_RETURN operator>(const SEL_LHS & s1, const SEL_RHS & s2) {
+            return s1.isStrictSupersetOf(s2);
+        }
+
+        // Strict subset test
+        SEL_2_TEMPLATE
+        BOOL_RETURN operator<(const SEL_LHS & s1, const SEL_RHS & s2) {
+            return s1.isStrictSubsetOf(s2);
+        }
+    }
 }
 
 

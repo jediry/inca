@@ -21,7 +21,7 @@ using namespace inca::world;
 #include <io/IOUtilities.hpp>
 
 
-void Material::setImage(const string &filename) {
+void Material::setImage(const std::string & filename) {
     if (filename == "") {
         image = ImagePtr(); // Un-set
     } else {

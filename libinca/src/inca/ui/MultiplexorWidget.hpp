@@ -49,17 +49,17 @@ public:
  *---------------------------------------------------------------------------*/
 public:
     // Default constructor with optional component name
-    explicit MultiplexorWidget(const string &nm = "")
+    explicit MultiplexorWidget(const std::string & nm = "")
         : PassThruWidget(nm) { }
 
     // Constructor taking an initial Widget and optional component name
-    explicit MultiplexorWidget(WidgetPtr w, const string &nm = "")
+    explicit MultiplexorWidget(WidgetPtr w, const std::string & nm = "")
         : PassThruWidget(nm) { addWidget(w); }
 
     // Constructor taking a group of Widgets, and an optional component name
     template <class InputIterator>
     MultiplexorWidget(InputIterator first, InputIterator last,
-                      const string &nm = "") : PassThruWidget(nm) {
+                      const std::string & nm = "") : PassThruWidget(nm) {
         while (first != last) { // Move across this iterator range, adding
             addWidget(*first);  // each Widget in sequence
             ++first;
@@ -68,7 +68,7 @@ public:
 
     // Search functions
     IndexType indexOf(WidgetConstPtr w) const; // First index of 'w'
-    IndexType indexOf(const string &nm) const; // First widget named 'nm'
+    IndexType indexOf(const std::string & nm) const; // First widget named 'nm'
     IndexType indexBefore(IndexType from) const; // Previous widget before 'from'
     IndexType indexAfter(IndexType from)  const; // Next widget after 'from'
 
@@ -77,14 +77,14 @@ public:
     // Add/remove functions
     void addWidget(WidgetPtr w);        // Stick a new Widget into the list
     bool removeWidget(WidgetPtr w);     // Remove the first occurance of 'w'
-    bool removeWidget(const string &nm);// Remove the widget with name 'nm'
+    bool removeWidget(const std::string & nm);// Remove the widget with name 'nm'
     bool removeWidget(IndexType index);   // Remove the widget at 'index'
 
     // Widget selection functions
     bool selectPreviousWidget();        // Step backward in the widget order
     bool selectNextWidget();            // Step forward in the widget order
     bool selectWidget(WidgetConstPtr w);// Select the first occurance of 'w'
-    bool selectWidget(const string &nm);// Select the wigdet with name 'nm'
+    bool selectWidget(const std::string & nm);// Select the wigdet with name 'nm'
     bool selectWidget(IndexType index);   // Select the widget at 'index'
 
 protected:

@@ -41,7 +41,7 @@ protected:
     explicit View() { }
 
     // Non-public constructor with component name
-    explicit View(const string &nm) { name = nm; }
+    explicit View(const std::string & nm) { name = nm; }
 
 public:
     // View callbacks

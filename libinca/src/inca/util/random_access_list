@@ -135,8 +135,8 @@ public:
     bool     locked()   const { return _locked; }
 
     // To-string cast
-    operator string() const {
-        stringstream ss;
+    operator std::string() const {
+        std::stringstream ss;
         ss << "RandomAccessList:\n"
               "\tCapacity:   " << capacity() << "\n"
               "\tSize:       " << size() << "\n"

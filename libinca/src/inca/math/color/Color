@@ -115,7 +115,7 @@ public:
  *---------------------------------------------------------------------------*/
 public:
     // to-string Cast
-    operator string() const {
+    operator std::string() const {
         std::ostringstream str;
         str << "Color[" << ColorSpace::name() << "]: ("
             << this->stringifyElements() << ')';

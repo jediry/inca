@@ -87,7 +87,7 @@ public:
     ~Application();
 
     // Framework initialization function (called by main() after constructor)
-    void initialize(int &argc, char **argv);
+    void initialize(int & argc, char ** argv);
 
 
 /*---------------------------------------------------------------------------*
@@ -107,13 +107,13 @@ public:
  *---------------------------------------------------------------------------*/
 public:
     // Initialize the UI-toolkit and process toolkit-specific arguments
-    virtual void initializeToolkit(int &argc, char **argv) = 0;
+    virtual void initializeToolkit(int & argc, char ** argv) = 0;
 
     // Launch the application's event-handling mechanism (may not return)
     virtual int run() = 0;
 
     // Cause the application to terminate
-    virtual void exit(int status, const string &msg);
+    virtual void exit(int status, const std::string & msg);
 
 
 /*---------------------------------------------------------------------------*
@@ -136,7 +136,7 @@ protected:
  *---------------------------------------------------------------------------*/
 public:
     // Pull off the first command-line argument and remove it from the list
-    static string shift(int &argc, char **&argv);
+    static std::string shift(int & argc, char ** & argv);
 };
 
 

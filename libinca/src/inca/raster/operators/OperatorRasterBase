@@ -148,7 +148,8 @@ namespace inca {
             typedef typename MAX4( size_tag_value<T0>,
                                    size_tag_value<T1>,
                                    size_tag_value<T2>,
-                                   size_tag_value<T3> )::type type;
+                                   size_tag_value<T3> ) max;
+            typedef typename max::type type;
         };
 
     }
@@ -184,7 +185,7 @@ namespace inca {
         struct extract_bounds<T, ENABLE_IF( AND2( is_raster<T>,
                                                   is_arbitrary_size_raster<T> ) ) > {
             typedef Nothing type;
-            const type & operator()(const T & t) { Nothing(); }
+            const type operator()(const T & t) { return Nothing(); }
         };
 
         // intersect_pair is a sub-functor that handles all the possible
@@ -285,7 +286,6 @@ public:
                                 : IS_SAME( Operand2Type, Nothing )::value ? 2
                                 : IS_SAME( Operand3Type, Nothing )::value ? 3
                                 :                                           4;
-
     // Rasterified types (non-rasters are promoted to ConstantValueRaster)
     typedef typename make_raster<Op0, dimensionality>::type Operand0RasterType;
     typedef typename make_raster<Op1, dimensionality>::type Operand1RasterType;
@@ -340,7 +340,8 @@ protected:
         if (doBoundsCalculation) calculateBounds();
     }
 
-protected:
+//protected:    // Visual studio can't handle this for some reason
+public:
     // The operands, in all their glory
     Operand0RasterType operand0;
     Operand1RasterType operand1;
@@ -409,7 +410,7 @@ protected:
                        true, false, false>,                                 \
             RasterTypes<RETURN,                                             \
                         maximum_dimensionality<PARAMS(ARITY, R)>::value,    \
-                        RETURN, RETURN, RETURN>                             \
+                        RETURN, RETURN, RETURN >                            \
             COMMA_IF( ARITY ) PARAMS(ARITY, R) >                            \
 
 #define INCA_RASTER_OPERATOR_GET_ELEMENT_HEADER(VAR)                        \

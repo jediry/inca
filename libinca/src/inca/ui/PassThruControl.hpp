@@ -48,11 +48,11 @@ private:
  *---------------------------------------------------------------------------*/
 public:
     // Default constructor with optional component name
-    explicit PassThruControl(const string &nm = "")
+    explicit PassThruControl(const std::string & nm = "")
         : control(this) { name = nm; }
 
     // Constructor with initialization of Control
-    explicit PassThruControl(ControlPtr c, const string &nm = "")
+    explicit PassThruControl(ControlPtr c, const std::string & nm = "")
         : control(this, c) { name = nm; }
 
     // The Control that we're wrapping

@@ -74,7 +74,7 @@ protected:
 
     void initializeChannelDefaults() {
 #if 0
-        string initialSetup =
+        std::string initialSetup =
             // Our material is medium gray
             "illuminatedColor = [0.5, 0.5, 0.5, 1.0];\n"
             // Shadow area is the same hue

@@ -33,10 +33,10 @@ private:
 public:
     // Constructors
 //    WorldObject() : id(this) { }
-//    WorldObject(const string &i) : id(this, i) { }
+//    WorldObject(const std::string & i) : id(this, i) { }
 
     // All objects in the world have a (hopefully) unique ID
-//    rw_property(string, id, "hello");
+//    rw_property(std::string, id, "hello");
 
 protected:
     // This exists only to ensure that the compiler generates RTTI info

@@ -38,7 +38,7 @@ private:
 
 public:
     // Default constructor with optional component name
-    explicit BasicControl(const string &nm = "")
+    explicit BasicControl(const std::string & nm = "")
         : size(0, 0) { name = nm; }
 
 

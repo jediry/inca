@@ -53,7 +53,7 @@ protected:
     explicit Control() : controlFlags(0x0000) { }
 
     // Non-public constructor with component name
-    explicit Control(const string &nm) : controlFlags(0x0000) { name = nm; }
+    explicit Control(const std::string & nm) : controlFlags(0x0000) { name = nm; }
 
 
 /*---------------------------------------------------------------------------*
@@ -119,9 +119,9 @@ public:
     bool anyModifiersActive(ControlFlags f) const { return ((f & controlFlags) & AllModifiers) != 0; }
 
     // Get a string representations of the active flags
-    string printActiveFlags() const { return '[' + buttonFlagsString(controlFlags) + '-' + modifierFlagsString(controlFlags) + ']'; }
-    string printActiveButtons() const { return '[' + buttonFlagsString(controlFlags) + ']'; }
-    string printActiveModifiers() const { return '[' + modifierFlagsString(controlFlags) + ']'; }
+    std::string printActiveFlags() const { return '[' + buttonFlagsString(controlFlags) + '-' + modifierFlagsString(controlFlags) + ']'; }
+    std::string printActiveButtons() const { return '[' + buttonFlagsString(controlFlags) + ']'; }
+    std::string printActiveModifiers() const { return '[' + modifierFlagsString(controlFlags) + ']'; }
 
 protected:
     ControlFlags controlFlags;  // The fabled 'controlFlags'

@@ -39,7 +39,7 @@ inline GLenum translate(PrimitiveType type) {
         case TriangleFan:   return GL_TRIANGLE_FAN;
         case Quads:         return GL_QUADS;
         case QuadStrip:     return GL_QUAD_STRIP;
-        case Polygon:       return GL_POLYGON;
+//        case Polygon:       return GL_POLYGON;
         default:
             std::cerr << "translate(" << type << ") => GLenum: "
                          "unrecognized PrimitiveType" << std::endl;
@@ -177,9 +177,13 @@ SizeType API::lightingUnitCount() {
     return count;
 }
 SizeType API::texturingUnitCount() {
+#ifdef GL_MAX_TEXTURE_UNITS_ARB
     GLint count;
     GL_GET_INTEGER_VALUE(GL_MAX_TEXTURE_UNITS_ARB, count)
     return count;
+#else
+    return 1;
+#endif
 }
 IDType API::matrixStackID(IndexType index) {
     switch (index) {
@@ -192,7 +196,13 @@ IDType API::matrixStackID(IndexType index) {
     }
 }
 IDType API::lightingUnitID(IndexType index)  { return GL_LIGHT0 + index; }
-IDType API::texturingUnitID(IndexType index) { return GL_TEXTURE0_ARB + index; }
+IDType API::texturingUnitID(IndexType index) {
+#ifdef GL_MAX_TEXTURE_UNITS_ARB
+    return GL_TEXTURE0_ARB + index;
+#else
+    return 0;
+#endif
+}
 
 IndexType API::projectionMatrixIndex()  { return 0; }
 IndexType API::viewMatrixIndex()        { return 1; }
@@ -394,7 +404,7 @@ void API::setHardwareState<API::CurrentEdgeFlag>(bool edge) {
 // vertex data array properties (e.g., pointer, stride).
 #define DATA_ARRAY_GETTER(NAME, ENUM)                                       \
 template <>                                                                 \
-void API::getHardwareState<API::NAME ## ArrayPointer>(void * & ptr) { \
+void API::getHardwareState<API::NAME ## ArrayPointer>(void * & ptr) {       \
     if (glIsEnabled(ENUM))                                                  \
         GL_GET_POINTER_VALUE(ENUM ## _POINTER, ptr)                         \
     else                                                                    \

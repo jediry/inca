@@ -56,13 +56,13 @@ class inca::ui::GLUTWindow : public Window {
  *---------------------------------------------------------------------------*/
 protected:
     // Defaults for new windows (if unspecified)
-    static const string    DEFAULT_TITLE;
-    static const Pixel     DEFAULT_POSITION;
-    static const Dimension DEFAULT_SIZE;
-    static const Dimension DEFAULT_MINIMUM_SIZE;
-    static const Dimension DEFAULT_MAXIMUM_SIZE;
-    static const float     DEFAULT_ASPECT_RATIO;
-    static const bool      DEFAULT_IS_FULL_SCREEN;
+    static const std::string    DEFAULT_TITLE;
+    static const Pixel          DEFAULT_POSITION;
+    static const Dimension      DEFAULT_SIZE;
+    static const Dimension      DEFAULT_MINIMUM_SIZE;
+    static const Dimension      DEFAULT_MAXIMUM_SIZE;
+    static const float          DEFAULT_ASPECT_RATIO;
+    static const bool           DEFAULT_IS_FULL_SCREEN;
 
 protected:
     // Button click timing
@@ -96,10 +96,10 @@ protected:
  *---------------------------------------------------------------------------*/
 public:
     // Default Constructor
-    GLUTWindow(const string &title = DEFAULT_TITLE);
+    GLUTWindow(const std::string & title = DEFAULT_TITLE);
     
     // Widget-containing Constructor
-    GLUTWindow(WidgetPtr w, const string &title = DEFAULT_TITLE);
+    GLUTWindow(WidgetPtr w, const std::string & title = DEFAULT_TITLE);
 
     // Destructor
     virtual ~GLUTWindow();
@@ -165,8 +165,8 @@ public:
     IDType getID() const { return windowID; }
 
     // Window title
-    string getTitle() const { return title; }
-    void setTitle(const string &title);
+    std::string getTitle() const { return title; }
+    void setTitle(const std::string & title);
 
     // Window visibility state
     bool isVisible() const { return visible; }
@@ -210,7 +210,7 @@ public:
     void requestRedisplay() const;
 
 protected:
-    string title;           // The current window title
+    std::string title;      // The current window title
     Pixel position;         // On-screen postion of the window
     Dimension size,         // How big it is
               minSize,      // How small it can be

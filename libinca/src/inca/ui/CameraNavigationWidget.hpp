@@ -64,10 +64,10 @@ private:
  *---------------------------------------------------------------------------*/
 public:
     // Default constructor with optional component name
-    explicit CameraNavigationWidget(const string &nm = "");
+    explicit CameraNavigationWidget(const std::string & nm = "");
 
     // Constructor initializing camera
-    explicit CameraNavigationWidget(CameraPtr c, const string &nm = "");
+    explicit CameraNavigationWidget(CameraPtr c, const std::string & nm = "");
 
     // The camera we're controlling
     rw_ptr_property(Camera, camera, NULL);

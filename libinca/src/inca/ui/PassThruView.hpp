@@ -48,11 +48,11 @@ private:
  *---------------------------------------------------------------------------*/
 public:
     // Default constructor with optional component name
-    explicit PassThruView(const string &nm = "")
+    explicit PassThruView(const std::string & nm = "")
         : view(this) { name = nm; }
 
     // Constructor with explicit initialization of View
-    explicit PassThruView(ViewPtr v, const string &nm = "")
+    explicit PassThruView(ViewPtr v, const std::string & nm = "")
         : view(this, v) { name = nm; }
 
     // The View that we're wrapping

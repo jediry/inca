@@ -14,7 +14,7 @@
  *      std::ostream using the normal '<<' operator, and to perform integer
  *      arithmetic on the enumeration type without the need to explicitly
  *      cast back and forth to ints. This allows the user to write normal,
- *      C-style for looks using enumerated types:
+ *      C-style for loops using enumerated types:
  *
  *          for (MyEnum e = MyEnum::minimum(); e &lt; MyEnum::maximum(); ++e) ...
  *
@@ -80,15 +80,24 @@
 #include <boost/preprocessor/selection/min.hpp>
 #include <boost/preprocessor/selection/max.hpp>
 
-// Import Boost template SFINAE enable mechanism
+// Import Boost template SFINAE enable mechanism and type traits metafunctions
 #include <boost/utility/enable_if.hpp>
+#include <boost/type_traits.hpp>
+
+// Disable stupid Visual Studio warning
+#pragma warning (disable : 4290)    // Ignoring C++ exception specification
 
 
 // This is part of the Inca utilities collection
 namespace inca {
     // Forward declarations
     struct IllegalEnumerantException;
-    template <class Derived, int min, int max, int sz, int deflt> class Enumeration;
+    template <class Derived,
+              int min, int max,
+              int sz, int deflt> class Enumeration;
+
+    // Tag class for identifying enumeration subclasses
+    class EnumerationTag { };
 }
 
 
@@ -102,8 +111,11 @@ struct inca::IllegalEnumerantException : public std::exception {
 
 // The Enumeration class, which implements most of the usual integer
 // arithmetic operations
-template <class Derived, int min, int max, int sz = (max - min + 1), int deflt = min>
-class inca::Enumeration {
+template <class Derived,
+          int min, int max,
+          int sz = (max - min + 1),
+          int deflt = min>
+class inca::Enumeration : public EnumerationTag {
 /*---------------------------------------------------------------------------*
  | Access to the derived class
  *---------------------------------------------------------------------------*/
@@ -120,9 +132,6 @@ private:
  | Static properties of the enumeration (min, max, default, etc.)
  *---------------------------------------------------------------------------*/
 public:
-    // This is just here to simplify the function templates later
-    static const bool inca_enumeration_subclass = true;
-
     // How many (normal) values does this enumeration have?
     static const int count = sz;
 
@@ -158,17 +167,24 @@ public:
 
 
 /*---------------------------------------------------------------------------*
- | Constructors
+ | Constructors & assignment operators
  *---------------------------------------------------------------------------*/
 public:
     // Default constructor
-    Enumeration() : index(defaultValue()) { }
+    explicit Enumeration() : index(defaultValue()) { }
 
-    // Integer constructor (allows implicit conversion)
-    Enumeration(int idx) throw(IllegalEnumerantException) {
+    // Integer constructor
+    explicit Enumeration(int idx) throw(IllegalEnumerantException) {
         validate(idx);                  // Throw if invalid
         index = idx;                    // Otherwise, assign it
     }
+
+    // Integer assignment operator
+/*    Derived & operator=(int idx) throw(IllegalEnumerantException) {
+        validate(idx);
+        index = idx);
+        return derived();
+    }*/
 
 
 /*---------------------------------------------------------------------------*
@@ -213,7 +229,9 @@ protected:
 namespace inca {
 #define ENUM_OP(RTYPE)                                                      \
     template <typename E>                                                   \
-    typename boost::enable_if_c< E::inca_enumeration_subclass, RTYPE>::type operator
+    typename boost::enable_if<                                              \
+        boost::is_convertible< E, ::inca::EnumerationTag >,                 \
+        RTYPE>::type operator
 
 #define ENUM_REL_OP(OP)                                                     \
     ENUM_OP(bool) OP (E e, int i) {                                         \
@@ -237,10 +255,10 @@ namespace inca {
         return E(int(e0) OP int(e1));                                       \
     }                                                                       \
     ENUM_OP(E &) OP ## = (E e, int i) throw(IllegalEnumerantException) {    \
-        return (e = E(int(e), i));                                          \
+        return (e = E(int(e) OP i));                                        \
     }                                                                       \
     ENUM_OP(E &) OP ## = (E e0, E e1) throw(IllegalEnumerantException) {    \
-        return (e0 = E(int(e0), int(e1)));                                  \
+        return (e0 = E(int(e0) OP int(e1)));                                \
     }
 
     // Relational operators
@@ -252,7 +270,7 @@ namespace inca {
     ENUM_REL_OP(>)
 
     // Arithmetic operations (and computed-assignment counterparts)
-    ENUM_ARITH_OP(+)
+//    ENUM_ARITH_OP(+)
     ENUM_ARITH_OP(-)
     ENUM_ARITH_OP(*)
     ENUM_ARITH_OP(/)

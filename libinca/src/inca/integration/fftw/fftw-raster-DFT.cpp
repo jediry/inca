@@ -20,6 +20,8 @@ using namespace inca::raster;
 #include <complex>
 #include <fftw3.h>
 
+// This won't link with the FFTW library if we compile as "managed" code
+#pragma unmanaged
 
 namespace inca {
     namespace raster {

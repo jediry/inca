@@ -67,7 +67,7 @@ namespace inca {
             RealRaster kernel(r1.sizes());
             fill(kernel, ElementType(0));
             typename ScaleList::const_iterator it = scales.begin();
-            for (IndexType s = 0; s < scales.size(); ++s, ++it) {
+            for (IndexType s = 0; s < IndexType(scales.size()); ++s, ++it) {
                 if (*it == ScaleType(0)) {
                     // This is the no-smoothing scale level. Just copy
                     r0.slice(dimensionality, s) = r1;
