@@ -94,7 +94,7 @@ public:
 public:
     // to-string Cast
     operator string() const {
-        ostringstream str;
+        std::ostringstream str;
         str << "Color[" << colorSpace << "]: (" << stringifyElements() << ')';
         return str.str();
     }
@@ -106,7 +106,7 @@ template <typename scalar, ColorSpace cs, bool hasAlpha>
 Color<scalar, cs, hasAlpha> operator%(const Color<scalar, cs, hasAlpha> &c1,
                                       const Color<scalar, cs, true> &c2) {
     // The number of actual "color" channels (excluding alpha)
-    size_t components = colorspace_traits<cs, false>::components;
+    std::size_t components = colorspace_traits<cs, false>::components;
 
     // Either c1 has alpha, or we assign it an alpha of 1
     scalar alphaC1 = hasAlpha ? c1[components] : scalar(1);
@@ -130,7 +130,7 @@ Color<scalar, cs, hasAlpha> operator%(const Color<scalar, cs, hasAlpha> &c1,
 
 
 template <typename s, ColorSpace cs, bool alpha>
-ostream & operator<<(ostream &os, const Color<s, cs, alpha> &c) {
+std::ostream & operator<<(std::ostream &os, const Color<s, cs, alpha> &c) {
     os << '<';
     for (index_t i = 0; i < index_t(c.size) - 1; ++i)
         os << c[i] << ", ";
