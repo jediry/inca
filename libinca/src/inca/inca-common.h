@@ -82,6 +82,7 @@ namespace inca {
 #include <boost/multi_array.hpp>
 #include <inca/util/hash_container>     // Hash containers are non-standard
 namespace inca {
+    using std::pair;
     using std::vector;
     using std::list;
     using boost::multi_array;
