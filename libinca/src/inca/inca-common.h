@@ -71,6 +71,11 @@ namespace inca {
     using std::ostream;
 };
 
+// Logging functions
+#define LOG_WARNING(STREAM_EXPR) std::cerr << "WARNING: " << STREAM_EXPR ;
+#define LOG_ERROR(STREAM_EXPR)   std::cerr << "ERROR:   " << STREAM_EXPR ;
+
+
 // Everything in the system should have access to the Logger instance
 #include <inca/util/Logger.hpp>
 

@@ -124,7 +124,16 @@ namespace inca {
         X scale
 #endif
 
-        // Factory functions
+        // Factory function taking raster and both source and target ranges
+        template <typename R1, class Collection1, class Collection2>
+        LinearMapRasterOperator<R1> linearMap(R1 &r,
+                                              const Collection1 & iRange,
+                                              const Collection2 & oRange) {
+            Array<typename R1::ElementType, 2> inRange(iRange), outRange(oRange);
+            return LinearMapRasterOperator<R1>(r, inRange, outRange);
+        }
+
+        // Factory function taking raster and target range
         template <typename R1, class Collection>
         LinearMapRasterOperator<R1> linearMap(R1 &r, const Collection & oRange) {
             Array<typename R1::ElementType, 2> inRange, outRange;
@@ -132,6 +141,31 @@ namespace inca {
             outRange = oRange;
             cerr << "Trying to map [" << inRange[0] << "," << inRange[1] << "] to [" << outRange[0] << "," << outRange[1] << "]\n";
             return LinearMapRasterOperator<R1>(r, inRange, outRange);
+        }
+
+        template <class T, typename Enable = void>
+        struct is_collection {
+            typedef ::boost::mpl::false_ type;
+            static const bool value = type::value;
+        };
+        template <class T>
+        struct is_collection<T, ENABLE_IF( NOT( ::boost::is_void<typename T::iterator> ) ) > {
+            typedef ::boost::mpl::true_ type;
+            static const bool value = type::value;
+        };
+        
+        // Factory function taking raster, source range and scale/offset amounts
+        template <typename R1, class Collection, typename scalar1, typename scalar2>
+        ENABLE_IF_T ( AND3( is_collection<Collection>,
+                            is_scalar<scalar1>,
+                            is_scalar<scalar2> ),
+        LinearMapRasterOperator<R1> ) linearMap(R1 &r,
+                                              const Collection & iRange,
+                                              scalar1 scale,
+                                              scalar2 offset) {
+            typedef typename R1::ElementType T;
+            Array<typename R1::ElementType, 2> inRange(iRange);
+            return LinearMapRasterOperator<R1>(r, inRange, T(scale), T(offset));
         }
 
 #if 0

@@ -128,9 +128,6 @@
 			<File
 				RelativePath=".\src\inca\raster\Raster">
 			</File>
-			<File
-				RelativePath=".\src\inca\raster\RasterView">
-			</File>
 			<Filter
 				Name="operators"
 				Filter="">
@@ -147,6 +144,9 @@
 					RelativePath=".\src\inca\raster\operators\Dft">
 				</File>
 				<File
+					RelativePath=".\src\inca\raster\operators\gradient">
+				</File>
+				<File
 					RelativePath=".\src\inca\raster\operators\hacked_in_lambda">
 				</File>
 				<File
@@ -157,6 +157,9 @@
 				</File>
 				<File
 					RelativePath=".\src\inca\raster\operators\selection">
+				</File>
+				<File
+					RelativePath=".\src\inca\raster\operators\statistic">
 				</File>
 				<File
 					RelativePath=".\src\inca\raster\operators\transformation">
@@ -528,7 +531,7 @@
 				RelativePath=".\src\inca\util\random_access_list">
 			</File>
 			<File
-				RelativePath=".\src\inca\util\stream_exception.hpp">
+				RelativePath=".\src\inca\util\StreamException.hpp">
 			</File>
 			<File
 				RelativePath=".\src\inca\util\StreamTokenizer.cpp">
@@ -558,7 +561,13 @@
 				RelativePath=".\src\inca\util\ustring.hpp">
 			</File>
 			<File
+				RelativePath=".\src\inca\util\weak_ptr_iterator">
+			</File>
+			<File
 				RelativePath=".\src\inca\util\weak_ptr_set">
+			</File>
+			<File
+				RelativePath=".\src\inca\util\wraparound_iterator">
 			</File>
 			<Filter
 				Name="iterators"

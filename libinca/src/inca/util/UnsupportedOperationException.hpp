@@ -20,17 +20,17 @@
 #define INCA_UNSUPPORTED_OPERATION_EXCEPTION
 
 // Import superclass definition
-#include "stream_exception.hpp"
+#include "StreamException.hpp"
 
 
 // This is part of the Inca utilities collection
 namespace inca {
     // This is thrown when an unsupported operation is implemented
-    class UnsupportedOperationException : public stream_exception {
+    class UnsupportedOperationException : public StreamException {
     public:
         // Constructors
         explicit UnsupportedOperationException(const string &msg = "")
-            : stream_exception(msg) { }
+            : StreamException(msg) { }
     };
 }
 

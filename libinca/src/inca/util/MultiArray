@@ -7,18 +7,54 @@
  * Copyright 2004, Ryan L. Saunders. All rights reserved.
  *
  * Description:
- *      The MultiArray container template class is an arbitrary-dimensional
- *      array of homogeneous elements.
+ *      The MultiArray container template classes are a family of related,
+ *      arbitrary-dimensional arrays of homogeneous elements. They offer
+ *      similar functionality to the Boost library's multi_array containers,
+ *      but with several significant improvements:
+ *          * true, random-access (non-nested) multi-dimensional iterators
+ *          * optional range checking
+ *          * function-style, dimension-specific accessors, e.g.: array(x, y)
+ *          * iterator-based and container-based (e.g., vector)
+ *            arbitrary-dimensional versions of functions
  *
- *      It offers essentially the same functionality as boost::multi_array,
- *      but provides a simpler, more intuitive interface...and it's resizeable.
+ *      The ConstMultiArrayView container is the most basic, implementing
+ *      read-only multi-dimensional access to an un-owned, contiguous chunk
+ *      of memory. This can be used, for example, to put a multi-dimensional
+ *      "facade" on top of memory belonging to another object.
+ *
+ *      The MultiArrayView container extends ConstMultiArrayView to support
+ *      read-write access.
+ *
+ *      The MultiArray container adds memory allocation capabilities to
+ *      MultiArrayView, allowing the container to own its memory and to
+ *      resize itself.
+ *
+ * Usage notes:
+ *      Run-time range checking is governed by the value of
+ *      INCA_MULTI_ARRAY_RANGE_CHECK macro, which may be:
+ *          0           no range checks will be performed
+ *          1           range checks will be performed
+ *          undefined   range checks will be performed only if DEBUG is defined
+ *
+ *      There are three types of checks.
+ *
+ *      The first check is basically an argument sanity check, to verify that
+ *      a collection of indices/sizes has at least the same number of elements
+ *      as the dimensionality of the container. If this check fails an
+ *      IncorrectDimensionalityException is thrown.
+ *
+ *      The second check is to maintain the constraint that reshaping a
+ *      MultiArray should not change the total number of elements. If this is
+ *      attempted, an IllegalSizeException is thrown.
+ *
+ *      The third check depends on whether the list being checked is a list
+ *      of sizes or a list of indices. For sizes, this check simply ensures
+ *      that each size is non-negative (negative sizes are meaningless, but
+ *      zero sizes are allowed). For indices, this check ensures that each
+ *      index falls between the base and extent (inclusive) for that dimension.
+ *      If this check fails, an IllegalSizeException or an
+ *      IndexOutOfBoundsException (respectively) is thrown.
  */
-
-// TODO
-//  How does multi_array handle index-bases in constructor sigs?
-//  It seems that non-zero index bases may wreck our concept of the "origin",
-// since in many cases we just default to IntArray(0), which won't be the origin
-
 
 #ifndef INCA_UTIL_MULTI_ARRAY
 #define INCA_UTIL_MULTI_ARRAY
@@ -30,8 +66,15 @@
 // This is part of the Inca utilities collection
 namespace inca {
     // Forward declarations
+    template <typename T, inca::SizeType dim>   class ConstMultiArrayView;
+    template <typename T, inca::SizeType dim>   class MultiArrayView;
     template <typename T, inca::SizeType dim>   class MultiArray;
     template <inca::SizeType dim>               class MultiArrayStorageOrder;
+
+    // Exception classes
+    class IncorrectDimensionalityException;
+    class IllegalSizeException;
+    class IndexOutOfBoundsException;
 
     // Predefined StorageOrders
     class CStorageOrder;
@@ -46,18 +89,149 @@ namespace inca {
 // Import multi-dimensional preprocessor metaprogramming macros
 #include "multi-dimensional-macros.hpp"
 
+// Import exception superclass
+#include "StreamException.hpp"
 
+// Exception classes
+class inca::IncorrectDimensionalityException : public StreamException {
+public:
+    // Constructors
+    IncorrectDimensionalityException(IndexType act, IndexType exp)
+            : _actual(act), _expected(exp) { }
+    IncorrectDimensionalityException(IndexType act, IndexType exp,
+                                     const std::string & msg)
+            : StreamException(msg), _actual(act), _expected(exp) { }
+
+    // Accessors
+    IndexType actual()   const { return _actual; }
+    IndexType expected() const { return _expected; }
+
+protected:
+    IndexType _actual, _expected;
+};
+
+class inca::IllegalSizeException : public StreamException {
+public:
+    // Constructors
+    IllegalSizeException(IndexType dim, SizeType sz)
+            : _dimension(dim), _size(sz) { }
+    IllegalSizeException(IndexType dim, SizeType sz,
+                         const std::string & msg)
+            : StreamException(msg), _dimension(dim), _size(sz) { }
+
+    // Accessors
+    IndexType dimension() const { return _dimension; }
+    SizeType  size()      const { return _size; }
+
+protected:
+    IndexType _dimension;
+    SizeType  _size;
+};
+
+class inca::IndexOutOfBoundsException : public StreamException {
+public:
+    // Constructors
+    IndexOutOfBoundsException(IndexType dim, IndexType idx,
+                              IndexType bs, IndexType ext)
+            : _dimension(dim), _index(idx), _base(bs), _extent(ext) { }
+    IndexOutOfBoundsException(IndexType dim, IndexType idx,
+                              IndexType bs, IndexType ext,
+                              const std::string & msg)
+            : StreamException(msg),
+              _dimension(dim), _index(idx), _base(bs), _extent(ext) { }
+
+    // Accessors
+    IndexType dimension() const { return _dimension; }
+    IndexType index()     const { return _index; }
+    IndexType base()      const { return _base; }
+    IndexType extent()    const { return _extent; }
+
+protected:
+    IndexType _dimension, _index, _base, _extent;
+};
+
+
+// Enable range checking only if appropriate
+#if INCA_MULTI_ARRAY_RANGE_CHECK == 1 || (! defined(INCA_MULTI_ARRAY_RANGE_CHECK) && defined(DEBUG) )
+    // Ensure we have (at least) the correct number of values
+    #define CHECK_DIMENSIONALITY(COLLECTION) {                              \
+        if (COLLECTION.size() < dimensionality) {                           \
+            IncorrectDimensionalityException e(COLLECTION.size(),           \
+                                               dimensionality);             \
+            e << "Expected dimensionality " << expected()                   \
+              << ", found " << actual();                                    \
+            throw e;                                                        \
+        }                                                                   \
+    }
+
+    // Ensure the product of these sizes is the same as what we have now
+    #define CHECK_SAME_SIZE(ITER_TYPE, COLLECTION) {                        \
+        CHECK_DIMENSIONALITY(COLLECTION);                                   \
+        ITER_TYPE it = COLLECTION.begin();                                  \
+        SizeType product = 1;                                               \
+        for (int i = 0; i < dimensionality; ++i, ++it)                      \
+            product *= *it;                                                 \
+        if (product != size()) {                                            \
+            IllegalSizeException e(i, product);                             \
+            e << "New size " << product << " differs from current size "    \
+              << size();                                                    \
+            throw e;                                                        \
+        }                                                                   \
+    }
+
+    // Ensure each size is non-negative
+    #define CHECK_SIZES(ITER_TYPE, COLLECTION) {                            \
+        CHECK_DIMENSIONALITY(COLLECTION);                                   \
+        ITER_TYPE it = COLLECTION.begin();                                  \
+        for (int i = 0; i < dimensionality; ++i, ++it)                      \
+            if (*it < 0) {                                                  \
+                IllegalSizeException e(i, *it);                             \
+                e << "Size along dimension " << dimension()                 \
+                  << " of " << size() << " is illegal";                     \
+                throw e;
+            }
+    }
+
+    // Ensure each index is within the range [base, extent]
+    #define CHECK_INDICES(ITER_TYPE, COLLECTION) {                          \
+        CHECK_DIMENSIONALITY(COLLECTION);                                   \
+        ITER_TYPE it = COLLECTION.begin();                                  \
+        for (int i = 0; i < dimensionality; ++i, ++it)                      \
+            if (*it < base(i) || *it > extent(i)) {                         \
+                IndexOutOfBoundsException e(i, *it, base(i), extent(i));    \
+                e << "Index along dimension " << dimension()                \
+                  << " of " << index() << " is not within ["                \
+                  << base() << "," << extent() << "]";                      \
+                throw e;                                                    \
+            }                                                               \
+    }
+
+#else
+    // Do nothing...
+    #define CHECK_DIMENSIONALITY(COLLECTION)
+    #define CHECK_SAME_SIZE(ITER_TYPE, COLLECTION)
+    #define CHECK_SIZES(ITER_TYPE, COLLECTION)
+    #define CHECK_INDICES(ITER_TYPE, COLLECTION)
+#endif
+
+
+// The ConstMultiArrayView class implements the following functionality:
+//      Storage orders, sizes/bases/extents, indexing, reshaping
+//      Const accessors/iterators
 template <typename T, inca::SizeType dim>
-class inca::MultiArray {
+class inca::ConstMultiArrayView {
 /*---------------------------------------------------------------------------*
  | Type & constant declarations
  *---------------------------------------------------------------------------*/
+private:
+    // My own type (only used internally)
+    typedef ConstMultiArrayView<T, dim> ThisType;
+
 public:
     // How many dimensions do I have?
     static const SizeType dimensionality = dim;
 
-    // Myself & my storage order
-    typedef MultiArray<T, dim>          ThisType;
+    // My storage order type
     typedef MultiArrayStorageOrder<dim> StorageOrder;
 
     // Numeric types
@@ -78,39 +252,48 @@ public:
     typedef T const &                   ConstReference;
 
     // Iterator types
-    typedef MultiArrayIterator<ThisType, ElementType, false>             Iterator;
     typedef MultiArrayIterator<ThisType const, const ElementType, false> ConstIterator;
-    typedef MultiArrayIterator<ThisType, ElementType, true>              ReverseIterator;
     typedef MultiArrayIterator<ThisType const, const ElementType, true>  ConstReverseIterator;
+    typedef ConstIterator           Iterator;
+    typedef ConstReverseIterator    ReverseIterator;
+
+//    STL_COMPLIANT_TYPEDEFS;
 
 
 /*---------------------------------------------------------------------------*
  | Constructors
  *---------------------------------------------------------------------------*/
-public:
-    // Default (no allocated memory) constructor
-    explicit
-    MultiArray(const StorageOrder & so = CStorageOrder())
+protected:
+    // No-memory constructor (only called by subclasses)
+    template <class IndexList>
+    ConstMultiArrayView(const IndexList & bases, const StorageOrder & so)
             : _elements(NULL), _storageOrder(so), _size(0),
-              _sizes(0), _offsets(0), _strides(0), _bases(0), _extents(-1) { }
+              _sizes(0), _offsets(0), _strides(0),
+              _bases(bases), _extents(-1) { }
 
-    // Copy constructor
-    MultiArray(const ThisType &a)
-            : _elements(NULL), _storageOrder(a.storageOrder()), _size(0),
-              _bases(a.bases()) {
-        resize(a.sizes());                      // Become the same size
-        std::copy(a.begin(), a.end(), begin()); // Copy all the contents
+public:
+    // Using default generated copy constructor
+    // ConstMultiArrayView(const ThisType & a) { ... }
+
+    // Arbitrary-dimensional constructor based at the origin
+    template <class SizeList>
+    explicit ConstMultiArrayView(ConstPointer data,
+                                 const SizeList & sizes,
+                                 const StorageOrder & so = CStorageOrder())
+                            : _elements(data), _storageOrder(so), _bases(0) {
+        setSizes(sizes);
+        reindex();
     }
 
-    /**
-     * Arbitrary-dimensional constructor, with optional storage order.
-     */
-    template <class SizeList>
-    explicit MultiArray(const SizeList & sizes,
-                        const StorageOrder & so = CStorageOrder())
-            : _elements(NULL), _storageOrder(so), _size(0), _bases(0) {
-        // Allocate memory, and all that
-        resize(sizes);
+    // Arbitrary-dimensional constructor specifying index bases
+    template <class SizeList, class IndexList>
+    explicit ConstMultiArrayView(ConstPointer data,
+                                 const SizeList & sizes,
+                                 const IndexList & bases,
+                                 const StorageOrder & so = CStorageOrder())
+                            : _elements(data), _storageOrder(so), _bases(bases) {
+        setSizes(sizes);
+        reindex();
     }
 
     /**
@@ -121,25 +304,20 @@ public:
      */
     #define CREATE_DIMENSIONAL_CONSTRUCTOR(DIM)                             \
         explicit                                                            \
-        MultiArray(PARAMS(DIM, int e),                                      \
-                   const StorageOrder so = CStorageOrder())                 \
-                : _elements(NULL), _storageOrder(so), _size(0),             \
-                  _bases(0) {                                          \
+        ConstMultiArrayView(ConstPointer data,                              \
+                            PARAMS(DIM, int e),                             \
+                            const StorageOrder so = CStorageOrder())        \
+                : _elements(data), _storageOrder(so), _bases(0) {           \
             /* Cause a compile-time failure if this constructor is used     \
              * with an instance of the wrong dimensionality. */             \
             BOOST_STATIC_ASSERT(dimensionality == DIM);                     \
                                                                             \
-            /* Allocate memory, and all that */                             \
-            resize(SizeArray(PARAMS(DIM, e)));                            \
+            /* Set the correct sizes */                                     \
+            setSizes(SizeArray(PARAMS(DIM, e)));                            \
         }
     FOR_ALL_DIMS(CREATE_DIMENSIONAL_CONSTRUCTOR);
     #undef CREATE_DIMENSIONAL_CONSTRUCTOR
 
-    // Destructor
-    ~MultiArray() {
-        if (_elements)
-            delete [] _elements;        // Free up the memory
-    }
 
 protected:
     Pointer      _elements;     // The linear array of elements that
@@ -158,12 +336,12 @@ protected:
  *---------------------------------------------------------------------------*/
 public:
     // Pointer to underlying array of elements
-    Pointer      elements()       { return _elements; }
     ConstPointer elements() const { return _elements; }
 
-    // Logical origin element accessors
-    Pointer      origin()       { return _elements + indexOf(IndexArray(0)); }
-    ConstPointer origin() const { return _elements + indexOf(IndexArray(0)); }
+    // Pointer to the logical origin element (i.e., the element at 0,0,0...)
+    // This will throw an IndexOutOfBoundsException if the origin falls
+    // outside the legal index range.
+    ConstPointer origin() const { return elements() + indexOf(IndexArray(0)); }
 
 
 /*---------------------------------------------------------------------------*
@@ -171,7 +349,7 @@ public:
  *---------------------------------------------------------------------------*/
 public:
     // Total number of elements
-    SizeType size() const                   { return _size; }
+    SizeType size() const               { return _size; }
 
     // Number of elements along each dimensional axis
     SizeType size(IndexType d) const    { return _sizes[d]; }
@@ -183,7 +361,7 @@ public:
 
     // Starting offset along each dimensional axis
     DifferenceType offset(IndexType d) const    { return _offsets[d]; }
-    const IndexArray & offsets() const          { return _offsets; }
+    const DifferenceArray & offsets() const     { return _offsets; }
 
     // Index base (minimum index) along each dimensional axis
     IndexType base(IndexType d) const   { return _bases[d]; }
@@ -200,7 +378,83 @@ public:
         reindex();
     }
 
-    // Calculate the linear index corresponding to a set of n-dim indices
+    // Modify the sizes along individual dimensions. The total number of
+    // elements must remain constant. If range checking is enabled, trying to
+    // reshape to a new size will cause an IllegalSizeException.
+    template <class SizeList>
+    void reshape(const SizeList & sizes) {
+        CHECK_SAME_SIZE(typename SizeList::const_iterator, sizes);
+        setSizes(sizes);
+        reindex();
+    }
+
+protected:
+    // Set the sizes of the array
+    template <class SizeList>
+    void setSizes(const SizeList & sizes) {
+        CHECK_SIZES(typename SizeList::const_iterator, sizes);
+
+        // Copy dimensional sizes and calculate the total size
+        _size = 1;
+        SizeList::const_iterator it = sizes.begin();
+        for (IndexType i = 0; i < dimensionality; ++i, ++it) {
+            _sizes[i] = *it;
+            _size *= _sizes[i];
+        }
+    }
+
+    // Recalculate indexing parameters (if storage order, shape, or bases change)
+    void reindex() {
+        // Figure out the stride/offset for each dimension
+        std::fill(_strides.begin(), _strides.end(), 1);
+        std::fill(_offsets.begin(), _offsets.end(), 0);
+        for (int i = 0; i < dimensionality; ++i) {
+            for (int j = 0; j < dimensionality; ++j)
+                if (_storageOrder.order(j) > _storageOrder.order(i))
+                    _strides[j] *= _sizes[i];
+            _extents[i] = _bases[i] + _sizes[i] - 1;
+        }
+    }
+
+
+/*---------------------------------------------------------------------------*
+ | Iterators
+ *---------------------------------------------------------------------------*/
+public:
+    // Forward iterators
+    ConstIterator begin() const  { return ConstIterator(*this, 0); }
+    ConstIterator end()   const  { return ConstIterator(*this, size()); }
+
+    template <class IndexList>
+    ConstIterator iteratorAt(const IndexList & i) const { return ConstIterator(this, i); }
+    #define CREATE_DIMENSIONAL_ITERATOR_AT(DIM)                             \
+        ConstIterator iteratorAt(PARAMS(DIM, int i)) const {                \
+            return ConstIterator(this, PARAMS(DIM, i));                     \
+        }
+    FOR_ALL_DIMS(CREATE_DIMENSIONAL_ITERATOR_AT);
+    #undef CREATE_DIMENSIONAL_ITERATOR_AT
+
+    // Reverse iterators
+    ConstReverseIterator reverseBegin() const { return ConstReverseIterator(*this, size() - 1); }
+    ConstReverseIterator reverseEnd()   const { return ConstReverseIterator(*this - 1); }
+
+    template <class IndexList>
+    ConstReverseIterator reverseIteratorAt(const IndexList & indices) const {
+        return ConstReverseIterator(this, indices);
+    }
+    #define CREATE_DIMENSIONAL_ITERATOR_AT(DIM)                             \
+        ConstReverseIterator reverseIteratorAt(PARAMS(DIM, int i)) const {  \
+            return ReverseIterator(this, PARAMS(DIM, i));                   \
+        }
+    FOR_ALL_DIMS(CREATE_DIMENSIONAL_ITERATOR_AT);
+    #undef CREATE_DIMENSIONAL_ITERATOR_AT
+
+
+/*---------------------------------------------------------------------------*
+ | Element accessors
+ *---------------------------------------------------------------------------*/
+public:
+    // The linear index corresponding to a set of n-dim indices
     template <class IndexList>
     IndexType indexOf(const IndexList & indices) const {
         int idx = 0;
@@ -209,15 +463,283 @@ public:
         return idx;
     }
 
+    // Linear [] element accessor (always 1D)
+    ConstReference operator[](IndexType i) const { return elements()[i]; }
+
+    // Arbitrary-dimensional element accessor
     template <class IndexList>
-    void setBounds(const IndexList & bases, const IndexList & extents) {
-        _bases = bases;
-        SizeArray sz;
-        for (IndexType d = 0; d < dimensionality; ++d)
-            sz[d] = extents[d] - bases[d] + 1;
-        resize(sz);
+    ConstReference operator()(const IndexList &indices) const {
+        return operator[](indexOf(indices));
     }
 
+    // Dimensionality-specific element accessors
+    #define CREATE_DIMENSIONAL_ACCESSOR(DIM)                                \
+        ConstReference operator()(PARAMS(DIM, IndexType i)) const {         \
+            BOOST_STATIC_ASSERT(dimensionality == DIM);                     \
+            return operator[](indexOf(IndexArray(PARAMS(DIM, i))));         \
+        }
+    FOR_ALL_DIMS(CREATE_DIMENSIONAL_ACCESSOR);
+    #undef CREATE_DIMENSIONAL_ACCESSOR
+};
+
+
+// The MultiArrayView class implements the following functionality:
+//      Non-const accessors/iterators
+template <typename T, inca::SizeType dim>
+class inca::MultiArrayView : public inca::ConstMultiArrayView<T, dim> {
+/*---------------------------------------------------------------------------*
+ | Type & constant declarations
+ *---------------------------------------------------------------------------*/
+private:
+    // My own type and super-type (only used internally)
+    typedef ConstMultiArrayView<T, dim> Superclass;
+    typedef MultiArrayView<T, dim>      ThisType;
+
+public:
+    // Container types
+    typedef typename Superclass::SizeArray          SizeArray;
+    typedef typename Superclass::IndexArray         IndexArray;
+    typedef typename Superclass::DifferenceArray    DifferenceArray;
+
+    // Contained types
+    typedef typename Superclass::ElementType        ElementType;
+    typedef typename Superclass::Pointer            Pointer;
+    typedef typename Superclass::ConstPointer       ConstPointer;
+    typedef typename Superclass::Reference          Reference;
+    typedef typename Superclass::ConstReference     ConstReference;
+
+    // Iterator types
+    typedef MultiArrayIterator<ThisType, ElementType, false> Iterator;
+    typedef MultiArrayIterator<ThisType, ElementType, true>  ReverseIterator;
+    typedef typename Superclass::ConstIterator          ConstIterator;
+    typedef typename Superclass::ConstReverseIterator   ConstReverseIterator;
+
+
+/*---------------------------------------------------------------------------*
+ | Constructors
+ *---------------------------------------------------------------------------*/
+protected:
+    // Default constructor (only called by subclasses)
+    template <class IndexList>
+    MultiArrayView(const IndexList & bases, const StorageOrder & so)
+            : Superclass(bases, so) { }
+
+public:
+    // Using default generated copy constructor
+    // MultiArrayView(const ThisType & a) { ... }
+
+
+    // Arbitrary-dimensional constructor based at the origin
+    template <class SizeList>
+    explicit MultiArrayView(Pointer data,
+                            const SizeList & sizes,
+                            const StorageOrder & so = CStorageOrder())
+            : Superclass(data, sizes, so) { }
+
+    // Arbitrary-dimensional constructor specifying index bases
+    template <class SizeList, class IndexList>
+    explicit MultiArrayView(Pointer data,
+                            const SizeList & sizes,
+                            const IndexList & bases,
+                            const StorageOrder & so = CStorageOrder())
+            : Superclass(data, sizes, bases, so) { }
+
+    /**
+     * Parameter list constructors giving the size along each dimension.
+     * Each of these is intended to be used only with instances of the
+     * appropriate rank (calling a constructor of the wrong rank will cause
+     * a compile-time assert).
+     */
+    #define CREATE_DIMENSIONAL_CONSTRUCTOR(DIM)                             \
+        explicit                                                            \
+        MultiArrayView(Pointer data,                                        \
+                       PARAMS(DIM, int e),                                  \
+                       const StorageOrder so = CStorageOrder())             \
+                : Superclass(data, PARAMS(DIM, e), so) { }
+    FOR_ALL_DIMS(CREATE_DIMENSIONAL_CONSTRUCTOR);
+    #undef CREATE_DIMENSIONAL_CONSTRUCTOR
+
+
+/*---------------------------------------------------------------------------*
+ | Data accessors
+ *---------------------------------------------------------------------------*/
+public:
+    // Pointer to underlying array of elements
+         Pointer elements()       { return const_cast<Pointer>(_elements); }
+    ConstPointer elements() const { return _elements; }
+
+    // Pointer to the logical origin element (i.e., the element at 0,0,0...)
+    // This will throw an IndexOutOfBoundsException if the origin falls
+    // outside the legal index range.
+         Pointer origin()       { return elements() + indexOf(IndexArray(0)); }
+    ConstPointer origin() const { return elements() + indexOf(IndexArray(0)); }
+
+
+/*---------------------------------------------------------------------------*
+ | Iterators
+ *---------------------------------------------------------------------------*/
+public:
+    // Forward iterators
+    Iterator begin() { return Iterator(*this, 0); }
+    Iterator end()   { return Iterator(*this, size()); }
+    ConstIterator begin() const  { return ConstIterator(*this, 0); }
+    ConstIterator end()   const  { return ConstIterator(*this, size()); }
+
+    template <class IndexList>
+    Iterator iteratorAt(const IndexList & i) { return Iterator(this, i); }
+    template <class IndexList>
+    ConstIterator iteratorAt(const IndexList & i) const { return ConstIterator(this, i); }
+    #define CREATE_DIMENSIONAL_ITERATOR_AT(DIM)                             \
+        Iterator iteratorAt(PARAMS(DIM, int i)) {                           \
+            return Iterator(this, PARAMS(DIM, i));                          \
+        }                                                                   \
+        ConstIterator iteratorAt(PARAMS(DIM, int i)) const {                \
+            return ConstIterator(this, PARAMS(DIM, i));                     \
+        }
+    FOR_ALL_DIMS(CREATE_DIMENSIONAL_ITERATOR_AT);
+    #undef CREATE_DIMENSIONAL_ITERATOR_AT
+
+    // Reverse iterators
+    ReverseIterator reverseBegin() { return ReverseIterator(*this, size() - 1); }
+    ReverseIterator reverseEnd()   { return ReverseIterator(*this, -1); }
+    ConstReverseIterator reverseBegin() const { return ConstReverseIterator(*this, size() - 1); }
+    ConstReverseIterator reverseEnd()   const { return ConstReverseIterator(*this - 1); }
+
+    template <class IndexList>
+    ReverseIterator reverseIteratorAt(const IndexList & indices) {
+        return ReverseIterator(this, indices);
+    }
+    template <class IndexList>
+    ConstReverseIterator reverseIteratorAt(const IndexList & indices) const {
+        return ConstReverseIterator(this, indices);
+    }
+    #define CREATE_DIMENSIONAL_ITERATOR_AT(DIM)                             \
+        ReverseIterator reverseIteratorAt(PARAMS(DIM, int i)) {             \
+            return ReverseIterator(this, PARAMS(DIM, i));                   \
+        }                                                                   \
+        ConstReverseIterator reverseIteratorAt(PARAMS(DIM, int i)) const {  \
+            return ReverseIterator(this, PARAMS(DIM, i));                   \
+        }
+    FOR_ALL_DIMS(CREATE_DIMENSIONAL_ITERATOR_AT);
+    #undef CREATE_DIMENSIONAL_ITERATOR_AT
+
+
+/*---------------------------------------------------------------------------*
+ | Element accessors
+ *---------------------------------------------------------------------------*/
+public:
+    // Linear [] element accessors (always 1D)
+         Reference operator[](IndexType i)       { return elements()[i]; }
+    ConstReference operator[](IndexType i) const { return elements()[i]; }
+
+    // Arbitrary-dimensional element accessors
+    template <class IndexList>
+    Reference operator()(const IndexList &indices) {
+        return operator[](indexOf(indices));
+    }
+    template <class IndexList>
+    ConstReference operator()(const IndexList &indices) const {
+        return operator[](indexOf(indices));
+    }
+
+    // Dimensionality-specific element accessors
+    #define CREATE_DIMENSIONAL_ACCESSOR(DIM)                                \
+        Reference operator()(PARAMS(DIM, IndexType i)) {                    \
+            BOOST_STATIC_ASSERT(dimensionality == DIM);                     \
+            return operator[](indexOf(IndexArray(PARAMS(DIM, i))));         \
+        }                                                                   \
+        ConstReference operator()(PARAMS(DIM, IndexType i)) const {         \
+            BOOST_STATIC_ASSERT(dimensionality == DIM);                     \
+            return operator[](indexOf(IndexArray(PARAMS(DIM, i))));         \
+        }
+    FOR_ALL_DIMS(CREATE_DIMENSIONAL_ACCESSOR);
+    #undef CREATE_DIMENSIONAL_ACCESSOR
+};
+
+
+// The MultiArray class implements the following functionality:
+//      Memory management
+//      Resizing
+//      Swapping
+template <typename T, inca::SizeType dim>
+class inca::MultiArray : public inca::MultiArrayView<T, dim> {
+/*---------------------------------------------------------------------------*
+ | Type & constant declarations
+ *---------------------------------------------------------------------------*/
+private:
+    // My own type and super-type (only used internally)
+    typedef MultiArrayView<T, dim>  Superclass;
+    typedef MultiArray<T, dim>      ThisType;
+
+public:
+    // Container types
+    typedef typename Superclass::SizeArray          SizeArray;
+    typedef typename Superclass::IndexArray         IndexArray;
+    typedef typename Superclass::DifferenceArray    DifferenceArray;
+
+    // Contained types
+    typedef typename Superclass::ElementType        ElementType;
+    typedef typename Superclass::Pointer            Pointer;
+    typedef typename Superclass::ConstPointer       ConstPointer;
+    typedef typename Superclass::Reference          Reference;
+    typedef typename Superclass::ConstReference     ConstReference;
+
+    // Iterator types
+    typedef typename Superclass::Iterator               Iterator;
+    typedef typename Superclass::ReverseIterator        ReverseIterator;
+    typedef typename Superclass::ConstIterator          ConstIterator;
+    typedef typename Superclass::ConstReverseIterator   ConstReverseIterator;
+
+
+/*---------------------------------------------------------------------------*
+ | Constructors
+ *---------------------------------------------------------------------------*/
+public:
+    // Default constructor
+    MultiArray(const StorageOrder & so = CStorageOrder())
+            : Superclass(IndexArray(0), so) { }
+
+    // Copy constructor
+    MultiArray(const ThisType &a)
+            : Superclass(a.bases(), a.storageOrder()) {
+        resize(a.sizes());                          // Become the same size
+        memcpy(elements(), a.elements(), size());   // Copy the memory
+    }
+
+    // Arbitrary-dimensional constructor based at the origin
+    template <class SizeList>
+    explicit MultiArray(const SizeList & sizes,
+                        const StorageOrder & so = CStorageOrder())
+            : Superclass(IndexArray(0), so) { resize(sizes); }
+
+    // Arbitrary-dimensional constructor specifying index bases
+    template <class SizeList, class IndexList>
+    explicit MultiArray(const SizeList & sizes,
+                        const IndexList & bases,
+                        const StorageOrder & so = CStorageOrder())
+            : Superclass(bases, so) { resize(sizes); }
+
+    /**
+     * Parameter list constructors giving the size along each dimension.
+     * Each of these is intended to be used only with instances of the
+     * appropriate rank (calling a constructor of the wrong rank will cause
+     * a compile-time assert).
+     */
+    #define CREATE_DIMENSIONAL_CONSTRUCTOR(DIM)                             \
+        explicit                                                            \
+        MultiArray(PARAMS(DIM, int e),                                      \
+                   const StorageOrder so = CStorageOrder())                 \
+                : Superclass(IndexArray(0), so) {                           \
+            resize(SizeArray(PARAMS(DIM, e)));                              \
+        }
+    FOR_ALL_DIMS(CREATE_DIMENSIONAL_CONSTRUCTOR);
+    #undef CREATE_DIMENSIONAL_CONSTRUCTOR
+
+
+/*---------------------------------------------------------------------------*
+ | Resizing functions
+ *---------------------------------------------------------------------------*/
+public:
     // Modify the shape and/or size of the array. The number of dimensions
     // must remain constant, but the number of elements may be changed.
     // If the size does not change, the elements in the array are guaranteed
@@ -225,21 +747,17 @@ public:
     // does change, then the elements in the array are NOT preserved unless
     // preservation is requested. If preservation is requested, then any indices
     // that are valid in both the original and the resized arrays will be copied.
-    template <typename SizeList>
+    template <class SizeList>
     void resize(const SizeList & sz, bool preserveContents = false) {
-//        function_requires<::boost::CollectionConcept<SizeList> >();
-
         // Copy dimensions and figure out how many elements we'll need
-        SizeType oldSize = _size;
-        std::copy(sz.begin(), sz.end(), _sizes.begin());
-        _size = std::accumulate(_sizes.begin(), _sizes.end(), 1,
-                                std::multiplies<SizeType>());
+        SizeType oldSize = size();
+        setSizes(sz);
 
         // We might have to allocate new elements
-        if (oldSize != _size) {
-            Pointer oldElements = _elements;
-            if (_size > 0) {            // Make some more
-                _elements = new ElementType[_size];
+        if (oldSize != size()) {
+            ConstPointer oldElements = _elements;
+            if (size() > 0) {           // Make some more
+                _elements = new ElementType[size()];
                 if (preserveContents) {         // Copy the common elements
                     cerr << "non-destructive resize not implemented!\n";
                 }
@@ -255,6 +773,26 @@ public:
         reindex();
     }
 
+    // Modify the shape and/or size of the array. This version takes two sets
+    // of indices, giving the bases and extents along each dimension.
+    template <class IndexList>
+    void resize(const IndexList & bs, const IndexList & ext,
+                bool preserveContents = false) {
+        CHECK_DIMENSIONALITY(bs);
+        CHECK_DIMENSIONALITY(ext);
+        SizeArray sz;
+        
+        // Copy the new bases/extents and calculate the new sizes
+        IndexList::const_iterator bi = bs.begin(),
+                                  ei = ext.begin();
+        for (IndexType d = 0; d < dimensionality; ++d, ++bi, ++ei) {
+            _bases[d]   = *bi;
+            _extents[d] = *ei;
+            sz[d] = _extents[d] - _bases[d] + 1;
+        }
+        resize(sz, preserveContents);
+    }
+
     // Dimensionality-specific versions
     #define CREATE_DIMENSIONAL_RESIZE(DIM)                                  \
         void resize(PARAMS(DIM, int e), bool preserveContents = false) {    \
@@ -263,22 +801,14 @@ public:
     FOR_ALL_DIMS(CREATE_DIMENSIONAL_RESIZE);
     #undef CREATE_DIMENSIONAL_RESIZE
 
-    // Recalculate indexing parameters (if storage order, shape, or bases change)
-    void reindex() {
-        // Figure out the stride/offset for each dimension
-        std::fill(_strides.begin(), _strides.end(), 1);
-        std::fill(_offsets.begin(), _offsets.end(), 0);
-        for (int i = 0; i < dimensionality; ++i) {
-            for (int j = 0; j < dimensionality; ++j)
-                if (_storageOrder.order(j) > _storageOrder.order(i))
-                    _strides[j] *= _sizes[i];
-            _extents[i] = _bases[i] + _sizes[i] - 1;
-        }
-    }
 
+/*---------------------------------------------------------------------------*
+ | Swapping function
+ *---------------------------------------------------------------------------*/
+public:
     // Swap the contents of this array with another
-    void swap(MultiArray<ElementType, dimensionality> & a) {
-        Pointer p;      IndexArray ia;      // Temporary variables
+    void swap(ThisType & a) {
+        ConstPointer p; IndexArray ia;      // Temporary variables
         SizeType st;    SizeArray sa;
         StorageOrder so;
 
@@ -314,91 +844,6 @@ public:
         _extents = a._extents;
         a._extents = ia;
     }
-
-
-/*---------------------------------------------------------------------------*
- | Iterators
- *---------------------------------------------------------------------------*/
-public:
-    // Forward iterators
-         Iterator begin()        { return Iterator(*this, 0); }
-    ConstIterator begin() const  { return ConstIterator(*this, 0); }
-         Iterator end()          { return Iterator(*this, size()); }
-    ConstIterator end() const    { return ConstIterator(*this, size()); }
-
-    template <class IndexList>
-    Iterator      iteratorAt(const IndexList & i) { return Iterator(this, i); }
-    template <class IndexList>
-    ConstIterator iteratorAt(const IndexList & i) const { return ConstIterator(this, i); }
-    #define CREATE_DIMENSIONAL_ITERATOR_AT(DIM)                             \
-        Iterator iteratorAt(PARAMS(DIM, int i)) {                           \
-            return Iterator(this, PARAMS(DIM, i));                          \
-        }                                                                   \
-        ConstIterator iteratorAt(PARAMS(DIM, int i)) const {                \
-            return ConstIterator(this, PARAMS(DIM, i));                     \
-        }
-    FOR_ALL_DIMS(CREATE_DIMENSIONAL_ITERATOR_AT);
-    #undef CREATE_DIMENSIONAL_ITERATOR_AT
-
-    // Reverse iterators
-         ReverseIterator reverseBegin()       { return ReverseIterator(*this, size() - 1); }
-    ConstReverseIterator reverseBegin() const { return ConstReverseIterator(*this, size() - 1); }
-         ReverseIterator reverseEnd()         { return ReverseIterator(*this, -1); }
-    ConstReverseIterator reverseEnd() const   { return ConstReverseIterator(*this - 1); }
-
-    template <class IndexList>
-    ReverseIterator      reverseIteratorAt(const IndexList & indices) {
-        return ReverseIterator(this, indices);
-    }
-    template <class IndexList>
-    ConstReverseIterator reverseIteratorAt(const IndexList & indices) const {
-        return ConstReverseIterator(this, indices);
-    }
-    #define CREATE_DIMENSIONAL_ITERATOR_AT(DIM)                             \
-        ReverseIterator reverseIteratorAt(PARAMS(DIM, int i)) {             \
-            return ReverseIterator(this, PARAMS(DIM, i));                   \
-        }                                                                   \
-        ConstReverseIterator reverseIteratorAt(PARAMS(DIM, int i)) const {  \
-            return ReverseIterator(this, PARAMS(DIM, i));                   \
-        }
-    FOR_ALL_DIMS(CREATE_DIMENSIONAL_ITERATOR_AT);
-    #undef CREATE_DIMENSIONAL_ITERATOR_AT
-
-
-/*---------------------------------------------------------------------------*
- | Element accessors
- *---------------------------------------------------------------------------*/
-public:
-    // Linear [] element accessors (always 1D)
-    Reference operator[](IndexType i) {
-        return _elements[i];
-    }
-    ConstReference operator[](IndexType i) const {
-        return _elements[i];
-    }
-
-    // Arbitrary-dimensional element accessors
-    template <class IndexList>
-    Reference operator()(const IndexList &indices) {
-        return operator[](indexOf(indices));
-    }
-    template <class IndexList>
-    ConstReference operator()(const IndexList &indices) const {
-        return operator[](indexOf(indices));
-    }
-
-    // Dimensionality-specific element accessors
-    #define CREATE_DIMENSIONAL_ACCESSOR(DIM)                                \
-        Reference operator()(PARAMS(DIM, IndexType i)) {                    \
-            BOOST_STATIC_ASSERT(dimensionality == DIM);                     \
-            return (*this)[indexOf(IndexArray(PARAMS(DIM, i)))];            \
-        }                                                                   \
-        ConstReference operator()(PARAMS(DIM, IndexType i)) const {         \
-            BOOST_STATIC_ASSERT(dimensionality == DIM);                     \
-            return (*this)[indexOf(IndexArray(PARAMS(DIM, i)))];            \
-        }
-    FOR_ALL_DIMS(CREATE_DIMENSIONAL_ACCESSOR);
-    #undef CREATE_DIMENSIONAL_ACCESSOR
 };
 
 
@@ -465,3 +910,4 @@ public:
 #include "multi-dimensional-macros.hpp"
 
 #endif
+

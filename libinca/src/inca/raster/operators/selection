@@ -131,12 +131,24 @@ namespace inca {
         };
 
 
-        // Factory function
+        // Factory function taking start and end indices
         template <typename R1, class IndexList>
         SelectRegionRasterOperator<R1> select(R1 &r, const IndexList &i1,
                                                      const IndexList &i2,
                                                      bool relocate = true) {
             return SelectRegionRasterOperator<R1>(r, i1, i2, relocate);
+        }
+
+        // Factory function taking size (implicitly indexed from zero)
+        template <typename R1, class SizeList>
+        SelectRegionRasterOperator<R1> select(R1 &r, const SizeList &s) {
+            typedef Array<IndexType, R1::dimensionality> IndexArray;
+            IndexArray extents;
+            for (IndexType i = 0; i < extents.size(); ++i)
+                extents[i] = s[i] - 1;
+            return SelectRegionRasterOperator<R1>(r,
+                                                  IndexArray(0),
+                                                  extents);
         }
     };
 };

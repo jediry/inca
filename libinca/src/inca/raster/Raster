@@ -36,7 +36,9 @@
 namespace inca {
     namespace raster {
         // Forward declarations
-        template <class Base> class RasterView;
+        template <class R, template <class> Holder> class PassThruRaster;
+        template <class R> class ByValueRasterHolder;
+        template <class R> class ByReferenceRasterHolder;
     };
 };
 
@@ -44,40 +46,56 @@ namespace inca {
 #include <inca/util/multi-dimensional-macros.hpp>
 
 
-template <class RasterBase>
-class inca::raster::RasterView : public RasterBase {
+template <class R, template <class> Holder = ByReferenceRasterHolder>
+class inca::raster::PassThruRaster {
 /*---------------------------------------------------------------------------*
  | Type & constant declarations
  *---------------------------------------------------------------------------*/
+private:
+    // Who am I?
+    typedef PassThruRaster<R, Holder>   ThisType;
+
 public:
-    // Typedefs for me and my base (implementation) class
-    typedef RasterView<RasterBase>  ThisType;
-    typedef RasterBase              Base;
+    // The raster type that we're wrapping, and the thing that holds it
+    typedef R           RasterType;
+    typedef Holder<R>   RasterHolder;
 
     // Numeric types
-    typedef typename Base::SizeType         SizeType;
-    typedef typename Base::IndexType        IndexType;
-    typedef typename Base::DifferenceType   DifferenceType;
-
-    // Numeric list types
-    typedef typename Base::ExtentList       ExtentList;
-    typedef typename Base::IndexList        IndexList;
-
-    // Iterator types
-    typedef typename Base::Iterator              Iterator;
-    typedef typename Base::ConstIterator         ConstIterator;
-    typedef typename Base::ReverseIterator       ReverseIterator;
-    typedef typename Base::ConstReverseIterator  ConstReverseIterator;
+    typedef inca::SizeType         SizeType;
+    typedef inca::IndexType        IndexType;
+    typedef inca::DifferenceType   DifferenceType;
 
     // How many dimensions do I have?
-    static const SizeType dimensionality = Base::dimensionality;
+    static const SizeType dimensionality = Raster::dimensionality;
+
+    // Numeric list types
+    typedef Array<SizeType, dimensionality>         SizeArray;
+    typedef Array<IndexType, dimensionality>        IndexArray;
+    typedef Array<DifferenceType, dimensionality>   DifferenceArray;
+
+    // Iterator types
+//    typedef typename Base::Iterator              Iterator;
+//    typedef typename Base::ConstIterator         ConstIterator;
+//    typedef typename Base::ReverseIterator       ReverseIterator;
+//    typedef typename Base::ConstReverseIterator  ConstReverseIterator;
 
     // What type of things do I contain?
-    typedef typename Base::ElementType      ElementType;
-    typedef typename Base::Reference        Reference;
-    typedef typename Base::ConstReference   ConstReference;
-    typedef typename Base::Pointer          Pointer;
-    typedef typename Base::ConstPointer     ConstPointer;
+    typedef typename R::ElementType         ElementType;
+    typedef typename R::Reference           Reference;
+    typedef typename R::ConstReference      ConstReference;
+    typedef typename R::Pointer             Pointer;
+    typedef typename R::ConstPointer        ConstPointer;
+
+
+/*---------------------------------------------------------------------------*
+ | Constructors
+ *---------------------------------------------------------------------------*/
+public:
+    // Constructor
+    PassThruRaster(RasterType & r) : holder(r) { }
+
+protected:
+    RasterHolder raster;
 
 
 /*---------------------------------------------------------------------------*
@@ -103,6 +121,60 @@ public:
     constraint ThisType is not resizeable
 
 
+/*---------------------------------------------------------------------------*
+ | Size & shape functions
+ *---------------------------------------------------------------------------*/
+public:
+    // Total number of elements
+    SizeType size() const                   { return raster().size(); }
+
+    // Number of elements along each dimensional axis
+    SizeType size(IndexType d) const  { return raster().size(d); }
+    const SizeArray & sizes() const   { return raster().sizes(); }
+
+    // Index base (minimum index) along each dimensional axis
+    IndexType base(IndexType d) const  { return raster().base(d); }
+    const IndexArray & bases() const   { return raster().bases(); }
+
+    // Index extent (maximum index) along each dimensional axis
+    IndexType extent(IndexType d) const     { return raster().extent(d); }
+    const IndexArray & extents() const      { return raster().extents(); }
+
+
+/*---------------------------------------------------------------------------*
+ | Iterator accessors
+ *---------------------------------------------------------------------------*/
+public:
+         Iterator begin()       { return raster().begin(); }
+    ConstIterator begin() const { return raster().begin(); }
+         Iterator end()         { return raster().end(); }
+    ConstIterator end()   const { return raster().end(); }
+
+         ReverseIterator reverseBegin()       { return raster().reverseBegin(); }
+    ConstReverseIterator reverseBegin() const { return raster().reverseBegin(); }
+         ReverseIterator reverseEnd()         { return raster().reverseEnd(); }
+    ConstReverseIterator reverseEnd()   const { return raster().reverseEnd(); }
+
+
+/*---------------------------------------------------------------------------*
+ | Element accessors
+ *---------------------------------------------------------------------------*/
+public:
+    // Arbitrary-dimensional element accessors
+    template <class IndexList>
+         Reference operator()(const IndexList &indices)       { return array()(indices); }
+    template <class IndexList>
+    ConstReference operator()(const IndexList &indices) const { return array()(indices); }
+
+    #define CREATE_DIMENSIONAL_ACCESSOR(DIM)                                \
+        Reference operator()(PARAMS(DIM, IndexType i)) {                    \
+            return array()(PARAMS(DIM, i));                                 \
+        }                                                                   \
+        ConstReference operator()(PARAMS(DIM, IndexType i)) const {         \
+            return array()(PARAMS(DIM, i));                                 \
+        }
+    FOR_ALL_DIMS(CREATE_DIMENSIONAL_ACCESSOR);
+    #undef CREATE_DIMENSIONAL_ACCESSOR
 /*---------------------------------------------------------------------------*
  | Size & shape functions
  *---------------------------------------------------------------------------*/

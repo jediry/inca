@@ -29,7 +29,7 @@
 #define INCA_IO_FILE_EXCEPTIONS
 
 // Include superclass definition
-#include <inca/util/stream_exception.hpp>
+#include <inca/util/StreamException.hpp>
 
 
 // This is part of the Inca I/O subsystem
@@ -45,11 +45,11 @@ namespace inca {
 };
 
 
-class inca::io::FileException : public stream_exception {
+class inca::io::FileException : public StreamException {
 public:
     // Constructors
     explicit FileException(const string &file, const string &msg = "")
-        : stream_exception(msg), _filename(file) { }
+        : StreamException(msg), _filename(file) { }
 
     // Accessors
     const string & filename() const { return _filename; }

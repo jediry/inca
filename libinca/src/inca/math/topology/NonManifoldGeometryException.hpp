@@ -18,19 +18,19 @@
 #define INCA_MATH_TOPOLOGY_EXCEPTIONS
 
 // Include superclass definition
-#include <inca/util/stream_exception.hpp>
+#include <inca/util/StreamException.hpp>
 
 
 // This is part of the Inca polygon modeling library
 namespace inca {
     namespace math {
         // This is the superclass for all geometry-related exceptions
-        class GeometryException : public stream_exception {
+        class GeometryException : public StreamException {
         public:
             // Constructors
-            explicit GeometryException() : stream_exception() { }
+            explicit GeometryException() : StreamException() { }
             explicit GeometryException(const string &msg)
-                : stream_exception(msg) { }
+                : StreamException(msg) { }
         };
 
         // This is thrown when a non-manifold condition is detected

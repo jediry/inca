@@ -56,9 +56,11 @@ class inca::raster::MultiArrayRaster : public WritableRasterTag,
 /*---------------------------------------------------------------------------*
  | Type & constant declarations
  *---------------------------------------------------------------------------*/
-public:
+private:
+    // Who am I?
     typedef MultiArrayRaster<T, dim>            ThisType;
 
+public:
     // Underlying MultiArray type
     typedef inca::MultiArray<T, dim>            MultiArray;
     typedef typename MultiArray::StorageOrder   StorageOrder;
@@ -67,6 +69,9 @@ public:
 //    typedef typename MultiArray::SizeType       SizeType;
 //    typedef typename MultiArray::IndexType      IndexType;
 //    typedef typename MultiArray::DifferenceType DifferenceType;
+
+    // How many dimensions do I have?
+    static const SizeType dimensionality = MultiArray::dimensionality;
 
     // Container types
     typedef typename MultiArray::SizeArray          SizeArray;
@@ -85,9 +90,6 @@ public:
     typedef typename MultiArray::ConstReference ConstReference;
     typedef typename MultiArray::Pointer        Pointer;
     typedef typename MultiArray::ConstPointer   ConstPointer;
-
-    // How many dimensions do I have?
-    static const SizeType dimensionality = MultiArray::dimensionality;
 
 
 /*---------------------------------------------------------------------------*
@@ -153,8 +155,7 @@ public:
     // Copy assignment from another RasterView object
     template <class Src>
     ENABLE_IF_T(is_raster<Src>, ThisType &) operator=(const Src &r) {
-        array().setBounds(r.bases(), r.extents());
-//        resize(r.sizes());               // Make sure it's the right size
+        array().resize(r.bases(), r.extents());// Make sure it's the right size
         copy(*this, r);                 // Copy all the elements
         return *this;                   // Return a reference
     }
