@@ -1,0 +1,51 @@
+/** -*- C++ -*-
+ *
+ * \file FixedSizeRasterConcept
+ *
+ * \author Ryan L. Saunders
+ *
+ * Copyright 2004, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ */
+
+#ifndef INCA_RASTER_CONCEPT_FIXED_SIZE_RASTER
+#define INCA_RASTER_CONCEPT_FIXED_SIZE_RASTER
+
+// Import related concepts
+#include "RasterConcept"
+
+// Import concept checking mechanism and metaprogramming macros
+#include <boost/concept_check.hpp>
+#include <inca/util/metaprogramming/macros.hpp>
+
+
+// This is part of the Inca raster processing library
+namespace inca {
+    namespace raster {
+
+        // Semantic tag
+        struct FixedSizeRasterTag { };
+
+        // Boolean test metafunction
+        BOOLEAN_METAFUNCTION( is_fixed_size_raster,
+                              IS_A( typename T::SizeTag,
+                                    FixedSizeRasterTag ) )
+
+
+        // Concept checking class
+        template <class R>
+        struct FixedSizeRasterConcept {
+
+        };
+
+    }
+}
+
+
+// Clean up the preprocessor namespace
+#define UNDEFINE_INCA_METAPROGRAMMING_MACROS
+#include <inca/util/metaprogramming/macros.hpp>
+
+#endif
+

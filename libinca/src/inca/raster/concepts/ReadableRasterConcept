@@ -1,0 +1,101 @@
+/** -*- C++ -*-
+ *
+ * \file ReadableRasterConcept
+ *
+ * \author Ryan L. Saunders
+ *
+ * Copyright 2004, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ */
+
+#ifndef INCA_RASTER_CONCEPT_READABLE_RASTER
+#define INCA_RASTER_CONCEPT_READABLE_RASTER
+
+// Import related concepts
+#include "RasterConcept"
+
+// Import concept checking mechanism and metaprogramming macros
+#include <boost/concept_check.hpp>
+#include <inca/util/metaprogramming/macros.hpp>
+
+
+// This is part of the Inca raster processing library
+namespace inca {
+    namespace raster {
+
+        // Semantic tag
+        struct ReadableRasterTag { };
+
+
+        // Boolean test metafunction
+        BOOLEAN_METAFUNCTION( is_readable_raster,
+                              IS_A( typename T::AccessTag,
+                                    ReadableRasterTag ) )
+
+
+        // Concept checking class
+        template <class R>
+        struct ReadableRasterConcept {
+            // Make sure R has the correct semantic tags
+            static const bool AccessTag_is_a_ReadableRasterTag
+                = IS_A( typename R::AccessTag, ReadableRasterTag )::value;
+
+            // Check that T implements the required interface
+            void constraints() {
+                using boost::function_requires;
+                using boost::ConvertibleConcept;
+
+                R * r;
+
+                // This must be tagged as a ReadableRaster
+                BOOST_STATIC_ASSERT(AccessTag_is_a_ReadableRasterTag);
+
+                // Super-concept check
+                function_requires< RasterConcept<R> >();
+
+                // Make sure additional associated types are intact
+                typedef typename R::ElementType             ElementType;
+                typedef typename R::ReadableElementType     ReadableElementType;
+                typedef typename R::ConstIterator           ConstIterator;
+                typedef typename R::ConstReverseIterator    ConstReverseIterator;
+
+                // Check STL-compatible typedefs of these
+                typedef typename R::const_iterator          const_iterator;
+                typedef typename R::const_reverse_iterator  const_reverse_iterator;
+
+                // Associated type concept checks
+        //                function_requires< MultiDimensionalIteratorConcept<ConstIterator> >();
+        //                function_requires< MultiDimensionalIteratorConcept<Iterator> >();
+                function_requires< ConvertibleConcept<ElementType,
+                                                      ReadableElementType> >();
+                function_requires< ConvertibleConcept<ConstIterator,
+                                                      ConstReverseIterator> >();
+                function_requires< ConvertibleConcept<ConstReverseIterator,
+                                                      ConstIterator> >();
+
+                // Check direct element access
+                typename R::IndexArray indices(0);
+                ReadableElementType re = (*r)(indices); // Arbitrary-dim () operator
+                ElementType e = re;                     // Assignment to ElementType
+
+                // Check iterator accessors
+                ConstIterator ci = r->begin();
+                              ci = r->end();
+                              ci = r->iteratorAt(indices);
+
+                ConstReverseIterator cri = r->rbegin();
+                                     cri = r->rend();
+                                     cri = r->reverseIteratorAt(indices);
+            }
+        };
+
+    }
+}
+
+
+// Clean up the preprocessor namespace
+#define UNDEFINE_INCA_METAPROGRAMMING_MACROS
+#include <inca/util/metaprogramming/macros.hpp>
+
+#endif

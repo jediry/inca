@@ -1,0 +1,53 @@
+/** -*- C++ -*-
+ *
+ * \file ReadWriteRasterConcept
+ *
+ * \author Ryan L. Saunders
+ *
+ * Copyright 2004, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ */
+
+#ifndef INCA_RASTER_CONCEPT_READ_WRITE_RASTER
+#define INCA_RASTER_CONCEPT_READ_WRITE_RASTER
+
+// Import related concepts
+#include "ReadableRasterConcept"
+#include "WritableRasterConcept"
+
+// Import concept checking mechanism and metaprogramming macros
+#include <boost/concept_check.hpp>
+#include <inca/util/metaprogramming/macros.hpp>
+
+
+// This is part of the Inca raster processing library
+namespace inca {
+    namespace raster {
+
+        // Semantic tag
+        struct ReadWriteRasterTag : public ReadableRasterTag,
+                                    public WritableRasterTag { };
+
+        // Boolean test metafunction
+        BOOLEAN_METAFUNCTION( is_read_write_raster,
+                              IS_A( typename T::AccessTag,
+                                    ReadWriteRasterTag ) )
+
+
+        // Concept checking class
+        template <class R>
+        struct ReadWriteRasterConcept {
+
+        };
+
+    }
+}
+
+
+// Clean up the preprocessor namespace
+#define UNDEFINE_INCA_METAPROGRAMMING_MACROS
+#include <inca/util/metaprogramming/macros.hpp>
+
+#endif
+

@@ -1,0 +1,63 @@
+/** -*- C++ -*-
+ *
+ * File: fill
+ *
+ * Author: Ryan L. Saunders
+ *
+ * Copyright 2004, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ */
+
+#ifndef INCA_RASTER_ALGORITHM_FILL
+#define INCA_RASTER_ALGORITHM_FILL
+
+// Import system configuration
+#include <inca/inca-common.h>
+
+// Import concept & tag definitions
+#include "../concepts.hpp"
+
+
+// This is part of the Inca raster processing library
+namespace inca {
+    namespace raster {
+
+        // Recursive fill functor
+        template <typename R0, typename E, class IndexList, inca::SizeType dim>
+        struct FillSlice {
+            void operator()(R0 & dst, const E & src, IndexList & it,
+                            const IndexList & bases, const IndexList & extents) {
+                for (it[dim] = bases[dim]; it[dim] <= extents[dim]; ++it[dim])
+                    FillSlice<R0, E, IndexList, dim - 1>()
+                        (dst, src, it, bases, extents);
+            }
+        };
+        // Recursion base case
+        template <typename R0, typename E, class IndexList>
+        struct FillSlice<R0, E, IndexList, 0> {
+            void operator()(R0 & dst, const E & src, IndexList & it,
+                            const IndexList & bases, const IndexList & extents) {
+                for (it[0] = bases[0]; it[0] <= extents[0]; ++it[0]) {
+                    dst(it) = static_cast<typename R0::ElementType>(src);
+                }
+            }
+        };
+
+
+        template <typename R0, typename E>
+        void fill(R0 & dst, const E & src) {
+            typedef typename R0::IndexType IndexType;
+            typedef typename R0::IndexArray IndexArray;
+
+//            std::fill(dst.begin(), dst.end(), src);
+            IndexArray it = dst.bases();
+            FillSlice<R0, E, IndexArray, R0::dimensionality - 1>()
+                (dst, src, it, dst.bases(), dst.extents());
+        }
+
+    }
+}
+
+#endif
+

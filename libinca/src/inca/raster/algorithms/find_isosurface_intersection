@@ -1,0 +1,540 @@
+/** -*- C++ -*-
+ *
+ * File: find_isosurface_intersection
+ *
+ * Author: Ryan L. Saunders
+ *
+ * Copyright 2004, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ */
+
+// FIXME: right now this assumes identical bounds on args
+// FIXME: and 3 dimensions
+// FIXME: and a sign + zero test...
+
+// DOCME: explain difference between std::pair and Point
+
+// Oh my gosh. This needs like a BOOK of documentation!!!
+// Abandon all hope...
+
+#ifndef INCA_RASTER_ALGORITHM_FIND_ISOSURFACE_INTERSECTION
+#define INCA_RASTER_ALGORITHM_FIND_ISOSURFACE_INTERSECTION
+
+// Import system configuration
+#include <inca/inca-common.h>
+
+// Import concept & tag definitions
+#include "../concepts.hpp"
+
+#include "fill"
+
+#include <inca/math/linalg.hpp>
+
+// FIXME: hacked
+#define None   -1
+#define DownX   0
+#define UpX     1
+#define DownY   2
+#define UpY     3
+#define DownT   4
+#define UpT     5
+
+
+// This is part of the Inca raster processing library
+namespace inca {
+    namespace raster {
+
+        template <class IndexList, class Faces, class Counts>
+        int nextCell(const IndexList & indices, const Faces & faces, const Counts & counts, int fromDirection) {
+            typedef typename Faces::ElementType             BoolArray;
+
+            bool noIntersection = false;
+
+            // First look for actual intersection trails
+            const BoolArray & ddd = faces(indices);
+            if (fromDirection != DownX && indices[0]     > faces.base(0)   && ddd[0] != noIntersection)
+                return DownX;
+            if (fromDirection != DownY && indices[1]     > faces.base(1)   && ddd[1] != noIntersection)
+                return DownY;
+            if (fromDirection != DownT && indices[2]     > faces.base(2)   && ddd[2] != noIntersection)
+                return DownT;
+            if (fromDirection != UpX   && indices[0] + 1 < faces.extent(0) && faces(indices[0]+1, indices[1], indices[2])[0] != noIntersection)
+                return UpX;
+            if (fromDirection != UpY   && indices[1] + 1 < faces.extent(1) && faces(indices[0], indices[1]+1, indices[2])[1] != noIntersection)
+                return UpY;
+            if (fromDirection != UpT   && indices[2] + 1 < faces.extent(2) && faces(indices[0], indices[1], indices[2]+1)[2] != noIntersection)
+                return UpT;
+
+            // Now try to fill in broken edges
+            if (counts(indices) == 1) {
+                if (fromDirection != DownX && indices[0]     > faces.base(0)   && counts(indices[0]-1, indices[1], indices[2]) == 1)
+                    return DownX;
+                if (fromDirection != DownY && indices[1]     > faces.base(1)   && counts(indices[0], indices[1]-1, indices[2]) == 1)
+                    return DownY;
+                if (fromDirection != DownT && indices[2]     > faces.base(2)   && counts(indices[0], indices[1], indices[2]-1) == 1)
+                    return DownT;
+                if (fromDirection != UpX   && indices[0] + 1 < faces.extent(0) && counts(indices[0]+1, indices[1], indices[2]) == 1)
+                    return UpX;
+                if (fromDirection != UpY   && indices[1] + 1 < faces.extent(1) && counts(indices[0], indices[1]+1, indices[2]) == 1)
+                    return UpY;
+                if (fromDirection != UpT   && indices[2] + 1 < faces.extent(2) && counts(indices[0], indices[1], indices[2]+1) == 1)
+                    return UpT;
+            }
+
+            return None;
+        }
+
+        template <class Z0, class S0, class V, class Z1, class S1, class Tracker>
+        Tracker find_isosurface_intersection(Z0 z0, S0 s0, V v, Z1 z1, S1 s1, Tracker tracker) {
+            const SizeType dimensionality = Z0::dimensionality;
+            typedef typename Z0::ElementType                Scalar;
+            typedef inca::Array<IndexType, dimensionality>  IndexArray;
+            typedef inca::math::Point<Scalar, 2>            Point;
+            typedef inca::math::Vector<Scalar, 2>           Vector;
+            typedef inca::math::Matrix<Scalar, 2, 2>        MatrixA;
+            typedef inca::math::Matrix<Scalar, 2, 1>        MatrixB;
+            typedef std::pair<bool, bool>                   BoolPair;
+            typedef std::pair<Scalar, Scalar>               ScalarPair;
+            typedef inca::Array<BoolPair, dimensionality>   BoolPairArray;
+            typedef inca::Array<ScalarPair, dimensionality> ScalarPairArray;
+            typedef inca::Array<Point, dimensionality>      PointArray;
+            typedef inca::Array<bool, dimensionality>       BoolArray;
+
+            // Scalar values of t in the range [0, 1] indicate intersections
+            ScalarPair unset(Scalar(-1), Scalar(-1));
+
+            Point noIntersection(Scalar(-1));
+
+
+            //-----------------------------------------------------------------
+            // Phase 1: Find voxel-edge crossings for each surface
+            //-----------------------------------------------------------------
+
+            // This keeps track of where each surface intersects voxel edges
+            MultiArray< ScalarPairArray, 3> edgeCrossings(z0.bounds());
+            std::pair<int, int> edgeCrossingCount(0, 0);
+
+            // Start with no intersections
+            fill(edgeCrossings, ScalarPairArray(unset));
+
+            IndexArray ddd, udd, dud, ddu; // Up-Down-Down, etc.
+
+
+
+            // Brace yourself for the world's most ungodly triple for loop
+            for (ddd[0] = ddu[0] = dud[0] = z0.base(0), udd[0] = ddd[0] + 1;
+                 ddd[0] < z0.extent(0); ++ddd[0], ++udd[0], ++dud[0], ++ddu[0]) {
+                for (ddd[1] = ddu[1] = udd[1] = z0.base(1), dud[1] = ddd[1] + 1;
+                     ddd[1] < z0.extent(1); ++ddd[1], ++udd[1], ++dud[1], ++ddu[1]) {
+                    for (ddd[2] = dud[2] = udd[2] = z0.base(2), ddu[2] = ddd[2] + 1;
+                         ddd[2] < z0.extent(2); ++ddd[2], ++udd[2], ++dud[2], ++ddu[2]) {
+
+                        // Could we possibly have an intersection on this edge?
+                        BoolPairArray possible(BoolPair(false, false));
+                        BoolPair      anyPossible(false, false);
+
+                        // First check corner signs for first surface
+                        Scalar s0ddd = s0(ddd);
+                        if (std::isnan(s0ddd)) {
+                            // No possible intersections
+
+                        } else if (math::effectivelyLessThan(s0ddd, Scalar(0))) {
+                            // Could potentially intersect on all three
+                            possible[0].first = true;
+                            possible[1].first = true;
+                            possible[2].first = true;
+                            anyPossible.first = true;
+
+                        } else {
+                            // We'll have to check each one separately
+                            Scalar s0udd = s0(udd);
+                            if (! std::isnan(s0udd) && math::effectivelyLessThan(s0udd, Scalar(0))) {
+                                possible[0].first = true;
+                                anyPossible.first = true;
+                            }
+                            Scalar s0dud = s0(dud);
+                            if (! std::isnan(s0dud) && math::effectivelyLessThan(s0dud, Scalar(0))) {
+                                possible[1].first = true;
+                                anyPossible.first = true;
+                            }
+                            Scalar s0ddu = s0(ddu);
+                            if (! std::isnan(s0ddu) && math::effectivelyLessThan(s0ddu, Scalar(0))) {
+                                possible[2].first = true;
+                                anyPossible.first = true;
+                            }
+                        }
+
+                        // Now check corner signs for second surface
+                        Scalar s1ddd = s1(ddd);
+                        if (std::isnan(s1ddd)) {
+                            // No possible intersections
+
+                        } else if (math::effectivelyLessThan(s1ddd, Scalar(0))) {
+                            // Could potentially intersect on all three
+                            possible[0].second = true;
+                            possible[1].second = true;
+                            possible[2].second = true;
+                            anyPossible.second = true;
+
+                        } else {
+                            // We'll have to check each one separately
+                            Scalar s1udd = s1(udd);
+                            if (! std::isnan(s1udd) && math::effectivelyLessThan(s1udd, Scalar(0))) {
+                                possible[0].second = true;
+                                anyPossible.second = true;
+                            }
+                            Scalar s1dud = s1(dud);
+                            if (! std::isnan(s1dud) && math::effectivelyLessThan(s1dud, Scalar(0))) {
+                                possible[1].second = true;
+                                anyPossible.second = true;
+                            }
+                            Scalar s1ddu = s1(ddu);
+                            if (! std::isnan(s1ddu) && math::effectivelyLessThan(s1ddu, Scalar(0))) {
+                                possible[2].second = true;
+                                anyPossible.second = true;
+                            }
+                        }
+
+                        // Now look at each possible intersection w/ first
+                        if (anyPossible.first) {
+                            Scalar v1 = z0(ddd);
+                            if (! std::isnan(v1)) {
+                                if (possible[0].first) {
+                                    Scalar v2 = z0(udd);
+                                    if (! std::isnan(v2) &&
+                                          ((v1 < Scalar(0) && v2 > Scalar(0)) ||
+                                           (v1 > Scalar(0) && v2 < Scalar(0)))) {
+                                        edgeCrossings(ddd)[0].first = v1 / (v1 - v2);
+                                        ++edgeCrossingCount.first;
+                                    }
+                                }
+                                if (possible[1].first) {
+                                    Scalar v2 = z0(dud);
+                                    if (! std::isnan(v2) &&
+                                          ((v1 < Scalar(0) && v2 > Scalar(0)) ||
+                                           (v1 > Scalar(0) && v2 < Scalar(0)))) {
+                                        edgeCrossings(ddd)[1].first = v1 / (v1 - v2);
+                                        ++edgeCrossingCount.first;
+                                    }
+                                }
+                                if (possible[2].first) {
+                                    Scalar v2 = z0(ddu);
+                                    if (! std::isnan(v2) &&
+                                          ((v1 < Scalar(0) && v2 > Scalar(0)) ||
+                                           (v1 > Scalar(0) && v2 < Scalar(0)))) {
+                                        edgeCrossings(ddd)[2].first = v1 / (v1 - v2);
+                                        ++edgeCrossingCount.first;
+                                    }
+                                }
+                            }
+                        }
+
+                        // ...and for the second surface
+                        if (anyPossible.second) {
+                            Scalar v1 = z1(ddd);
+                            if (! std::isnan(v1)) {
+                                if (possible[0].second) {
+                                    Scalar v2 = z1(udd);
+                                    if (! std::isnan(v2) &&
+                                          ((v1 < Scalar(0) && v2 > Scalar(0)) ||
+                                           (v1 > Scalar(0) && v2 < Scalar(0)))) {
+                                        edgeCrossings(ddd)[0].second = v1 / (v1 - v2);
+                                        ++edgeCrossingCount.second;
+                                    }
+                                }
+                                if (possible[1].second) {
+                                    Scalar v2 = z1(dud);
+                                    if (! std::isnan(v2) &&
+                                          ((v1 < Scalar(0) && v2 > Scalar(0)) ||
+                                           (v1 > Scalar(0) && v2 < Scalar(0)))) {
+                                        edgeCrossings(ddd)[1].second = v1 / (v1 - v2);
+                                        ++edgeCrossingCount.second;
+                                    }
+                                }
+                                if (possible[2].second) {
+                                    Scalar v2 = z1(ddu);
+                                    if (! std::isnan(v2) &&
+                                          ((v1 < Scalar(0) && v2 > Scalar(0)) ||
+                                           (v1 > Scalar(0) && v2 < Scalar(0)))) {
+                                        edgeCrossings(ddd)[2].second = v1 / (v1 - v2);
+                                        ++edgeCrossingCount.second;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            cerr << "There were " << edgeCrossingCount.first << " and "
+                 << edgeCrossingCount.second << " edge crossings.\n";
+
+
+            //-----------------------------------------------------------------
+            // Phase 2: Find intersections of the two surfaces on voxel faces
+            //-----------------------------------------------------------------
+
+            // This keeps track of where polygon edges intersect on faces
+            // Note: we index the faces according to the edge they don't touch.
+            // E.g., the face orthogonal to the Z axis has index 2.
+//            MultiArrayRaster<PointArray, 3> faceIntersections(z0.bounds());
+            MultiArray<BoolArray, 3>  faceIntersections(z0.bounds());
+            MultiArray<int, 3>        cellIntersections(z0.bounds());
+            int faceIntersectionCount = 0;
+
+            // Start with no intersection
+            fill(faceIntersections, BoolArray(false));
+            fill(cellIntersections, 0);
+
+            // Please, God...not again...<whimper>
+            for (ddd[0] = ddu[0] = dud[0] = z0.base(0), udd[0] = ddd[0] + 1;
+                 ddd[0] < z0.extent(0); ++ddd[0], ++udd[0], ++dud[0], ++ddu[0]) {
+                for (ddd[1] = ddu[1] = udd[1] = z0.base(1), dud[1] = ddd[1] + 1;
+                     ddd[1] < z0.extent(1); ++ddd[1], ++udd[1], ++dud[1], ++ddu[1]) {
+                    for (ddd[2] = dud[2] = udd[2] = z0.base(2), ddu[2] = ddd[2] + 1;
+                         ddd[2] < z0.extent(2); ++ddd[2], ++udd[2], ++dud[2], ++ddu[2]) {
+
+                        for (IndexType face = 0; face < dimensionality; ++face) {
+                            // First, we copy all of the relevant edges
+                            Array<ScalarPair, 4> xings;
+                            switch (face) {
+                            case 0:
+                                xings[0] = edgeCrossings(ddd)[1];
+                                xings[1] = edgeCrossings(dud)[2];
+                                xings[2] = edgeCrossings(ddu)[1];
+                                xings[3] = edgeCrossings(ddd)[2];
+                                break;
+                            case 1:
+                                xings[0] = edgeCrossings(ddd)[2];
+                                xings[1] = edgeCrossings(ddu)[0];
+                                xings[2] = edgeCrossings(udd)[2];
+                                xings[3] = edgeCrossings(ddd)[0];
+                                break;
+                            case 2:
+                                xings[0] = edgeCrossings(ddd)[0];
+                                xings[1] = edgeCrossings(udd)[1];
+                                xings[2] = edgeCrossings(dud)[0];
+                                xings[3] = edgeCrossings(ddd)[1];
+                                break;
+                            }
+
+                            // Now, figure out the end points
+                            Array<Point, 2> firstPoints, secondPoints;
+                            int firstCount  = 0,
+                                secondCount = 0;
+
+                            for (IndexType edge = 0; edge < 4; ++edge) {
+                                if (xings[edge].first >= Scalar(0)) {
+                                    if (firstCount < 2) {
+                                        switch (edge) {
+                                        case 0:
+                                            firstPoints[firstCount] = Point(xings[edge].first, Scalar(0));
+                                            firstCount++;
+                                            break;
+                                        case 1:
+                                            firstPoints[firstCount] = Point(Scalar(1), xings[edge].first);
+                                            firstCount++;
+                                            break;
+                                        case 2:
+                                            firstPoints[firstCount] = Point(xings[edge].first, Scalar(1));
+                                            firstCount++;
+                                            break;
+                                        case 3:
+                                            firstPoints[firstCount] = Point(Scalar(0), xings[edge].first);
+                                            firstCount++;
+                                            break;
+                                        }
+                                    }
+                                }
+                                if (xings[edge].second >= Scalar(0)) {
+                                    if (secondCount < 2) {
+                                        switch (edge) {
+                                        case 0:
+                                            secondPoints[secondCount] = Point(xings[edge].second, Scalar(0));
+                                            secondCount++;
+                                            break;
+                                        case 1:
+                                            secondPoints[secondCount] = Point(Scalar(1), xings[edge].second);
+                                            secondCount++;
+                                            break;
+                                        case 2:
+                                            secondPoints[secondCount] = Point(xings[edge].second, Scalar(1));
+                                            secondCount++;
+                                            break;
+                                        case 3:
+                                            secondPoints[secondCount] = Point(Scalar(0), xings[edge].second);
+                                            secondCount++;
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+
+                            // If we have exactly two points for each, find the intersection
+                            if (firstCount == 2 && secondCount == 2) {
+
+                                // Hmmm...we need the intersection coordinates of the
+                                // two lines. There's probably a cleaner way to do this,
+                                // but this is the best I can do at 5:30 am.
+                                Vector firstVector  = firstPoints[1]  - firstPoints[0];
+                                Vector secondVector = secondPoints[1] - secondPoints[0];
+
+                                // Set up and solve Ax = b
+                                MatrixA A;
+                                    A(0,0) = firstVector[1];    A(0,1) = -firstVector[0];
+                                    A(1,0) = secondVector[1];   A(1,1) = -secondVector[0];
+                                MatrixB b;
+                                    b(0,0) = firstVector[1]*firstPoints[0][0]   - firstVector[0]*firstPoints[0][1],
+                                    b(1,0) = secondVector[1]*secondPoints[0][0] - secondVector[0]*secondPoints[0][1];
+                                MatrixB x(math::inverse(A) % b);
+
+                                // Did we hit in-bounds on this face?
+                                if (x(0,0) >= Scalar(0) && x(0,0) <= Scalar(1) &&
+                                    x(1,0) >= Scalar(0) && x(1,0) <= Scalar(1)) {
+#if 0
+                                    inca::math::Point<Scalar, dimensionality> p;
+                                    switch (face) {
+                                    case 0:
+                                        p[0] = ddd[0];
+                                        p[1] = ddd[1] + x(0,0);
+                                        p[2] = ddd[2] + x(1,0);
+                                        break;
+                                    case 1:
+                                        p[0] = ddd[0] + x(1,0);
+                                        p[1] = ddd[1];
+                                        p[2] = ddd[2] + x(0,0);
+                                        break;
+                                    case 2:
+                                        p[0] = ddd[0] + x(0,0);
+                                        p[1] = ddd[1] + x(1,0);
+                                        p[2] = ddd[2];
+                                        break;
+                                    }
+                                    faceIntersections(ddd)[face] = Point(x(0,0), x(1,0));
+#endif
+                                    faceIntersections(ddd)[face] = true;
+                                    ++cellIntersections(ddd);
+                                    if (ddd[face] != 0) {
+                                        IndexArray tmp(ddd);
+                                        tmp[face]--;
+                                        ++cellIntersections(tmp);
+                                    }
+                                    ++faceIntersectionCount;
+//                                    cerr << "Hit at " << p << endl;
+                                } else {
+//                                    cerr << "Didn't intersect " << firstPoints[0] << " -> " << firstPoints[1]
+//                                         << " and " << secondPoints[0] << " -> " << secondPoints[1] << endl;
+//                                    cerr << "REsult was " << x(0,0) << ", " << x(1,0) << endl;
+                                }
+
+                            } else if (firstCount > 2 || secondCount > 2) {
+                                cerr << "Unhandled # of stuff: " << firstCount << " & " << secondCount << endl;
+                            }
+                        }
+                    }
+                }
+            }
+            cerr << "There were " << faceIntersectionCount << " face intersections.\n";
+
+
+            //-----------------------------------------------------------------
+            // Phase 3: Link consecutive points to make curves
+            //-----------------------------------------------------------------
+
+            int curveCount = 0;
+
+            // <Sigh>...here we go again
+            for (ddd[0] = z0.base(0); ddd[0] < z0.extent(0); ++ddd[0]) {
+                for (ddd[1] = z0.base(1); ddd[1] < z0.extent(1); ++ddd[1]) {
+                    for (ddd[2] = z0.base(2); ddd[2] < z0.extent(2); ++ddd[2]) {
+
+                        int intersectionCount = cellIntersections(ddd);
+                        if (intersectionCount == 1) {
+                            IndexArray current = ddd;
+                            int fromDirection = -1, toDirection;
+
+                            // Notify the tracker that we're starting a curve
+                            tracker.begin();
+                            tracker(current, v(current));
+//                            cerr << "Starting at cell (" << current << ") #" << intersectionCount << endl;
+
+                            // Follow the curve where it leads
+                            do {
+                                // Figure out where to go next
+                                toDirection = nextCell(current, faceIntersections, cellIntersections, fromDirection);
+
+                                // Mark this cell as 'done'
+                                cellIntersections(current) = 0;
+
+                                if (toDirection != None) {
+                                    // Move to the next cell
+                                    switch (toDirection) {
+                                        case DownX:
+                                            current[0]--;
+                                            fromDirection = UpX;
+                                            break;
+                                        case UpX:
+                                            current[0]++;
+                                            fromDirection = DownX;
+                                            break;
+                                        case DownY:
+                                            current[1]--;
+                                            fromDirection = UpY;
+                                            break;
+                                        case UpY:
+                                            current[1]++;
+                                            fromDirection = DownY;
+                                            break;
+                                        case DownT:
+                                            current[2]--;
+                                            fromDirection = UpT;
+                                            break;
+                                        case UpT:
+                                            current[2]++;
+                                            fromDirection = DownT;
+                                            break;
+                                    }
+
+                                    // Get the intersection count for the new cell
+                                    intersectionCount = cellIntersections(current);
+
+                                    // Notify the tracker about this point
+                                    tracker(current, v(current));
+//                                    cerr << "Visiting cell (" << current << ") #" << intersectionCount << endl;
+
+                                    if (intersectionCount > 2) {
+                                        toDirection = None;
+//                                        cerr << "Ignoring " << intersectionCount
+//                                            << " intersection cell " << current << endl;
+                                    }
+                                }
+
+                            } while (toDirection != None);
+
+                            // Notify the tracker that we're done here
+                            tracker.end();
+
+                            ++curveCount;
+                        }
+                    }
+                }
+            }
+
+            cerr << "There were " << curveCount << " curves" << endl;
+            // Send the data back to...wherever
+            tracker.done();
+            return tracker;
+        }
+
+    }
+}
+
+#undef None
+#undef DownX
+#undef UpX
+#undef DownY
+#undef UpY
+#undef DownT
+#undef UpT
+
+#endif

@@ -1,0 +1,133 @@
+/* -*- C++ -*-
+ *
+ * File: ScaleSpaceProjection
+ *
+ * Author: Ryan L. Saunders
+ *
+ * Copyright 2004, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ */
+
+#ifndef INCA_RASTER_OPERATORS_SCALE_SPACE_PROJECTION
+#define INCA_RASTER_OPERATORS_SCALE_SPACE_PROJECTION
+
+// Import system configuration
+#include <inca/inca-common.h>
+
+// Import related operator definitions
+#include "../operators/arithmetic"
+#include "../operators/fourier"
+#include "../generators/gaussian"
+#include "../generators/constant"
+
+// Import complex definition
+#include <complex>
+
+// Import metaprogramming tools
+#include <inca/util/multi-dimensional-macros.hpp>
+#include <inca/util/metaprogramming/macros.hpp>
+
+
+// This is part of the Inca raster processing library
+namespace inca {
+    namespace raster {
+
+        template <typename R0, typename R1, class ScaleList>
+        ENABLE_IF_T( AND2( is_mutable_size_raster<R0>,
+                           EQUAL( raster_dimensionality<R0>,
+                                  PLUS( raster_dimensionality<R1>, INT(1) ) ) ),
+        void ) scale_space_project(R0 & r0, const R1 & r1, const ScaleList & scales) {
+            typedef typename ScaleList::value_type  ScaleType;
+            typedef typename R1::ElementType        ElementType;
+
+            const typename R1::SizeType dimensionality = R1::dimensionality;
+
+            typedef MultiArrayRaster<ElementType, dimensionality>               RealRaster;
+            typedef MultiArrayRaster<std::complex<ElementType>, dimensionality> ComplexRaster;
+            typedef Array<IndexType, dimensionality>                            IndexArray;
+
+            // Make the output large enough to hold everything
+            Array<SizeType, R0::dimensionality> hyperSizes;
+            for (IndexType d = 0; d < R1::dimensionality; ++d)
+                hyperSizes[d] = r1.size(d);
+            hyperSizes[R1::dimensionality] = scales.size();
+            r0.setSizes(hyperSizes);
+
+            // Take the DFT of the input
+            ComplexRaster srcDFT = dft(r1);
+
+            // Each successive layer is blurred with a scales[d] sized gaussian
+            IndexArray window;
+
+            // FIXME
+            for (int i = 0; i < dimensionality; ++i)
+                window[i] = r1.size(i) / 2;
+
+            RealRaster kernel(r1.sizes());
+            fill(kernel, ElementType(0));
+            typename ScaleList::const_iterator it = scales.begin();
+            for (IndexType s = 0; s < scales.size(); ++s, ++it) {
+                if (*it == ScaleType(0)) {
+                    // This is the no-smoothing scale level. Just copy
+                    r0.slice(dimensionality, s) = r1;
+                    r0.slice(dimensionality, s) = idft(dft(r1));
+//                    r0.slice(dimensionality, s) = linear_map(r1, inca::Array<float, 2>(0.0f, 1.0f));
+//                    r0.slice(dimensionality, s) = linear_map(idft(srcDFT), inca::Array<float, 2>(0.0f, 1.0f));
+//                    r0.slice(dimensionality, s) = log(cmagnitude(srcDFT) + 1);
+
+                } else {
+                    // We have to blur this layer
+                    ScaleType sigma = std::sqrt(*it);
+#if 0
+
+                    // Make an N-D gaussian function
+                    GaussianGeneratorRaster<ElementType, dimensionality> gauss
+                        = gaussian<ElementType, dimensionality>(sigma);
+
+                    // Put 1/N^2-th of it in each corner
+                    IndexArray kernelBases, gaussBases;
+
+                    // Toggling the bits of 'b' chooses which corner we're looking at
+                    for (int b = 0; b < dimensionality * dimensionality; ++b) {
+                        for (IndexType d = 0; d < dimensionality; ++d) {
+                            if ((1 << d) & b) {
+                                kernelBases[d] = kernel.size(d) - window[d] - 1;
+                                gaussBases[d]  = -window[d];
+                            } else {
+                                kernelBases[d] = 0;
+                                gaussBases[d]  = 0;
+                            }
+                        }
+                        select(kernel, kernelBases, window) = select(gauss, gaussBases, window);// * (sigma + 1);
+                    }
+#else
+                    typedef inca::Array<ElementType, dimensionality> ElArr;
+//                    fill(kernel, 0.0f);
+                    select(kernel) = selectBS(gaussian(ElArr(sigma), ElArr(ElementType(0)))
+                                    + gaussian(ElArr(sigma), ElArr(ElementType(kernel.size(0)), ElementType(0)))
+                                    + gaussian(ElArr(sigma), ElArr(ElementType(0), ElementType(kernel.size(1))))
+                                    + gaussian(ElArr(sigma), ElArr(ElementType(kernel.size(0)), ElementType(kernel.size(1)))),
+                                    IndexArray(0,0), kernel.sizes());
+#endif
+//                    cerr << "Sum of scale " << *it << " is " << sum(kernel) << endl;
+//                    cerr << "Corner element is " << kernel(0,0) << " and 5, 5 is " << kernel(5, 5) << endl;
+                    // Multiply the DFTs of the gaussian kernel and the input and unDFT
+                    r0.slice(dimensionality, s) = idft(dft(kernel) * srcDFT);
+//                    r0.slice(dimensionality, s) = linear_map(idft(dft(kernel) * srcDFT), inca::Array<float, 2>(0.0f, 1.0f));
+//                    r0.slice(dimensionality, s) = linear_map(log(cmagnitude(dft(kernel)) + 1), inca::Array<float, 2>(0.0f, 1.0f));
+                }
+            }
+        }
+
+    };
+};
+
+
+// Clean up the preprocessor's namespace
+#define UNDEFINE_INCA_MULTI_DIM_MACROS
+#include <inca/util/multi-dimensional-macros.hpp>
+#define UNDEFINE_INCA_METAPROGRAMMING_MACROS
+#include <inca/util/metaprogramming/macros.hpp>
+
+#endif

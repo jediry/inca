@@ -1,0 +1,266 @@
+/** -*- C++ -*-
+ *
+ * \File flood_fill
+ *
+ * \Author Ryan L. Saunders
+ *
+ * Copyright 2004, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ * FIXME: This currently only works for 2 dimensions
+ * FIXME: This should probably throw some different kinds of exceptions...
+ * Note: this comes from the QuickFill algo documented on The Code Project:
+                           http://www.codeproject.com/gdi/QuickFill.asp
+ */
+
+#ifndef INCA_RASTER_ALGORITHM_FLOOD_FILL
+#define INCA_RASTER_ALGORITHM_FLOOD_FILL
+
+// Import system configuration
+#include <inca/inca-common.h>
+
+// Import concept & tag definitions
+#include "../concepts.hpp"
+
+// Constant value generator functor
+#include "../generators/constant"
+
+// Import container definitions
+#include <list>
+
+
+// This is part of the Inca raster processing library
+namespace inca {
+    namespace raster {
+
+        // TODO: Maybe this should be generalized to a "boolean raster operator".
+        //
+        // This test predicate returns true if its raster has a  particular
+        //  value at the specified indices, and false otherwise. When
+        // combined with the flood_fill algorithm, this implements the normal
+        // "fill contiugous region" type of flood-fill.
+        template <typename R0>
+        struct EqualsValue {
+            typedef typename R0::ElementType    ElementType;
+            typedef typename R0::ConstReference ConstReference;
+
+            // Constructor
+            EqualsValue(const R0 & r, ConstReference v)
+                : raster(&r), value(v) { }
+
+            // Test function
+            template <typename IndexList>
+            bool operator()(const IndexList & indices) {
+                return (*raster)(indices) == value;
+            }
+
+        protected:
+            R0 const * raster;
+            ElementType value;
+        };
+
+
+        // This is the most generic implementation of a flood-fill
+        // algorithm taking a predicate for determining the
+        // boundary of the to-fill area and a generator functor to
+        // produce the value at each filled cell. Starting from the
+        // seed point, every adjacent cell for which the BoundsTest
+        // predicate returns true is filled with the value produced
+        // by Generator.
+        //
+        // It returns a Region object giving the rectangular bounds of the
+        // filled area.
+        template <typename R0, class IndexList, class BoundsTest, class Generator>
+        typename R0::Region flood_fill(R0 & r, const IndexList & startFrom,
+                                       BoundsTest shouldFill, Generator fillWith) {
+            typedef typename R0::IndexArray IndexArray;
+            typedef typename R0::Region     Region;
+
+            // Make sure the seed point is valid
+            IndexArray seed(startFrom);
+            if (! r.bounds().contains(seed)) {
+                // FIXME: this really needs a multi-dim macro in OOBE.hpp
+                OutOfBoundsException e(0, 0, 0);
+                e << "Dork! You gave me an OOB starting point!";
+                throw e;
+            }
+            if (! shouldFill(seed)) {
+                std::cerr << "Idiot! Not even your starting point should be filled!\n";
+                return Region();        // An empty region
+            }
+
+            // We need to keep track of the minimum and maximum filled cell
+            // indices so that we can return the filled region bounds at the end.
+            IndexArray filledMin = seed,
+                       filledMax = seed,
+                       idx;
+
+            // These also do double duty by helping us scan the first line
+            while (filledMin[0] >= r.base(0) && shouldFill(filledMin))
+                --filledMin[0];
+            ++filledMin[0];
+            while (filledMax[0] <= r.extent(0) && shouldFill(filledMax))
+                ++filledMax[0];
+            --filledMax[0];
+
+            // Fill 'er up!
+            idx = filledMin;
+            for (idx[0] = filledMin[0]; idx[0] <= filledMax[0]; ++idx[0])
+                r(idx) = fillWith(idx);
+
+
+            // This represents a single "to-be-scanned" line, which will go
+            // into the linked list. The meanings of the values in the array
+            // are:
+            //      [0]: "parent" line's minimum X coordinate
+            //      [1]: "parent" line's maximum X coordinate
+            //      [2]: "parent" line's Y coordinate
+            //      [3]: change in Y to get to this line (always +/- 1)
+            typedef Array<IndexType, 4> Segment;
+            typedef std::list<Segment> SegmentList;
+
+            SegmentList todoList;
+
+            // Push starting segment onto stack
+            todoList.push_front(Segment(filledMin[0], filledMax[0], seed[1],     +1));
+            todoList.push_front(Segment(filledMin[0], filledMax[0], seed[1] + 1, -1));
+
+
+            // Keep flooding until the list is empty
+            while (! todoList.empty()) {
+                // Pull the top item off the stack
+                Segment line = todoList.front();
+                todoList.pop_front();
+
+                // The parent's X-range will be used to determine how far we
+                // should search for fillable cells. The 'dY' parameter tells
+                // us the relationship between the child line and its parent,
+                // and is always +/- 1 (allowing it to search both up and down).
+                IndexArray parentMin, parentMax;
+                parentMin[0] = line[0];
+                parentMax[0] = line[1];
+                parentMin[1] = parentMax[1] = line[2];  // Same Y coordinate
+                IndexType dY = line[3];
+
+                // We'll use the 'idx' array to walk along the scanlines
+                // of our raster. The Y index will always remain constant during a
+                // single pass of this loop, so we just set it once at the beginning.
+                idx[1] = parentMin[1] + dY;
+
+
+                // If we've left the bounds of the raster, skip this one
+                if (idx[1] < r.base(1) || idx[1] > r.extent(1))
+                    continue;
+
+                // From here on out, we're trying to fill segments of fillable cells
+                // that are adjacent to the parent scanline. This can be broken down
+                // into three cases (which are not all mutually exclusive):
+                //      Case 1: a segment starting to the left of the parent
+                //      Case 2: a segment completely contained within the parent
+                //      Case 3: a segment continuing past the right of the parent
+                // Note that cases 1 & 3 (which could actually be fulfilled by a
+                // single, longer segment) also allow the possibility that a new
+                // segment on the parent's scanline might be reachable by the child.
+                IndexArray childMin, childMax;
+                childMin[1] = childMax[1] = idx[1]; // Stay on the same scanline
+
+                // Case 1 (and possibly also Case 3)
+                childMin[0] = childMax[0] = parentMin[0];
+                if (shouldFill(childMin)) {
+                    // Search for the left endpoint of this segment
+                    while (childMin[0] >= r.base(0) && shouldFill(childMin))
+                        --childMin[0];
+                    ++childMin[0];
+
+                    // Now find the right endpoint
+                    while (childMax[0] <= r.extent(0) && shouldFill(childMax))
+                        ++childMax[0];
+                    --childMax[0];
+
+                    // Fill 'er up!
+                    for (idx[0] = childMin[0]; idx[0] <= childMax[0]; ++idx[0])
+                        r(idx) = fillWith(idx);
+
+                    // See if we need to update our minimum and maximum
+                    if (childMin[0] < filledMin[0])     filledMin[0] = childMin[0];
+                    if (childMax[0] > filledMax[0])     filledMax[0] = childMax[0];
+                    if (childMin[1] < filledMin[1])     filledMin[1] = childMin[1];
+                    if (childMax[1] > filledMax[1])     filledMax[1] = childMax[1];
+
+                    // Push the new regions we've opened up onto the stack
+                    todoList.push_front(Segment(childMin[0], childMax[0], idx[1], dY));
+                    if (childMin[0] <= parentMin[0] - 2) {
+                        // Search parent's scanline to his left (Case 1)
+                        todoList.push_front(Segment(childMin[0], parentMin[0] - 2, idx[1], -dY));
+                    }
+                    if (childMax[0] >= parentMax[0] + 2) {
+                        // Search parent's scanline to his right (Case 3)
+                        todoList.push_front(Segment(parentMax[0] + 2, childMax[0], idx[1], -dY));
+                    }
+
+                    // Advance our child-max to prepare for the in-betweens loop
+                    ++childMax[0];
+                }
+
+
+                // Case 2 (and possibly also Case 3)
+                while (childMax[0] < parentMax[0]) {
+                    // Skip non-fillable cells, looking for a fillable cell that
+                    // still touches the parent segment
+                    while (childMax[0] <= parentMax[0] && ! shouldFill(childMax))
+                        ++childMax[0];
+
+                    // If we haven't overshot the parent's max, we've found a segment
+                    if (childMax[0] <= parentMax[0]) {
+                        // OK, this is the left endpoint
+                        childMin[0] = childMax[0];
+
+                        // Keep hunting for the end of it
+                        while (childMax[0] <= r.extent(0) && shouldFill(childMax))
+                            ++childMax[0];
+                        --childMax[0];
+
+                        // Fill 'er up!
+                        for (idx[0] = childMin[0]; idx[0] <= childMax[0]; ++idx[0])
+                            r(idx) = fillWith(idx);
+
+                        // See if we need to update our minimum and maximum
+                        if (childMin[0] < filledMin[0])     filledMin[0] = childMin[0];
+                        if (childMax[0] > filledMax[0])     filledMax[0] = childMax[0];
+                        if (childMin[1] < filledMin[1])     filledMin[1] = childMin[1];
+                        if (childMax[1] > filledMax[1])     filledMax[1] = childMax[1];
+
+                        // Push the new regions we've opened up onto the stack
+                        todoList.push_front(Segment(childMin[0], childMax[0], idx[1], dY));
+                        if (childMax[0] >= parentMax[0] + 2)
+                            // Search parent's scanline to his right (Case 3)
+                            todoList.push_front(Segment(parentMax[0] + 2, childMax[0], idx[1], -dY));
+
+                        // Advance to prepare for the next loop iteration
+                        ++childMax[0];
+                    }
+                }
+            }
+
+            // Return the bounds of the region we filled
+            return Region(filledMin, filledMax);
+        }
+
+
+        // This version of the flood-fill algorithm fills with a constant value
+        // of the raster's element type and fills the contiguous region with
+        // the same value as at the seed point.
+        template <typename R0, class IndexList>
+        typename R0::Region flood_fill(R0 & r, const IndexList & startFrom,
+                                       typename R0::ConstReference fillWith) {
+            typedef typename R0::ElementType ElementType;
+            ElementType value = r(startFrom);
+//            std::cerr << "Flooding areas with value of
+            return flood_fill(r, startFrom, EqualsValue<R0>(r, value),
+                              constant<ElementType, R0::dimensionality>(fillWith));
+        }
+    }
+}
+
+#endif
+

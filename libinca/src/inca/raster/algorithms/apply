@@ -1,0 +1,160 @@
+/** -*- C++ -*-
+ *
+ * File: apply
+ *
+ * Author: Ryan L. Saunders
+ *
+ * Copyright 2004, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ */
+
+#ifndef INCA_RASTER_ALGORITHM_APPLY
+#define INCA_RASTER_ALGORITHM_APPLY
+
+// Import system configuration
+#include <inca/inca-common.h>
+
+// Import concept & tag definitions
+#include "../concepts.hpp"
+
+// Import metaprogramming tools
+#include <inca/util/metaprogramming/macros.hpp>
+
+
+// This is part of the Inca raster processing library
+namespace inca {
+    namespace raster {
+
+        // Recursive unary-functor-application functor
+        template <typename F, class R0, class IndexList, inca::SizeType dim>
+        struct ApplyUnaryFunctorToSlice {
+            void operator()(F & f, R0 & r0, IndexList & it,
+                            const IndexList & bases,
+                            const IndexList & extents) {
+                for (it[dim] = bases[dim]; it[dim] <= extents[dim]; ++it[dim])
+                    ApplyUnaryFunctorToSlice<F, R0, IndexList, dim - 1>()
+                        (f, r0, it, bases, extents);
+            }
+        };
+        // Recursion base case
+        template <typename F, class R0, class IndexList>
+        struct ApplyUnaryFunctorToSlice<F, R0, IndexList, 0> {
+            void operator()(F & f, R0 & r0, IndexList & it,
+                            const IndexList & bases,
+                            const IndexList & extents) {
+                for (it[0] = bases[0]; it[0] <= extents[0]; ++it[0])
+                    f(r0(it));
+            }
+        };
+
+        // Recursive binary-functor-application functor
+        template <typename F, class R0, class R1, class IndexList, inca::SizeType dim>
+        struct ApplyBinaryFunctorToSlice {
+            void operator()(F & f, R0 & r0, R1 & r1, IndexList & it,
+                            const IndexList & bases,
+                            const IndexList & extents) {
+                for (it[dim] = bases[dim]; it[dim] <= extents[dim]; ++it[dim])
+                    ApplyBinaryFunctorToSlice<F, R0, R1, IndexList, dim - 1>()
+                        (f, r0, r1, it, bases, extents);
+            }
+        };
+        // Recursion base case
+        template <typename F, class R0, class R1, class IndexList>
+        struct ApplyBinaryFunctorToSlice<F, R0, R1, IndexList, 0> {
+            void operator()(F & f, R0 & r0, R1 & r1, IndexList & it,
+                            const IndexList & bases,
+                            const IndexList & extents) {
+                for (it[0] = bases[0]; it[0] <= extents[0]; ++it[0])
+                    f(r0(it), r1(it));
+            }
+        };
+
+        // Apply an arbitrary unary functor to every element in a raster
+        template <typename F, class R0>
+        ENABLE_IF_T( AND3( NOT(is_raster<F>),
+                               is_raster<R0>,
+                           NOT(is_arbitrary_size_raster<R0>)
+                         ),
+        F ) apply(F f, R0 & r0) {
+            typedef Array<IndexType, R0::dimensionality> IndexArray;
+
+            IndexArray it = r0.bases();
+            ApplyUnaryFunctorToSlice<F, R0, IndexArray, R0::dimensionality - 1>()
+                (f, r0, it, r0.bases(), r0.extents());
+            return f;
+        }
+
+        // Apply an arbitrary unary functor to every element in a const raster
+        template <typename F, class R0>
+        ENABLE_IF_T( AND3( NOT(is_raster<F>),
+                               is_raster<R0>,
+                           NOT(is_arbitrary_size_raster<R0>)
+                         ),
+        F ) apply(F f, const R0 & r0) {
+            typedef typename R0::IndexArray IndexArray;
+            typedef typename R0::Region     Region;
+
+            const Region & r = r0.bounds();
+            IndexArray it = r.bases();
+
+            ApplyUnaryFunctorToSlice<F, const R0, IndexArray, R0::dimensionality - 1>()
+                (f, r0, it, r0.bases(), r0.extents());
+            return f;
+        }
+
+
+        // Apply an arbitrary binary functor to every element in a raster
+        template <typename F, class R0, class R1>
+        ENABLE_IF_T( AND4( NOT(is_raster<F>),
+                               is_raster<R0>,
+                               is_raster<R1>,
+                           OR2( NOT(is_arbitrary_size_raster<R0>),
+                                NOT(is_arbitrary_size_raster<R1>)
+                           )
+                         ),
+        void ) apply(F f, R0 & r0, R1 & r1) {
+            typedef Array<IndexType, R0::dimensionality> IndexArray;
+
+            IndexArray bases, extents, it;
+            for (IndexType d = 0; d < R0::dimensionality; ++d) {
+                bases[d] = inca::math::max(r0.base(d), r1.base(d));
+                extents[d] = inca::math::min(r0.extent(d), r1.extent(d));
+            }
+            it = bases;
+            ApplyBinaryFunctorToSlice<F, R0, R1, IndexArray, R0::dimensionality - 1>()
+                (f, r0, r1, it, bases, extents);
+        }
+
+        // Apply an arbitrary binary functor to every element in a const raster
+        template <typename F, class R0, class R1>
+        ENABLE_IF_T( AND4( NOT(is_raster<F>),
+                               is_raster<R0>,
+                               is_raster<R1>,
+                           OR2( NOT(is_arbitrary_size_raster<R0>),
+                                NOT(is_arbitrary_size_raster<R1>)
+                           )
+                         ),
+        void ) apply(F f, const R0 & r0, const R1 & r1) {
+            typedef Array<IndexType, R0::dimensionality> IndexArray;
+
+            IndexArray bases, extents, it;
+            for (IndexType d = 0; d < R0::dimensionality; ++d) {
+                bases[d] = inca::math::max(r0.base(d), r1.base(d));
+                extents[d] = inca::math::min(r0.extent(d), r1.extent(d));
+            }
+            it = bases;
+            ApplyBinaryFunctorToSlice<F, const R0, const R1, IndexArray, R0::dimensionality - 1>()
+                (f, r0, r1, it, bases, extents);
+        }
+
+    }
+}
+
+
+// Clean up the preprocessor's namespace
+#define UNDEFINE_INCA_METAPROGRAMMING_MACROS
+#include <inca/util/metaprogramming/macros.hpp>
+
+#endif
+

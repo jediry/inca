@@ -1,0 +1,80 @@
+/** -*- C++ -*-
+ *
+ * File: copy
+ *
+ * Author: Ryan L. Saunders
+ *
+ * Copyright 2004, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ */
+
+#ifndef INCA_RASTER_ALGORITHM_COPY
+#define INCA_RASTER_ALGORITHM_COPY
+
+// Import system configuration
+#include <inca/inca-common.h>
+
+// Import concept & tag definitions
+#include "../concepts.hpp"
+
+// Import standard math functions
+#include <cmath>
+
+
+// This is part of the Inca raster processing library
+namespace inca {
+    namespace raster {
+
+        // Recursive copy functor
+        template <class R0, class R1, class IndexList, inca::SizeType dim>
+        struct CopySlice {
+            void operator()(R0 & dst, const R1 & src, IndexList & it,
+                            const IndexList & bases, const IndexList & extents) {
+                for (it[dim] = bases[dim]; it[dim] <= extents[dim]; ++it[dim])
+                    CopySlice<R0, R1, IndexList, dim - 1>()
+                        (dst, src, it, bases, extents);
+            }
+        };
+        // Recursion base case
+        template <class R0, class R1, class IndexList>
+        struct CopySlice<R0, R1, IndexList, 0> {
+            void operator()(R0 & dst, const R1 & src, IndexList & it,
+                            const IndexList & bases, const IndexList & extents) {
+                for (it[0] = bases[0]; it[0] <= extents[0]; ++it[0]) {
+                    dst(it) = static_cast<typename R0::ElementType>(src(it));
+                }
+            }
+        };
+
+// FIXME: this should use the Region operations
+// FIXME: it should also take iterators...
+        template <class R0, class R1>
+        void copy(R0 & dst, const R1 & src) {
+            typedef Array<IndexType, R0::dimensionality> IndexArray;
+
+            IndexArray bases, extents, it;
+            for (IndexType d = 0; d < R0::dimensionality; ++d) {
+                bases[d] = std::max(src.base(d), dst.base(d));
+                extents[d] = std::min(src.extent(d), dst.extent(d));
+            }
+            it = bases;
+            CopySlice<R0, R1, IndexArray, R0::dimensionality - 1>()
+                (dst, src, it, bases, extents);
+        }
+
+// FIXME: this should check concepts, dimensionalities
+        template <class R0, class R1>
+        void copy(R0 & dst, const R1 & src,
+                  const typename R0::IndexArray & bases,
+                  const typename R0::IndexArray & extents) {
+            typename R0::IndexArray idx(bases);
+            CopySlice<R0, R1, typename R0::IndexArray, R0::dimensionality - 1>()
+                (dst, src, idx, bases, extents);
+        }
+
+    }
+}
+
+#endif
+

@@ -1,0 +1,148 @@
+/** -*- C++ -*-
+ *
+ * File: find_ridges
+ *
+ * Author: Ryan L. Saunders
+ *
+ * Copyright 2004, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ */
+
+#ifndef INCA_RASTER_ALGORITHM_FIND_RIDGES
+#define INCA_RASTER_ALGORITHM_FIND_RIDGES
+
+// Import system configuration
+#include <inca/inca-common.h>
+
+// Import concept & tag definitions
+#include "../concepts.hpp"
+
+// Import related algorithms and operators
+#include "find_isosurface_intersection"
+#include "../operators/derivative"
+#include "../generators/array"
+
+
+// This is part of the Inca raster processing library
+namespace inca {
+    namespace raster {
+#if 0
+        template <>
+        struct RidgeTest {
+            // Constructor
+            explicit RidgeTest(R0 _dp, R1 _dq, R2 _dpp, R3 _dqq)
+                : dp(_dp), dq(_dq), dpp(_dpp), dqq(_dqq) { }
+
+            template <class IndexList>
+            bool operator()(const IndexList & indices) {
+
+            }
+        };
+#endif
+
+struct countNAN {
+    countNAN() : nanCount(0), nCount(0), zeroCount(0) { }
+
+    template <typename T>
+    void operator()(T t) {
+        if (std::isnan(t))
+            nanCount++;
+        else if (t == T(0))
+            zeroCount++;
+        else
+            nCount++;
+    }
+
+    int nanCount, nCount, zeroCount;
+};
+
+        template <class R0, class ScaleList, class Tracker>
+        Tracker find_ridges(const R0 & r0,
+                            const ScaleList & scales,
+                            Tracker tracker) {
+            const SizeType dimensionality = R0::dimensionality;
+            typedef typename R0::ElementType ElementType;
+            typedef typename ScaleList::value_type Scalar;
+            typedef MultiArrayRaster<ElementType, dimensionality>   EvaluatedRaster;
+            typedef EvaluatedRaster                             FirstDerivative;
+            typedef EvaluatedRaster                             SecondDerivative;
+            typedef EvaluatedRaster                             ThirdDerivative;
+//            typedef DerivativeOperatorRaster<R0>                FirstDerivative;
+//            typedef DerivativeOperatorRaster<FirstDerivative>   SecondDerivative;
+//            typedef DerivativeOperatorRaster<SecondDerivative>  ThirdDerivative;
+
+            Scalar gamma = Scalar(0.5);
+            IndexType xDim = 0,
+                      yDim = 1,
+                      sDim = 2;
+
+            // Calculate the differentials between scale levels (usually non-linear)
+            ScaleList scaleDiffs(scales);
+            for (IndexType s = 0; s < scaleDiffs.size() - 1; ++s)
+                scaleDiffs[s] = scaleDiffs[s + 1] - scaleDiffs[s];
+            scaleDiffs[scaleDiffs.size() - 1] = scaleDiffs[scaleDiffs.size() - 2];
+            ArrayGeneratorRaster<ScaleList, dimensionality>
+                t  = array<ScaleList, dimensionality>(scales, sDim),
+                dt = array<ScaleList, dimensionality>(scaleDiffs, sDim);
+
+#if 0
+            FirstDerivative Lx = d(r0, xDim),
+                            Ly = d(r0, yDim);
+            SecondDerivative Lxx = d(Lx, xDim),
+                             Lxy = d(Lx, yDim),
+                             Lyy = d(Ly, yDim);
+            EvaluatedRaster diff = Lxx - Lyy,
+                            rational = (diff) / sqrt(square(diff) + square(Lxy) * 4),
+                            cosB = sqrt((rational + 1) * Scalar(0.5)),
+                            sinB = sqrt((rational - 1) * Scalar(-0.5)) * sign(Lxy);
+            EvaluatedRaster Lp  = sinB * Lx - cosB * Ly,
+                            Lq  = cosB * Lx + sinB * Ly,
+                            Lpp = sinB * d(Lp, xDim) - cosB * d(Lp, yDim),
+                            Lqq = cosB * d(Lq, xDim) - sinB * d(Lq, yDim),
+                            Lpp = square(sinB)*Lxx + square(cosB)*Lyy - sinB*cosB*Lxy*2,
+                            Lqq = square(cosB)*Lxx + square(sinB)*Lyy + sinB*cosB*Lxy*2;
+            EvaluatedRaster ridgeSurface    = Lp,
+                            ridgeSign       = Lpp,
+                            strength        = pow(t, gamma / 2) * max(abs(Lpp), abs(Lqq)),
+                            strengthSurface = -d(strength, sDim) / dt,
+                            strengthSign    = -d(strengthSurface, sDim) / dt;
+
+#else
+            EvaluatedRaster Lx = d(r0, xDim),
+                            Ly = d(r0, yDim),
+                            Lxx = d(Lx, xDim),
+                            Lxy = d(Lx, yDim),
+                            Lyy = d(Ly, yDim),
+                            gradientSquared = Lx*Lx + Ly*Ly,
+                            denominator = pow(gradientSquared, Scalar(-0.5)),
+                            diff = Lxx - Lyy,
+                            rational = (diff) / sqrt(square(diff) + square(Lxy) * 4),
+                            cosB = sqrt((rational + 1) * Scalar(0.5)),
+                            sinB = sqrt((rational - 1) * Scalar(-0.5)) * sign(Lxy),
+                            cosA = Lx / denominator,
+                            sinA = Ly / denominator,
+                            Lu = sinA * Lx - cosA * Ly,
+                            Lv = cosA * Lx + sinA * Ly,
+                            Luu = sinA * d(Lu, xDim) - cosA * d(Lu, yDim),
+                            Luv = cosA * d(Lu, xDim) - sinA * d(Lu, yDim),
+                            Lvv = cosA * d(Lv, xDim) - sinA * d(Lv, yDim),
+                            Lpp = square(sinB)*Lxx + square(cosB)*Lyy - sinB*cosB*Lxy*2,
+                            Lqq = square(cosB)*Lxx + square(sinB)*Lyy + sinB*cosB*Lxy*2,
+                            ridgeSurface    = Luv,
+                            ridgeSign       = Lvv*Lvv - Luu*Luu,
+                            strength        = max(abs(Lpp), abs(Lqq)),
+                            strengthSurface = -d(strength, sDim) / dt,
+                            strengthSign    = -d(strengthSurface, sDim) / dt;
+
+#endif
+
+            return find_isosurface_intersection(ridgeSurface, ridgeSign,
+                                                strength, strengthSurface, strengthSign,
+                                                tracker);
+        }
+
+    }
+}
+
+#endif

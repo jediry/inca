@@ -1,0 +1,97 @@
+/** -*- C++ -*-
+ *
+ * \file RasterConcept
+ *
+ * \author Ryan L. Saunders
+ *
+ * Copyright 2004, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ */
+
+#ifndef INCA_RASTER_CONCEPT_RASTER
+#define INCA_RASTER_CONCEPT_RASTER
+
+// Import concept checking mechanism and metaprogramming macros
+#include <boost/concept_check.hpp>
+#include <inca/util/metaprogramming/macros.hpp>
+
+
+// This is part of the Inca raster processing library
+namespace inca {
+    namespace raster {
+
+        // Semantic tag
+        struct RasterTag { };
+
+        // Boolean test metafunction
+        BOOLEAN_METAFUNCTION( is_raster, IS_A(T, RasterTag) )
+
+        // Concept checking class
+        template <class R>
+        struct RasterConcept {
+            void constraints() {
+                using boost::function_requires;
+                using boost::DefaultConstructibleConcept;
+                using boost::CopyConstructibleConcept;
+
+                R *r;
+
+                // Check for associated numeric types
+                typedef typename R::SizeType        SizeType;
+                typedef typename R::IndexType       IndexType;
+                typedef typename R::DifferenceType  DifferenceType;
+
+                // Check for associated container types
+                typedef typename R::SizeArray       SizeArray;
+                typedef typename R::IndexArray      IndexArray;
+                typedef typename R::DifferenceArray DifferenceArray;
+                typedef typename R::Region          Region;
+
+                // Check for value types
+                typedef typename R::ElementType     ElementType;
+                typedef typename R::Reference       Reference;
+                typedef typename R::ConstReference  ConstReference;
+                typedef typename R::Pointer         Pointer;
+                typedef typename R::ConstPointer    ConstPointer;
+
+                // Check for STL-compatible types
+                typedef typename R::value_type      value_type;
+                typedef typename R::reference       reference;
+                typedef typename R::const_reference const_reference;
+                typedef typename R::pointer         pointer;
+                typedef typename R::const_pointer   const_pointer;
+                typedef typename R::size_type       size_type;
+                typedef typename R::difference_type difference_type;
+
+                // Associated type concept checks
+                function_requires< DefaultConstructibleConcept<SizeArray> >();
+                function_requires< DefaultConstructibleConcept<IndexArray> >();
+                function_requires< DefaultConstructibleConcept<DifferenceArray> >();
+                function_requires< CopyConstructibleConcept<SizeArray> >();
+                function_requires< CopyConstructibleConcept<IndexArray> >();
+                function_requires< CopyConstructibleConcept<DifferenceArray> >();
+
+                // Make sure we can get the raster dimensionality
+                const inca::SizeType dim = R::dimensionality;
+
+                // Check for semantic tags
+                typedef typename R::AccessTag           AccessTag;
+                typedef typename R::SizeTag             SizeTag;
+                typedef typename R::BoundsTag           BoundsTag;
+                typedef typename R::ValidityCheckTag    ValidityCheckTag;
+
+                // Check index-validity-check expressions
+                IndexArray indices(0);
+                bool valid = r->indicesValid(indices);
+            }
+        };
+
+    }
+}
+
+// Clean up the preprocessor namespace
+#define UNDEFINE_INCA_METAPROGRAMMING_MACROS
+#include <inca/util/metaprogramming/macros.hpp>
+
+#endif

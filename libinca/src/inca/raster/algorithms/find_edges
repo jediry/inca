@@ -1,0 +1,135 @@
+/** -*- C++ -*-
+ *
+ * File: find_edges
+ *
+ * Author: Ryan L. Saunders
+ *
+ * Copyright 2004, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ */
+
+#ifndef INCA_RASTER_ALGORITHM_FIND_EDGES
+#define INCA_RASTER_ALGORITHM_FIND_EDGES
+
+// Import system configuration
+#include <inca/inca-common.h>
+
+// Import concept & tag definitions
+#include "../concepts.hpp"
+
+// Import related algorithms and operators
+#include "find_isosurface_intersection"
+#include "../operators/derivative"
+#include "../generators/array"
+
+
+// This is part of the Inca raster processing library
+namespace inca {
+    namespace raster {
+
+        template <class R0>
+        struct writeTo {
+            static const SizeType dimensionality = R0::dimensionality;
+
+            writeTo(R0 * r) : raster(r) { }
+
+            void begin() {
+                length = 0;
+                strength = 0;
+            }
+            void end() {
+                cerr << "Found edge of length " << length << " and strength " << strength << endl;
+            }
+
+            template <class Point>
+            void operator()(const Point & p, float s) {
+                ++length;
+                strength += s;
+                Array<IndexType, dimensionality> indices;
+                for (IndexType d = 0; d < dimensionality; ++d)
+                    indices[d] = IndexType(p[d]);
+                (*raster)(indices) = typename R0::ElementType(1);
+            }
+
+            int length;
+            float strength;
+            R0 * raster;
+        };
+
+
+        template <class R0, class ScaleList, class Tracker>
+        Tracker find_edges(const R0 & r0,
+                           const ScaleList & scales,
+                           Tracker tracker) {
+            const SizeType dimensionality = R0::dimensionality;
+            typedef typename R0::ElementType ElementType;
+            typedef typename ScaleList::value_type Scalar;
+            typedef MultiArrayRaster<ElementType, dimensionality>   EvaluatedRaster;
+            typedef EvaluatedRaster                             FirstDerivative;
+            typedef EvaluatedRaster                             SecondDerivative;
+            typedef EvaluatedRaster                             ThirdDerivative;
+//            typedef DerivativeOperatorRaster<R0>                FirstDerivative;
+//            typedef DerivativeOperatorRaster<FirstDerivative>   SecondDerivative;
+//            typedef DerivativeOperatorRaster<SecondDerivative>  ThirdDerivative;
+
+            Scalar gamma = Scalar(0.5);
+            IndexType xDim = 0,
+                      yDim = 1,
+                      sDim = 2;
+
+            // Calculate the differentials between scale levels (usually non-linear)
+            ScaleList scaleDiffs(scales);
+            for (IndexType s = 0; s < scaleDiffs.size() - 1; ++s)
+                scaleDiffs[s] = scaleDiffs[s + 1] - scaleDiffs[s];
+            scaleDiffs[scaleDiffs.size() - 1] = scaleDiffs[scaleDiffs.size() - 2];
+            ArrayGeneratorRaster<ScaleList, dimensionality>
+                t  = array<ScaleList, dimensionality>(scales, sDim),
+                dt = array<ScaleList, dimensionality>(scaleDiffs, sDim);
+
+#if 1
+            FirstDerivative dx = d(r0, xDim),
+                            dy = d(r0, yDim);
+            SecondDerivative dxx = d(dx, xDim),
+                             dxy = d(dx, yDim),
+                             dyy = d(dy, yDim);
+            ThirdDerivative dxxx = d(dxx, xDim),
+                            dxxy = d(dxx, yDim),
+                            dxyy = d(dxy, yDim),
+                            dyyy = d(dyy, yDim);
+
+            EvaluatedRaster edgeSurface = dx*dx*dxx + dx*dy*dxy*Scalar(2) + dy*dy*dyy,
+                            edgeSign    = dx*dx*dx*dxxx + dx*dx*dy*dxxy*Scalar(3) +
+                                          dy*dy*dy*dyyy + dx*dy*dy*dxyy*Scalar(3),
+                            strength    = pow(t, gamma) * (dx*dx + dy*dy),
+                            strengthSurface = -d(strength, sDim) / dt,
+//                            strengthSign    = d(pow(t, gamma) * (dx*dx + dy*dy), sDim) / dt;
+                            strengthSign    = -d(strengthSurface, sDim) / dt;
+#else
+            EvaluatedRaster Lx = d(r0, xDim),
+                            Ly = d(r0, yDim),
+                            gradientSquared = Lx*Lx + Ly*Ly,
+                            denominator = pow(gradientSquared, Scalar(-0.5)),
+                            cosA = Lx / denominator,
+                            sinA = Ly / denominator,
+                            Lv = cosA * Lx + sinA * Ly,
+                            Lv2 = Lv * Lv,
+                            Lv3 = Lv2 * Lv,
+                            Lvv = cosA * d(Lv, xDim) + sinA * d(Lv, yDim),
+                            Lvvv = cosA * d(Lvv, xDim) + sinA * d(Lvv, yDim),
+                            edgeSurface     = Lv2 * Lvv,
+                            edgeSign        = Lv3 * Lvvv,
+                            strength        = pow(t, gamma) * gradientSquared,
+                            strengthSurface = -d(strength, sDim) / dt,
+                            strengthSign    = -d(strengthSurface, sDim) / dt;
+#endif
+
+            return find_isosurface_intersection(edgeSurface, edgeSign,
+                                                strength, strengthSurface, strengthSign,
+                                                tracker);
+        }
+
+    }
+}
+
+#endif
