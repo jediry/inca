@@ -138,6 +138,9 @@
 					RelativePath=".\src\inca\raster\operators\arithmetic">
 				</File>
 				<File
+					RelativePath=".\src\inca\raster\operators\blur">
+				</File>
+				<File
 					RelativePath=".\src\inca\raster\operators\complex">
 				</File>
 				<File
@@ -211,11 +214,6 @@
 				Filter="">
 				<File
 					RelativePath=".\src\inca\integration\fftw\fftw-raster-DFT.cpp">
-					<FileConfiguration
-						Name="Debug|Win32">
-						<Tool
-							Name="VCCLCompilerTool"/>
-					</FileConfiguration>
 				</File>
 			</Filter>
 		</Filter>

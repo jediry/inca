@@ -1,0 +1,82 @@
+/*
+ * File: blur
+ * 
+ * Author: Ryan L. Saunders
+ *
+ * Copyright 2004, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ */
+
+#ifndef INCA_RASTER_OPERATORS_BLUR
+#define INCA_RASTER_OPERATORS_BLUR
+
+
+// Import operator base classes and macros
+#include "operator-bases"
+
+// Import statistics functions
+#include "../algorithms"
+
+
+// This is part of the Inca raster processing library
+namespace inca {
+    namespace raster {
+
+        template <class R1>
+        class BlurRasterOperator
+                    : public UnaryRasterOperator<R1, typename R1::ElementType> {
+        public:
+            typedef UnaryRasterOperator<R1, typename R1::ElementType> Superclass;
+            typedef BlurRasterOperator<R1>        OperatorType;
+            typedef typename Superclass::ElementType    ElementType;
+
+            // Constructor
+            BlurRasterOperator(R1 & r) : Superclass(r) { }
+
+            // Evaluator function -- clamp and transform
+            template <class IndexList>
+            ElementType operator()(const IndexList &indices) const {
+                typedef Array<int, 2> IndexArray;
+                IndexArray c(indices), u(c), d(c), l(c), r(c), ul(c), ur(c), dl(c), dr(c);
+                if (c[0] - 1 >= base(0)) {
+                    l[0]--;
+                    ul[0]--;
+                    dl[0]--;
+                }
+                if (c[1] - 1 >= base(1)) {
+                    d[1]--;
+                    dl[1]--;
+                    dr[1]--;
+                }
+                if (c[0] + 1 <= extent(0)) {
+                    r[0]++;
+                    ur[0]++;
+                    dr[0]++;
+                }
+                if (c[1] + 1 >= extent(1)) {
+                    u[1]++;
+                    ul[1]++;
+                    ur[1]++;
+                }
+                ElementType value = first(c) * ElementType(0.25)
+                                  + (first(u) + first(d) + first(l) + first(r)) * ElementType(0.125)
+                                  + (first(ul) + first(dl) + first(ur) + first(dr)) * ElementType(0.125);
+                return value;
+            }
+        };
+
+        // Factory functions
+        template <typename R1>
+        BlurRasterOperator<R1> blur(R1 &r) {
+            return BlurRasterOperator<R1>(r);
+        }
+
+    };
+};
+
+// Clean up the preprocessor's namespace
+#define UNDEFINE_INCA_RASTER_OPERATOR_MACROS
+#include "operator-bases"
+
+#endif

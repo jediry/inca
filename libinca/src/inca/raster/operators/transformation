@@ -94,9 +94,9 @@ namespace inca {
                 
             }
 
-            // Constructor giving input range and transform
-            template <class R1>
-            LinearMapRasterOperator(R1 & r,
+            // Constructor giving target size
+            template <class SizeList>
+            ScaleRasterOperator(R1 & r,
                     const ElementRange & iRange,
                     const ElementType & sc, const ElementType & off)
                     : Superclass(r), inputRange(iRange),
