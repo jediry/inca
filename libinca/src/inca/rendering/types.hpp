@@ -130,6 +130,22 @@ namespace inca {
                                              << int(mode);
             }
         }
+
+
+        // Enumeration of different ways to fill polygons
+        enum FillMode {
+            Filled      = 0,
+            Outlined    = 1,
+        };
+        const unsigned ALL_FILL_MODES = Outlined + 1;
+        inline ostream & operator<<(ostream &o, FillMode mode) {
+            switch (mode) {
+                case Filled:    return o << "Filled";
+                case Outlined:  return o << "Outlined";
+                default:            return o << "UNKNOWN FillMode "
+                                             << int(mode);
+            }
+        }
     };
 };
 

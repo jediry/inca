@@ -111,6 +111,15 @@ bool OPEN_GL_API is_z_buffer_enabled() {
 }
 
 template <>
+void OPEN_GL_API enable_culling(bool enabled) {
+    enabled ? glEnable(GL_CULL_FACE) : glDisable(GL_CULL_FACE);
+}
+template<>
+bool OPEN_GL_API is_culling_enabled() {
+    return static_cast<bool>(glIsEnabled(GL_CULL_FACE));
+}
+
+template <>
 void OPEN_GL_API enable_alpha_blending(bool enabled) {
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     enabled ? glEnable(GL_BLEND) : glDisable(GL_BLEND);
@@ -167,8 +176,29 @@ template <>
 ShadingMode OPEN_GL_API shading_mode() {
     GLint value;
     glGetIntegerv(GL_SHADE_MODEL, &value);
-    if (value == GL_SMOOTH) return SmoothShade;
-    else                    return FlatShade;
+    switch (value) {
+        case GL_SMOOTH: return SmoothShade;
+        case GL_FLAT:   return FlatShade;
+        default:        return SmoothShade;
+    }
+}
+
+template <>
+void OPEN_GL_API set_fill_mode(FillMode mode) {
+    switch (mode) {
+        case Filled:    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);  break;
+        case Outlined:  glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);  break;
+    }
+}
+template <>
+FillMode OPEN_GL_API fill_mode() {
+    GLint value;
+    glGetIntegerv(GL_POLYGON_MODE, &value);
+    switch (value) {
+        case GL_FILL:   return Filled;
+        case GL_LINE:   return Outlined;
+        default:        return Filled;
+    }
 }
 
 
@@ -376,6 +406,11 @@ void OPEN_GL_API set_texture_coordinates<float, 3>(const Point<float, 3> &t) {
 template <> template <>
 void OPEN_GL_API render_vertex<double, 2>(const Point<double, 2> &v) {
     glVertex2d(v[0], v[1]);
+}
+
+template <> template <>
+void OPEN_GL_API render_vertex<double, 3>(const Point<double, 3> &v) {
+    glVertex3d(v[0], v[1], v[2]);
 }
 
 

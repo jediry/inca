@@ -165,7 +165,7 @@ public:
     void setLineWidth(float width) { api::set_line_width(width); }
     void enablePointSmoothing(bool enabled) { api::enable_point_smoothing(enabled); }
     void enableLineSmoothing(bool enabled)  { api::enable_line_smoothing(enabled); }
-    void enableAlphaBlending(bool enabled) { api::enable_alpha_blending(enabled); }
+    void enableAlphaBlending(bool enabled)  { api::enable_alpha_blending(enabled); }
 
     void enableLight(world::LightPtr lite);
     void disableLight(world::LightPtr lite);
@@ -304,38 +304,45 @@ public:
 
     void beginRenderPass(RenderPass pass) {
         // Begin timing this render pass
-        _currentRenderPass = pass;
         _frameStats.beginRenderPass(pass);
         _totalStats.beginRenderPass(pass);
 
         switch (pass) {
         case Opacity:
-            api::set_polygon_fill_mode(Filled);  // Draw filled polyons
-            api::enable_alpha_blending(false);   // No transparency
-            api::lock_z_buffer(false);           // Normal Z-buffer use
-            api::enable_polgon_culling(true);    // Cull back-faces
+            api::set_fill_mode(Filled);         // Draw filled polyons
+            api::enable_alpha_blending(false);  // No transparency
+            api::lock_z_buffer(false);          // Normal Z-buffer use
+            api::enable_culling(true);          // Cull back-faces
             break;
         case Wireframe:
-            api::set_polygon_fill_mode(Outline); // Draw wireframe
-            api::enable_alpha_blending(false);   // No transparency
-            api::lock_z_buffer(false);           // Normal Z-buffer use
-            api::enable_polygon_culling(false);  // Don't cull faces
+            api::set_fill_mode(Outlined);       // Draw wireframe
+            api::enable_alpha_blending(false);  // No transparency
+            api::lock_z_buffer(false);          // Normal Z-buffer use
+            api::enable_culling(false);         // Don't cull faces
             break;
         case Transparency:
-            api::set_polygon_fill_mode(Filled);  // Draw filled polygons
-            api::enable_alpha_blending(true);    // Enable transparency
-            api::lock_z_buffer(true);            // Don't update Z-buffer
-            api::enable_polygon_culling(false);  // Don't cull faces
+            api::set_fill_mode(Filled);         // Draw filled polygons
+            api::enable_alpha_blending(true);   // Enable transparency
+            api::lock_z_buffer(true);           // Don't update Z-buffer
+            api::enable_culling(false);         // Don't cull faces
             break;
         case Selection:
+            //api::enable_selection_mode(true);   // Enter selection mode
             break;
         default:
             logger << "IMR::initializeRenderPass(" << pass << "): not supported";
             logger.warning();
         }
+        // Keep track of our state
+        _currentRenderPass = pass;
     }
 
     void endRenderPass() {
+        switch (_currentRenderPass) {
+        case Selection:
+//            api::enable_selection_mode(false);  // Finish out the selection
+            break;
+        }
         _frameStats.endRenderPass(_currentRenderPass);
         _totalStats.endRenderPass(_currentRenderPass);
     }

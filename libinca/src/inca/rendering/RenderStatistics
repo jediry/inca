@@ -76,8 +76,7 @@ public:
     void beginRenderPass(index_t pass) {
         if (boundsCheck) {
             if (pass < 0 || pass >= RENDER_PASS_COUNT) {
-                cerr << "RenderStatistics::vertexRendered("
-                     << type << ", " << pass
+                cerr << "RenderStatistics::beginRenderPass(" << pass
                      << "): render pass " << pass << " out of range\n";
                 return;
             }
@@ -87,8 +86,7 @@ public:
     void endRenderPass(index_t pass) {
         if (boundsCheck) {
             if (pass < 0 || pass >= RENDER_PASS_COUNT) {
-                cerr << "RenderStatistics::vertexRendered("
-                     << type << ", " << pass
+                cerr << "RenderStatistics::endRenderPass(" << pass
                      << "): render pass " << pass << " out of range\n";
                 return;
             }

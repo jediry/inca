@@ -46,6 +46,8 @@ struct inca::rendering::immediate_mode_rendering_api {
     static bool is_z_buffer_locked();
     static void enable_z_buffer(bool enabled);
     static bool is_z_buffer_enabled();
+    static void enable_culling(bool enabled);
+    static bool is_culling_enabled();
     static void enable_alpha_blending(bool enabled);
     static bool is_alpha_blending_enabled();
     static void enable_lighting(bool enabled);
@@ -59,6 +61,8 @@ struct inca::rendering::immediate_mode_rendering_api {
 
     static void set_shading_mode(ShadingMode mode);
     static ShadingMode shading_mode();
+    static void set_fill_mode(FillMode mode);
+    static FillMode fill_mode();
 
     template <typename scalar_t, imaging::ColorSpace cs, bool hasAlpha>
     static void set_background_color(
