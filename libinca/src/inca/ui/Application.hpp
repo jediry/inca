@@ -39,6 +39,8 @@ namespace inca {
 // Import other UI class definitions
 #include "Window.hpp"
 
+// Import container definitions
+#include <vector>
 
 /**
  * The Application abstract class represents a generic application, and
@@ -121,7 +123,7 @@ public:
     void registerComponent(UIComponentPtr uic);
 
 protected:
-    vector<UIComponentPtr> components;
+    std::vector<UIComponentPtr> components;
 
 
 /*---------------------------------------------------------------------------*

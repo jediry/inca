@@ -1,0 +1,8 @@
+Inca Media Framework
+
+Open design questions:
+
+I) Rendering subsystem:
+  ~) Should hardware capabilities be represented by enumeration constants?
+     Or ought there be specific get* functions for each?
+     Or both?

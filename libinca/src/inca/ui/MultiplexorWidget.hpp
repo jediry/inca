@@ -35,11 +35,13 @@ namespace inca {
 // Import superclass definition
 #include "PassThruWidget.hpp"
 
+// Import container definitions
+#include <vector>
 
 class inca::ui::MultiplexorWidget : public PassThruWidget {
 public:
     // Container typedefs
-    typedef vector<WidgetPtr> WidgetList;
+    typedef std::vector<WidgetPtr> WidgetList;
 
 
 /*---------------------------------------------------------------------------*

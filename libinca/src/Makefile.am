@@ -1,5 +1,9 @@
 ## Makefile.am -- Process this file with automake to generate Makefile.in
 
+# Incorporate additional Makefile rules
+include Makefile.rules
+
+
 ###############################################################################
 ##
 ## Build configuration variables
@@ -18,10 +22,6 @@ CLEANFILES = $(gen_srcdir)/*
 ## Source file definitions
 ##
 ###############################################################################
-## Include the source file catalog
-include $(top_srcdir)/src_catalog
-
-
 dist_LIBRARIES = libinca.a
 
 libinca_a_SOURCES = $(src_inca_util) $(src_inca_math) $(src_inca_imaging)   \
@@ -48,16 +48,6 @@ run_unit_tests_LDADD    = -L. -lcppunit
 ## Special build target definitions
 ##
 ###############################################################################
-# Make the Makefile depend on the src catalog
-Makefile.in : $(top_srcdir)/src_catalog
-
-# Rebuild the src catalog
-catalog :
-	( cd $(top_srcdir) ; make catalog)
-
-# Reset the dependency information that make uses
-clean-deps :
-	for file in .deps/*; do echo > $$file ; done
 
 # Generate serialization code from XML
 XSLT = java org.apache.xalan.xslt.Process
@@ -80,10 +70,3 @@ $(gen_srcdir)/SceneIdentifiers.h++ : io/scene/scene-schema.xsd $(xslt_src)
 	echo >> $(gen_srcdir)/SceneSerialization.c++
 #	rm -f $(gen_srcdir)/dummy.xml $(gen_srcdir)/normalized.xsd
 
-# Generate parser/lexer code from Antlr grammar files
-$(gen_srcdir)/%Lexer.hpp : io/%.g
-	java antlr.Tool -o $(gen_srcdir) $<
-$(gen_srcdir)/%Parser.hpp : io/%.g
-	java antlr.Tool -o $(gen_srcdir) $<
-%Lexer.cpp : %Lexer.hpp
-%Parser.cpp : %Parser.hpp

@@ -54,13 +54,17 @@ namespace inca {
 };
 
 
+// Import container defintions
+#include <set>
+
+
 class inca::world::SelectionSet {
 /*---------------------------------------------------------------------------*
  | Type definitions
  *---------------------------------------------------------------------------*/
 protected:
     // Container typedefs
-    typedef set<unsigned int> IDSet;
+    typedef std::set<id_t>  IDSet;
 
 public:
     // Iterator typedefs -- passed up from the set
@@ -85,11 +89,11 @@ public:
  | Element operations & tests
  *---------------------------------------------------------------------------*/
 public:
-    size_t size() const;                    // How many items in the selection?
-    void select(unsigned int id);           // Make this item selected
-    void deselect(unsigned int id);         // Make this item unselected
-    bool isSelected(unsigned int id) const; // Is this item selected?
-    void setSelected(unsigned int id, bool s);  // Make it so
+    size_t size() const;                // How many items in the selection?
+    void select(id_t id);               // Make this item selected
+    void deselect(id_t id);             // Make this item unselected
+    bool isSelected(id_t id) const;     // Is this item selected?
+    void setSelected(id_t id, bool s);  // Make it so
 
 
 /*---------------------------------------------------------------------------*

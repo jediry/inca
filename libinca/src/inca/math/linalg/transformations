@@ -1,6 +1,6 @@
 /* -*- C++ -*-
  *
- * File:
+ * File: transformations
  * 
  * Author: Ryan L. Saunders
  *
@@ -9,25 +9,22 @@
  * Description:
  */
 
-#ifndef INCA_MATH_TRANSFORMATIONS
-#define INCA_MATH_TRANSFORMATIONS
+#ifndef INCA_MATH_LINALG_TRANSFORMATIONS
+#define INCA_MATH_LINALG_TRANSFORMATIONS
 
+// Import system configuration
+#include <inca/inca-common.h>
 
-// Import Boost preprocessor metaprogramming library
-#include <boost/preprocessor/punctuation/comma_if.hpp>
+// Import scalar math implementation
+#include "../scalar.hpp"
 
-#define TEMPLATE(DIM)   template <typename scalar BOOST_PP_COMMA_IF(DIM) \
-                                  BOOST_PP_ENUM_PARAMS(DIM, size_t dim)>
-#define DIM     dim0
-#define DIM1    dim0
-#define DIM2    dim1
+// Import linear algebra types
+#include "Point"
+#include "Vector"
+#include "Matrix"
 
-#define SCALAR          scalar
-#define SCALAR_ARG      typename scalar_traits<scalar>::arg_type
-#define POINT(D1)       Point<scalar, D1>
-#define VECTOR(D1)      Vector<scalar, D1>
-#define QUATERNION      Quaternion<scalar>
-#define MATRIX(D1, D2)  Matrix<scalar, D1, D2>
+// Import math macros
+#include "../macros.hpp"
 
 
 // This is part of the Inca math library
@@ -35,35 +32,34 @@ namespace inca {
     namespace math {
 
         // Make this an identity matrix
-        TEMPLATE(1)
-        MATRIX(DIM, DIM) & loadIdentity(MATRIX(DIM, DIM) &m) {
-            for (index_t row = 0; row < DIM; row++)
-                for (index_t col = 0; col < DIM; col++)
-                    m(row, col) = (row == col) ? SCALAR(1) : SCALAR(0);
+        M_TEMPLATE(1,1)
+        M(D0,D0,AS0) & loadIdentity( M(D0,D0,AS0) &m) {
+            for (index_t row = 0; row < D0; row++)
+                for (index_t col = 0; col < D0; col++)
+                    m(row, col) = (row == col) ? S(1) : S(0);
             return m;
         }
 
         // Generate an identity matrix
-        TEMPLATE(1)
-        MATRIX(DIM, DIM) identityMatrix() {
-            MATRIX(DIM, DIM) m;
+        M_TEMPLATE(1,1)
+        M(D0,D0,AS0) identityMatrix() {
+            M(D0,D0,AS0) m;
             loadIdentity(m);
             return m;
         }
 
         // Fill this matrix with a constant value
-        TEMPLATE(1)
-        MATRIX(DIM, DIM) & loadConstant(MATRIX(DIM, DIM) &m,
-                                                 SCALAR_ARG c) {
+        M_TEMPLATE(1,1)
+        M(D0,D0,AS0) & loadConstant( M(D0,D0,AS0) &m, S_ARG c) {
             for (index_t i = 0; i < m.size; i++)
                 m[i] = c;
             return m;
         }
 
         // Generate a matrix filled with a constant value
-        TEMPLATE(1)
-        MATRIX(DIM, DIM) constantMatrix(SCALAR_ARG c) {
-            MATRIX(DIM, DIM) m;
+        M_TEMPLATE(1,1)
+        M(D0,D0,AS0) constantMatrix(S_ARG c) {
+            M(D0,D0,AS0) m;
             loadConstant(m);
             return m;
         }
@@ -72,22 +68,22 @@ namespace inca {
     /*-----------------------------------------------------------------------*
      | Translation matrices
      *-----------------------------------------------------------------------*/
-        TEMPLATE(1)
-        MATRIX(DIM, DIM) & loadTranslation(MATRIX(DIM, DIM) &m,
-                                           const VECTOR(DIM - 1) &t) {
+        M_TEMPLATE(1,1)
+        M(D0,D0,AS0) & loadTranslation( M(D0,D0,AS0) &m,
+                                        const V(D0 - 1) &t) {
             loadIdentity(m);    // Start with an identity matrix
 
             // Fill in the right-most column from the Vector
-            for (index_t row = 0; row < DIM - 1; row++)
-                m.rowCol(row, DIM - 1) = t[row];
-            m.rowCol(DIM-1, DIM-1) = SCALAR(1);
+            for (index_t row = 0; row < D0 - 1; row++)
+                m.rowCol(row, D0 - 1) = t[row];
+            m.rowCol(D0-1, D0-1) = S(1);
             return m;
         }
 
         // Generate a translation matrix from a Vector
-        TEMPLATE(1)
-        MATRIX(DIM, DIM) translationMatrix(const VECTOR(DIM - 1) &t) {
-            MATRIX(DIM, DIM) m;
+        M_TEMPLATE(1,1)
+        M(D0,D0,AS0) translationMatrix(const V(D0 - 1) &t) {
+            M(D0,D0,AS0) m;
             loadTranslation(m, t);
             return m;
         }
@@ -97,12 +93,12 @@ namespace inca {
      | Rotation matrices
      *-----------------------------------------------------------------------*/
         // 2D rotation (in radians)
-        TEMPLATE(0)
-        MATRIX(3, 3) & loadRotation2D(MATRIX(3, 3) &m, SCALAR_ARG radians) {
+        M_TEMPLATE(0,1)
+        M(3,3,AS0) & loadRotation2D( M(3,3,AS0) &m, S_ARG radians) {
             loadIdentity(m);    // Start with an identity matrix
 
             // Fill in the necessary elements
-            SCALAR cosine = cos(radians),
+            S cosine = cos(radians),
                      sine   = sin(radians);
             m.rowCol(0, 0) = cosine;  m.rowCol(0, 1) = -sine;
             m.rowCol(1, 0) = sine;    m.rowCol(1, 1) = cosine;
@@ -110,9 +106,9 @@ namespace inca {
         }
 
         // XXX this is not arbitrary DIMensional
-        TEMPLATE(0)
-        MATRIX(3, 3) rotation2DMatrix(SCALAR_ARG radians) {
-            MATRIX(3, 3) m;
+        M_TEMPLATE(0,1)
+        M(3,3,AS0) rotation2DMatrix(S_ARG radians) {
+            M(3,3,AS0) m;
             loadRotation2D(m, radians);
             return m;
         }
@@ -183,22 +179,21 @@ namespace inca {
     /*-----------------------------------------------------------------------*
      | Scaling matrices
      *-----------------------------------------------------------------------*/
-        TEMPLATE(1)
-        MATRIX(DIM, DIM) & loadScaling(MATRIX(DIM, DIM) &m,
-                                       const VECTOR(DIM - 1) &s) {
-            loadConstant(m, SCALAR(0));   // Start with a zero matrix
+        M_TEMPLATE(1,1)
+        M(D0,D0,AS0) & loadScaling( M(D0,D0,AS0) &m, const V(D0 - 1) &s) {
+            loadConstant(m, 0);   // Start with a zero matrix
 
             // Fill in the matrix diagonal from the Vector
-            for (index_t i = 0; i < DIM - 1; i++)
+            for (index_t i = 0; i < D0 - 1; i++)
                 m(i, i) = s[i];
-            m(DIM-1, DIM-1) = SCALAR(1);
+            m(D0 - 1, D0 - 1) = 1;
             return m;
         }
 
         // Generate a translation matrix from a Vector
-        TEMPLATE(1)
-        MATRIX(DIM, DIM) scalingMatrix(const VECTOR(DIM - 1) &s) {
-            MATRIX(DIM, DIM) m;
+        M_TEMPLATE(1,1)
+        M(D0,D0,AS0) scalingMatrix(const V(D0 - 1) &s) {
+            M(D0,D0,AS0) m;
             loadScaling(m, s);
             return m;
         }
@@ -216,22 +211,21 @@ namespace inca {
     // up, and right already form an orthonormal basis. So if they're not all
     // perpendicular to each other, or if they're not of unit length, I'm not
     // responsible for the consequences!!
-        TEMPLATE(0)
-        QUATERNION & loadRotation3D(QUATERNION &q, const VECTOR(3) &front,
-                                                   const VECTOR(3) &up,
-                                                   const VECTOR(3) &right) {
+        S_TEMPLATE
+        Q & loadRotation3D(Q &q, const V(3) &front,
+                           const V(3) &up, const V(3) &right) {
             // We'll need these constants repeatedly
-            const SCALAR zero(0), one(1), two(2);
+            const S zero(0), one(1), two(2);
 
-            VECTOR(3) d1 = front;  d1[2] -= -one;   // d1 is front - (-Z)
-            VECTOR(3) d2 = right;  d2[0] -= one;    // d2 is right - (+X)
-            VECTOR(3) k = d1 % d2;
-            SCALAR c = -k[1];                       // c is dot(k, (-Y))
+            V(3) d1 = front;  d1[2] -= -one;   // d1 is front - (-Z)
+            V(3) d2 = right;  d2[0] -= one;    // d2 is right - (+X)
+            V(3) k = d1 % d2;
+            S c = -k[1];                       // c is dot(k, (-Y))
             bool frontUseful = true;
 
             if (effectivelyZero(c)) {
                 // Oops...k was in the plane...pick another 
-                VECTOR(3) d3 = -up; d3[1] -= -one;  // d3 is -up - (-Y)
+                V(3) d3 = -up; d3[1] -= -one;  // d3 is -up - (-Y)
                 k = d1 % d3;
                 c = -k[0];                          // c is dot(k, (-X))
 
@@ -245,30 +239,30 @@ namespace inca {
             // Now let's get our quaternion
             if (effectivelyZero(c)) {       // This was the identity rotation
                 // Give up in disgust. All this work for NOTHING!!!!!
-                q = QUATERNION(one, zero, zero, zero);
+                q = Q(one, zero, zero, zero);
 
             } else {                        // There's work to do
                 // Find the vector part of Q
-                VECTOR(3) j = k / (two * sqrt(c));
+                V(3) j = k / (two * sqrt(c));
 
                 // Figure out the scalar part
                 if (frontUseful) {
-                    k = VECTOR(3)(zero, zero, -one) % j;
+                    k = V(3)(zero, zero, -one) % j;
                     c = -dot(front, k) / (two * dot(k, k));
                 } else {
-                    k = VECTOR(3)(one, zero, zero) % j;
+                    k = V(3)(one, zero, zero) % j;
                     c = -dot(right, k) / (two * dot(k, k));
                 }
-                q = QUATERNION(c, j[0], j[1], j[2]);
+                q = Q(c, j[0], j[1], j[2]);
             }
             return q;
         }
 
-        TEMPLATE(0)
-        QUATERNION rotation3DQuaternion(const VECTOR(3) &front,
-                                        const VECTOR(3) &up,
-                                        const VECTOR(3) &right) {
-            QUATERNION q;
+        S_TEMPLATE
+        Q rotation3DQuaternion(const V(3) &front,
+                               const V(3) &up,
+                               const V(3) &right) {
+            Q q;
             loadRotation3D(q, front, up, right);
             return q;
         }
@@ -291,18 +285,8 @@ namespace inca {
     }
 #endif
 
-// Clean up the preprocessor namespace on the way out
-#undef TEMPLATE
-#undef DIM
-#undef DIM1
-#undef DIM2
-
-#undef SCALAR
-#undef SCALAR_ARG
-#undef POINT
-#undef VECTOR
-#undef QUATERNION
-#undef MATRIX
+// Clean up the preprocessor's namespace
+#define UNDEFINE_INCA_MATH_MACROS
+#include "../macros.hpp"
 
 #endif
-

@@ -57,6 +57,8 @@
 // Import system configuration
 #include <inca/inca-common.h>
 
+// Import container definitions
+#include <vector>
 
 // Disable the annoying "this : used in base member initializer list" warning
 // under Visual Studio
@@ -335,11 +337,11 @@
 
 #define RO_LIST_PROPERTY_OWNER_VARIABLES(TYPE, NAME)                        \
     const property_ ## NAME NAME;                                           \
-    vector<TYPE> _ ## NAME;
+    std::vector<TYPE> _ ## NAME;
 
 #define RW_LIST_PROPERTY_OWNER_VARIABLES(TYPE, NAME)                        \
     property_ ## NAME NAME;                                                 \
-    vector<TYPE> _ ## NAME;
+    std::vector<TYPE> _ ## NAME;
 
 
 /*****************************************************************************

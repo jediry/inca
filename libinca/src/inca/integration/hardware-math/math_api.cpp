@@ -10,7 +10,7 @@
  */
 
 // Import class definition
-#include <inca/math/scalar_ops>
+#include <inca/math/scalar/scalar_ops>
 using namespace inca::math;
 
 // Import the ANSI/IEEE math functions

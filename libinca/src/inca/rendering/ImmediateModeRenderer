@@ -13,38 +13,20 @@
  *      model (as opposed to a global lighting model, such as in raytracing,
  *      which considers the entire scene as a whole for the purpose of
  *      calculating the lighting. Because an immediate-mode renderer can
- *      deal with primitives independent of each other, the renderer can be
+ *      deal with primitives independently of one another, the renderer can be
  *      designed as a state-machine, such that the programmer sets the
  *      renderer's "current" attributes (transformation matrix stack, color,
  *      lighting mode, etc.) and then draws the primitives using the current
- *      state. DirectX and OpenGL are two examples of
- *      immediate mode rendering APIs.
+ *      state. DirectX and OpenGL are two examples of immediate mode
+ *      rendering APIs.
  *
- *      The OpenGLRenderer is a subclass of Renderer designed to
- *      offer a higher-level interface around a low-level rendering API like
- *      OpenGL. It provides wrapper functions allowing the low-level API's
- *      functions to be invoked with the corresponding Inca::World objects and
- *      the rendering primitives declared in this file.
+ *      Because of the sheer volume of code that makes up this structure and
+ *      its subunits, it has been split up into logical chunks and implemented
+ *      in separate files, which files are then included at the end of this
+ *      one (which is the main file, in case you were wondering).
  *
- *      OpenGLRenderer can be used in either of two modes:
- *      true-immediate or semi-immediate. In true-immediate mode, the renderer
- *      behaves in the same manner as the underlying low-level API. To use the
- *      renderer in this way, simply call the high-level functions
- *      in the same order as you would have called the corresponding low-level
- *      API functions. In this way, it is possible to create a
- *      rendering-system-independent application, and to switch between
- *      multiple renderers as desired.
- *
- *      In semi-immediate mode, the renderer attempts to optimize the rendering
- *      process by reordering the necessary operations. For example, since
- *      loading and switching textures may be a computationally expensive
- *      operation, the renderer will collate sets of primitives using the
- *      same texture and draw them consecutively, thus saving the expense of
- *      making that texture "current" multiple times. This could be done
- *      manually in true-immediate mode, but when materials are shared between
- *      different objects, this might get messy.
- *      
- *      
+ * Not implemented:
+ *      Stipple, color-index mode, culling, poly offset, poly mode (f/b)
  */
 
 #ifndef INCA_RENDERING_IMMEDIATE_MODE_RENDERER
@@ -53,12 +35,11 @@
 // Import system configuration
 #include <inca/inca-common.h>
 
-
 // This is part of the Inca rendering subsystem
 namespace inca {
     namespace rendering {
         // Forward declarations
-        template <typename RenderingAPI> class ImmediateModeRenderer;
+        template <class APITraits> class ImmediateModeRenderer;
     };
 };
 
@@ -66,326 +47,347 @@ namespace inca {
 // Import superclass definition
 #include "Renderer.hpp"
 
-// Import the traits template that interfaces with the underlying API
-#include "immediate_mode_rendering_api"
-
-// Import our statistics keeper
-#include "RenderStatistics"
-
 // Import rendering type definitions
 #include "types.hpp"
+#include "Primitive"
 
 // Import types from other Inca libraries
 #include <inca/math.hpp>
-#include <inca/imaging.hpp>
 
 
-template <typename RenderingAPI>
-class inca::rendering::ImmediateModeRenderer : public Renderer {
-public:
-    // Implementation traits typedef
-    typedef immediate_mode_rendering_api<RenderingAPI> api;
+// Import container definitions
+#include <vector>
+#include <boost/array.hpp>
 
-    // Rendering statistics counter defintion
-    typedef RenderStatistics<float, ALL_PRIMITIVE_TYPES, ALL_RENDER_PASSES>
-        RenderStatistics;
-
-    // Geometric type definitions
-    typedef typename api::Point2D   Point2D;
-    typedef typename api::Vector2D  Vector2D;
-
-    typedef typename api::Point3D   Point3D;
-    typedef typename api::Vector3D  Vector3D;
-
-    typedef typename api::Matrix    Matrix;
+    //PickingProjection
+    //OrthographicProjection
+    //PerspectiveProjection
+    //ScreenspaceProjection
 
 
+// Make some REALLY long names shorter
+#define RENDERER_TEMPLATE template <class APITraits>
+#define RENDERER inca::rendering::ImmediateModeRenderer<APITraits>
+
+
+RENDERER_TEMPLATE class RENDERER {
 /*---------------------------------------------------------------------------*
- | Performance & statistics
+ | Type definitions
  *---------------------------------------------------------------------------*/
 public:
-    const RenderStatistics & frameStatistics() const { return _frameStats; }
-    const RenderStatistics & totalStatistics() const { return _totalStats; }
+    // Geometric type definitions
+    typedef typename APITraits::geometry_t geometry_t;
+    INCA_MATH_LINALG_TYPES_CUSTOM(geometry_t, 2, /* */, 2D);
+    INCA_MATH_LINALG_TYPES_CUSTOM(geometry_t, 3, /* */, 3D);
+    typedef Quaternion3D                Quaternion;
+    typedef typename APITraits::Matrix  Matrix;
+
+    // Color type definitions
+    typedef typename APITraits::color_t color_t;
+    typedef typename APITraits::Color   Color;
+
+    // Texture coordinate type definitions
+    typedef typename APITraits::tex_coord_t tex_coord_t;
+    
+    // Timer type definitions
+    typedef typename APITraits::timer_t timer_t;
+
+    // Screenspace type definitions
+    typedef typename APITraits::Pixel       Pixel;
+    typedef typename APITraits::Dimension   Dimension;
+
+    // Import world object types
+    typedef world::Transform Transform;
+
 
 protected:
-    RenderStatistics _frameStats, _totalStats;
+    // Inner class that serves as the base class for the other components
+    class Component;
+
+
+public:
+    // The following substructures are implemented in separate files,
+    // for the sake of keeping this code readable, and are included
+    // at the end of this file
+
+    // Inner class keeping track of the performance of the renderer
+    class Statistics;
+
+    // Inner class representing a screenspace viewport
+    class Viewport;
+
+    // Inner classes representing graphics hardware resources
+    class MatrixStack;  // A hardware matrix stack
+    class TextureUnit;  // A hardware texture unit
+    class LightingUnit; // A hardware lighting unit
+
+    // Inner classes representing hardware raster buffers
+    template <typename element_t> class Buffer;
+    typedef Buffer<Color>       ColorBuffer;
+    typedef Buffer<geometry_t>  ScalarBuffer;
+    typedef Buffer<Color>       AccumulationBuffer;
+
+    // Property caching mechanism
+    template <typename T>
+    class CacheEntry {
+    public:
+        // Constructor
+        CacheEntry(const T & val = T(), bool isValid = false)
+            : value(val), valid(isValid) { }
+
+        T value;    // The cached value
+        bool valid; // Is this cache entry current with the hardware?
+    };
+
+    // Container type definitions
+    typedef std::vector<MatrixStack>    MatrixStackList;
+    typedef std::vector<TextureUnit>    TextureUnitList;
+    typedef std::vector<LightingUnit>   LightingUnitList;
+    typedef std::vector<ColorBuffer>    ColorBufferList;
+    typedef std::vector<ScalarBuffer>   ScalarBufferList;
+    typedef std::vector<Statistics>     StatisticsList;
+    typedef boost::array<CacheEntry<bool>,  APITraits::numBoolProperties>
+        BoolPropertyCache;
+    typedef boost::array<CacheEntry<int>,   APITraits::numIntProperties>
+        IntPropertyCache;
+    typedef boost::array<CacheEntry<float>, APITraits::numFloatProperties>
+        FloatPropertyCache;
+    typedef boost::array<CacheEntry<double>,APITraits::numDoubleProperties>
+        DoublePropertyCache;
+    typedef boost::array<CacheEntry<Color>, APITraits::numColorProperties>
+        ColorPropertyCache;
+
+    // We're all buddy-buddy with our sub-objects
+    friend Component;
+    friend Statistics;
+    friend Viewport;
+    friend MatrixStack;
+    friend TextureUnit;
+    friend LightingUnit;
+    friend ColorBuffer;
+    friend ScalarBuffer;
+    friend AccumulationBuffer;
 
 
 /*---------------------------------------------------------------------------*
- | Initialization functions
+ | Constructors
  *---------------------------------------------------------------------------*/
 public:
     // Constructor
-    ImmediateModeRenderer()
-        : _currentRenderPass(Opacity), _currentPrimitiveType(Points) { }
-
-    void initialize() {
-        _frameStats.reset();
-        _totalStats.reset();
-    }
-
-    void checkForError() { api::check_for_error(); }
+    ImmediateModeRenderer();
 
 
 /*---------------------------------------------------------------------------*
- | Framebuffer control functions
- *---------------------------------------------------------------------------*/
-    // Clear the framebuffer
-    void clear() {
-        api::clear_framebuffer();
-    }
-
-    // Access the framebuffer (or some sub-region)
-    //ImagePtr framebuffer() const;
-    //ImagePtr framebuffer(index_t x, index_t y, size_t w, size_t h) const;
-    //Color framebuffer(index_t x, index_t y) const;
-
-    // Change the framebuffer's size
-    void resize(size_t w, size_t h) {
-        api::resize_framebuffer(w, h);
-    }
-
-
-/*---------------------------------------------------------------------------*
- | Rendering-state control functions (TI)
- *---------------------------------------------------------------------------*/
-    void setShadingMode(ShadingMode mode) {
-        switch (mode) {
-        case SmoothShade:
-            api::enable_lighting(true);
-            api::set_shading_mode(SmoothShade);
-            //glLightModelf(GL_LIGHT_MODEL_TWO_SIDE, GL_FALSE);
-            break;
-        case FlatShade:
-            api::enable_lighting(true);
-            api::set_shading_mode(FlatShade);
-            //glLightModelf(GL_LIGHT_MODEL_TWO_SIDE, GL_FALSE);
-            break;
-        case Paint:
-            api::enable_lighting(false);
-            break;
-        default:
-            logger << "IMR::setShadingMode(" << mode << "): not supported";
-            logger.warning();
-        }
-    }
-
-    void enableDepthBuffering(bool enabled) { api::enable_z_buffer(false); }
-    void setPointDiameter(float size) { api::set_point_size(size); }
-    void setLineWidth(float width)    { api::set_line_width(width); }
-    void enablePointSmoothing(bool enabled) { api::enable_point_smoothing(enabled); }
-    void enableLineSmoothing(bool enabled)  { api::enable_line_smoothing(enabled); }
-    void enableAlphaBlending(bool enabled)  { api::enable_alpha_blending(enabled); }
-
-    void enableLight(world::LightPtr lite);
-    void disableLight(world::LightPtr lite);
-    void setBackgroundColor(world::Material::Color &c) {
-        api::set_background_color(c);
-    }
-    template <typename scalar, imaging::ColorSpace cs, bool hasAlpha>
-    void setColor(const imaging::Color<scalar, cs, hasAlpha> &c) {
-        api::set_drawing_color(c);
-    }
-
-    template <typename scalar, size_t dim>
-    void setNormal(const math::Vector<scalar, dim> &n) {
-        api::set_normal(n);
-    }
-
-    template <typename scalar, size_t dim>
-    void setTexCoords(const math::Point<scalar, dim> &t) {
-        api::set_texture_coordinates(t);
-    }
-
-    void setMaterial(world::MaterialPtr mtl);
-
-
-/*---------------------------------------------------------------------------*
- | Transformation matrix functions (TI)
- *---------------------------------------------------------------------------*/
-    void resetTransformMatrix() {
-        api::select_transformation_matrix();
-        api::reset_matrix();
-    }
-    void saveTransformMatrix(Matrix &m) {
-        api::save_transformation_matrix(m);
-    }
-    void loadTransformMatrix(const Matrix &m) {
-        api::load_transformation_matrix(m);
-    }
-    void resetProjectionMatrix() {
-        api::select_projection_matrix();
-        api::reset_matrix();
-        api::select_transformation_matrix();
-    }
-    void saveProjectionMatrix(Matrix &m) {
-        api::save_projection_matrix(m);
-    }
-    void loadProjectionMatrix(const Matrix &m) {
-        api::load_projection_matrix(m);
-    }
-    void pushTransform() {
-        api::push_matrix();
-    }
-    void pushTransform(world::TransformConstPtr xform) {
-        api::push_matrix();
-        applyTransform(xform);  // Just call my buddy!
-    }
-    void popTransform() {
-        api::pop_matrix();
-    }
-    void applyMatrixProjection(const Matrix &m) {
-        api::select_projection_matrix();
-        api::multiply_matrix(m);
-        api::select_transformation_matrix();
-    }
-    void applyPickingProjection(const Point2D &center, const Vector2D &size) {
-        api::select_projection_matrix();
-        api::apply_picking_projection(center, size);
-        api::select_transformation_matrix();
-    }
-    void applyCameraProjection(world::CameraConstPtr cam) {
-        // Make sure we're not crazy here...
-        if (! cam) {
-            logger << "applyCameraProjection(CameraPtr): NULL pointer";
-            logger.warning();
-            return;     // Go home...we're done here
-        }
-
-        // See if this is a perspective camera
-        world::PerspectiveCameraConstPtr pCam
-            = dynamic_pointer_cast<world::PerspectiveCamera const>(cam);
-        if (pCam) {
-            // Extract camera view parameters
-            Vector2D angles, clipping;
-            angles[0] = pCam->horizViewAngle();
-            angles[1] = pCam->vertViewAngle();
-            clipping[0] = pCam->nearClip();
-            clipping[1] = pCam->farClip();
-
-            // Multiply in the projection matrix
-            api::select_projection_matrix();
-            api::apply_perspective_projection(angles, clipping);
-            api::select_transformation_matrix();
-            return;     // Go home...we're done here
-        }
-
-        // See if this is an orthographic camera
-        world::OrthographicCameraConstPtr oCam
-            = dynamic_pointer_cast<world::OrthographicCamera const>(cam);
-        if (oCam) {
-            // Extract camera view parameters
-            Vector2D extents, clipping;
-            extents[0] = oCam->viewWidth();
-            extents[1] = oCam->viewHeight();
-            clipping[0] = oCam->nearClip();
-            clipping[1] = oCam->farClip();
-
-            // Multiply in the projection matrix
-            api::select_projection_matrix();
-            api::apply_orthographic_projection(extents, clipping);
-            api::select_transformation_matrix();
-            return;     // Go home...we're done here
-        }
-
-        // OK...you're on crack. What the $#%@ is this??
-        logger << "applyCameraProjection(CameraPtr): Unsupported Camera type "
-               << typeid(cam).name();
-        logger.warning();
-    }
-    void applyCameraTransform(world::CameraConstPtr cam) {
-        // Since camera transformation is effectively the inverse model
-        // transformation, we just need to send the camera's xform thru backwards
-        unapplyTransform(cam->transform);
-    }
-
-    void applyTransform(world::TransformConstPtr xform) {
-        // Translate, rotate, and scale
-        applyTranslation(xform->position());
-        applyRotation(xform->rotation());
-        applyScaling(xform->scaling());
-    }
-    void unapplyTransform(world::TransformConstPtr xform) {
-        // Unscale, unrotate, and untranslate
-        unapplyScaling(xform->scaling());
-        unapplyRotation(xform->rotation());
-        unapplyTranslation(xform->position());
-    }
-    
-    void applyTranslation(const world::Transform::Point &t) {
-        api::apply_translation(t);
-    }
-    void unapplyTranslation(const world::Transform::Point &t) {
-        api::unapply_translation(t);
-    }
-
-    void applyRotation(const world::Transform::Quaternion &q) {
-        api::apply_rotation(q);
-    }
-    void unapplyRotation(const world::Transform::Quaternion &q) {
-        api::unapply_rotation(q);
-    }
-
-    void applyScaling(const world::Transform::Vector &s) {
-        api::apply_scaling(s);
-    }
-    void unapplyScaling(const world::Transform::Vector &s) {
-        api::unapply_scaling(s);
-    }
-
-    // Transform a world-space coordinate into local space, and back
-    world::Transform::Point transform(const world::Transform::Point &world) const {
-        world::Transform::Point local;
-        api::transform(world, local);
-        return local;
-    }
-    world::Transform::Point untransform(const world::Transform::Point &local) const {
-        world::Transform::Point world;
-        api::untransform(local, world);
-        return world;
-    }
-
-    // Transform a world-space coordinate into screen-space, and back
-    world::Transform::Point project(const world::Transform::Point &world) const {
-        world::Transform::Point screen;
-        api::project(world, screen);
-        return screen;
-    }
-    world::Transform::Point unproject(const world::Transform::Point &screen) const {
-        world::Transform::Point world;
-        api::unproject(screen, world);
-        return world;
-    }
-
-
-/*---------------------------------------------------------------------------*
- | Selection functions (TI)
+ | Renderer sub-objects
  *---------------------------------------------------------------------------*/
 public:
-    void setSelectionID(unsigned int id)  { api::set_selection_id(id); }
-    void pushSelectionID(unsigned int id) { api::push_selection_id(id); }
-    void popSelectionID()                 { api::pop_selection_id(); }
-    void getSelectedIDs(world::SelectionSet &s) { api::load_selected_ids(s); }
+    // Access to the drawable screen viewport
+    Viewport & viewport();
+
+    // Access to available hardware matrix stacks
+    MatrixStack & projectionMatrix();
+    MatrixStack & viewMatrix();
+    MatrixStack & worldMatrix();
+    MatrixStack & colorMatrix();
+
+    // Access to available hardware buffers
+    ColorBuffer & auxillaryBuffer(index_t i);
+    ColorBuffer & stencilBuffer();
+    ScalarBuffer & depthBuffer();
+    AccumulationBuffer & accumulationBuffer();
+
+    // Performance & statistics
+    Statistics & frameStatistics();
+    Statistics & cumulativeStatistics();
+
+protected:
+    // Renderer sub-objects
+    MatrixStackList     _matrixStacks;
+    Viewport            _viewport;
+    TextureUnitList     _textureUnits;
+    LightingUnitList    _lightingUnits;
+    ColorBufferList     _colorBuffers;
+    ScalarBufferList    _scalarBuffers;
+    StatisticsList      _statistics;
+
+    // Property caches
+    mutable BoolPropertyCache   boolPropertyCache;
+    mutable IntPropertyCache    intPropertyCache;
+    mutable FloatPropertyCache  floatPropertyCache;
+    mutable DoublePropertyCache doublePropertyCache;
+    mutable ColorPropertyCache  colorPropertyCache;
 
 
 /*---------------------------------------------------------------------------*
- | True-immediate mode rendering functions (TI)
+ | Coordinate space transformation functions
  *---------------------------------------------------------------------------*/
-    void beginFrame() {
-        _frameStats.reset();
-        _frameStats.beginFrame();
-        _totalStats.beginFrame();
+public:
+    // Transform between world and local coordinate spaces
+    Point3D worldToLocal(const Point3D &world) const {
+        return viewTransformation.transform(world);
+    }
+    Vector3D worldToLocal(const Vector3D &world) const {
+        return viewTransformation.transform(world);
+    }
+    Point3D localToWorld(const Point3D &local) const {
+        return viewTransformation.untransform(local);
+    }
+    Vector3D localToWorld(const Vector3D &local) const {
+        return viewTransformation.untransform(local);
     }
 
+    // Transform between world and screen coordinate spaces
+    Point3D worldToScreen(const Point3D &world) const {
+        return  viewport.transform(
+                    projectionTransformation.transform(
+                        viewTransformation.transform(world)
+                    )
+                );
+    }
+    Point3D screenToWorld(const Point3D &screen) const {
+        return  viewTransformation.untransform(
+                    projectionTransformation.untransform(
+                        viewport.untransform(screen)
+                    )
+                );
+    }
+
+
+/*---------------------------------------------------------------------------*
+ | Rendering-state control functions
+ *---------------------------------------------------------------------------*/
+public:
+    // Background color
+    Color backgroundColor() const;
+    void setBackgroundColor(const Color &c);
+
+    // Fragment depth-test
+    bool isDepthBufferingEnabled() const;
+    void enableDepthBuffering(bool enabled);
+
+    float pointDiameter() const;
+    void setPointDiameter(float size);
+
+    float lineWidth() const;
+    void setLineWidth(float width);
+
+    bool isPointSmoothingEnabled() const;
+    void enablePointSmoothing(bool enabled);
+
+    bool isLineSmoothingEnabled() const;
+    void enableLineSmoothing(bool enabled);
+
+    bool isBlendingEnabled() const;
+    void enableBlending(bool enabled);
+
+    bool isLightingEnabled() const;
+    void enabledLighting(bool enabled);
+
+    void setShadingMode(ShadingMode mode);
+
+
+/*---------------------------------------------------------------------------*
+ | Primitive rendering functions
+ *---------------------------------------------------------------------------*/
+public:
+    // Start/end rendering a geometric primitive
+    void beginPrimitive(PrimitiveType type);
+    void endPrimitive();
+
+    // Create a vertex at a point
+    template <typename scalar, size_t dim>
+    void vertexAt(const math::Point<scalar, dim> &p);
+
+    // Create a vertex using the data in the currently enabled arrays
+    void vertexAt(index_t index);
+
+    // Current drawing color
+    template <typename scalar, class colorspace>
+    void setColor(const math::Color<scalar, colorspace> &c);
+
+    // Current vertex normal
+    template <typename scalar, size_t dim>
+    void setNormal(const math::Vector<scalar, dim> &n);
+
+    // Current texture coordinates
+    template <typename scalar, size_t dim>
+    void setTexCoords(const math::Point<scalar, dim> &t);
+
+    // Current edge-of-primitive flag
+    void setEdgeFlag(bool isEdge);
+
+
+    // Vertex array data
+    template <typename vertex_t>
+    void setVertexArray(const VertexArray<vertex_t> &va);
+    template <typename vertex_t>
+    void setVertexArray(vertex_t const *va, size_t stride = 0);
+
+    // Normal array data
+    template <typename normal_t>
+    void setNormalArray(const NormalArray<normal_t> &na);
+    template <typename normal_t>
+    void setNormalArray(normal_t const *na, size_t stride = 0);
+
+    // Texture coordinate array data
+    template <typename tex_coord_t>
+    void setTexCoordArray(const TexCoordArray<tex_coord_t> &tca);
+    template <typename tex_coord_t>
+    void setTexCoordArray(tex_coord_t const *tca, size_t stride = 0);
+
+    // Color array data
+    template <typename color_t>
+    void setColorArray(const ColorArray<color_t> &ca);
+    template <typename color_t>
+    void setColorArray(color_t const *ca, size_t stride = 0);
+
+    // Edge flag array data
+    template <typename edge_flag_t>
+    void setEdgeFlagArray(const EdgeFlagArray<edge_flag_t> &efa);
+    void setEdgeFlagArray(bool const *efa, size_t stride = 0);
+
+    // Render a pre-built, batch primitive
+    template <typename vertex_t, typename normal_t, typename tex_coord_t,
+              typename color_t, typename edge_flag_t>
+    void renderPrimitive(const Primitive<vertex_t, normal_t, tex_coord_t,
+                                         color_t, edge_flag_t> &p) {
+        // Set up the vertex arrays
+        setVertexArray(p);
+        setNormalArray(p);
+        setTexCoordArray(p);
+        setColorArray(p);
+        setEdgeFlagArray(p);
+
+        // Render the primitive
+        // FIXME: Implement
+    }
+
+
+/*---------------------------------------------------------------------------*
+ | Selection functions
+ *---------------------------------------------------------------------------*/
+public:
+    void setSelectionID(id_t id) const;
+    void pushSelectionID(id_t id) const;
+    void popSelectionID() const;
+    void getSelectedIDs(world::SelectionSet &s) const;
+
+#if 0
+    // Start/end the rendering of a frame
+    void beginFrame() {
+        frameStatistics.reset();
+        frameStatistics.beginFrame();
+        cumulativeStatistics.beginFrame();
+    }
     void endFrame() {
-        _frameStats.endFrame();
-        _totalStats.endFrame();
+        frameStatistics.endFrame();
+        cumulativeStatistics.endFrame();
     }
 
     void beginRenderPass(RenderPass pass) {
         // Begin timing this render pass
-        _frameStats.beginRenderPass(pass);
-        _totalStats.beginRenderPass(pass);
+        frameStatistics.beginRenderPass(pass);
+        cumulativeStatistics.beginRenderPass(pass);
 
         switch (pass) {
         case Opacity:
@@ -424,38 +426,28 @@ public:
             api::enable_selection_mode(false);  // Finish out the selection
             break;
         }
-        _frameStats.endRenderPass(_currentRenderPass);
-        _totalStats.endRenderPass(_currentRenderPass);
+        frameStatistics.endRenderPass(_currentRenderPass);
+        cumulativeStatistics.endRenderPass(_currentRenderPass);
     }
 
-    void beginRenderImmediate(PrimitiveType type) {
-        _currentPrimitiveType = type;
-        api::begin_render_immediate(type);
-    }
-    void endRenderImmediate() {
-        api::end_render_immediate();
-    }
-
-//    template <PrimitiveType p, NormalType n, TextureType t>
-//    void renderImmediate(const Primitive<p, n, t> &prim);
-
-    template <typename scalar, size_t dim>
-    void renderVertex(const math::Point<scalar, dim> &p) {
-        _frameStats.vertexRendered(_currentPrimitiveType, _currentRenderPass);
-        _totalStats.vertexRendered(_currentPrimitiveType, _currentRenderPass);
-        api::render_vertex(p);
-    }
 
 protected:
     RenderPass    _currentRenderPass;
     PrimitiveType _currentPrimitiveType;
-
-
-/*---------------------------------------------------------------------------*
- | Semi-immediate mode functions
- *---------------------------------------------------------------------------*/
-public:
-    void render() { }
+#endif
 };
+
+
+// Import implementation of renderer sub-objects
+#include "ImmediateModeRenderer-Statistics"
+#include "ImmediateModeRenderer-Viewport"
+#include "ImmediateModeRenderer-MatrixStack"
+#include "ImmediateModeRenderer-LightingUnit"
+#include "ImmediateModeRenderer-TextureUnit"
+#include "ImmediateModeRenderer-Buffer"
+
+// Clean up the preprocessor namespace
+#undef RENDERER_TEMPLATE
+#undef RENDERER
 
 #endif

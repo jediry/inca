@@ -1,0 +1,192 @@
+/** -*- C++ -*-
+ *
+ * \file Matrix
+ *
+ * \author Ryan L. Saunders
+ *
+ * Copyright 2004, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ *      The Matrix template class is a two-dimensional scalar grid, possibly
+ *      representing a geometric transformation. The usual matrix operations
+ *      are defined for it.
+ */
+
+#ifndef INCA_MATH_LINALG_MATRIX
+#define INCA_MATH_LINALG_MATRIX
+
+// Import system configuration
+#include <inca/inca-common.h>
+
+// This is part of the Inca math library
+namespace inca {
+    namespace math {
+        // Forward declarations
+        template <typename scalar, inca::size_t maj, inca::size_t min,
+                  bool rowMajAccess = true, bool rowMajorStorage = true>
+        class Matrix;
+    };
+};
+
+// Import superclass definition
+#include <boost/array.hpp>
+
+// Import STL algorithms
+#include <algorithm>
+
+// Import related class definitions
+#include "Point"
+#include "Vector"
+
+// Import math macros
+#include "../macros.hpp"
+
+
+template <typename scalar, inca::size_t _major, inca::size_t _minor,
+          bool _rowMajorAccess, bool _rowMajorStorage>
+class inca::math::Matrix : public boost::array<scalar, _major * _minor> {
+/*---------------------------------------------------------------------------*
+ | Type/constant declarations
+ *---------------------------------------------------------------------------*/
+public:
+    // Scalar typedefs
+    INCA_MATH_SCALAR_TYPES(scalar, IS_WITHIN_TEMPLATE);
+
+    // What size matrix, and what storage order are we working with?
+    static const size_t major = _major;
+    static const size_t minor = _minor;
+    static const bool rowMajorAccess =   _rowMajorAccess;
+    static const bool colMajorAccess = ! _rowMajorAccess;
+    static const bool rowMajorStorage =   _rowMajorStorage;
+    static const bool colMajorStorage = ! _rowMajorStorage;
+    static const size_t rows = rowMajorAccess ? major : minor;
+    static const size_t cols = colMajorAccess ? major : minor;
+
+
+/*---------------------------------------------------------------------------*
+ | Constructors
+ *---------------------------------------------------------------------------*/
+public:
+    /**
+     * Default (no initialization) constructor.
+     */
+    explicit Matrix() { }
+
+    /**
+     * Initialization from another array type, possibly of a different scalar
+     * type. The argument array must be of the same dimensionality, and its
+     * scalar type must be convertible to scalar_t.
+     */
+    template <typename scalar2>
+    explicit Matrix(const boost::array<scalar2, static_size> &arr) {
+        std::copy(arr.begin(), arr.end(), begin());
+    }
+
+    /**
+     * C-style array constructor. The element type must be convertible to
+     * scalar_t.
+     */
+    template <typename scalar2>
+    explicit Matrix(scalar2 * arr) {
+        std::copy(arr, arr + static_size, begin());
+        // FIXME: this doesn't respect storage order
+    }
+
+    /**
+     * C-style 2D array constructor. The element type must be convertible to
+     * scalar_t
+     */
+    template <typename scalar2>
+    explicit Matrix(scalar2 arr[major][minor]) {
+        for (index_t i = 0; i < major; i++)
+            for (index_t j = 0; j < minor; j++)
+                at(indexOf(i, j)) = arr[i][j];
+        // FIXME: this doesn't respect storage order
+    }
+
+    /**
+     * Constant element initialization constructor
+     */
+    explicit Matrix(scalar_arg_t e) {
+        std::fill_n(begin(), static_size, e);
+    }
+ 
+    /**
+     * scalar_arg_t argument list constructors. Each of these is intended to
+     * be used only with instances of the same dimensionality as there are
+     * arguments. Attempting to invoke a constructor for a different
+     * dimensionality will cause a compile-time failure.
+     */
+//    BOOST_PP_REPEAT_FROM_TO(MIN_DIMENSION * MIN_DIMENSION,
+//                            MAX_DIMENSION * MAX_DIMENSION,
+//                            PARAM_LIST_CONSTRUCTOR, Matrix);
+
+
+    /**
+     * 2D matrix-subscript element accessor.
+     */
+    const scalar_t & operator()(index_t maj, index_t min) const {
+        return at(indexOf(maj, min));
+    }
+    scalar_t & operator()(index_t maj, index_t min) {
+        return at(indexOf(maj, min));
+    }
+
+    /**
+     * 2D, storage-order-independent element accessor.
+     */
+    const scalar_t & rowCol(index_t r, index_t c) const {
+        return at(rowMajorStorage ? r * cols + c : c * rows + r);
+    }
+    scalar_t & rowCol(index_t r, index_t c) {
+        return at(rowMajorStorage ? r * cols + c : c * rows + r);
+    }
+
+    /**
+     * 2D, storage-order-independent element accessor.
+     */
+    const scalar_t & colRow(index_t c, index_t r) const {
+        return rowCol(r, c);
+    }
+    scalar_t & colRow(index_t c, index_t r) {
+        return rowCol(r, c);
+    }
+
+    /**
+     * Calculate a 1D index into the underlying ScalarList from a pair of
+     * major-axis, minor-axis subscripts.
+     */
+    index_t indexOf(index_t maj, index_t min) const {
+        if (rowMajorStorage == rowMajorAccess)  // Same access as storage
+            return maj * minor + min;
+        else
+            return min * major + maj;
+    }
+
+
+/*---------------------------------------------------------------------------*
+ | Type-conversion functions
+ *---------------------------------------------------------------------------*/
+public:
+    /**
+     * Cast to string representation.
+     * \returns a string like "[1.4, 3.5]\n[0.0, 3.0]"
+     */
+    operator string() const {
+        ostringstream ss;
+        for (index_t row = 0; row < rows; row++)
+            // Stringify a single row in the matrix. This has to be done
+            // differently, depending on the storage scheme
+            if (colMajorStorage)
+                ss << '[' << stringifyElements(row, cols, rows) << "]\n";
+            else
+                ss << '[' << stringifyElements(row * cols, cols, 1) << "]\n";
+        return ss.str();
+    }
+};
+
+// Clean up the preprocessor's namespace
+#define UNDEFINE_INCA_MATH_MACROS
+#include "../macros.hpp"
+
+#endif

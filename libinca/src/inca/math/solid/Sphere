@@ -12,56 +12,41 @@
 #ifndef INCA_MATH_SOLID_SPHERE
 #define INCA_MATH_SOLID_SPHERE
 
-
-// Include superclass definition
-#include "../Shape"
-
-
-// This is part of the Inca geometry library
-namespace Inca {
-    namespace Geometry {
-        // Forward declaration
-        template <class Scalar, unsigned int dim> class Sphere;
+// This is part of the Inca math library
+namespace inca {
+    namespace math {
+        // Forward declarations
+        template <typename _scalar_t, size_t dim> class Sphere;
     };
 };
 
 
-template <class Scalar, unsigned int dim>
-class Inca::Geometry::Sphere : public Shape<Scalar, dim> {
-private:
-    // Convenience typedefs
-    typedef Sphere<Scalar, dim>                 ThisType;
-    typedef Shape<Scalar, dim>                  Superclass;
-
+template <typename _scalar_t, size_t dim>
+class inca::math::Sphere {
 public:
-    // What dimensional space are we working in?
-    const static unsigned int dimension = dim;
+    // What dimensionality are we working with?
+    static const size_t dimensionality = dim;
 
-    // Template typedefs
-    typedef typename Superclass::scalar_t       scalar_t;
-    typedef typename Superclass::scalar_arg_t   scalar_arg_t;
-    typedef typename Superclass::Point          Point;
-    typedef typename Superclass::Vector         Vector;
-    typedef typename Superclass::Ray            Ray;
-
-protected:
-    // Sphere radius
-    scalar_t radius;
+    // Type definitions
+    INCA_MATH_SCALAR_TYPES(_scalar_t, IS_WITHIN_TEMPLATE);
+    INCA_MATH_LINALG_TYPES(scalar_t, dim);
 
 
 /*---------------------------------------------------------------------------*
  | Constructors
  *---------------------------------------------------------------------------*/
 public:
-    Sphere() : radius(1) { }
+    Sphere() : _radius(1) { }
+
 
 /*---------------------------------------------------------------------------*
  | Accessor functions
  *---------------------------------------------------------------------------*/
 public:
-    scalar_t getRadius() const { return radius; }
-    void setRadius(scalar_arg_t r) { radius = r; }
-    
+    scalar_t radius() const { return _radius; }
+    void setRadius(scalar_arg_t r) { _radius = r; }
+
+#if 0
     scalar_t calculateDistance(const Ray &along) const {
         Vector p_to_center = Point() - along.point();
         scalar_t b = along.vector() * p_to_center,
@@ -88,6 +73,10 @@ public:
         Vector result = (at.point() - Point()) / radius;
         return result;
     }
+#endif
+
+protected:
+    scalar_t _radius;   // The radius of the sphere
 };
 
 #endif

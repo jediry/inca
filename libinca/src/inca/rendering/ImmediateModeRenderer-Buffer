@@ -1,0 +1,50 @@
+/** -*- C++ -*-
+ *
+ * File: ImmediateModeRenderer-Buffer
+ * 
+ * Author: Ryan L. Saunders
+ *
+ * Copyright 2004, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ *      This file defines the Buffer inner class belonging to
+ *      ImmediateModeRenderer. A Buffer directly represents a
+ *      hardware-accelerated raster buffer.
+ *
+ *      This file is not meant to be used directly, but is included by
+ *      the main ImmediateModeRenderer header file.
+ */
+
+#ifndef INCA_RENDERING_IMMEDIATE_MODE_RENDERER_BUFFER
+#define INCA_RENDERING_IMMEDIATE_MODE_RENDERER_BUFFER
+
+
+RENDERER_TEMPLATE
+template <typename _element_t>
+class RENDERER::Buffer : public RENDERER::Component {
+public:
+    // Type definitions
+    typedef _element_t element_t;
+
+    // Default constructor
+    Buffer() : renderer(*NULL) { }
+
+    // Constructor linking to the parent renderer
+    Buffer(RENDERER &r, id_t id);
+
+    void clear();
+    element_t operator()(index_t x, index_t y) const;
+    element_t operator()(Pixel p) const;
+
+    unsigned int writeMask() const;
+    void setWriteMask(unsigned int mask) const;
+
+//    void store(XX) const;
+//    void load(XX);
+
+protected:
+    void resize(size_t x, size_t y);
+    void resize(Dimension d);
+};
+
+#endif

@@ -177,7 +177,6 @@ int StreamTokenizer::readFilteredChar() {
         char nextChar = readChar();
         if (nextChar == '*') {
             // Ignore to '*/'
-            int i = 0;
             while (!(c == '*' && nextChar == '/') && c >= 0) {
                 c = nextChar;
                 nextChar = readChar();

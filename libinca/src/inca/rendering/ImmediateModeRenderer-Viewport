@@ -1,0 +1,48 @@
+/** -*- C++ -*-
+ *
+ * File: ImmediateModeRenderer-Viewport
+ * 
+ * Author: Ryan L. Saunders
+ *
+ * Copyright 2004, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ *      This file defines the Viewport inner class belonging to
+ *      ImmediateModeRenderer. A Viewport directly represents the active
+ *      drawing region.
+ *
+ *      This file is not meant to be used directly, but is included by
+ *      the main ImmediateModeRenderer header file.
+ */
+
+#ifndef INCA_RENDERING_IMMEDIATE_MODE_RENDERER_VIEWPORT
+#define INCA_RENDERING_IMMEDIATE_MODE_RENDERER_VIEWPORT
+
+
+// Import the raster block definition
+#include <inca/raster/Block>
+
+RENDERER_TEMPLATE
+class RENDERER::Viewport : public RENDERER::Component {
+/*---------------------------------------------------------------------------*
+ | Type definitions
+ *---------------------------------------------------------------------------*/
+public:
+    typedef raster::Block<int, 2>   Rectangle;
+
+
+/*---------------------------------------------------------------------------*
+ | Constructors
+ *---------------------------------------------------------------------------*/
+public:
+    Viewport(RENDERER &r, id_t myID);
+
+    const Rectangle & bounds() const;
+
+
+protected:
+    mutable Rectangle viewportBounds;
+    mutable bool boundsValid;
+};
+
+#endif

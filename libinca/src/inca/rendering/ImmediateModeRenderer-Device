@@ -1,0 +1,31 @@
+/** -*- C++ -*-
+ *
+ * File: ImmediateModeRenderer-Device
+ * 
+ * Author: Ryan L. Saunders
+ *
+ * Copyright 2004, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ *      This file defines the Device inner class belonging to
+ *      ImmediateModeRenderer. A Device represents a display adapter attached
+ *      to the computer (more accurately, it represents the view of that device
+ *      provided by the operating system), and can query the supported video
+ *      modes and rendering capabilities of that device.
+ *
+ *      This file is not meant to be used directly, but is included by
+ *      the main ImmediateModeRenderer header file.
+ */
+
+#ifndef INCA_RENDERING_IMMEDIATE_MODE_RENDERER_DEVICE
+#define INCA_RENDERING_IMMEDIATE_MODE_RENDERER_DEVICE
+
+
+RENDERER_TEMPLATE
+class RENDERER::Device : public RENDERER::Component {
+public:
+    // Constructor
+    Device(RENDERER &r, id_t id);
+};
+
+#endif

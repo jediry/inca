@@ -85,13 +85,13 @@ void MultiplexorWidget::addWidget(WidgetPtr w) {
 
     // First, let's go hunt for an empty slot in the array
     index_t slot;
-    for (slot = 0; size_t(slot) < widgets.size(); ++slot)
+    for (slot = 0; slot < index_t(widgets.size()); ++slot)
         if (widgets[slot] == NULL)
             break;
 
-    if (size_t(slot) < widgets.size())      // There was an empty slot
+    if (slot < index_t(widgets.size())) // There was an empty slot
         widgets[slot] = w;
-    else                            // Have to add it to the end
+    else                                // Have to add it to the end
         widgets.push_back(w);
 
     if (widget == NULL)     // ...there is no selected widget
@@ -111,7 +111,7 @@ bool MultiplexorWidget::removeWidget(const string &nm) {
 // Remove a widget at the speficied location (true means success)
 bool MultiplexorWidget::removeWidget(index_t index) {
     // Make sure there's a valid Widget at that spot
-    if (index >= 0 && size_t(index) < widgets.size()
+    if (index >= 0 && index < index_t(widgets.size())
                  && widgets[index] != NULL) {
         widgets[index] = WidgetPtr();   // Set it to NULL
         return true;                    // Success!
@@ -146,7 +146,7 @@ bool MultiplexorWidget::selectWidget(const string &name) {
 // Jump straight to a widget
 bool MultiplexorWidget::selectWidget(index_t index) {
     // Make sure this is sane
-    if (index >= 0 && size_t(index) < widgets.size()) {
+    if (index >= 0 && index < index_t(widgets.size())) {
         WidgetPtr w = widgets[index];
         if (w != NULL) {        // ...then this slot has a valid Widget
             widget = w;             // The superclass's "widget" property will

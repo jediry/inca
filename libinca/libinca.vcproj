@@ -13,8 +13,8 @@
 	<Configurations>
 		<Configuration
 			Name="Debug|Win32"
-			OutputDirectory="C:\temp"
-			IntermediateDirectory="C:\Temp"
+			OutputDirectory="C:\temp\Build\$(ConfigurationName)"
+			IntermediateDirectory="C:\temp\Build\$(ConfigurationName)"
 			ConfigurationType="4"
 			CharacterSet="2"
 			ManagedExtensions="FALSE"
@@ -59,8 +59,8 @@
 		</Configuration>
 		<Configuration
 			Name="Release|Win32"
-			OutputDirectory="C:\temp"
-			IntermediateDirectory="C:\Temp"
+			OutputDirectory="C:\temp\Build\$(ConfigurationName)"
+			IntermediateDirectory="C:\temp\Build\$(ConfigurationName)"
 			ConfigurationType="4"
 			CharacterSet="2"
 			ManagedExtensions="FALSE"
@@ -112,19 +112,22 @@
 			Filter="">
 		</Filter>
 		<Filter
-			Name="imaging"
+			Name="raster"
 			Filter="">
 			<File
-				RelativePath=".\src\inca\imaging\color_types">
+				RelativePath=".\src\inca\raster\Block">
 			</File>
 			<File
-				RelativePath=".\src\inca\imaging\Image">
+				RelativePath=".\src\inca\raster\Raster">
 			</File>
 			<File
-				RelativePath=".\src\inca\imaging\MIPMap">
+				RelativePath=".\src\inca\raster\RasterAnalyzer">
 			</File>
 			<File
-				RelativePath=".\src\inca\imaging\Normalize">
+				RelativePath=".\src\inca\raster\RasterFilter">
+			</File>
+			<File
+				RelativePath=".\src\inca\raster\RasterGenerator">
 			</File>
 		</Filter>
 		<Filter
@@ -134,7 +137,10 @@
 				Name="opengl"
 				Filter="">
 				<File
-					RelativePath=".\src\inca\integration\opengl\OpenGL_API.cpp">
+					RelativePath=".\src\inca\integration\opengl\GL.hpp">
+				</File>
+				<File
+					RelativePath=".\src\inca\integration\opengl\opengl-ImmediateModeRenderer.cpp">
 				</File>
 			</Filter>
 			<Filter
@@ -182,19 +188,16 @@
 			Name="math"
 			Filter="">
 			<File
-				RelativePath=".\src\inca\math\scalar_ops">
+				RelativePath=".\src\inca\math\color.hpp">
 			</File>
 			<File
-				RelativePath=".\src\inca\math\scalar_types">
+				RelativePath=".\src\inca\math\linalg.hpp">
 			</File>
 			<File
-				RelativePath=".\src\inca\math\transformations">
+				RelativePath=".\src\inca\math\macros.hpp">
 			</File>
 			<File
-				RelativePath=".\src\inca\math\vector_ops">
-			</File>
-			<File
-				RelativePath=".\src\inca\math\vector_types">
+				RelativePath=".\src\inca\math\scalar.hpp">
 			</File>
 			<Filter
 				Name="curve"
@@ -213,6 +216,12 @@
 			<Filter
 				Name="solid"
 				Filter="">
+				<File
+					RelativePath=".\src\inca\math\solid\QuadPrism">
+				</File>
+				<File
+					RelativePath=".\src\inca\math\solid\Sphere">
+				</File>
 			</Filter>
 			<Filter
 				Name="surface"
@@ -258,10 +267,64 @@
 					RelativePath=".\src\inca\math\topology\WingedEdgeMesh-Vertex">
 				</File>
 			</Filter>
+			<Filter
+				Name="color"
+				Filter="">
+				<File
+					RelativePath=".\src\inca\math\color\Color">
+				</File>
+				<File
+					RelativePath=".\src\inca\math\color\Grayscale.hpp">
+				</File>
+				<File
+					RelativePath=".\src\inca\math\color\sRGB.hpp">
+				</File>
+			</Filter>
+			<Filter
+				Name="scalar"
+				Filter="">
+				<File
+					RelativePath=".\src\inca\math\scalar\scalar_ops">
+				</File>
+				<File
+					RelativePath=".\src\inca\math\scalar\scalar_types">
+				</File>
+			</Filter>
+			<Filter
+				Name="linalg"
+				Filter="">
+				<File
+					RelativePath=".\src\inca\math\linalg\Matrix">
+				</File>
+				<File
+					RelativePath=".\src\inca\math\linalg\operations">
+				</File>
+				<File
+					RelativePath=".\src\inca\math\linalg\Point">
+				</File>
+				<File
+					RelativePath=".\src\inca\math\linalg\projections">
+				</File>
+				<File
+					RelativePath=".\src\inca\math\linalg\Quaternion">
+				</File>
+				<File
+					RelativePath=".\src\inca\math\linalg\Ray">
+				</File>
+				<File
+					RelativePath=".\src\inca\math\linalg\transformations">
+				</File>
+				<File
+					RelativePath=".\src\inca\math\linalg\Vector">
+				</File>
+			</Filter>
 		</Filter>
 		<Filter
 			Name="rendering"
 			Filter="">
+			<File
+				RelativePath=".\src\inca\rendering\GridPrimitive.h">
+			</File>
 			<File
 				RelativePath=".\src\inca\rendering\immediate_mode_rendering_api">
 			</File>
@@ -269,10 +332,37 @@
 				RelativePath=".\src\inca\rendering\ImmediateModeRenderer">
 			</File>
 			<File
-				RelativePath=".\src\inca\rendering\Renderer.hpp">
+				RelativePath=".\src\inca\rendering\ImmediateModeRenderer-Buffer">
 			</File>
 			<File
-				RelativePath=".\src\inca\rendering\RenderStatistics">
+				RelativePath=".\src\inca\rendering\ImmediateModeRenderer-Context">
+			</File>
+			<File
+				RelativePath=".\src\inca\rendering\ImmediateModeRenderer-Device">
+			</File>
+			<File
+				RelativePath=".\src\inca\rendering\ImmediateModeRenderer-LightingUnit">
+			</File>
+			<File
+				RelativePath=".\src\inca\rendering\ImmediateModeRenderer-MatrixStack">
+			</File>
+			<File
+				RelativePath=".\src\inca\rendering\ImmediateModeRenderer-Rasterizer">
+			</File>
+			<File
+				RelativePath=".\src\inca\rendering\ImmediateModeRenderer-Statistics">
+			</File>
+			<File
+				RelativePath=".\src\inca\rendering\ImmediateModeRenderer-TextureUnit">
+			</File>
+			<File
+				RelativePath=".\src\inca\rendering\ImmediateModeRenderer-Viewport">
+			</File>
+			<File
+				RelativePath=".\src\inca\rendering\Primitive">
+			</File>
+			<File
+				RelativePath=".\src\inca\rendering\Renderer.hpp">
 			</File>
 			<File
 				RelativePath=".\src\inca\rendering\types.hpp">
@@ -434,7 +524,7 @@
 				RelativePath=".\src\inca\world\Material.hpp">
 			</File>
 			<File
-				RelativePath=".\src\inca\world\Objects.hpp">
+				RelativePath=".\src\inca\world\Object.hpp">
 			</File>
 			<File
 				RelativePath=".\src\inca\world\Scene.hpp">
@@ -462,6 +552,9 @@
 			RelativePath=".\src\inca\config-win32.h">
 		</File>
 		<File
+			RelativePath=".\doc\Design Questions.txt">
+		</File>
+		<File
 			RelativePath=".\src\inca\dynamics.hpp">
 		</File>
 		<File
@@ -480,7 +573,13 @@
 			RelativePath=".\src\inca\math.hpp">
 		</File>
 		<File
+			RelativePath=".\src\inca\raster.hpp">
+		</File>
+		<File
 			RelativePath=".\src\inca\rendering.hpp">
+		</File>
+		<File
+			RelativePath=".\templates\Separators">
 		</File>
 		<File
 			RelativePath=".\src\inca\ui.hpp">

@@ -12,19 +12,20 @@
 
 // Import class definition
 #include "SelectionSet.hpp"
+using namespace inca;
 using namespace inca::world;
 
 
 /*---------------------------------------------------------------------------*
  | Element operations & tests
  *---------------------------------------------------------------------------*/
-size_t SelectionSet::size() const { return items.size(); }
-bool SelectionSet::isSelected(unsigned int id) const {
+inca::size_t SelectionSet::size() const { return items.size(); }
+bool SelectionSet::isSelected(id_t id) const {
     return (items.find(id) != items.end());
 }
-void SelectionSet::select(unsigned int id) { items.insert(id); }
-void SelectionSet::deselect(unsigned int id) { items.erase(id); }
-void SelectionSet::setSelected(unsigned int id, bool s) {
+void SelectionSet::select(id_t id) { items.insert(id); }
+void SelectionSet::deselect(id_t id) { items.erase(id); }
+void SelectionSet::setSelected(id_t id, bool s) {
     s ? select(id) : deselect(id);
 }
 
@@ -39,7 +40,7 @@ void SelectionSet::unionWith(const SelectionSet &s) {
     IDSet tmp;
     std::set_union(items.begin(), items.end(),
                    s.items.begin(), s.items.end(),
-                   tmp.begin());
+                   std::insert_iterator<IDSet>(tmp, tmp.end()));
     items.swap(tmp);
 }
 
@@ -47,21 +48,21 @@ void SelectionSet::intersectWith(const SelectionSet &s) {
     IDSet tmp;
     std::set_intersection(items.begin(), items.end(),
                           s.items.begin(), s.items.end(),
-                          tmp.begin());
+                          std::insert_iterator<IDSet>(tmp, tmp.end()));
     items.swap(tmp);
 }
 void SelectionSet::differenceWith(const SelectionSet &s) {
     IDSet tmp;
     std::set_difference(items.begin(), items.end(),
                         s.items.begin(), s.items.end(),
-                        tmp.begin());
+                        std::insert_iterator<IDSet>(tmp, tmp.end()));
     items.swap(tmp);
 }
 void SelectionSet::symmetricDifferenceWith(const SelectionSet &s) {
     IDSet tmp;
     std::set_symmetric_difference(items.begin(), items.end(),
                                   s.items.begin(), s.items.end(),
-                                  tmp.begin());
+                                  std::insert_iterator<IDSet>(tmp, tmp.end()));
     items.swap(tmp);
 }
 void SelectionSet::complement() {   // XXX throw unsupported

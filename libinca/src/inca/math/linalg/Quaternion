@@ -1,0 +1,137 @@
+/** -*- C++ -*-
+ *
+ * \file Quaternion
+ *
+ * \author Ryan L. Saunders
+ *
+ * Copyright 2004, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ *      The Quaternion template class represents a rotation in 3-space.
+ */
+
+#ifndef INCA_MATH_LINALG_QUATERNION
+#define INCA_MATH_LINALG_QUATERNION
+
+// Import system configuration
+#include <inca/inca-common.h>
+
+// This is part of the Inca math library
+namespace inca {
+    namespace math {
+        // Forward declarations
+        template <typename scalar> class Quaternion;
+    };
+};
+
+// Import superclass definition
+#include <boost/array.hpp>
+
+// Import STL algorithms
+#include <algorithm>
+
+// Import related class definitions
+#include "Point"
+#include "Vector"
+
+// Import math macros
+#include "../macros.hpp"
+
+
+template <typename scalar>
+class inca::math::Quaternion : public boost::array<scalar, 4> {
+/*---------------------------------------------------------------------------*
+ | Type/constant declarations
+ *---------------------------------------------------------------------------*/
+public:
+    // Scalar typedefs
+    INCA_MATH_SCALAR_TYPES(scalar, IS_WITHIN_TEMPLATE);
+
+
+/*---------------------------------------------------------------------------*
+ | Constructors
+ *---------------------------------------------------------------------------*/
+public:
+    /**
+     * Default (no initialization) constructor.
+     */
+    explicit Quaternion() { }
+
+    /**
+     * Initialization from another array type, possibly of a different scalar
+     * type. The argument array must be of the same dimensionality, and its
+     * scalar type must be convertible to scalar_t.
+     */
+    template <typename scalar2>
+    explicit Quaternion(const boost::array<scalar2, 4> &arr) {
+        std::copy(arr.begin(), arr.end(), begin());
+    }
+
+    /**
+     * 3D array constructor. Zero is stored into the first element
+     * of the Quaternion, and the contents of the array go into the second,
+     * third, and fourth elements. This allows a Quaternion to be initialized
+     * from a Point or Vector of one less dimension.
+     *
+     * The array's element type must be convertible to scalar_t.
+     */
+    template <typename scalar2>
+    explicit Quaternion(const boost::array<scalar2, 3> &arr) {
+        *begin() = scalar_t(0.0);
+        std::copy(arr.begin(), arr.end(), begin() + 1);
+    }
+
+    /**
+     * Scalar + 3D array constructor. The scalar is stored into the first element
+     * of the Quaternion, and the contents of the array go into the second,
+     * third, and fourth elements. This allows a Quaternion to be initialized
+     * from a Point or Vector of one less dimension.
+     *
+     * The array's element type must be convertible to scalar_t.
+     */
+    template <typename scalar2>
+    explicit Quaternion(scalar_arg_t s, const boost::array<scalar2, 3> &arr) {
+        *begin() = s;
+        std::copy(arr.begin(), arr.end(), begin() + 1);
+    }
+
+    /**
+     * C-style array constructor. The element type must be convertible to
+     * scalar_t.
+     */
+    template <typename scalar2>
+    explicit Quaternion(scalar2 * arr) {
+        std::copy(arr, arr + 3, begin());
+    }
+
+    /**
+     * Constant element initialization constructor
+     */
+    explicit Quaternion(scalar_arg_t e) {
+        std::fill(begin(), end(), e);
+    }
+
+    /**
+     * scalar_t argument list constructor.
+     */
+    PARAM_LIST_CONSTRUCTORS(Quaternion, 4, 4);
+
+
+/*---------------------------------------------------------------------------*
+ | Type-conversion functions
+ *---------------------------------------------------------------------------*/
+public:
+    /**
+     * Cast to string representation.
+     * \returns a string like "(1.4, 3.5)"
+     */
+    operator string() const {
+        return string("[") + elements[0] + " (" + stringifyElements() + ")]";
+    }
+};
+
+// Clean up the preprocessor's namespace
+#define UNDEFINE_INCA_MATH_MACROS
+#include "../macros.hpp"
+
+#endif

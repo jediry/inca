@@ -28,6 +28,9 @@
 // Import system configuration
 #include <inca/inca-common.h>
 
+// Import base class
+#include <sstream>
+
 // This is part of the Inca utilities collection
 namespace inca {
     // Forward declarations
@@ -60,7 +63,7 @@ namespace inca {
 };
 
 
-class inca::Logger : public ostringstream {
+class inca::Logger : public std::ostringstream {
 public:
     // Compile-time logging level
     #ifdef LOGGER_LEVEL
@@ -140,6 +143,10 @@ public:
 protected:
     ostream & target;
     int indentLevel;
+
+private:
+    // Disabled assignment operator
+    Logger & operator=(const Logger & lg) { }
 };
 
 #endif

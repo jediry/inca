@@ -1,0 +1,227 @@
+/*
+ * File: Primitive
+ * 
+ * Author: Ryan L. Saunders
+ *
+ * Copyright 2004, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ */
+
+#ifndef INCA_RENDERING_PRIMITIVE
+#define INCA_RENDERING_PRIMITIVE
+
+// Import system configuration
+#include <inca/inca-common.h>
+
+
+// This is part of the Inca rendering subsystem
+namespace inca {
+    namespace rendering {
+        class Omitted { };  // Dummy class for disallowing a particular
+                            // data array
+
+        // Forward declarations
+        template <typename vertex_t>     class VertexArray;
+        template <typename normal_t>     class NormalArray;
+        template <typename tex_coord_t>  class TexCoordArray;
+        template <typename color_t>      class ColorArray;
+        template <typename edge_flag_t>  class EdgeFlagArray;
+        template <typename vertex_t,
+                  typename normal_t     = Omitted,
+                  typename tex_coord_t  = Omitted,
+                  typename color_t      = Omitted,
+                  typename edge_flag_t  = Omitted>
+              class Primitive;
+
+        // Specialization forward declarations
+        template <> class NormalArray<Omitted>;
+        template <> class TexCoordArray<Omitted>;
+        template <> class ColorArray<Omitted>;
+        template <> class EdgeFlagArray<Omitted>;
+    };
+};
+
+// Import primitive type enumeration
+#include "types.hpp"
+
+
+// Low-level vertex array object
+template <typename _vertex_t>
+class inca::rendering::VertexArray {
+public:
+    // Type definitions
+    typedef _vertex_t vertex_t;
+
+    // Constructor & Destructor
+    VertexArray(size_t n) : _size(n), _vertices(new vertex_t[n]) { }
+    ~VertexArray() { delete [] _vertices; }
+
+    // Access to the contained array
+    vertex_t const * vertices() const { return _vertices; }
+    vertex_t       * vertices()       { return _vertices; }
+
+    // Access to an individual element
+    vertex_t const & vertex(index_t i) const { return _vertices[i]; }
+    vertex_t       & vertex(index_t i)       { return _vertices[i]; }
+
+    // The number of elements in this array
+    size_t size() const { return _size; }
+
+protected:
+    vertex_t *_vertices;
+    size_t   _size;
+};
+
+
+// Low-level normal array object
+template <typename _normal_t>
+class inca::rendering::NormalArray {
+public:
+    // Type definitions
+    typedef _normal_t normal_t;
+
+    // Constructor & Destructor
+    NormalArray(size_t n) : _size(n), _normals(new normal_t[n]) { }
+    ~NormalArray() { delete [] _normals; }
+
+    // Access to the contained array
+    normal_t const * normals() const { return _normals; }
+    normal_t       * normals()       { return _normals; }
+
+    // Access to an individual element
+    normal_t const & normal(index_t i) const { return _normals[i]; }
+    normal_t       & normal(index_t i)       { return _normals[i]; }
+
+    // The number of elements in this array
+    size_t size() const { return _size; }
+
+protected:
+    normal_t *_normals;
+    size_t   _size;
+};
+
+
+// Low-level texture coordinate array object
+template <typename _tex_coord_t>
+class inca::rendering::TexCoordArray {
+public:
+    // Type definitions
+    typedef _tex_coord_t tex_coord_t;
+
+    // Constructor & Destructor
+    TexCoordArray(size_t n) : _size(n), _tex_coords(new tex_coord_t[n]) { }
+    ~TexCoordArray() { delete [] _texCoords; }
+
+    // Access to the contained array
+    tex_coord_t const * texCoords() const { return _texCoords; }
+    tex_coord_t       * texCoords()       { return _texCoords; }
+
+    // Access to an individual element
+    tex_coord_t const & texCoord(index_t i) const { return _texCoords[i]; }
+    tex_coord_t       & texCoord(index_t i)       { return _texCoords[i]; }
+
+    // The number of elements in this array
+    size_t size() const { return _size; }
+
+protected:
+    tex_coord_t *_texCoords;
+    size_t      _size;
+};
+
+
+// Low-level color array object
+template <typename _color_t>
+class inca::rendering::ColorArray {
+public:
+    // Type definitions
+    typedef _color_t color_t;
+
+    // Constructor & Destructor
+    ColorArray(size_t n) : _size(n), _colors(new color_t[n]) { }
+    ~ColorArray() { delete [] _colors; }
+
+    // Access to the contained array
+    color_t const * colors() const { return _colors; }
+    color_t       * colors()       { return _colors; }
+
+    // Access to an individual element
+    color_t const & color(index_t i) const { return _colors[i]; }
+    color_t       & color(index_t i)       { return _colors[i]; }
+
+    // The number of elements in this array
+    size_t size() const { return _size; }
+
+protected:
+    color_t *_colors;
+    size_t  _size;
+};
+
+
+// Low-level edge flag array object
+template <typename _edge_flag_t>
+class inca::rendering::EdgeFlagArray {
+public:
+    // Type definitions
+    typedef _edge_flag_t edge_flag_t;
+
+    // Constructor & Destructor
+    EdgeFlagArray(size_t n) : _size(n), _edge_flags(new edge_flag_t[n]) { }
+    ~EdgeFlagArray() { delete [] _edge_flags; }
+
+    // Access to the contained array
+    edge_flag_t const * edgeFlags() const { return _edge_flags; }
+    edge_flag_t       * edgeFlags()       { return _edge_flags; }
+
+    // Access to an individual element
+    edge_flag_t const & edge_flag(index_t i) const { return _edge_flags[i]; }
+    edge_flag_t       & edge_flag(index_t i)       { return _edge_flags[i]; }
+
+    // The number of elements in this array
+    size_t size() const { return _size; }
+
+protected:
+    edge_flag_t *_edge_flags;
+    size_t      _size;
+};
+
+
+// Null specializations of the data array templates in which the data is
+// omitted. This is useful for the higher-level objects, which inherit from
+// these array objects.
+template <> class inca::rendering::NormalArray<inca::rendering::Omitted>    { public: NormalArray(size_t) { } };
+template <> class inca::rendering::TexCoordArray<inca::rendering::Omitted>  { public: TexCoordArray(size_t) { } };
+template <> class inca::rendering::ColorArray<inca::rendering::Omitted>     { public: ColorArray(size_t) { } };
+template <> class inca::rendering::EdgeFlagArray<inca::rendering::Omitted>  { public: EdgeFlagArray(size_t) { } };
+
+
+template <typename vertex_t, typename normal_t, typename tex_coord_t,
+          typename color_t, typename edge_flag_t>
+class inca::rendering::Primitive : public VertexArray<vertex_t>,
+                                   public NormalArray<normal_t>,
+                                   public TexCoordArray<tex_coord_t>,
+                                   public ColorArray<color_t>,
+                                   public EdgeFlagArray<edge_flag_t>
+{
+public:
+    // Constructor
+    Primitive(PrimitiveType p, size_t vtxCount)
+        : VertexArray<vertex_t>     (vtxCount),
+          NormalArray<normal_t>     (vtxCount),
+          TexCoordArray<tex_coord_t>(vtxCount),
+          ColorArray<color_t>       (vtxCount),
+          EdgeFlagArray<edge_flag_t>(vtxCount),
+          _primitiveType(p) { }
+
+    // Access to the primitive type for this object
+    PrimitiveType primitiveType() const { return _primitiveType; }
+    void setPrimitiveType(PrimitiveType p) { _primitiveType = p; }
+
+    // The number of vertices in this primitive
+    size_t size() const { return VertexArray<vertex_t>::size(); }
+
+protected:
+    PrimitiveType _primitiveType;   // What sort of primitive is this?
+};
+
+#endif

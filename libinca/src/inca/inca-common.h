@@ -31,6 +31,7 @@
 
 // Declare special primitive types
 namespace inca {
+    typedef int             size_t;     // A number of elements
     typedef int             index_t;    // An index into a list
     typedef unsigned int    id_t;       // A unique, numeric identifier
     typedef unsigned short  uchar;      // Unicode character
@@ -38,6 +39,7 @@ namespace inca {
 
 
 // We take the C++ stdlib & Boost smart(er) pointers as "core" components
+#define BOOST_DISABLE_ASSERTS   // Don't want smart_ptrs to assert
 #include <memory>
 #include <boost/scoped_ptr.hpp>
 #include <boost/scoped_array.hpp>
@@ -54,55 +56,20 @@ namespace inca {
     using boost::dynamic_pointer_cast;
     using boost::static_pointer_cast;
 };
+#undef BOOST_DISABLE_ASSERTS
 
 
-// Include C++ standard library stuff
+// Include C++ strings and IOStream library
 #include <string>
-namespace inca {
-    using std::string;
-};
-
 #include <iostream>
 #include <iomanip>
 namespace inca {
+    using std::string;
     using std::cin;     using std::endl;
     using std::cout;    using std::dec;
     using std::cerr;    using std::hex;
     using std::ostream;
 };
-
-
-#include <fstream>
-namespace inca {
-    using std::ifstream;
-    using std::ofstream;
-};
-
-#include <sstream>
-namespace inca {
-    using std::stringstream;
-    using std::ostringstream;
-};
-
-
-// Include C++ STL and Boost containers
-#include <vector>
-#include <list>
-#include <set>
-#include <boost/multi_array.hpp>
-#include <inca/util/hash_container>     // Hash containers are non-standard
-namespace inca {
-    using std::pair;
-    using std::vector;
-    using std::list;
-    using std::set;
-    using boost::multi_array;
-
-    // Import hash containers from whatever namespace they live in
-    using stl_ext::hash_map;
-    using stl_ext::hash_set;
-};
-
 
 // Everything in the system should have access to the Logger instance
 #include <inca/util/Logger.hpp>

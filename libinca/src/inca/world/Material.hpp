@@ -34,9 +34,9 @@ namespace inca {
 // Import superclass definition
 #include "WorldObject.hpp"
 
-// Import Inca::Math and Inca::Imaging libraries
-#include <inca/math.hpp>
-#include <inca/imaging.hpp>
+// Import scalar and Color definitions
+#include <inca/math/scalar.hpp>
+#include <inca/math/color.hpp>
 
 // Import sub-component definitions
 //#include "Transform.hpp"
@@ -50,13 +50,9 @@ private:
     typedef Material ThisType;
 
 public:
-    // Import typedefs for the scalar model we're using for colors
-    typedef float                   scalar_t;
-    typedef float                   scalar_arg_t;
-    typedef imaging::Color<float, imaging::sRGB, true> Color;
-
-    // Import typedefs for imaging data
-    //INCA_IMAGING_TYPEDEFS(Scalar, Inca::Imaging::sRGB, , );
+    // Import color typedefs
+    INCA_MATH_SCALAR_TYPES(float, IS_NOT_WITHIN_TEMPLATE);
+    INCA_MATH_COLOR_TYPES(scalar_t, sRGB);
 
 
 //    // The properties that make up a material

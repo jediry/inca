@@ -29,6 +29,9 @@ namespace inca {
     };
 };
 
+// Import scalar math implementation
+#include "../scalar.hpp"
+
 
 template <typename scalar>
 class inca::math::RandomGaussian {
@@ -38,7 +41,7 @@ private:
 
 public:
     // Import scalar typedefs
-    INCA_MATH_SCALAR_TYPEDEFS(scalar, IS_WITHIN_TEMPLATE, /* */, /* */);
+    INCA_MATH_SCALAR_TYPES(scalar, IS_WITHIN_TEMPLATE);
 
     // Constructors
     RandomGaussian()

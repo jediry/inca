@@ -1,5 +1,5 @@
 /*
- * File: Objects.hpp
+ * File: Object.hpp
  * 
  * Author: Ryan L. Saunders
  *
@@ -12,8 +12,8 @@
  *      rendered (usually).
  */
 
-#ifndef INCA_WORLD_OBJECTS
-#define INCA_WORLD_OBJECTS
+#ifndef INCA_WORLD_OBJECT
+#define INCA_WORLD_OBJECT
 
 // Import system configuration
 #include <inca/inca-common.h>
@@ -34,12 +34,11 @@ namespace inca {
 // Import Inca::Math library
 #include <inca/math.hpp>
 
-// Import the superclass definition
+// Import the superclass and related object definitions
 #include "WorldObject.hpp"
-
-// Include the sub-object definitions
+#include "Cameras.hpp"
 #include "Transform.hpp"
-#include "Material.hpp"
+//#include "Material.hpp"
 
 
 class inca::world::Object : public WorldObject {

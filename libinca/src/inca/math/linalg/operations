@@ -1,0 +1,735 @@
+/* -*- C++ -*-
+ *
+ * File: operations
+ *
+ * Author: Ryan A. Saunders
+ *
+ * Copyright 2004, Ryan A. Saunders. All rights reserved.
+ *
+ * Description:
+ *      This file declares the various operations that work on vector-type
+ *      objects (including Vector, Point, Matrix, etc.). They are defined
+ *      here rather than in the files implementing the various vector templates
+ *      because some of the operations operate across types (e.g., a Matrix
+ *      multiplied by a Vector), so there isn't a natural home for them.
+ *      For the sake of consistency, all operations but those that MUST be
+ *      implemented as class members are implemented as free functions.
+ */
+
+#ifndef INCA_MATH_LINALG_OPERATIONS
+#define INCA_MATH_LINALG_OPERATIONS
+
+
+// Import the definitions of the linear algebra primitive types
+#include "Point"
+#include "Vector"
+#include "Matrix"
+#include "Ray"
+#include "Quaternion"
+
+// Import the scalar operations, which will be used in implementing some
+// array-type operations
+#include "../scalar.hpp"
+
+// Import math macros
+#include "../macros.hpp"
+
+
+// This is part of the Inca math library
+namespace inca {
+    namespace math {
+    /*-----------------------------------------------------------------------*
+     | iostream interface operators
+     *-----------------------------------------------------------------------*/
+        // std::ostream "<<" operators
+        S_TEMPLATE      OSTREAM_OP_A( Q );              // o << Q
+        A_TEMPLATE(1)   OSTREAM_OP_A( P(D0) );          // o << P
+        A_TEMPLATE(1)   OSTREAM_OP_A( V(D0) );          // o << V
+        M_TEMPLATE(2,1) OSTREAM_OP_A( M(D0,D1,AS0) );   // o << M
+
+
+    /*-----------------------------------------------------------------------*
+     | Comparison operators
+     *-----------------------------------------------------------------------*/
+        S_TEMPLATE      A_EQ_A( Q, Q );                         // Q == Q ?
+        S_TEMPLATE      A_NE_A( Q, Q );                         // Q != Q ?
+        A_TEMPLATE(1)   A_EQ_A( P(D0), P(D0) );                 // P == P ?
+        A_TEMPLATE(1)   A_NE_A( P(D0), P(D0) );                 // P != P ?
+        A_TEMPLATE(1)   A_EQ_A( V(D0), V(D0) );                 // V == V ?
+        A_TEMPLATE(1)   A_NE_A( V(D0), V(D0) );                 // V != V ?
+        M_TEMPLATE(2,1) A_EQ_A( M(D0,D1,AS0), M(D0,D1,AS0) );   // M == M ?
+        M_TEMPLATE(2,1) A_NE_A( M(D0,D1,AS0), M(D0,D1,AS0) );   // M != M ?
+
+
+    /*-----------------------------------------------------------------------*
+     | Extended assignment operators
+     *-----------------------------------------------------------------------*/
+        // Assignment operators for Quaternion
+
+        // Assignment operators for Point
+        A_TEMPLATE(1)   A_ASSIGN_A( P(D0), +=, P(D0) );         // P += P
+        A_TEMPLATE(1)   A_ASSIGN_A( P(D0), -=, P(D0) );         // P -= P
+        A_TEMPLATE(1)   A_ASSIGN_A( P(D0), +=, V(D0) );         // P += V
+        A_TEMPLATE(1)   A_ASSIGN_A( P(D0), -=, V(D0) );         // P -= V
+        A_TEMPLATE(1)   A_ASSIGN_S( P(D0), *=, S    );          // P *= S
+        A_TEMPLATE(1)   A_ASSIGN_S( P(D0), /=, S    );          // P /= S
+
+        // Assignment operators for Vector
+        A_TEMPLATE(1)   A_ASSIGN_A( V(D0), +=, P(D0) );         // V += P
+        A_TEMPLATE(1)   A_ASSIGN_A( V(D0), -=, P(D0) );         // V -= P
+        A_TEMPLATE(1)   A_ASSIGN_A( V(D0), +=, V(D0) );         // V += V
+        A_TEMPLATE(1)   A_ASSIGN_A( V(D0), -=, V(D0) );         // V -= V
+        A_TEMPLATE(1)   A_ASSIGN_S( V(D0), *=, S    );          // V *= S
+        A_TEMPLATE(1)   A_ASSIGN_S( V(D0), /=, S    );          // V /= S
+
+// FIXME: Different storage orders won't work here...switch to iterators!!
+        // Assignment operators for Matrix
+        M_TEMPLATE(2,2) A_ASSIGN_A( M(D0,D1,AS0), +=, M(D0,D1,AS1) ); // M += M
+        M_TEMPLATE(2,2) A_ASSIGN_A( M(D0,D1,AS0), -=, M(D0,D1,AS1) ); // M -= M
+        M_TEMPLATE(2,1) A_ASSIGN_S( M(D0,D1,AS0), *=, S        );     // M *= S
+        M_TEMPLATE(2,1) A_ASSIGN_S( M(D0,D1,AS0), /=, S        );     // M /= S
+
+
+    /*-----------------------------------------------------------------------*
+     | Arithmetic operators
+     *-----------------------------------------------------------------------*/
+        // Unary operators for element-wise negation of list types
+        S_TEMPLATE      OP_A( Q,            -, Q );             // Q = -Q
+        A_TEMPLATE(1)   OP_A( P(D0),        -, P(D0) );         // P = -P
+        A_TEMPLATE(1)   OP_A( V(D0),        -, V(D0) );         // V = -V
+        M_TEMPLATE(2,1) OP_A( M(D0,D1,AS0), -, M(D0,D1,AS0) );  // M = -M
+
+        // Binary operators for element-wise operations between list types
+        S_TEMPLATE      A_OP_A( Q, Q, +, Q );                   // Q = Q + Q
+        S_TEMPLATE      A_OP_A( Q, Q, -, Q );                   // Q = Q - Q
+        A_TEMPLATE(1)   A_OP_A( P(D0), P(D0), +, P(D0) );       // P = P + P
+        A_TEMPLATE(1)   A_OP_A( V(D0), P(D0), -, P(D0) );       // V = P - P
+        A_TEMPLATE(1)   A_OP_A( P(D0), P(D0), *, P(D0) );       // P = P * P
+        A_TEMPLATE(1)   A_OP_A( P(D0), P(D0), /, P(D0) );       // P = P / P
+        A_TEMPLATE(1)   A_OP_A( P(D0), P(D0), +, V(D0) );       // P = P + V
+        A_TEMPLATE(1)   A_OP_A( P(D0), P(D0), -, V(D0) );       // P = P - V
+        A_TEMPLATE(1)   A_OP_A( V(D0), V(D0), +, V(D0) );       // V = V + V
+        A_TEMPLATE(1)   A_OP_A( V(D0), V(D0), -, V(D0) );       // V = V - V
+        A_TEMPLATE(1)   A_OP_A( V(D0), V(D0), *, V(D0) );       // V = V * V
+        A_TEMPLATE(1)   A_OP_A( V(D0), V(D0), /, V(D0) );       // V = V / V
+        A_TEMPLATE(1)   A_OP_A( P(D0), V(D0), +, P(D0) );       // P = V + P
+        A_TEMPLATE(1)   A_OP_A( P(D0), V(D0), -, P(D0) );       // P = V - P
+        M_TEMPLATE(2,1) A_OP_A( M(D0,D1,AS0), M(D0,D1,AS0), +, M(D0,D1,AS0) );// M = M + M
+        M_TEMPLATE(2,1) A_OP_A( M(D0,D1,AS0), M(D0,D1,AS0), -, M(D0,D1,AS0) );// M = M - M
+//        M_TEMPLATE(2,1) A_OP_A( M(D0,D1,AS0), M(D0,D1,AS0), *, M(D0,D1,AS0) );    // M = M * M
+//        M_TEMPLATE(2,1) A_OP_A( M(D0,D1,AS0), M(D0,D1,AS0), /, M(D0,D1,AS0) );    // M = M / M
+
+        // Binary operators for scaling list types
+        S_TEMPLATE      A_OP_S( Q, Q, *, S );               // Q = Q * S
+        S_TEMPLATE      A_OP_S( Q, Q, /, S );               // Q = Q / S
+        S_TEMPLATE      S_OP_A( Q, S, *, Q );               // Q = S * Q
+        S_TEMPLATE      S_OP_A( Q, S, /, Q );               // Q = S / Q
+        A_TEMPLATE(1)   A_OP_S( P(D0), P(D0), *, S     );   // P = P * S
+        A_TEMPLATE(1)   A_OP_S( P(D0), P(D0), /, S     );   // P = P / S
+        A_TEMPLATE(1)   S_OP_A( P(D0), S,     *, P(D0) );   // P = S * P
+        A_TEMPLATE(1)   S_OP_A( P(D0), S,     /, P(D0) );   // P = S / P
+        A_TEMPLATE(1)   A_OP_S( V(D0), V(D0), *, S     );   // V = V * S
+        A_TEMPLATE(1)   A_OP_S( V(D0), V(D0), /, S     );   // V = V / S
+        A_TEMPLATE(1)   S_OP_A( V(D0), S,     *, V(D0) );   // V = S * V
+        A_TEMPLATE(1)   S_OP_A( V(D0), S,     /, V(D0) );   // V = S / V
+        M_TEMPLATE(2,1) A_OP_S( M(D0,D1,AS0), M(D0,D1,AS0), *, S );// M = M * S
+        M_TEMPLATE(2,1) A_OP_S( M(D0,D1,AS0), M(D0,D1,AS0), /, S );// M = M / S
+        M_TEMPLATE(2,1) S_OP_A( M(D0,D1,AS0), S, *, M(D0,D1,AS0) );// M = S * M
+        M_TEMPLATE(2,1) S_OP_A( M(D0,D1,AS0), S, /, M(D0,D1,AS0) );// M = S / M
+
+
+    /*-----------------------------------------------------------------------*
+     | Element-wise mathematical functions
+     *-----------------------------------------------------------------------*/
+        // Arithmetic functions
+        A_TEMPLATE(1)   A_FUNC_2A( A(D0), min,     A(D0), A(D0) );
+        A_TEMPLATE(1)   A_FUNC_2A( A(D0), max,     A(D0), A(D0) );
+        A_TEMPLATE(1)   A_FUNC_2A( P(D0), min,     P(D0), P(D0) );
+        A_TEMPLATE(1)   A_FUNC_2A( P(D0), max,     P(D0), P(D0) );
+        A_TEMPLATE(1)   A_FUNC_2A( V(D0), min,     V(D0), V(D0) );
+        A_TEMPLATE(1)   A_FUNC_2A( V(D0), max,     V(D0), V(D0) );
+
+        A_TEMPLATE(1)   A_FUNC_1A( A(D0), abs,     A(D0) );
+        A_TEMPLATE(1)   A_FUNC_1A( P(D0), abs,     P(D0) );
+        A_TEMPLATE(1)   A_FUNC_1A( V(D0), abs,     V(D0) );
+        A_TEMPLATE(1)   A_FUNC_1A( A(D0), floor,   A(D0) );
+        A_TEMPLATE(1)   A_FUNC_1A( P(D0), floor,   P(D0) );
+        A_TEMPLATE(1)   A_FUNC_1A( V(D0), floor,   V(D0) );
+        A_TEMPLATE(1)   A_FUNC_1A( A(D0), ceil,    A(D0) );
+        A_TEMPLATE(1)   A_FUNC_1A( P(D0), ceil,    P(D0) );
+        A_TEMPLATE(1)   A_FUNC_1A( V(D0), ceil,    V(D0) );
+        A_TEMPLATE(1)   A_FUNC_1A( A(D0), round,   A(D0) );
+        A_TEMPLATE(1)   A_FUNC_1A( P(D0), round,   P(D0) );
+        A_TEMPLATE(1)   A_FUNC_1A( V(D0), round,   V(D0) );
+
+        // Algebraic functions
+        A_TEMPLATE(1)   A_FUNC_1A( A(D0), sqrt,    A(D0) );
+        A_TEMPLATE(1)   A_FUNC_1A( P(D0), sqrt,    P(D0) );
+        A_TEMPLATE(1)   A_FUNC_1A( V(D0), sqrt,    V(D0) );
+
+        // Power/log functions
+        A_TEMPLATE(1)   A_FUNC_2A( A(D0), pow,     A(D0), A(D0) );
+        A_TEMPLATE(1)   A_FUNC_2A( P(D0), pow,     P(D0), P(D0) );
+        A_TEMPLATE(1)   A_FUNC_2A( V(D0), pow,     V(D0), V(D0) );
+        A_TEMPLATE(1)   A_FUNC_2A( A(D0), log,     A(D0), A(D0) );
+        A_TEMPLATE(1)   A_FUNC_2A( P(D0), log,     P(D0), P(D0) );
+        A_TEMPLATE(1)   A_FUNC_2A( V(D0), log,     V(D0), V(D0) );
+        A_TEMPLATE(1)   A_FUNC_1A( A(D0), exp,     A(D0) );
+        A_TEMPLATE(1)   A_FUNC_1A( P(D0), exp,     P(D0) );
+        A_TEMPLATE(1)   A_FUNC_1A( V(D0), exp,     V(D0) );
+        A_TEMPLATE(1)   A_FUNC_1A( A(D0), ln,      A(D0) );
+        A_TEMPLATE(1)   A_FUNC_1A( P(D0), ln,      P(D0) );
+        A_TEMPLATE(1)   A_FUNC_1A( V(D0), ln,      V(D0) );
+
+        // Trigonometric functions
+        A_TEMPLATE(1)   A_FUNC_1A( A(D0), sin,     A(D0) );
+        A_TEMPLATE(1)   A_FUNC_1A( P(D0), sin,     P(D0) );
+        A_TEMPLATE(1)   A_FUNC_1A( V(D0), sin,     V(D0) );
+        A_TEMPLATE(1)   A_FUNC_1A( A(D0), cos,     A(D0) );
+        A_TEMPLATE(1)   A_FUNC_1A( P(D0), cos,     P(D0) );
+        A_TEMPLATE(1)   A_FUNC_1A( V(D0), cos,     V(D0) );
+        A_TEMPLATE(1)   A_FUNC_1A( A(D0), tan,     A(D0) );
+        A_TEMPLATE(1)   A_FUNC_1A( P(D0), tan,     P(D0) );
+        A_TEMPLATE(1)   A_FUNC_1A( V(D0), tan,     V(D0) );
+        A_TEMPLATE(1)   A_FUNC_1A( A(D0), cot,     A(D0) );
+        A_TEMPLATE(1)   A_FUNC_1A( P(D0), cot,     P(D0) );
+        A_TEMPLATE(1)   A_FUNC_1A( V(D0), cot,     V(D0) );
+        A_TEMPLATE(1)   A_FUNC_1A( A(D0), sec,     A(D0) );
+        A_TEMPLATE(1)   A_FUNC_1A( P(D0), sec,     P(D0) );
+        A_TEMPLATE(1)   A_FUNC_1A( V(D0), sec,     V(D0) );
+        A_TEMPLATE(1)   A_FUNC_1A( A(D0), csc,     A(D0) );
+        A_TEMPLATE(1)   A_FUNC_1A( P(D0), csc,     P(D0) );
+        A_TEMPLATE(1)   A_FUNC_1A( V(D0), csc,     V(D0) );
+        A_TEMPLATE(1)   A_FUNC_1A( A(D0), arcsin,  A(D0) );
+        A_TEMPLATE(1)   A_FUNC_1A( P(D0), arcsin,  P(D0) );
+        A_TEMPLATE(1)   A_FUNC_1A( V(D0), arcsin,  V(D0) );
+        A_TEMPLATE(1)   A_FUNC_1A( A(D0), arccos,  A(D0) );
+        A_TEMPLATE(1)   A_FUNC_1A( P(D0), arccos,  P(D0) );
+        A_TEMPLATE(1)   A_FUNC_1A( V(D0), arccos,  V(D0) );
+        A_TEMPLATE(1)   A_FUNC_1A( A(D0), arctan,  A(D0) );
+        A_TEMPLATE(1)   A_FUNC_1A( P(D0), arctan,  P(D0) );
+        A_TEMPLATE(1)   A_FUNC_1A( V(D0), arctan,  V(D0) );
+        A_TEMPLATE(1)   A_FUNC_2A( A(D0), arctan,  A(D0), A(D0) );
+        A_TEMPLATE(1)   A_FUNC_2A( P(D0), arctan,  P(D0), P(D0) );
+        A_TEMPLATE(1)   A_FUNC_2A( V(D0), arctan,  V(D0), V(D0) );
+        A_TEMPLATE(1)   A_FUNC_1A( A(D0), arccot,  A(D0) );
+        A_TEMPLATE(1)   A_FUNC_1A( P(D0), arccot,  P(D0) );
+        A_TEMPLATE(1)   A_FUNC_1A( V(D0), arccot,  V(D0) );
+        A_TEMPLATE(1)   A_FUNC_2A( A(D0), arccot,  A(D0), A(D0) );
+        A_TEMPLATE(1)   A_FUNC_2A( P(D0), arccot,  P(D0), P(D0) );
+        A_TEMPLATE(1)   A_FUNC_2A( V(D0), arccot,  V(D0), V(D0) );
+        A_TEMPLATE(1)   A_FUNC_1A( A(D0), arcsec,  A(D0) );
+        A_TEMPLATE(1)   A_FUNC_1A( P(D0), arcsec,  P(D0) );
+        A_TEMPLATE(1)   A_FUNC_1A( V(D0), arcsec,  V(D0) );
+        A_TEMPLATE(1)   A_FUNC_1A( A(D0), arccsc,  A(D0) );
+        A_TEMPLATE(1)   A_FUNC_1A( P(D0), arccsc,  P(D0) );
+        A_TEMPLATE(1)   A_FUNC_1A( V(D0), arccsc,  V(D0) );
+
+
+    /*-----------------------------------------------------------------------*
+     | array operations -- these operate identically for all array
+     | subtypes
+     *-----------------------------------------------------------------------*/
+        /**
+         * Calculates the scalar sum of the items in \a arr.
+         * \param   arr an array or derived type
+         * \returns the value \code arr[0] + arr[1] + ... + arr[n-1] \endcode
+         */
+        A_TEMPLATE(1)
+        S sum(const A(D0) & arr) {
+            S result = arr[0];
+            for (index_t i = 1; i < arr.static_size; i++)
+                result += arr[i];
+            return result;
+        }
+
+        /**
+         * Calculates the scalar product of the items in \a arr.
+         * \param   arr an array or derived type
+         * \returns the value \code arr[0] * arr[1] * ... * arr[n-1] \endcode
+         */
+        A_TEMPLATE(1)
+        S product(const A(D0) & arr) {
+            S result = arr[0];
+            for (index_t i = 1; i < arr.static_size; i++)
+                result *= arr[i];
+            return result;
+        }
+
+        /**
+         * Finds the smallest (i.e., most negative) value in \a arr.
+         * \param   arr an array or derived type
+         * \returns the value \code min(arr[0], arr[1], ... ,arr[n-1]) \endcode
+         */
+        A_TEMPLATE(1)
+        S min(const A(D0) & arr) {
+            S result = arr[0];
+            for (index_t i = 1; i < arr.static_size; i++)
+                if (arr[i] < result)
+                    result = arr[i];
+            return result;
+        }
+
+        /**
+         * Finds the largest (i.e., most positive) value in \a arr.
+         * \param   arr an array or derived type
+         * \returns the value \code max(arr[0], arr[1], ... ,arr[n-1]) \endcode
+         */
+        A_TEMPLATE(1)
+        S max(const A(D0) & arr) {
+            S result = arr[0];
+            for (index_t i = 1; i < arr.static_size; i++)
+                if (arr[i] > result)
+                    result = arr[i];
+            return result;
+        }
+
+        // Dot product
+        A_TEMPLATE(1)
+        S dot(const A(D0) &l1, const A(D0) &l2) {
+            S result = 0;
+            for (index_t i = 0; i < l1.static_size; i++)
+                result += l1[i] * l2[i];
+            return result;
+        }
+
+
+    /*-----------------------------------------------------------------------*
+     | Quaternion operations
+     *-----------------------------------------------------------------------*/
+        // Cartesian Distance Metric (A-2)
+        S_TEMPLATE
+        S magnitude(const Q &q) {
+            S result = 0;
+            for (index_t i = 0; i < 4; i++)
+                result += q[i] * q[i];
+            return sqrt(result);
+        }
+
+        // The rotation angle (in radians) around the natural axis
+        S_TEMPLATE
+        S angle(const Q &q) {
+            return S(2.0) * arccos(q[0] / magnitude(q));
+        }
+
+        // The normalized natural axis of the quaternion
+        S_TEMPLATE
+        V(3) axis(const Q &q) {
+            return normalize(V(3)(q[1], q[2], q[3]));
+        }
+
+        // Conjugate of a quaternion
+        S_TEMPLATE
+        Q conjugate(const Q &q) {
+            return Q(q[0], -q[1], -q[2], -q[3]);
+        }
+
+        // Inverse of a quaternion
+        S_TEMPLATE
+        Q inverse(const Q &q) {
+            // Find the square of the magnitude of 'q'
+            S ms = 0.0;
+            for (index_t i = 0; i < 4; i++)
+                ms += q[i] * q[i];
+
+            // Find the components of the inverse
+            return Q(q[0] / ms, -q[1] / ms,
+                    -q[2] / ms, -q[3] / ms);
+        }
+
+        // Normalized quaternion
+        S_TEMPLATE
+        Q normalize(const Q &q) {
+            S length = magnitude(q);
+            if (length != 0)    return q / length;
+            else                return q;
+        }
+
+        // Quaternion multiplication
+        S_TEMPLATE
+        Q operator%(const Q &q1, const Q &q2) {
+            S e0, e1, e2, e3;
+            e0 = q1[0]*q2[0] - q1[1]*q2[1] - q1[2]*q2[2] - q1[3]*q2[3];
+            e1 = q1[0]*q2[1] + q1[1]*q2[0] + q1[2]*q2[3] - q1[3]*q2[2];
+            e2 = q1[0]*q2[2] + q1[2]*q2[0] + q1[3]*q2[1] - q1[1]*q2[3];
+            e3 = q1[0]*q2[3] + q1[3]*q2[0] + q1[1]*q2[2] - q1[2]*q2[1];
+            return Q(e0, e1, e2, e3);
+        }
+
+
+//        // Interior angle between quaternions
+//        S_TEMPLATE
+//        S angle(const Q &q1, const Q &q2) {
+//            XXXXXXX
+//            S cosine = q1 * q2 / magnitude(q1) / magnitude(q2);
+//            return arccos(cosine);
+//        }
+
+//        // Signed angle between vectors, with reference to an "up"
+//        // (all vectors should be pre-normalized)
+//        S_TEMPLATE
+//        S angle(const Q &q1, const Q &q2, const Q &up) {
+//            XXXXXXXX
+//            S cosine = q1 * q2,
+//              sine = (q1 % q2) * up;
+//
+//            return arctan(sine, cosine);
+//        }
+
+
+    /*-----------------------------------------------------------------------*
+     | Point operations
+     *-----------------------------------------------------------------------*/
+        // Cartesian distance between two points (A-2)
+        A_TEMPLATE(1)
+        S distance(const P(D0) &p0, const P(D0) &p1) {
+            S result = 0;
+            for (index_t i = 0; i < p0.static_size; i++) { // Accumulate the squares
+                S diff = p1[i] - p0[i];             // of differences along
+                result += diff * diff;              // each axis
+            }
+            return sqrt(result);
+        }
+
+
+    /*-----------------------------------------------------------------------*
+     | Vector operations
+     *-----------------------------------------------------------------------*/
+        // Cartesian Distance Metric (A-2)
+        A_TEMPLATE(1)
+        S magnitude(const V(D0) &v) {
+            S result = 0;
+            for (index_t i = 0; i < v.static_size; i++)
+                result += v[i] * v[i];
+            return sqrt(result);
+        }
+
+        // Interior angle between vectors. The result will lie within [0, pi].
+        A_TEMPLATE(1)
+        S angle(const V(D0) &v1, const V(D0) &v2) {
+            S cosine = dot(v1, v2) / magnitude(v1) / magnitude(v2);
+            return arccos(cosine);
+        }
+
+        // Signed angle between two vectors, with reference to an "up" vector.
+        // The result will lie within the range [-pi, pi]
+        // (all vectors should be pre-normalized)
+        A_TEMPLATE(1)
+        S signedAngle(const V(D0) &v1, const V(D0) &v2, const V(D0) &up) {
+            S cosine = dot(v1, v2),
+              sine   = dot((v1 % v2), up);
+            return arctan(sine, cosine);
+        }
+        // Special case for 2D vectors (doesn't need an 'up' vector).
+        S_TEMPLATE
+        S signedAngle(const V(2) &v1, const V(2) &v2) {
+            S alpha = arctan(v1[0], v1[1]),
+              beta  = arctan(v2[0], v2[1]);
+            return beta - alpha;
+        }
+
+        // Canonical angle between two vectors. The result will lie within
+        // the range [0, 2pi).
+        A_TEMPLATE(1)
+        S canonicalAngle(const V(D0) &v1, const V(D0) &v2, const V(D0) &up) {
+            S alpha = signedAngle(v1, v2, up);
+            return (alpha >= 0) ? alpha : 2 * PI<S>() + alpha;
+        }
+        // Special case for 2D vectors (doesn't need an 'up' vector).
+        S_TEMPLATE
+        S canonicalAngle(const V(2) &v1, const V(2) &v2) {
+            S alpha = signedAngle(v1, v2);
+            return (alpha >= 0) ? alpha : 2 * PI<S>() + alpha;
+        }
+
+//        // Dot product
+//        A_TEMPLATE(1)
+//        S dot(const V(D0) &v1, const V(D0) &v2) {
+//            S result = 0;
+//            for (index_t i = 0; i < v1.static_size; i++)
+//                result += v1[i] * v2[i];
+//            return result;
+//        }
+
+        // Cross product
+        A_TEMPLATE(1)
+        V(D0) operator%(const V(D0) &v1, const V(D0) &v2) {
+            // This is only defined for 3D and above
+            BOOST_STATIC_ASSERT(D0 >= 3);
+
+            V(D0) result;
+            for (index_t i = 0; i < D0; i++)
+                result[i] = v1[(i + 1) % D0] * v2[(i + 2) % D0]
+                            - v1[(i + 2) % D0] * v2[(i + 1) % D0];
+            return result;
+        }
+
+        // Normalized vector
+        A_TEMPLATE(1)
+        V(D0) normalize(const V(D0) &v) {
+            return v / magnitude(v);
+        }
+
+//        // Vector normalization
+//        A_TEMPLATE(1)
+//        void normalize() {
+//            scalar_t length = magnitude(*this);
+//            if (length != 0)
+//                elements /= length;
+//        }
+
+        // Normal-vector reflection
+        A_TEMPLATE(1)
+        V(D0) reflect(const V(D0) &v, const V(D0) &normal) {
+            V(D0) n = normalize(normal);
+            return 2 * n * dot(v, n) - v;
+        }
+
+        // Project a vector into a plane (represented by its normal,
+        // which must be normalized)
+        A_TEMPLATE(1)
+        V(D0) project(const V(D0) &v, const V(D0) &n) {
+            return v - n * dot(n, v);
+        }
+
+        // Vector between two points, but perpendicular to another
+        // (normalized) vector
+        A_TEMPLATE(1)
+        V(D0) project(const P(D0) &p1, const P(D0) &p2, const V(D0) &n) {
+            V(D0) tween = p1 - p2;
+            return project(tween, n);
+        }
+
+
+    /*************************************************************************
+     * Ray operations
+     *************************************************************************/
+#if 0
+        // Normalized ray
+        TEMPLATE
+        LIST(Ray) normalize(const LIST(Ray) &r) {
+            const LIST(Point) &p = r.point();
+            const LIST(Vector) &v = r.vector();
+            return LIST(Ray)(p, v / magnitude(v));
+        }
+
+        // Normal-vector reflection
+        TEMPLATE
+        LIST(Ray) reflect(const LIST(Ray) &r,
+                              const LIST(Vector) &n) {
+            return LIST(Ray)(r.point(), reflect(r.vector(), n));
+        }
+#endif
+
+    /*************************************************************************
+     * Matrix operations
+     *************************************************************************/
+        // Calculate a submatrix by eliminating a row and a column
+        M_TEMPLATE(2,1)
+        M(D0 - 1,D1 - 1, AS0)
+        sub(const M(D0,D1,AS0) &m, index_t er, index_t ec) {
+            M(D0-1,D1-1,AS0) result;
+            for (index_t c = 0; c < ec; c++)
+                for (index_t r = 0; r < er; r++)
+                    result.rowCol(r, c) = m.rowCol(r, c);
+            for (index_t c = 0; c < ec; c++)
+                for (index_t r = er; r < m.rows - 1; r++)
+                    result.rowCol(r, c) = m.rowCol(r + 1, c);
+            for (index_t c = ec; c < m.cols - 1; c++)
+                for (index_t r = 0; r < er; r++)
+                    result.rowCol(r, c) = m.rowCol(r, c + 1);
+            for (index_t c = ec; c < m.cols - 1; c++)
+                for (index_t r = er; r < m.rows - 1; r++)
+                    result.rowCol(r, c) = m.rowCol(r + 1, c + 1);
+            return result;
+        }
+
+        // Calculate Matrix determinant (square matrices only)
+        M_TEMPLATE(1,1)
+        S det(const M(D0,D0,AS0) &m) {
+            S result = 0;
+            for (index_t i = 0; i < D; i++)
+                if (i % 2 == 0)
+                    result += m(i, 0) * det(sub(m, i, 0));
+                else
+                    result -= m(i, 0) * det(sub(m, i, 0));
+            return result;
+        }
+
+        // Determinant of 1x1 Matrix is trivial
+        M_TEMPLATE(0,1)
+        S det(const M(1,1,AS0) &m) {
+            return m(0, 0);
+        }
+
+        // Matrix inverse (square matrices only)
+        M_TEMPLATE(1,1)
+        M(D0,D0,AS0) inverse(const M(D0,D0,AS0) &m) {
+            S detM = det(m);
+            M(D0,D0,AS0) inv;
+            bool negative;
+            for (index_t r = 0; r < D0; r++) {
+                negative = (r % 2 != 0);
+                for (index_t c = 0; c < D0; c++) {
+                    if (negative)
+                        inv(c, r) = -det(sub(m, r, c)) / detM;
+                    else
+                        inv(c, r) = det(sub(m, r, c)) / detM;
+                    negative = !negative;
+                }
+            }
+            return inv;
+        }
+
+        // Inverse of 1x1 Matrix is trivial
+        M_TEMPLATE(0,1)
+        M(1,1,AS0) inverse(const M(1,1,AS0) &m) {
+            return M(1,1,AS0)(1.0 / m(0, 0));
+        }
+
+        // Matrix transpose
+        M_TEMPLATE(2,1)
+        M(D1,D0,AS0) transpose(const M(D0,D1,AS0) &m) {
+            M(D1,D0,AS0) result;
+            for (index_t r = 0; r < D0; r++)
+                for (index_t c = 0; c < D1; c++)
+                    result.rowCol(c, r) = m.colRow(c, r);
+            return result;
+        }
+
+        // Matrix Multiplication
+        //      This function implements a general matrix multiplication.
+        //      Let the dimensions of this matrix be MxN, where M and N are the
+        //      row and column dimensions, respectively. The other operand is an
+        //      NxP matrix. The resulting matrix is MxP.
+        //
+        //      If the two matrices have different storage orders, the resulting
+        //      matrix will have the storage order of the LHS matrix.
+        M_TEMPLATE(3,1)
+        M(D0,D2,AS0) operator%(const M(D0,D1,AS0) &m1, const M(D1,D2,AS0) &m2) {
+            M(D0,D2,AS0) result;
+            for (index_t d0 = 0; d0 < D0; d0++)
+                for (index_t d2 = 0; d2 < D2; d2++) {
+                    result.rowCol(d0, d2) = 0;
+                    for (index_t d1 = 0; d1 < D1; d1++)
+                        result.rowCol(d0, d2) += m1.rowCol(d0, d1)
+                                               * m2.rowCol(d1, d2);
+                }
+            return result;
+        }
+
+        // Right multiplication of a Matrix by a point (column vector with
+        // implicit homogeneous coordinate w == 1)
+//        M_TEMPLATE(2,1)
+//        POINT( ( boost::mpl::minus<boost::mpl::integral_c<unsigned int, dim1>, boost::mpl::integral_c<unsigned int, 1> >::type::value ) )
+//        operator%(const M(0,1,0) &m, const POINT( ( boost::mpl::minus<boost::mpl::integral_c<unsigned int, dim1>, boost::mpl::integral_c<unsigned int, 1> >::type::value ) ) &p) {
+//            POINT( ( boost::mpl::minus<boost::mpl::integral_c<unsigned int, dim1>, boost::mpl::integral_c<unsigned int, 1> >::type::value ) ) result;
+        S_TEMPLATE
+        P(3)
+        operator%(const M(4,4,ASb(true,true)) &m, const P(3) &p) {
+            P(3) result;
+
+            // Calculate the normal multiplication of matrix by column vector
+            for (index_t r = 0; r < m.rows - 1; r++) {
+                result[r] = m.rowCol(r, m.cols - 1);
+                for (index_t c = 0; c < m.cols - 1; c++)
+                    result[r] += m.rowCol(r, c) * p[c];
+            }
+
+            // Figure out the value of 'w', the homogeneous coordinate (which
+            // is implicitly '1' in the input point).
+            S w = m.rowCol(m.rows - 1, m.cols - 1); // * S(1)
+            for (index_t c = 0; c < m.cols - 1; c++)
+                w += m.rowCol(m.rows - 1, c) * p[c];
+
+            // Divide through by 'w' to make the output point's homogeneous
+            // coordinate '1' (so we don't have to explicitly represent it).
+            if (w != S(1))
+                for (index_t r = 0; r < m.rows - 1; r++)
+                    result[r] /= w;
+            return result;
+        }
+
+        S_TEMPLATE
+        P(3) operator%(const M(4,4,ASb(true,false)) &m, const P(3) &p) {
+            P(3) result;
+
+            // Calculate the normal multiplication of matrix by column vector
+            for (index_t r = 0; r < m.rows - 1; r++) {
+                result[r] = m.rowCol(r, m.cols - 1);
+                for (index_t c = 0; c < m.cols - 1; c++)
+                    result[r] += m.rowCol(r, c) * p[c];
+            }
+
+            // Figure out the value of 'w', the homogeneous coordinate (which
+            // is implicitly '1' in the input point).
+            S w = m.rowCol(m.rows - 1, m.cols - 1); // * S(1)
+            for (index_t c = 0; c < m.cols - 1; c++)
+                w += m.rowCol(m.rows - 1, c) * p[c];
+
+            // Divide through by 'w' to make the output point's homogeneous
+            // coordinate '1' (so we don't have to explicitly represent it).
+            if (w != S(1))
+                for (index_t r = 0; r < m.rows - 1; r++)
+                    result[r] /= w;
+            return result;
+        }
+
+        S_TEMPLATE
+        P(3) operator%(const M(4,4,ASb(false,true)) &m, const P(3) &p) {
+            P(3) result;
+
+            // Calculate the normal multiplication of matrix by column vector
+            for (index_t r = 0; r < m.rows - 1; r++) {
+                result[r] = m.rowCol(r, m.cols - 1);
+                for (index_t c = 0; c < m.cols - 1; c++)
+                    result[r] += m.rowCol(r, c) * p[c];
+            }
+
+            // Figure out the value of 'w', the homogeneous coordinate (which
+            // is implicitly '1' in the input point).
+            S w = m.rowCol(m.rows - 1, m.cols - 1); // * S(1)
+            for (index_t c = 0; c < m.cols - 1; c++)
+                w += m.rowCol(m.rows - 1, c) * p[c];
+
+            // Divide through by 'w' to make the output point's homogeneous
+            // coordinate '1' (so we don't have to explicitly represent it).
+            if (w != S(1))
+                for (index_t r = 0; r < m.rows - 1; r++)
+                    result[r] /= w;
+            return result;
+        }
+
+        S_TEMPLATE
+        P(3) operator%(const M(4,4,ASb(false,false)) &m, const P(3) &p) {
+            P(3) result;
+
+            // Calculate the normal multiplication of matrix by column vector
+            for (index_t r = 0; r < m.rows - 1; r++) {
+                result[r] = m.rowCol(r, m.cols - 1);
+                for (index_t c = 0; c < m.cols - 1; c++)
+                    result[r] += m.rowCol(r, c) * p[c];
+            }
+
+            // Figure out the value of 'w', the homogeneous coordinate (which
+            // is implicitly '1' in the input point).
+            S w = m.rowCol(m.rows - 1, m.cols - 1); // * S(1)
+            for (index_t c = 0; c < m.cols - 1; c++)
+                w += m.rowCol(m.rows - 1, c) * p[c];
+
+            // Divide through by 'w' to make the output point's homogeneous
+            // coordinate '1' (so we don't have to explicitly represent it).
+            if (w != S(1))
+                for (index_t r = 0; r < m.rows - 1; r++)
+                    result[r] /= w;
+            return result;
+        }
+
+    };
+};
+
+// Clean up the preprocessor's namespace
+#define UNDEFINE_INCA_MATH_MACROS
+#include "../macros.hpp"
+
+#endif

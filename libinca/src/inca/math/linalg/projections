@@ -1,0 +1,125 @@
+/* -*- C++ -*-
+ *
+ * File: projections
+ * 
+ * Author: Ryan L. Saunders
+ *
+ * Copyright 2004, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ */
+
+#ifndef INCA_MATH_LINALG_PROJECTIONS
+#define INCA_MATH_LINALG_PROJECTIONS
+
+// Import system configuration
+#include <inca/inca-common.h>
+
+// Import scalar math implementation
+#include "../scalar.hpp"
+
+// Import linear algebra types
+#include "Point"
+#include "Vector"
+#include "Matrix"
+
+// Import math macros
+#include "../macros.hpp"
+
+
+// This is part of the Inca math library
+namespace inca {
+    namespace math {
+
+        // Make this a screenspace projection with the origin in the LL corner
+        M_TEMPLATE(0,1)
+        M(4,4,AS0) & loadScreenspaceLL( M(4,4,AS0) &m, const Vector<int,2> &screen) {
+            std::fill(m.begin(), m.end(), S(0));
+            m.rowCol(0,0) = S(2.0 / screen[0]);
+            m.rowCol(1,1) = S(2.0 / screen[1]);
+            m.rowCol(2,2) = S(1);
+            m.rowCol(3,3) = S(1);
+            m.rowCol(0,3) = S(-(1.0 - m.rowCol(0,0)));
+            m.rowCol(1,3) = S(-(1.0 - m.rowCol(1,1)));
+            return m;
+        }
+
+        // Generate a LL screenspace projection matrix
+        M_TEMPLATE(0,1)
+        M(4,4,AS0) screenspaceLLMatrix(const Vector<int,2> &screen) {
+            M(4,4,AS0) m;
+            loadScreenspaceLL(m, screen);
+            return m;
+        }
+
+        // Make this a screenspace projection with the origin in the LR corner
+        M_TEMPLATE(0,1)
+        M(4,4,AS0) & loadScreenspaceLR( M(4,4,AS0) &m, const Vector<int,2> &screen) {
+            std::fill(m.begin(), m.end(), S(0));
+            m.rowCol(0,0) = S(-2.0 / screen[0]);
+            m.rowCol(1,1) = S(2.0 / screen[1]);
+            m.rowCol(2,2) = S(1);
+            m.rowCol(3,3) = S(1);
+            m.rowCol(0,3) = S((1.0 - m.rowCol(0,0)));
+            m.rowCol(1,3) = S(-(1.0 - m.rowCol(1,1)));
+            return m;
+        }
+
+        // Generate a LR screenspace projection matrix
+        M_TEMPLATE(0,1)
+        M(4,4,AS0) screenspaceLRMatrix(const Vector<int,2> &screen) {
+            M(4,4,AS0) m;
+            loadScreenspaceLR(m, screen);
+            return m;
+        }
+
+        // Make this a screenspace projection with the origin in the UR corner
+        M_TEMPLATE(0,1)
+        M(4,4,AS0) & loadScreenspaceUR( M(4,4,AS0) &m, const Vector<int,2> &screen) {
+            std::fill(m.begin(), m.end(), S(0));
+            m.rowCol(0,0) = S(-2.0 / screen[0]);
+            m.rowCol(1,1) = S(-2.0 / screen[1]);
+            m.rowCol(2,2) = S(1);
+            m.rowCol(3,3) = S(1);
+            m.rowCol(0,3) = S((1.0 - m.rowCol(0,0)));
+            m.rowCol(1,3) = S((1.0 - m.rowCol(1,1)));
+            return m;
+        }
+
+        // Generate a UR screenspace projection matrix
+        M_TEMPLATE(0,1)
+        M(4,4,AS0) screenspaceURMatrix(const Vector<int,2> &screen) {
+            M(4,4,AS0) m;
+            loadScreenspaceUR(m, screen);
+            return m;
+        }
+
+        // Make this a screenspace projection with the origin in the UL corner
+        M_TEMPLATE(0,1)
+        M(4,4,AS0) & loadScreenspaceUL( M(4,4,AS0) &m, const Vector<int,2> &screen) {
+            std::fill(m.begin(), m.end(), S(0));
+            m.rowCol(0,0) = S(2.0 / screen[0]);
+            m.rowCol(1,1) = S(-2.0 / screen[1]);
+            m.rowCol(2,2) = S(1);
+            m.rowCol(3,3) = S(1);
+            m.rowCol(0,3) = S(-(1.0 - m.rowCol(0,0)));
+            m.rowCol(1,3) = S((1.0 - m.rowCol(1,1)));
+            return m;
+        }
+
+        // Generate a UL screenspace projection matrix
+        M_TEMPLATE(0,1)
+        M(4,4,AS0) screenspaceULMatrix(const Vector<int,2> &screen) {
+            M(4,4,AS0) m;
+            loadScreenspaceUL(m, screen);
+            return m;
+        }
+
+    };
+};
+
+// Clean up the preprocessor's namespace
+#define UNDEFINE_INCA_MATH_MACROS
+#include "../macros.hpp"
+
+#endif

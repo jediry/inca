@@ -38,6 +38,9 @@ namespace inca {
 // Import Timer definition
 #include <inca/util/Timer>
 
+// Import container definitions
+#include <vector>
+
 
 /**
  * The GLUTWindow class is the superclass for all GLUT windows used by the
@@ -69,7 +72,7 @@ public:
 
 protected:
     // The list of existing GLUT windows
-    static vector<GLUTWindow *> windowList;
+    static std::vector<GLUTWindow *> windowList;
 
     // Defaults for new windows (if unspecified)
     static const string    DEFAULT_TITLE;

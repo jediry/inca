@@ -18,18 +18,19 @@ namespace inca {
     template <typename T> class weak_ptr_set;
 };
 
-// Import weak_ptr_iterator definition
+// Import container and iterator definitions
+#include "hash_container"
 #include "weak_ptr_iterator"
 
 
 template <typename T>
-class inca::weak_ptr_set : public hash_set< weak_ptr<T> > {
+class inca::weak_ptr_set : public stl_ext::hash_set< weak_ptr<T> > {
 /*---------------------------------------------------------------------------*
  | Type definitions
  *---------------------------------------------------------------------------*/
 private:
     // Underlying container typedef
-    typedef hash_set< weak_ptr<T> >                 container_type;
+    typedef stl_ext::hash_set< weak_ptr<T> >        container_type;
     typedef typename container_type::iterator       cnt_iterator;
     typedef typename container_type::const_iterator cnt_const_iterator;
 
@@ -82,7 +83,7 @@ public:
 /*---------------------------------------------------------------------------*
  | Container modification
  *---------------------------------------------------------------------------*/
-    pair<iterator, bool> insert(shared_pointer ptr) {
+    std::pair<iterator, bool> insert(shared_pointer ptr) {
         // We don't add NULL pointers
         if (! ptr)
             // This probably isn't standard-conforming...
@@ -120,7 +121,7 @@ public:
         return container_type::count(weak_pointer(ptr));
     }
 
-    pair<iterator, iterator> equal_range(shared_pointer ptr) {
+    std::pair<iterator, iterator> equal_range(shared_pointer ptr) {
         pair<cnt_iterator, cnt_iterator> result;
         result = container_type::equal_range(weak_pointer(ptr));
         return pair<iterator, iterator>(iterator(result.first),

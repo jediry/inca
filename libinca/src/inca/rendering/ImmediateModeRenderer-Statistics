@@ -1,46 +1,39 @@
 /** -*- C++ -*-
  *
- * File: RenderStatistics
+ * File: ImmediateModeRenderer-Statistics
  * 
  * Author: Ryan L. Saunders
  *
  * Copyright 2004, Ryan L. Saunders. All rights reserved.
  *
  * Description:
+ *      This file defines the TextureUnit inner class belonging to
+ *      ImmediateModeRenderer. A TextureUnit directly represents a
+ *      hardware-accelerated texture.
+ *
+ *      This file is not meant to be used directly, but is included by
+ *      the main ImmediateModeRenderer header file.
  */
 
-#ifndef INCA_RENDERING_RENDER_STATISTICS
-#define INCA_RENDERING_RENDER_STATISTICS
 
-// Import system configuration
-#include <inca/inca-common.h>
-
-// This is part of the Inca rendering subsystem
-namespace inca {
-    namespace rendering {
-        // Forward declarations
-        template <typename timer_t, size_t primitives,
-                  size_t passes, bool boundsCheck> class RenderStatistics;
-    };
-};
+#ifndef INCA_RENDERING_IMMEDIATE_MODE_RENDERER_STATISTICS
+#define INCA_RENDERING_IMMEDIATE_MODE_RENDERER_STATISTICS
 
 // Import Timer definition
 #include <inca/util/Timer>
 
 
-template <typename timer_t,
-          size_t numPrimitiveTypes,
-          size_t numRenderPasses,
-          bool boundsCheck = false>
-class inca::rendering::RenderStatistics {
+RENDERER_TEMPLATE
+class RENDERER::Statistics : public RENDERER::Component {
 public:
     // Timer typedefs
     typedef inca::Timer<timer_t>    Timer;
-    static const size_t PRIMITIVE_TYPE_COUNT = numPrimitiveTypes;
-    static const size_t RENDER_PASS_COUNT    = numRenderPasses;
+    static const size_t PRIMITIVE_TYPE_COUNT = ALL_PRIMITIVE_TYPES;
+    static const size_t RENDER_PASS_COUNT    = ALL_RENDER_PASSES;
 
     // Constructor
-    explicit RenderStatistics() { reset(); }
+    Statistics() { reset(); }
+
 
 /*---------------------------------------------------------------------------*
  | Modifier functions

@@ -1,5 +1,5 @@
 /*
- * File: World.hpp
+ * File: world.hpp
  * 
  * Author: Ryan L. Saunders
  *
@@ -17,7 +17,7 @@
 #include "world/WorldObject.hpp"
 #include "world/Cameras.hpp"
 #include "world/Light.hpp"
-#include "world/Objects.hpp"
+#include "world/Object.hpp"
 #include "world/Transform.hpp"
 #include "world/Scene.hpp"
 //#include "Library.hpp"

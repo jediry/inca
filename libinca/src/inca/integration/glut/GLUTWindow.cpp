@@ -29,7 +29,7 @@ using namespace inca::ui;
  | Static GLUTWindow constants and variables
  *---------------------------------------------------------------------------*/
 // GLUT C++ wrapper static initialization
-vector<GLUTWindow *> GLUTWindow::windowList;
+std::vector<GLUTWindow *> GLUTWindow::windowList;
 
 // Default window parameters
 const string                GLUTWindow::DEFAULT_TITLE("Inca GLUT Window");

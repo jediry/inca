@@ -1,0 +1,46 @@
+/** -*- C++ -*-
+ *
+ * File: ImmediateModeRenderer-Rasterizer
+ * 
+ * Author: Ryan L. Saunders
+ *
+ * Copyright 2004, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ *      This file defines the Rasterizer inner class belonging to
+ *      ImmediateModeRenderer. The Rasterizer represents the renderer's
+ *      rasterization-related state variables.
+ *
+ *      This file is not meant to be used directly, but is included by
+ *      the main ImmediateModeRenderer header file.
+ */
+
+#ifndef INCA_RENDERING_IMMEDIATE_MODE_RENDERER_RASTERIZER
+#define INCA_RENDERING_IMMEDIATE_MODE_RENDERER_RASTERIZER
+
+
+template <class APITraits>
+class inca::rendering::ImmediateModeRenderer<APITraits>::Rasterizer {
+public:
+    // Constructor
+    Rasterizer(ImmediateModeRenderer<APITraits> &r);
+
+
+    float pointDiameter() const;
+    void setPointDiameter(float size);
+
+    float lineWidth() const;
+    void setLineWidth(float width);
+
+    bool isPointSmoothingEnabled() const;
+    void enablePointSmoothing(bool enabled);
+
+    bool isLineSmoothingEnabled() const;
+    void enableLineSmoothing(bool enabled);
+
+protected:
+    mutable ImmediateModeRenderer<APITraits> &renderer; // Daddy!
+
+};
+
+#endif

@@ -12,23 +12,6 @@
  *      The Inca scalar model is highly extensible, as described later in
  *      this file.
  *
- *      This file also declares a macro for typedefing the set of
- *      related scalar types. For example, calling:
- *          INCA_MATH_SCALAR_TYPEDEFS(double, IS_WITHIN_TEMPLATE, , )
- *      creates a list of typedefs something like:
- *          typedef typename inca::math::scalar_traits<double>::value_type scalar_t;
- *          typedef typename inca::math::scalar_traits<double>::arg_type scalar_arg_t;
- *          .
- *          .
- *          .
- *      This permits the scalar types to typedef'd fairly effortlessly. The
- *      second argument should be one of the values IS_WITHIN_TEMPLATE or
- *      IS_NOT_WITHIN_TEMPLATE, depending on the context where the macro is
- *      instantiated (this is necessary because the C++ standard doesn't permit
- *      the "typename" keyword outside of template definitions. Note that
- *      either of the last two arguments to the macros (the prefix and suffix)
- *      may be omitted.
- *
  * Implementation note:
  *      Ah...the joys and trials of template metaprogramming...
  *
@@ -97,8 +80,8 @@
  *             transcendental functions are pretty pointless for integer math).
  */
 
-#ifndef INCA_MATH_SCALAR_TYPES
-#define INCA_MATH_SCALAR_TYPES
+#ifndef INCA_MATH_SCALAR_TYPES_
+#define INCA_MATH_SCALAR_TYPES_
 
 // Import system configuration
 #include <inca/inca-common.h>
@@ -233,15 +216,6 @@ namespace inca {
 #undef  BUILTIN_TYPE_SPECIALIZATION
     };
 };
-
-
-// Macro to easily typedef scalar thingies
-#define IS_WITHIN_TEMPLATE      typename
-#define IS_NOT_WITHIN_TEMPLATE  
-#define INCA_MATH_SCALAR_TYPEDEFS(SCALAR, TYPENAME, PREF, SUFF)             \
-    typedef inca::math::scalar_traits<SCALAR>  PREF ## scalar_traits ## SUFF;\
-    typedef TYPENAME inca::math::scalar_traits<SCALAR>::value_type PREF ## scalar_t     ## SUFF;\
-    typedef TYPENAME inca::math::scalar_traits<SCALAR>::arg_type   PREF ## scalar_arg_t ## SUFF;
 
 #endif
 

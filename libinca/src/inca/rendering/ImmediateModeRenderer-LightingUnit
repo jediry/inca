@@ -1,0 +1,29 @@
+/** -*- C++ -*-
+ *
+ * File: ImmediateModeRenderer-LightingUnit
+ * 
+ * Author: Ryan L. Saunders
+ *
+ * Copyright 2004, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ *      This file defines the LightingUnit inner class belonging to
+ *      ImmediateModeRenderer. A LightingUnit directly represents a
+ *      hardware-accelerated light source.
+ *
+ *      This file is not meant to be used directly, but is included by
+ *      the main ImmediateModeRenderer header file.
+ */
+
+#ifndef INCA_RENDERING_IMMEDIATE_MODE_RENDERER_LIGHTING_UNIT
+#define INCA_RENDERING_IMMEDIATE_MODE_RENDERER_LIGHTING_UNIT
+
+
+RENDERER_TEMPLATE
+class RENDERER::LightingUnit : public RENDERER::Component {
+public:
+    // Constructor
+    LightingUnit(RENDERER &r, id_t id);
+};
+
+#endif

@@ -1,0 +1,110 @@
+/*
+ * File: Block
+ *
+ * Author: Ryan L. Saunders
+ *
+ * Copyright 2004, Ryan L. Saunders. Permission is granted to use and
+ *      distribute this file freely for educational purposes.
+ *
+ * Description:
+ *      The Block template class represents an n-dimensional, axially
+ *      aligned hyper-box, stored as a pair of opposite points (the most
+ *      negative and most positive points of the box -- note that these may
+ *      be different than the points passed in via the constructor).
+ *
+ *      Note that, since this is an n-dimensional object, there are 2^n
+ *      corner points in the general case, not 8 (as in the 3D case). This
+ *      allows the Block to be used as a bounding box for
+ *      hyper-dimensional shapes.
+ */
+
+#ifndef INCA_RASTER_BLOCK
+#define INCA_RASTER_BLOCK
+
+// Import Inca library configuration
+#include <inca/inca-common.h>
+
+// This is part of the Inca raster processing library
+namespace inca {
+    namespace raster {
+        // Forward declarations
+        template <typename scalar_t, inca::size_t dim> class Block;
+    };
+};
+
+// Import inca::math scalar and linear algebra types
+#include <inca/math/scalar.hpp>
+#include <inca/math/linalg.hpp>
+
+// Import statically-sized array class
+#include <boost/array.hpp>
+
+
+template <typename scalar, inca::size_t dim>
+class inca::raster::Block {
+/*---------------------------------------------------------------------------*
+ | Type/constant declarations
+ *---------------------------------------------------------------------------*/
+public:
+    // What dimensionality are we working with?
+    static const size_t dimensionality = dim;
+
+    // Scalar & linear algebra typedefs
+    INCA_MATH_SCALAR_TYPES(scalar, IS_WITHIN_TEMPLATE);
+    INCA_MATH_LINALG_TYPES(scalar, dim);
+
+    // Array of boolean
+    typedef boost::array<bool, dim> BoolArray;
+
+
+/*---------------------------------------------------------------------------*
+ | Constructors
+ *---------------------------------------------------------------------------*/
+public:
+    // Constructor accepting two opposite corners of the prism
+    Block(const Point &p1 = Point(-1), const Point &p2 = Point(1)) {
+        setExtrema(p1, p2);
+    }
+
+    // Constructor accepting a center point and "radius" to a corner
+    Block(const Point &c, const Vector &r) {
+        Vector absR = abs(r);
+        setExtrema(c - r, c + r);
+    }
+
+
+/*---------------------------------------------------------------------------*
+ | Accessor functions
+ *---------------------------------------------------------------------------*/
+public:
+    // Setter for the prism extrema: the minimum and maximum values for each
+    // dimension will be set in the respective components of 'minimumCorner'
+    // and 'maximumCorner'.
+    void setExtrema(const Point &p1, const Point &p2) {
+        // Copy the min and max into the appropriate slots and check for
+        // degenerate cases (no distance along one axis)
+        for (index_t i = 0; i < index_t(dimensionality); ++i) {
+            minimumCorner[i] = min(p1[i], p2[i]);
+            maximumCorner[i] = max(p1[i], p2[i]);
+            degenerate[i] =  effectivelyEqual(p1[i], p2[i]);
+        }
+    }
+
+    // This function chooses the corner point closest to the given point
+    Point nearestPointTo(const Point &p) const {
+        Point closest;
+        for (index_t i = 0; i < index_t(dimensionality); ++i) {
+            if (abs(p[i] - minimumCorner[i]) < abs(p[i] - maximumCorner[i]))
+                closest[i] = minimumCorner[i];
+            else
+                closest[i] = maximumCorner[i];
+        }
+        return closest;
+    }
+
+protected:
+    Point minimumCorner, maximumCorner;
+    BoolArray degenerate;
+};
+
+#endif

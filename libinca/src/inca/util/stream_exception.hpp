@@ -18,6 +18,9 @@
 // Import system configuration
 #include <inca/inca-common.h>
 
+// Import stringstream types
+#include <sstream>
+
 // This is the root Inca exception class
 namespace inca {
     class stream_exception {
@@ -29,14 +32,15 @@ namespace inca {
 
         // Accessors
         string message() const { return ss.str(); }
-        ostream & os() { return ss; }
+        std::ostream & os() { return ss; }
 
     protected:
-        ostringstream ss;
+        std::ostringstream ss;
     };
 
     // ostream writer for this exception type
-    inline ostream & operator<<(ostream &o, const stream_exception &e) {
+    inline std::ostream & operator<<(std::ostream &o,
+                                     const stream_exception &e) {
         return o << e.message();
     }
 };

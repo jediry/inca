@@ -22,15 +22,14 @@
 #ifndef INCA_MATH
 #define INCA_MATH
 
-// Scalar math template definitions
-#include "math/scalar_types"
-#include "math/scalar_ops"
+// Scalar types, operators, and functions
+#include "math/scalar.hpp"
 
+// Linear algebra types, operators, and functions
+#include "math/linalg.hpp"
 
-// Vector/matrix template definitions
-#include "math/vector_types"
-#include "math/vector_ops"
-#include "math/transformations"
+// Color types, operators, and functions
+#include "math/color.hpp"
 
 
 // Number generators
@@ -60,11 +59,10 @@
 #include "surface/Plane"
 
 
+
 // Analytic solid definitions
-#include "solid/Sphere"
-#include "solid/Cube"
-
+#include "math/solid/Sphere"
+#include "math/solid/QuadPrism"
 #endif
 
 #endif
-

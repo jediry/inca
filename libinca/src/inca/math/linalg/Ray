@@ -1,0 +1,101 @@
+/** -*- C++ -*-
+ *
+ * \file Ray
+ *
+ * \author Ryan L. Saunders
+ *
+ * Copyright 2004, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ *      The Ray template class represents both a location and a direction
+ *      in n-space. It is made up of a Point and a Vector.
+ */
+
+#ifndef INCA_MATH_LINALG_RAY
+#define INCA_MATH_LINALG_RAY
+
+// Import system configuration
+#include <inca/inca-common.h>
+
+// This is part of the Inca math library
+namespace inca {
+    namespace math {
+        // Forward declarations
+        template <typename scalar, inca::size_t dim> class Ray;
+    };
+};
+
+// Import related class definitions
+#include "Point"
+#include "Vector"
+
+// Import math macros
+#include "../macros.hpp"
+
+
+template <typename scalar, inca::size_t dim>
+class inca::math::Ray {
+public:
+/*---------------------------------------------------------------------------*
+ | Type/constant declarations
+ *---------------------------------------------------------------------------*/
+    // Scalar typedefs
+    INCA_MATH_SCALAR_TYPES(scalar, IS_WITHIN_TEMPLATE);
+
+
+/*---------------------------------------------------------------------------*
+ | Constructors
+ *---------------------------------------------------------------------------*/
+public:
+    /**
+     * Default (no initialization) constructor.
+     */
+    explicit Ray() { }
+
+    /** scalar_t array constructor. */
+//    Ray(scalar_t e[BOOST_PP_MUL(dim, 2)])
+//       : _position(e), _direction(e + dim) { }
+
+    /**
+     * scalar_t argument list constructor. This constructor takes a number
+     * of arguments twice the dimension. The first set of arguments is
+     * interpreted as the position, and the second set as the direction.
+     */
+//    explicit Ray(BOOST_PP_ENUM_PARAMS(BOOST_PP_MUL(dim, 2), scalar_arg_t e))
+//        : _position(BOOST_PP_ENUM_PARAMS_FROM_TO(0, BOOST_PP_DEC(dim), e)),
+//          _direction(BOOST_PP_ENUM_PARAMS_FROM_TO(dim,
+//                               BOOST_PP_DEC(BOOST_PP_MUL(dim, 2)), e)) { }
+
+    /**
+     * The positional part of this ray.
+     */
+    Point<scalar, dim> & position() { return _position; }
+
+    /**
+     * The directional part of this ray.
+     */
+    Vector<scalar, dim> & direction() { return _direction; }
+
+
+/*---------------------------------------------------------------------------*
+ | Type-conversion functions
+ *---------------------------------------------------------------------------*/
+public:
+    /**
+     * Cast to string representation.
+     * \returns a string like "(1.4, 3.5) ->(0.0, 3.0)"
+     */
+    operator std::string() const {
+        return string(_position) + " ->" + _direction;
+    }
+
+protected:
+    Point<scalar, dim>  _position;
+    Vector<scalar, dim> _direction;
+};
+
+// Clean up the preprocessor's namespace
+#define UNDEFINE_INCA_MATH_MACROS
+#include "../macros.hpp"
+
+#endif

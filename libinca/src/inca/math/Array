@@ -1,0 +1,86 @@
+/** -*- C++ -*-
+ *
+ * \file Array
+ *
+ * \author Ryan L. Saunders
+ *
+ * Copyright 2004, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ */
+
+#ifndef INCA_MATH_ARRAY_ARRAY
+#define INCA_MATH_ARRAY_ARRAY
+
+// Import system configuration
+#include <inca/inca-common.h>
+
+
+
+// Import superclass definition
+#include <boost/array.hpp>
+
+// Import the Boost preprocessor metaprogramming library
+#include <boost/preprocessor/arithmetic/inc.hpp>
+#include <boost/preprocessor/arithmetic/mul.hpp>
+
+// Import template metaprogramming constraints
+#include <boost/type_traits.hpp>
+#include <inca/util/metaprogramming>
+
+// Import scalar_traits definition
+#include "scalar_types"
+
+#if 0
+    /**
+     * Creates a string representation of elements in this list.
+     * This version
+     * \returns a string containing a comma-separated list of scalars
+     */
+    string stringifyElements() const {
+        return stringifyElements(0, dimension);
+    }
+
+    /**
+     * \overload stringifyElements()
+     * This version allows to specify the index range which should be
+     * stringified. If either \a start or \a (start + num * stride) are
+     * outside the range * [0, dimension - 1], they will be clamped to the nearest
+     * valid index.
+     *
+     * \param start     the index of the first element to stringify
+     * \param num       the number of elements to print
+     * \param stride    the stride length to take through the list with each
+     *                  element we print. If this is \c 1, all elements in
+     *                  the range will be printed; if \c 2, every other, etc.
+     * \returns a string containing a comma-separated list of scalars
+     */
+    string stringifyElements(index_t start,
+                             index_t num,
+                             size_t stride = 1) const {
+        index_t end = start + num * stride;
+        if (start < 0)          start = 0;
+        else if (start >= dimension) start = dimension;
+        if (end < 0)            end = 0;
+        else if (end >= dimension)   end = dimension;
+        ostringstream ss;
+        for (index_t i = start; i < end; i += stride) {
+            ss << elements[i];
+            if (index_t(i + stride) < end)  ss << ", ";
+        }
+        return ss.str();
+    }
+#endif
+
+
+
+// Last of all, clean up the preprocessor namespace on our way out
+#undef MAX_DIMENSION
+#undef MIN_DIMENSION
+#undef ASSIGN_ARG
+#undef PARAM_LIST_CONSTRUCTOR
+#undef UP_DIM_CONSTRUCTOR
+#undef DOWN_DIM_CONSTRUCTOR
+#undef IS_CONVERTIBLE
+
+#endif

@@ -1,0 +1,83 @@
+/** -*- C++ -*-
+ *
+ * File: ImmediateModeRenderer-MatrixStack
+ * 
+ * Author: Ryan L. Saunders
+ *
+ * Copyright 2004, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ *      This file defines the MatrixStack inner class belonging to
+ *      ImmediateModeRenderer. A MatrixStack directly represents a
+ *      transformation matrix stack implemented on the graphics card.
+ *
+ *      This file is not meant to be used directly, but is included by
+ *      the main ImmediateModeRenderer header file.
+ */
+
+#ifndef INCA_RENDERING_IMMEDIATE_MODE_RENDERER_MATRIX_STACK
+#define INCA_RENDERING_IMMEDIATE_MODE_RENDERER_MATRIX_STACK
+
+
+RENDERER_TEMPLATE
+class RENDERER::MatrixStack : public RENDERER::Component {
+public:
+    // Constructor
+    MatrixStack(RENDERER &r, id_t id);
+
+    // Stack depth functions
+    int stackDepth() const;         // How many matrices right now (min. 1)?
+    int maximumStackDepth() const;  // How many matrix levels possible?
+    bool isFull() const;            // Is the stack full?
+    bool isEmpty() const;           // Is the stack empty?
+    void push() const;              // Push a matrix onto the stack
+    void pop() const;               // Pop a matrix off the stack
+
+    void reset() const;                         // Identity matrix
+    void load(const Matrix &m) const;           // Load a matrix
+    const Matrix & get() const;                 // Retrieve the current matrix
+    const Matrix & getInverse() const;          // Retrieve the inverse matrix
+    void preMultiply(const Matrix &m) const;    // Multiply m % MS
+    void postMultiply(const Matrix &m) const;   // Multiply MS % m
+
+    // Specific transformations and their inverses
+    void scale(geometry_t s) const;
+    void scale(const Vector3D &s) const;
+    void unscale(geometry_t s) const;
+    void unscale(const Vector3D &s) const;
+    void rotate(const Quaternion &q) const;
+    void rotate(geometry_t angle, const Vector3D &axis) const;
+    void unrotate(const Quaternion &q) const;
+    void unrotate(geometry_t angle, const Vector3D &axis) const;
+    void translate(const Vector3D &v) const;
+    void untranslate(const Vector3D &v) const;
+    void transform(const Transform &t) const {
+        translate(xform.position);      // Translate...
+        rotate(xform.rotation);         // ...rotate...
+        scale(xform.scaling);           // ...then scale
+    }
+    void untransform(const Transform &t) const {
+        unscale(xform.scaling);         // Unscale...
+        unrotate(xform.rotation);       // ...unrotate...
+        untranslate(xform.position);    // ...then untranslate...
+    }
+
+    // Transformation of primitive objects by the current matrix
+    Point3D  transform(const Point3D &p) const;
+    Vector3D transform(const Vector3D &v) const;
+    Point3D  untransform(const Point3D &p) const;
+    Vector3D untransform(const Vector3D &v) const;
+
+protected:
+    void ensureActive() const;  // Make sure I'm the active matrix
+
+    const   id_t id;            // API's ID for this matrix stack
+    mutable int depth;          // How many matrices on the stack right now?
+            int maxDepth;       // How many can it hold?
+    mutable Matrix current;     // The current top of the stack
+    mutable Matrix inverse;     // The inverse of the top of the stack
+    mutable bool currentValid;  // Is 'current' current?
+    mutable bool inverseValid;  // Is 'inverse' current?
+};
+
+#endif

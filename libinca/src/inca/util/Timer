@@ -87,7 +87,7 @@ namespace inca {
 };
 
 // Import scalar math support
-#include <inca/math.hpp>
+#include <inca/math/scalar.hpp>
 
 // Import our collection of weakly-help shared pointers
 #include <inca/util/weak_ptr_set>
@@ -101,7 +101,7 @@ template <typename scalar>
 class inca::TimerListener {
 public:
     // Definition of the timer scalar type
-    INCA_MATH_SCALAR_TYPEDEFS(scalar, IS_WITHIN_TEMPLATE, time_, /* */);
+    INCA_MATH_SCALAR_TYPES_CUSTOM(scalar, IS_WITHIN_TEMPLATE, time_, /* */);
 
     // Listener callback functions
     virtual void timerStarted(time_scalar_arg_t time) { }
@@ -118,7 +118,7 @@ template <typename scalar, bool generateEvents = false>
 class inca::Timer {
 public:
     // Definition of the timer scalar type (for representing real time amounts)
-    INCA_MATH_SCALAR_TYPEDEFS(scalar, IS_WITHIN_TEMPLATE, /* */, /* */);
+    INCA_MATH_SCALAR_TYPES(scalar, IS_WITHIN_TEMPLATE);
 
     // Definition of listener notification stuff
     typedef TimerListener<scalar>                   Listener;

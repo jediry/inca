@@ -1,0 +1,122 @@
+/** -*- C++ -*-
+ *
+ * \file Point
+ *
+ * \author Ryan L. Saunders
+ *
+ * Copyright 2004, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ *      The Point template class describes an infinitesimal location in
+ *      n-space. The usual vector mathematics operations are defined for it.
+ */
+
+#ifndef INCA_MATH_LINALG_POINT
+#define INCA_MATH_LINALG_POINT
+
+// Import system configuration
+#include <inca/inca-common.h>
+
+// This is part of the Inca math library
+namespace inca {
+    namespace math {
+        // Forward declarations
+        template <typename scalar, inca::size_t dim> class Point;
+    };
+};
+
+// Import superclass definition
+#include <boost/array.hpp>
+
+// Import STL algorithms
+#include <algorithm>
+
+// Import related class definitions
+#include "Quaternion"
+
+// Import math macros
+#include "../macros.hpp"
+
+
+template <typename scalar, inca::size_t dim>
+class inca::math::Point : public boost::array<scalar, dim> {
+/*---------------------------------------------------------------------------*
+ | Type/constant declarations
+ *---------------------------------------------------------------------------*/
+public:
+    // Scalar typedefs
+    INCA_MATH_SCALAR_TYPES(scalar, IS_WITHIN_TEMPLATE);
+
+
+/*---------------------------------------------------------------------------*
+ | Constructors
+ *---------------------------------------------------------------------------*/
+public:
+    /**
+     * Default (no initialization) constructor.
+     */
+    explicit Point() { }
+
+    /**
+     * Initialization from another array type, possibly of a different scalar
+     * type. The argument array must be of the same dimensionality, and its
+     * scalar type must be convertible to scalar_t.
+     */
+    template <typename scalar2>
+    explicit Point(const boost::array<scalar2, static_size> &arr) {
+        std::copy(arr.begin(), arr.end(), begin());
+    }
+
+    /**
+     * Constant element initialization constructor
+     */
+    explicit Point(scalar_arg_t e) {
+        std::fill(begin(), end(), e);
+    }
+ 
+    /**
+     * C-style array constructor. The element type must be convertible to
+     * scalar_t.
+     */
+    template <typename scalar2>
+    explicit Point(scalar2 * arr) {
+        std::copy(arr, arr + static_size, begin());
+    }
+
+    /**
+     * scalar_arg_t argument list constructors. Each of these is intended to
+     * be used only with instances of the same dimensionality as there are
+     * arguments. Attempting to invoke a constructor for a different
+     * dimensionality will cause a compile-time failure.
+     */
+    PARAM_LIST_CONSTRUCTORS(Point, MIN_DIMENSION, MAX_DIMENSION)
+
+    /**
+     * Initialization from a Quaternion. This is only valid for 3D Vectors,
+     * and the Quaternion's scalar type must be convertible to scalar_t.
+     */
+    template <typename scalar2>
+    explicit Point(const Quaternion<scalar2> &q) {
+        BOOST_STATIC_ASSERT(static_size == 3);  // Only works for 3D Points
+        std::copy(q.begin() + 1, q.end(), begin());
+    }
+
+
+/*---------------------------------------------------------------------------*
+ | Type-conversion functions
+ *---------------------------------------------------------------------------*/
+public:
+    /**
+     * Cast to string representation.
+     * \returns a string like "(1.4, 3.5)"
+     */
+    operator string() const {
+        return '(' + stringifyElements() + ')';
+    }
+};
+
+// Clean up the preprocessor's namespace
+#define UNDEFINE_INCA_MATH_MACROS
+#include "../macros.hpp"
+
+#endif

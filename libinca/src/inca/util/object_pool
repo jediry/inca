@@ -52,6 +52,11 @@ namespace inca {
     template <class T, class _rst, class _crt, class _dstr> class object_pool;
 };
 
+// Import type definitions
+#include <vector>
+#include <list>
+
+
 // The 'reset(T *)' functor should restore its argument to a clean state. The
 // default implementation does nothing.
 template <class T>

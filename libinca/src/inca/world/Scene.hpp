@@ -35,7 +35,7 @@ namespace inca {
 // Import other parts of the world object model
 #include "Cameras.hpp"
 #include "Light.hpp"
-#include "Objects.hpp"
+#include "Object.hpp"
 
 
 class inca::world::Scene : public WorldObject {

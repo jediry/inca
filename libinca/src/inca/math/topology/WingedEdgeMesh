@@ -19,11 +19,6 @@
  *      If no additional data is needed, the empty class 'Nothing' can be
  *      used as a template argument (and is the default for most of them).
  *
- *      Because of the sheer volume of code that makes up this structure,
- *      it has been split up into logical chunks and implemented in separate
- *      files (for my sake!), which files are then included at the end of this
- *      one (which is the main file, in case you were wondering).
- *
  *      All of the algorithms here assume that vertices are oriented
  *      CCW (viewed from the "outside" of the face). If face vertices
  *      are consistently specifed using a CW orientation, then
@@ -36,6 +31,11 @@
  *
  *      The algorithms for adding and deleting parts of the mesh are
  *      a bit tricky, and so are extensively commented.
+ *
+ *      Because of the sheer volume of code that makes up this structure and
+ *      its subunits, it has been split up into logical chunks and implemented
+ *      in separate files, which files are then included at the end of this
+ *      one (which is the main file, in case you were wondering).
  */
 // TODO: add checks for un-closed solid
 // FIXME: add functionality to completely reverse the rotations on a
@@ -72,8 +72,10 @@ namespace inca {
 #include <inca/util/UnsupportedOperationException.hpp>
 
 // Import container/iterator definitions
+#include <vector>
 #include <inca/util/object_pool>
 #include <inca/util/wraparound_iterator>
+
 
 // Make some REALLY long names shorter
 #define MESH_TEMPLATE template <class MData, class VData, class FData, \
@@ -112,10 +114,10 @@ public:
     typedef EdgeVertex const *          EdgeVertexConstPtr;
 
     // Container typedefs
-    typedef vector<VertexPtr>           VertexPtrList;
-    typedef vector<FacePtr>             FacePtrList;
-    typedef vector<EdgePtr>             EdgePtrList;
-    typedef vector<FaceVertexPtr>       FaceVertexPtrList;
+    typedef std::vector<VertexPtr>      VertexPtrList;
+    typedef std::vector<FacePtr>        FacePtrList;
+    typedef std::vector<EdgePtr>        EdgePtrList;
+    typedef std::vector<FaceVertexPtr>  FaceVertexPtrList;
 
 protected:
     // Iteration delegate objects used to iterate through part of the mesh:

@@ -54,10 +54,10 @@ private:
 
 public:
     // Import typedefs for the scalar model we're using for geometry
-    INCA_MATH_SCALAR_TYPEDEFS(double, IS_NOT_WITHIN_TEMPLATE, /* */, /* */);
+    INCA_MATH_SCALAR_TYPES(double, IS_NOT_WITHIN_TEMPLATE);
 
     // Import typedefs for Point, Vector, etc.
-    INCA_MATH_VECTOR_TYPEDEFS(scalar_t, 3, /* */, /* */);
+    INCA_MATH_LINALG_TYPES(scalar_t, 3);
 
 
 /*---------------------------------------------------------------------------*

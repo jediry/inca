@@ -44,8 +44,8 @@ namespace inca {
 // Include the Transform definition
 #include "Transform.hpp"
 
-// Include the inca::imaging library
-#include <inca/imaging.hpp>
+// Include the inca color model
+#include <inca/math/color.hpp>
 
 
 class inca::world::Light : public WorldObject {
@@ -54,13 +54,9 @@ private:
     typedef Light ThisType;
 
 public:
-    // Import typedefs for the scalar model we're using for colors
-    typedef float       scalar_t;
-    typedef float       scalar_arg_t;
-    typedef imaging::Color<float, imaging::sRGB, false> Color;
-
-    // Import typedefs for imaging data
-    //INCA_IMAGING_TYPEDEFS(Scalar, Inca::Imaging::sRGB, /* */, /* */);
+    // Import color typedefs
+    INCA_MATH_SCALAR_TYPES(float, IS_NOT_WITHIN_TEMPLATE);
+    INCA_MATH_COLOR_TYPES(scalar_t, sRGB);
 
     // Constructor
     Light() : transform(this), color(this), intensity(this) { }
