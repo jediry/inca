@@ -29,7 +29,7 @@ namespace inca {
 };
 
 // Import superclass definition
-#include <boost/array.hpp>
+#include "../Array"
 
 // Import STL algorithms
 #include <algorithm>
@@ -38,13 +38,13 @@ namespace inca {
 #include "Point"
 #include "Vector"
 
+
 // Import math macros
 #include "../macros.hpp"
 
-
 template <typename scalar, inca::size_t _major, inca::size_t _minor,
           bool _rowMajorAccess, bool _rowMajorStorage>
-class inca::math::Matrix : public boost::array<scalar, _major * _minor> {
+class inca::math::Matrix : public inca::math::Array<scalar, _major * _minor> {
 /*---------------------------------------------------------------------------*
  | Type/constant declarations
  *---------------------------------------------------------------------------*/
@@ -172,8 +172,8 @@ public:
      * Cast to string representation.
      * \returns a string like "[1.4, 3.5]\n[0.0, 3.0]"
      */
-    operator string() const {
-        ostringstream ss;
+    operator std::string() const {
+        std::ostringstream ss;
         for (index_t row = 0; row < rows; row++)
             // Stringify a single row in the matrix. This has to be done
             // differently, depending on the storage scheme

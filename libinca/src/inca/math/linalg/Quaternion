@@ -25,7 +25,7 @@ namespace inca {
 };
 
 // Import superclass definition
-#include <boost/array.hpp>
+#include "../Array"
 
 // Import STL algorithms
 #include <algorithm>
@@ -34,12 +34,12 @@ namespace inca {
 #include "Point"
 #include "Vector"
 
+
 // Import math macros
 #include "../macros.hpp"
 
-
 template <typename scalar>
-class inca::math::Quaternion : public boost::array<scalar, 4> {
+class inca::math::Quaternion : public inca::math::Array<scalar, 4> {
 /*---------------------------------------------------------------------------*
  | Type/constant declarations
  *---------------------------------------------------------------------------*/

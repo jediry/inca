@@ -29,9 +29,9 @@ namespace inca {
 #include "Point"
 #include "Vector"
 
+
 // Import math macros
 #include "../macros.hpp"
-
 
 template <typename scalar, inca::size_t dim>
 class inca::math::Ray {

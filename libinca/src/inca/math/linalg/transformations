@@ -23,9 +23,12 @@
 #include "Vector"
 #include "Matrix"
 
+// Import vector math operations
+#include "operations"
+
+
 // Import math macros
 #include "../macros.hpp"
-
 
 // This is part of the Inca math library
 namespace inca {
@@ -248,7 +251,7 @@ namespace inca {
                 // Figure out the scalar part
                 if (frontUseful) {
                     k = V(3)(zero, zero, -one) % j;
-                    c = -dot(front, k) / (two * dot(k, k));
+                    c = -inca::math::dot(front, k) / (two * inca::math::dot(k, k));
                 } else {
                     k = V(3)(one, zero, zero) % j;
                     c = -dot(right, k) / (two * dot(k, k));
