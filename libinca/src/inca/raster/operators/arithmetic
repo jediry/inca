@@ -19,6 +19,9 @@
 
 #include <cmath>
 
+// Import apply() function
+#include <inca/raster/algorithms/apply>
+
 // Import metaprogramming tools
 #include <inca/util/multi-dimensional-macros.hpp>
 #include <inca/util/metaprogramming/macros.hpp>

@@ -1,6 +1,6 @@
 /*
  * File: PassThruView.hpp
- * 
+ *
  * Author: Ryan L. Saunders
  *
  * Copyright 2004, Ryan L. Saunders. All rights reserved.
@@ -63,6 +63,19 @@ public:
         releaseWidgetPart(_view); // Let the old View go
         _view = value;            // Set the new View
         acquireWidgetPart(_view); // Tell him we got 'im
+
+        // Tell the wrapped View about its context
+        if (_view) {
+            _view->resizeView(size);
+            _view->setRenderer(this->_renderer);
+        }
+    }
+
+    // XXX HACK!
+    void setRenderer(RendererPtr r) {
+        BasicView::setRenderer(r);
+        if (_view)
+            _view->setRenderer(r);
     }
 
 

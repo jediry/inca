@@ -1,6 +1,6 @@
 /*
  * File: Widget.hpp
- * 
+ *
  * Author: Ryan L. Saunders
  *
  * Copyright 2004, Ryan L. Saunders. All rights reserved.

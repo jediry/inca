@@ -1,6 +1,6 @@
 /*
  * File: WidgetPart.hpp
- * 
+ *
  * Author: Ryan L. Saunders
  *
  * Copyright 2004, Ryan L. Saunders. All rights reserved.
@@ -50,6 +50,7 @@ namespace inca {
  */
 class inca::ui::WidgetPart : virtual public UIComponent {
 private:
+public:
     // self() function to get a shared_ptr to myself of the appropriate type
     SHARED_PTR_TO_SELF(WidgetPart);
 
@@ -68,10 +69,10 @@ protected:
 public:
     // Event-handler functions for reacting to how the container is
     // treating this WidgetPart.
-    void acquired(WidgetPartContainerPtr wpc);
-    void released();
-    void activated();
-    void suspended();
+    virtual void acquired(WidgetPartContainerPtr wpc);
+    virtual void released();
+    virtual void activated();
+    virtual void suspended();
 
     // This tells our container that we've changed and need displayin'
     void requestRedisplay() const;
@@ -85,7 +86,17 @@ public:
     // Are we active within our parent?
     bool active() const;
 
+    // HACK Access to our renderer object
+    Renderer & renderer();
+    const Renderer & renderer() const;
+
+    // HACK Renderer accessor functions
+    virtual void setRenderer(RendererPtr r);
+
 protected:
+    // The renderer used by this part
+    RendererPtr _renderer;
+
     // Weak pointer to the WidgetPartContainer who owns me
     WidgetPartContainerWeakPtr _parent;
 
@@ -96,6 +107,7 @@ protected:
 
 class inca::ui::WidgetPartContainer : virtual public UIComponent {
 private:
+public:
     // self() function to get a shared_ptr to myself of the appropriate type
     SHARED_PTR_TO_SELF(WidgetPartContainer);
 
@@ -113,12 +125,11 @@ protected:
     void activateWidgetPart(WidgetPartPtr wp){ if (wp) wp->activated(); }
     void suspendWidgetPart(WidgetPartPtr wp) { if (wp) wp->suspended(); }
 
-
 public:
     // This is called by the contained WidgetParts when they want to be
     // redisplayed by us. Subclasses must implement this.
     virtual void redisplay(WidgetPartConstPtr wp) const = 0;
-    
+
     // This is called by the WidgetParts in order to figure out the
     // dimensions of the display area allotted to them.
     virtual Dimension getSize(WidgetPartConstPtr wp) const = 0;

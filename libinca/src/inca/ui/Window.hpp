@@ -70,7 +70,29 @@ public:
         releaseWidgetPart(_widget); // Tell the old guy we're leaving him...
         _widget = value;            // ...get the new guy...
         acquireWidgetPart(_widget); // ...and tell him that he's ours
+
+        // Tell the child Widget about its context
+        if (_widget) {
+            _widget->setRenderer(this->_renderer);
+        }
     }
+
+    Renderer & renderer() {
+        if (_renderer)
+            return *_renderer;
+        else
+            return * static_cast<Renderer*>(NULL);
+    }
+    const Renderer & renderer() const {
+        if (_renderer)
+            return *_renderer;
+        else
+            return * static_cast<Renderer*>(NULL);
+    }
+
+protected:
+    // HACK
+    RendererPtr _renderer;
 
 
 /*---------------------------------------------------------------------------*

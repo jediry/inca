@@ -7,9 +7,6 @@
  * Copyright 2004, Ryan L. Saunders. All rights reserved.
  *
  * Description:
- *      This file defines the TextureUnit inner class belonging to
- *      ImmediateModeRenderer. A TextureUnit directly represents a
- *      hardware-accelerated texture.
  *
  *      This file is not meant to be used directly, but is included by
  *      the main ImmediateModeRenderer header file.

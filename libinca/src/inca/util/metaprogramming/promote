@@ -1,0 +1,144 @@
+/** -*- C++ -*-
+ *
+ * \file promote
+ *
+ * \author Ryan L. Saunders
+ *
+ * Copyright 2004, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ *      The promote<> metafunction returns the "most promoted" type of its
+ *      arguments, according to the normal type-promotion rules of C:
+ *          Lowest: char
+ *                  short
+ *                  int
+ *                  long
+ *                  float
+ *                  double
+ *                  long double
+ *
+ * Usage:
+ *      One potential use for this metafunction is for allowing generic functions
+ *      taking multiple arguments of the same numeric type to do type promotion.
+ *      Non-template functions are allowed to promote actual parameters to the
+ *      types of their formal parameters (e.g., calling sqrt() with an integer),
+ *      whereas template functions can't do this, since the actual type of the
+ *      parameters is necessary for instantiating the function. This makes the
+ *      following illegal:
+ *          template <typename T>
+ *          void func(T t0, T t1) { ... }
+ *
+ *          func(1, 2.5);   // (int, double) not legal for func()
+ *
+ *      A solution for this is to use as many template parameters as the
+ *      function has arguments, and then cast each argument to the most promoted
+ *      type inside the function body:
+ *          template <typename T0, typename T1>
+ *          void func(T0 t0, T1 t1) {
+ *              typedef typename promote<T0, T1>::type T;
+ *              cerr << "func() called with " << T(t0) << ", " << T(t1) << endl;
+ *          }
+ *
+ *          func(1, 2.5);   // Prints out two doubles
+ */
+
+#ifndef INCA_UTIL_METAPROGRAMMING_PROMOTE
+#define INCA_UTIL_METAPROGRAMMING_PROMOTE
+
+// Import the numeric_limits class
+#include <limits>
+
+// Import metaprogramming tools
+#include "Nothing.hpp"
+#include "macros.hpp"
+
+// This is part of the Inca utilities collection
+namespace inca {
+    // Is the type a signed arithmetic type?
+    template <typename T, typename Enable = void>       // Unsigned version
+    struct is_signed {
+        static const bool value = false;
+        typedef T type;
+        typedef ::boost::mpl::integral_c_tag tag;
+    };
+    template <typename T>                               // Signed specialization
+    struct is_signed<T, ENABLE_IF_C(std::numeric_limits<T>::is_signed) > {
+        static const bool value = true;
+        typedef T type;
+        typedef ::boost::mpl::integral_c_tag tag;
+    };
+
+    // How many bits are devoted to representing numbers (as opposed to sign or exponent)
+    template <typename T>
+    struct precision {
+        static const int value = std::numeric_limits<T>::digits;
+        typedef ::boost::mpl::integral_c_tag tag;
+    };
+
+
+    // The general implementation, which simply chooses the left argument. The
+    // following specializations are enabled whenever the parameters are
+    // out of order and make a recursive call with the arguments re-arranged.
+    // Once no specializations match, this recursive base case will select the
+    // left operand, which is the more promoted type.
+    template <typename T0, typename T1, typename Enable = void>
+    struct promote_pair { typedef T0 type; };
+
+    // Nothing is always nothing
+    template <> struct promote_pair<Nothing, Nothing> { typedef Nothing type; };
+
+    // Something is always more than nothing
+    template <typename T> struct promote_pair<T, Nothing> { typedef T type; };
+
+    // These specializations are used to limit the number of specializations
+    // that we need, by reflecting symmetrical cases. Since any floating-point
+    // type will promote an integer to itself, we re-order cases in which the
+    // floating-point type is the second argument. For cases in which both
+    // arguments are floating-point or both are integral, we sort them such
+    // that the precision of the left argument is >= the precision of the
+    // right argument.
+    template <typename T0, typename T1>     // Two floats, resort on precision
+    struct promote_pair<T0, T1, ENABLE_IF( AND3(::boost::is_float<T0>,
+                                                ::boost::is_float<T1>,
+                                                LESS(precision<T0>, precision<T1>)) ) > {
+        typedef typename promote_pair<T1, T0>::type type;
+    };
+    template <typename T0, typename T1>     // Two integers, resort on precision
+    struct promote_pair<T0, T1, ENABLE_IF( AND3(::boost::is_integral<T0>,
+                                                ::boost::is_integral<T1>,
+                                                LESS(precision<T0>, precision<T1>)) ) > {
+        typedef typename promote_pair<T1, T0>::type type;
+    };
+    template <typename T0, typename T1>     // One integer, one float
+    struct promote_pair<T0, T1, ENABLE_IF( AND2(::boost::is_integral<T0>,
+                                                ::boost::is_float<T1>) ) > {
+        typedef typename promote_pair<T1, T0>::type type;
+    };
+
+
+
+    // Ladies and gentlemen...the moment you've all been waiting for...PROMOTE!
+    template <typename T0 = Nothing, typename T1 = Nothing,
+              typename T2 = Nothing, typename T3 = Nothing,
+              typename T4 = Nothing, typename T5 = Nothing,
+              typename T6 = Nothing, typename T7 = Nothing>
+    struct promote {
+        // Decompose the N-way promotion into a cascade of 2-way promotion tournaments
+        typedef typename promote_pair<
+            typename promote_pair<
+                typename promote_pair<T0, T1>::type,
+                typename promote_pair<T2, T3>::type
+            >::type,
+            typename promote_pair<
+                typename promote_pair<T4, T5>::type,
+                typename promote_pair<T6, T7>::type
+            >::type
+        >::type type;
+    };
+}
+
+// Clean up the preprocessor namespace
+#define UNDEFINE_INCA_METAPROGRAMMING_MACROS
+#include "macros.hpp"
+
+#endif

@@ -100,8 +100,7 @@ struct countNAN {
                             Lq  = cosB * Lx + sinB * Ly,
                             Lpp = sinB * d(Lp, xDim) - cosB * d(Lp, yDim),
                             Lqq = cosB * d(Lq, xDim) - sinB * d(Lq, yDim),
-                            Lpp = square(sinB)*Lxx + square(cosB)*Lyy - sinB*cosB*Lxy*2,
-                            Lqq = square(cosB)*Lxx + square(sinB)*Lyy + sinB*cosB*Lxy*2;
+                            Lpq = sinB*cosB*(Lxx - Lyy) - (square(cosB) - square(sinB)) * Lxy;
             EvaluatedRaster ridgeSurface    = Lp,
                             ridgeSign       = Lpp,
                             strength        = pow(t, gamma / 2) * max(abs(Lpp), abs(Lqq)),
@@ -109,14 +108,15 @@ struct countNAN {
                             strengthSign    = -d(strengthSurface, sDim) / dt;
 
 #else
-            EvaluatedRaster Lx = d(r0, xDim),
-                            Ly = d(r0, yDim),
+            EvaluatedRaster r(r0);
+            r.setOutOfBoundsPolicy(Nearest);
+            EvaluatedRaster Lx = d(r, xDim),
+                            Ly = d(r, yDim),
                             Lxx = d(Lx, xDim),
                             Lxy = d(Lx, yDim),
                             Lyy = d(Ly, yDim),
-                            gradientSquared = Lx*Lx + Ly*Ly,
-                            denominator = pow(gradientSquared, Scalar(-0.5)),
                             diff = Lxx - Lyy,
+                            denominator = pow(diff * diff + Lxy * Lxy * 4, Scalar(-0.5)),
                             rational = (diff) / sqrt(square(diff) + square(Lxy) * 4),
                             cosB = sqrt((rational + 1) * Scalar(0.5)),
                             sinB = sqrt((rational - 1) * Scalar(-0.5)) * sign(Lxy),
@@ -135,6 +135,7 @@ struct countNAN {
                             strengthSurface = -d(strength, sDim) / dt,
                             strengthSign    = -d(strengthSurface, sDim) / dt;
 
+//                            fill(ridgeSign, -1);
 #endif
 
             return find_isosurface_intersection(ridgeSurface, ridgeSign,

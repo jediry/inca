@@ -1,6 +1,6 @@
 /*
  * File: UIComponent.hpp
- * 
+ *
  * Author: Ryan L. Saunders
  *
  * Copyright 2004, Ryan L. Saunders. All rights reserved.
@@ -30,6 +30,9 @@ namespace inca {
 // Import math types
 #include <inca/math.hpp>
 
+// HACK import renderer definition
+#include <inca/rendering.hpp>
+
 
 // Import support for getting a shared_ptr from a 'this' ptr
 #include <boost/enable_shared_from_this.hpp>
@@ -58,7 +61,10 @@ private:
     PROPERTY_OWNING_OBJECT(UIComponent);
 
 public:
-    // Screen geometry typedefs
+    // XXX HORRIBLY HACKED!!! Help me, Obi-Wan Kenobi!!!
+    typedef rendering::ImmediateModeRenderer<rendering::OpenGLTraits,
+                                             rendering::ExclusiveAccessCachePolicy> Renderer;
+    typedef shared_ptr<Renderer> RendererPtr;
     typedef math::Point<IndexType, 2> Pixel;     // X,Y pair of integer coords
     typedef math::Vector<SizeType, 2> Dimension; // W,H pair of unsigned dims
 
@@ -72,10 +78,6 @@ public:
 
     // This component's name
     rw_property(string, name, "");
-
-private:
-    // This function has no other purpose than to trigger C++ RTTI generation
-    virtual void ensure_RTTI_info_is_generated() { }
 };
 
 #endif

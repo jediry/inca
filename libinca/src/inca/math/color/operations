@@ -120,10 +120,10 @@ namespace inca {
         // blending algorithm from Dr. Ergun  Ackelman's raytracing class.
         // Both arguments must be in the same colorspace. The RHS argument is
         // the color "on top", and must have an alpha channel. The result is
-        // of the same type as the LHS argument and 
+        // of the same type as the LHS argument and
         template <typename scalar, template <bool> class cs, bool alpha>
-        Color<scalar, cs<alpha> > operator%(const Color<scalar, cs<alpha> > &c1,
-                                            const Color<scalar, cs<true> >  &c2) {
+        Color<scalar, cs<alpha> > & operator%=(Color<scalar, cs<alpha> > &c1,
+                                               const Color<scalar, cs<true> >  &c2) {
             // The number of color components (excluding alpha)
             SizeType components = cs<alpha>::components;
 
@@ -132,21 +132,24 @@ namespace inca {
             scalar alphaC2 = c2[components];
             scalar alphaR  = alphaC2 + alphaC1 * (1 - alphaC2);
 
-            Color<scalar, cs<alpha> > result;
-
             // Do the associative color thing
-            for (IndexType i = 0; i < IndexType(components); i++) {
-                result[i] = (alphaC2 * c2[i]
-                          + (alphaC1 * c1[i]) * (1 - alphaC2)) / alphaR;
-            }
+            for (IndexType i = 0; i < IndexType(components); i++)
+                c1[i] = (alphaC2 * c2[i]
+                      + (alphaC1 * c1[i]) * (1 - alphaC2)) / alphaR;
 
             // If we have an alpha channel, store the new alpha
             if (alpha)
-                result[components] = alphaR;
+                c1[components] = alphaR;
 
-            return result;
+            return c1;
         }
 
+        template <typename scalar, template <bool> class cs, bool alpha>
+        Color<scalar, cs<alpha> > operator%(const Color<scalar, cs<alpha> > &c1,
+                                            const Color<scalar, cs<true> >  &c2) {
+            Color<scalar, cs<alpha> > result(c1);
+            return result %= c2;
+        }
     };
 };
 

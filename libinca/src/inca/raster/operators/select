@@ -50,31 +50,6 @@ namespace inca {
             // Get types from the superclass
             INCA_RASTER_OPERATOR_IMPORT_TYPES(SelectRegionOperatorRaster<R0>)
 
-            // Constructor taking a set of sizes (implicitly using the bases
-            // of the underlying raster).
-            template <class SizeList>
-            SelectRegionOperatorRaster(const R0 & r,
-                                       const SizeList & sz,
-                                       bool relocateToOrigin = true)
-                    : OperatorBaseType(r, false), relocate(relocateToOrigin) {
-                // Set bounds then clip and translate
-                this->_bounds.setBasesAndSizes(r.bases(), sz);
-                clipAndRelocate();
-            }
-            // Constructor taking a set of bases/extents or bases/sizes
-            template <class List0, class List1>
-            SelectRegionOperatorRaster(const R0 & r,
-                                       const List0 & bs,
-                                       const List1 & exOrSz,
-                                       bool isSizes = true,
-                                       bool relocateToOrigin = true)
-                    : OperatorBaseType(r, false), relocate(relocateToOrigin) {
-                // Set bounds then clip and translate
-                if (isSizes)    this->_bounds.setBasesAndSizes(bs, exOrSz);
-                else            this->_bounds.setBasesAndExtents(bs, exOrSz);
-                clipAndRelocate();
-            }
-
             // Constructor taking a region
             template <typename S, typename I, typename D>
             SelectRegionOperatorRaster(const R0 & r,
@@ -143,7 +118,9 @@ namespace inca {
                                                 const IndexList0 & bs,
                                                 const IndexList1 & ex,
                                                 bool relocate = true) {
-            return SelectRegionOperatorRaster<R0>(r, bs, ex, false, relocate);
+            typename R0::Region bounds;
+            bounds.setBasesAndExtents(bs, ex);
+            return SelectRegionOperatorRaster<R0>(r, bounds, relocate);
         }
 
         // Factory function taking base indices and sizes
@@ -152,15 +129,30 @@ namespace inca {
                                                 const IndexList & bs,
                                                 const SizeList & sz,
                                                 bool relocate = true) {
-            return SelectRegionOperatorRaster<R0>(r, bs, sz, true, relocate);
+            typename R0::Region bounds;
+            bounds.setBasesAndSizes(bs, sz);
+            return SelectRegionOperatorRaster<R0>(r, bounds, relocate);
         }
 
-        // Factory function taking size (implicitly starting from r's bases)
+        // Factory function taking center indices and sizes
+        template <typename R0, class IndexList, class SizeList>
+        SelectRegionOperatorRaster<R0> selectCS(const R0 & r,
+                                                const IndexList & ct,
+                                                const SizeList & sz,
+                                                bool relocate = true) {
+            typename R0::Region bounds;
+            bounds.setCentersAndSizes(ct, sz);
+            return SelectRegionOperatorRaster<R0>(r, bounds, relocate);
+        }
+
+        // Factory function taking sizes (implicitly starting from r's bases)
         template <typename R0, class SizeList>
         SelectRegionOperatorRaster<R0> select(const R0 & r,
                                               const SizeList & sz,
                                               bool relocate = true) {
-            return SelectRegionOperatorRaster<R0>(r, sz, relocate);
+            typename R0::Region bounds;
+            bounds.setBasesAndSizes(r.bases(), sz);
+            return SelectRegionOperatorRaster<R0>(r, bounds, relocate);
         }
 
         // Factory function taking a Region object

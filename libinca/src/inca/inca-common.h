@@ -84,13 +84,16 @@ namespace inca {
 
 
 // Logging functions
+#define INCA_DEBUG(STREAM_EXPR)   std::cerr << "DEBUG:   " << STREAM_EXPR << std::endl;
+#define INCA_INFO(STREAM_EXPR)    std::cerr << "INFO:    " << STREAM_EXPR << std::endl;
 #define INCA_WARNING(STREAM_EXPR) std::cerr << "WARNING: " << STREAM_EXPR << std::endl;
 #define INCA_ERROR(STREAM_EXPR)   std::cerr << "ERROR:   " << STREAM_EXPR << std::endl;
+//#define INCA_INFO(STREAM_EXPR)
 //#define INCA_WARNING(STREAM_EXPR)
 //#define INCA_ERROR(STREAM_EXPR)
 
 // Everything in the system should have access to the Logger instance
-#include <inca/util/Logger.hpp>
+//#include <inca/util/Logger.hpp>
 
 // We want to make accessible our C#-style properties
 #include <inca/util/property>

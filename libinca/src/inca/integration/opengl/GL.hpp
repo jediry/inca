@@ -188,6 +188,8 @@ namespace GL {
     inline void glTranslate(GLdouble x, GLdouble y, GLdouble z) { glTranslated(x, y, z); }
     #ifdef GL_HPP_IMPORT_INCA
         template <typename Scalar>
+        inline void glTranslate(const IM::Point<Scalar, 3> & dx) { glTranslate(dx[0], dx[1], dx[2]); }
+        template <typename Scalar>
         inline void glTranslate(const IM::Vector<Scalar, 3> & dx) { glTranslate(dx[0], dx[1], dx[2]); }
     #endif
 

@@ -29,7 +29,7 @@ class RENDERER::MatrixStack
  *---------------------------------------------------------------------------*/
 public:
     // Constructor
-    MatrixStack(RENDERER & r, IDType id) : Component(r, id) {
+    explicit MatrixStack(RENDERER & r, IDType id) : Component(r, id) {
         API::template getImplementationLimit<API::MatrixStackDepth>(this->id(), _maximumStackDepth);
     }
 
@@ -43,8 +43,7 @@ public:
 public:
     // How many matrices are there on the stack right now (at least 1)?
     int stackDepth() const {
-//        return
-
+        return _stackDepth;
     }
 
     // How many matrix levels are possible?
@@ -53,7 +52,7 @@ public:
     }
 
     // Is it possible to push any more matrices onto the stack?
-    bool isFull()  const { return stackDepth() == maximumStackDepth(); }
+    bool isFull() const { return stackDepth() == maximumStackDepth(); }
 
     // Is it possible to pop any more matrices from the stack?
     bool isEmpty() const { return stackDepth() == 1; }
@@ -133,24 +132,36 @@ public:
         API::scaleMatrix(this->id(), geometry_t(1) / s);
     }
     void rotate(const Quaternion & q) {
-        this->renderer().ensureCurrent(*this);
-        API::rotateMatrix(this->id(), math::angle(q), math::axis(q));
+        if (! math::effectivelyEqual(q[0], geometry_t(1))) {
+            this->renderer().ensureCurrent(*this);
+            API::rotateMatrix(this->id(), math::angle(q), math::axis(q));
+        }
     }
     void rotate(geometry_t angle, const Vector3D & axis) {
         this->renderer().ensureCurrent(*this);
         API::rotateMatrix(this->id(), angle, axis);
     }
     void unrotate(const Quaternion & q) {
-        this->renderer().ensureCurrent(*this);
-        API::rotateMatrix(this->id(), -math::angle(q), math::axis(q));
+        if (! math::effectivelyEqual(q[0], geometry_t(1))) {
+            this->renderer().ensureCurrent(*this);
+            API::rotateMatrix(this->id(), -math::angle(q), math::axis(q));
+        }
     }
     void unrotate(geometry_t angle, const Vector3D & axis) {
         this->renderer().ensureCurrent(*this);
         API::rotateMatrix(this->id(), -angle, axis);
     }
+    void translate(const Point3D & p) {
+        this->renderer().ensureCurrent(*this);
+        API::translateMatrix(this->id(), p);
+    }
     void translate(const Vector3D & v) {
         this->renderer().ensureCurrent(*this);
         API::translateMatrix(this->id(), v);
+    }
+    void untranslate(const Point3D & p) {
+        this->renderer().ensureCurrent(*this);
+        API::translateMatrix(this->id(), -p);
     }
     void untranslate(const Vector3D & v) {
         this->renderer().ensureCurrent(*this);
@@ -179,15 +190,20 @@ public:
 //        untranslate(Vector3D(t.position()));  // ...then untranslate...
     }
 
+protected:
+    mutable Matrix _currentMatrix;  // The current top of the stack
+    mutable Matrix _currentInverse; // The inverse of the top of the stack
+
+
+/*---------------------------------------------------------------------------*
+ | Coordinate transformation functions
+ *---------------------------------------------------------------------------*/
+public:
     // Transformation of primitive objects by the current matrix
     Point3D  transform(const Point3D & p)    const { return get() % p; }
     Vector3D transform(const Vector3D & v)   const { return get() % v; }
     Point3D  untransform(const Point3D & p)  const { return getInverse() % p; }
     Vector3D untransform(const Vector3D & v) const { return getInverse() % v; }
-
-protected:
-    mutable Matrix _currentMatrix;  // The current top of the stack
-    mutable Matrix _currentInverse; // The inverse of the top of the stack
 };
 
 #endif

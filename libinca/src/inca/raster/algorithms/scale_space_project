@@ -71,7 +71,7 @@ namespace inca {
                 if (*it == ScaleType(0)) {
                     // This is the no-smoothing scale level. Just copy
                     r0.slice(dimensionality, s) = r1;
-                    r0.slice(dimensionality, s) = idft(dft(r1));
+//                    r0.slice(dimensionality, s) = idft(dft(r1));
 //                    r0.slice(dimensionality, s) = linear_map(r1, inca::Array<float, 2>(0.0f, 1.0f));
 //                    r0.slice(dimensionality, s) = linear_map(idft(srcDFT), inca::Array<float, 2>(0.0f, 1.0f));
 //                    r0.slice(dimensionality, s) = log(cmagnitude(srcDFT) + 1);
@@ -79,7 +79,7 @@ namespace inca {
                 } else {
                     // We have to blur this layer
                     ScaleType sigma = std::sqrt(*it);
-#if 0
+#if 1
 
                     // Make an N-D gaussian function
                     GaussianGeneratorRaster<ElementType, dimensionality> gauss
@@ -99,7 +99,7 @@ namespace inca {
                                 gaussBases[d]  = 0;
                             }
                         }
-                        select(kernel, kernelBases, window) = select(gauss, gaussBases, window);// * (sigma + 1);
+                        selectBS(kernel, kernelBases, window) = selectBS(gauss, gaussBases, window);
                     }
 #else
                     typedef inca::Array<ElementType, dimensionality> ElArr;

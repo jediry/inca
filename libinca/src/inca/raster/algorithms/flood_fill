@@ -27,6 +27,7 @@
 
 // Import container definitions
 #include <list>
+#include <utility>      // std::pair
 
 
 // This is part of the Inca raster processing library
@@ -68,13 +69,16 @@ namespace inca {
         // predicate returns true is filled with the value produced
         // by Generator.
         //
-        // It returns a Region object giving the rectangular bounds of the
-        // filled area.
+        // It returns a std::pair object containing the rectangular bounds of
+        // the filled area, and the number of filled cells, respectively.
         template <typename R0, class IndexList, class BoundsTest, class Generator>
-        typename R0::Region flood_fill(R0 & r, const IndexList & startFrom,
-                                       BoundsTest shouldFill, Generator fillWith) {
+        std::pair<typename R0::Region, typename R0::Region::SizeType>
+        flood_fill(R0 & r, const IndexList & startFrom,
+                   BoundsTest shouldFill, Generator fillWith) {
             typedef typename R0::IndexArray IndexArray;
             typedef typename R0::Region     Region;
+            typedef typename R0::SizeType   SizeType;
+            typedef std::pair<Region, SizeType> ResultType;
 
             // Make sure the seed point is valid
             IndexArray seed(startFrom);
@@ -86,14 +90,16 @@ namespace inca {
             }
             if (! shouldFill(seed)) {
                 std::cerr << "Idiot! Not even your starting point should be filled!\n";
-                return Region();        // An empty region
+                return ResultType(Region(), 0);     // An empty region
             }
 
             // We need to keep track of the minimum and maximum filled cell
-            // indices so that we can return the filled region bounds at the end.
+            // indices, and the number of filled cells, so that we can calculate
+            // the return values at the end.
             IndexArray filledMin = seed,
                        filledMax = seed,
                        idx;
+            SizeType numFilled = 0;
 
             // These also do double duty by helping us scan the first line
             while (filledMin[0] >= r.base(0) && shouldFill(filledMin))
@@ -107,6 +113,7 @@ namespace inca {
             idx = filledMin;
             for (idx[0] = filledMin[0]; idx[0] <= filledMax[0]; ++idx[0])
                 r(idx) = fillWith(idx);
+            numFilled += filledMax[0] - filledMin[0] + 1;
 
 
             // This represents a single "to-be-scanned" line, which will go
@@ -180,6 +187,7 @@ namespace inca {
                     // Fill 'er up!
                     for (idx[0] = childMin[0]; idx[0] <= childMax[0]; ++idx[0])
                         r(idx) = fillWith(idx);
+                    numFilled += childMax[0] - childMin[0] + 1;
 
                     // See if we need to update our minimum and maximum
                     if (childMin[0] < filledMin[0])     filledMin[0] = childMin[0];
@@ -223,6 +231,7 @@ namespace inca {
                         // Fill 'er up!
                         for (idx[0] = childMin[0]; idx[0] <= childMax[0]; ++idx[0])
                             r(idx) = fillWith(idx);
+                        numFilled += childMax[0] - childMin[0] + 1;
 
                         // See if we need to update our minimum and maximum
                         if (childMin[0] < filledMin[0])     filledMin[0] = childMin[0];
@@ -242,8 +251,8 @@ namespace inca {
                 }
             }
 
-            // Return the bounds of the region we filled
-            return Region(filledMin, filledMax);
+            // Return the bounds/area of the region we filled
+            return ResultType(Region(filledMin, filledMax), numFilled);
         }
 
 
@@ -251,8 +260,9 @@ namespace inca {
         // of the raster's element type and fills the contiguous region with
         // the same value as at the seed point.
         template <typename R0, class IndexList>
-        typename R0::Region flood_fill(R0 & r, const IndexList & startFrom,
-                                       typename R0::ConstReference fillWith) {
+        std::pair<typename R0::Region, typename R0::SizeType>
+        flood_fill(R0 & r, const IndexList & startFrom,
+                           typename R0::ConstReference fillWith) {
             typedef typename R0::ElementType ElementType;
             ElementType value = r(startFrom);
 //            std::cerr << "Flooding areas with value of

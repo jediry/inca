@@ -1,0 +1,51 @@
+/** -*- C++ -*-
+ *
+ * \file ReturnType
+ *
+ * \author Ryan L. Saunders
+ *
+ * Copyright 2004, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ *      The ReturnType template implements a compile-time return-type deduction
+ *      mechanism, heavily based on that of the Boost Lambda Library (BLL), as
+ *      well as on the numeric traits mechanism used by the VIGRA image
+ *      processing library.
+ *
+ * Implementation:
+ *      Why not just use BLL's system and extend it to cover the Inca types?
+ *      Great question. I'm not generally a fan of wheel reinvention. I had
+ *      several reasons for reimplementing this functionality.
+ *          1) I'm not using BLL otherwise.
+ *          2) I don't care for BLL's verbose nomenclature. I mean,
+ *             bitwise_action<leftshift_action_no_stream>?? Please!
+ *          3) I don't care about const/volatile qualified types, so the
+ *             extra functionality that BLL provides in this regard is
+ *             unnecessary.
+ *          4) BLL likes to fail late in the game when it can't deduce
+ *             the return type of an expression. This makes it somewhat
+ *             hard to track down the source of the error.
+ *      All in all, only the last reason is really sufficient to justify
+ *      redoing this work, since the others are more aesthetic than functional.
+ */
+
+#ifndef INCA_UTIL_METAPROGRAMMING_RETURN_TYPE
+#define INCA_UTIL_METAPROGRAMMING_RETURN_TYPE
+
+// Import system configuration
+#include <inca/inca-common.h>
+
+// Import the 'Nothing' class
+#include "Nothing.hpp"
+
+// This is part of the Inca utilities collection
+namespace inca {
+
+    // This is the unspecialized version. If we end up instantiating this, then
+    // type deduction has failed.
+    template <typename Op, typename T0,
+                           typename T1 = Nothing,
+                           typename T2 = Nothing> class ReturnType { };
+
+    // These are the basic
+};

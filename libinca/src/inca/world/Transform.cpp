@@ -109,6 +109,15 @@ void Transform::orbit(scalar_arg_t angle,
 /*---------------------------------------------------------------------------*
  | Current frame-of-reference controls
  *---------------------------------------------------------------------------*/
+void Transform::moveLongitudinally(scalar_arg_t dist) {
+    translate(dist * front());
+}
+void Transform::moveLaterally(scalar_arg_t dist) {
+    translate(dist * right());
+}
+void Transform::moveVertically(scalar_arg_t dist) {
+    translate(dist * up());
+}
 void Transform::look(scalar_arg_t hAngle, scalar_arg_t vAngle) {
     pitch(vAngle);
     yaw(hAngle);

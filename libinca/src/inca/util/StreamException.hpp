@@ -27,12 +27,12 @@ namespace inca {
     class StreamException : public std::exception {
     public:
         // Constructors
-        StreamException() { }
+        explicit StreamException() { }
         StreamException(const StreamException &e) : ss(e.message()) { }
-        StreamException(const std::string &msg) : ss(msg) { }
+        explicit StreamException(const std::string &msg) : ss(msg) { }
 
         // Destructor
-        ~StreamException() throw() { }
+        virtual ~StreamException() throw() { }
 
         // Accessors
         string message() const { return ss.str(); }

@@ -95,6 +95,24 @@ namespace inca {
             return minmax.range();   // Return its output (cast to array)
         }
 
+        template <class R0>
+        ENABLE_IF_T( is_raster<R0>,
+        typename R0::ElementType ) min(const R0 & r) {
+            typedef typename R0::ElementType T;
+            Range<T> minmax;    // Create the range-measurement functor
+            minmax = apply(minmax, r);   // Apply it to the raster
+            return minmax.min();   // Return its output (cast to scalar)
+        }
+
+        template <class R0>
+        ENABLE_IF_T( is_raster<R0>,
+        typename R0::ElementType ) max(const R0 & r) {
+            typedef typename R0::ElementType T;
+            Range<T> minmax;    // Create the range-measurement functor
+            minmax = apply(minmax, r);   // Apply it to the raster
+            return minmax.max();   // Return its output (cast to scalar)
+        }
+
 
         // Calculation of all power means up to 'power'
         template <typename T, int power = 1>

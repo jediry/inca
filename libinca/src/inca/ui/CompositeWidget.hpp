@@ -1,6 +1,6 @@
 /*
  * File: CompositeWidget.hpp
- * 
+ *
  * Author: Ryan L. Saunders
  *
  * Copyright 2004, Ryan L. Saunders. All rights reserved.
@@ -52,6 +52,12 @@ public:
     // Constructor with explicit initialization of View/Control
     explicit CompositeWidget(ViewPtr v, ControlPtr c, const string &nm = "")
         : PassThruView(v), PassThruControl(c), Widget(nm) { }
+
+    // XXX HACK!
+    void setRenderer(RendererPtr r) {
+        PassThruView::setRenderer(r);
+        PassThruControl::setRenderer(r);
+    }
 
 
 /*---------------------------------------------------------------------------*

@@ -28,6 +28,11 @@ public:
     // Constructor
     LightingUnit(RENDERER & r, IDType id) : Component(r, id) { }
 
+    // XXX This needs more crap
+    bool enabled() const {
+        API::template getHardwareState<API::LightingUnitEnabled>(this->id(), _enabled);
+        return _enabled;
+    }
     void setEnabled(bool enabled) {
         API::template setHardwareState<API::LightingUnitEnabled>(this->id(), enabled);
     }
@@ -44,6 +49,9 @@ public:
     void setSpecularColor(const Color & c) {
         API::template setHardwareState<API::LightingUnitSpecularColor>(this->id(), c);
     }
+
+protected:
+    mutable bool _enabled;
 };
 
 #endif

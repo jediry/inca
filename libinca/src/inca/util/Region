@@ -187,6 +187,23 @@ public:
     FOR_ALL_DIMS(CREATE_DIMENSIONAL_SET_EXTENTS)
     #undef CREATE_DIMENSIONAL_SET_EXTENTS
 
+    template <class IndexList>
+    void setCenters(const IndexList & indices) {
+        typename IndexList::const_iterator it = indices.begin();
+        for (IndexType d = 0; d < dimensionality; ++d, ++it) {
+            IndexType c(*it);
+            _bases[d]   = c - size(d) / 2;
+            _extents[d] = base(d) + size(d) - 1;
+        }
+    }
+    #define CREATE_DIMENSIONAL_SET_CENTERS(DIM)                             \
+        void setCenters(PARAMS(DIM, IndexType i)) {                         \
+            BOOST_STATIC_ASSERT(dimensionality == DIM);                     \
+            setCenters(IndexArray(PARAMS(DIM, i)));                         \
+        }
+    FOR_ALL_DIMS(CREATE_DIMENSIONAL_SET_CENTERS)
+    #undef CREATE_DIMENSIONAL_SET_CENTERS
+
     template <class SizeList>
     void setSizes(const SizeList & sz) {
         bool degenerate = false;
@@ -271,6 +288,28 @@ public:
             } else {
                 _sizes[d] = _size = 0;
                 _bases[d] = _extents[d] = b;
+                degenerate = true;
+            }
+        }
+        if (! degenerate)
+            recalculateSize();
+    }
+
+    template <class IndexList, class SizeList>
+    void setCentersAndSizes(const IndexList & ct, const SizeList & sz) {
+        bool degenerate = false;
+        typename IndexList::const_iterator ci = ct.begin();
+        typename SizeList::const_iterator  si = sz.begin();
+        for (IndexType d = 0; d < dimensionality; ++d, ++ci, ++si) {
+            IndexType c(*ci);
+            SizeType  s(*si);
+            if (s > 0) {
+                _sizes[d] = s;
+                _bases[d] = c - s / 2;
+                _extents[d] = base(d) + size(d) - 1;
+            } else {
+                _sizes[d] = _size = 0;
+                _bases[d] = _extents[d] = c;
                 degenerate = true;
             }
         }

@@ -44,6 +44,10 @@ namespace inca {
 };
 
 
+// Import bounds-checking utilities
+#include <inca/util/OutOfBoundsException.hpp>
+
+
 /*****************************************************************************
  * The DataArray class is a semi-dynamically-sized array of elements. It is
  * similar to the STL vector class, except that resizing the array may be a

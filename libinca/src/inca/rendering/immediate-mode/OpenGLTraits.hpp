@@ -28,6 +28,7 @@ namespace inca {
 #include <inca/math/scalar.hpp>
 #include <inca/math/color.hpp>
 #include <inca/math/linalg.hpp>
+#include <inca/util/Region>
 
 // Import rendering enumerated types
 #include "types.hpp"
@@ -49,10 +50,11 @@ public:
     typedef math::Quaternion<geometry_t>                    Quaternion;
     typedef math::Matrix<geometry_t, 4, 4, true, false>     Matrix;
     typedef math::Color<color_t, math::sRGB<true> >         Color;
-    typedef math::Point<int, 2>                             Pixel;
-    typedef math::Vector<int, 2>                            Dimension;
     typedef math::Vector<geometry_t, 3>                     Normal;
     typedef math::Point<geometry_t, 2>                      TexCoord;
+    typedef Region<2>                                       Region;
+    typedef math::Point<int, 2>                             Pixel;
+    typedef math::Vector<int, 2>                            Dimension;
 
 //protected:
     // Grant the ImmediateModeRenderer access to the hardware functions
@@ -68,7 +70,7 @@ public:
         // Rasterizer toggle properties
         DepthBuffering, AlphaBlending, FaceCulling, Lighting,
         PointSmoothing, LineSmoothing, PolygonSmoothing,
-        BackgroundColor,
+        BackgroundColor, PolygonOffset, PointDiameter, LineWidth,
         ShadingModel, CurrentColor, CurrentNormal, CurrentTexCoord, CurrentEdgeFlag,
         VertexArrayPointer,   VertexArrayStride,
         NormalArrayPointer,   NormalArrayStride,
@@ -79,6 +81,9 @@ public:
         // Matrix stack properties
         CurrentMatrix,
         MatrixStackDepth,
+
+        // Viewport properties
+        ViewportBounds,
 
         // Lighting unit properties
         LightingUnitEnabled,
@@ -93,6 +98,8 @@ public:
     static const Property LastRasterizerProperty  = EdgeFlagArrayStride;
     static const Property FirstMatrixStackProperty = CurrentMatrix;
     static const Property LastMatrixStackProperty  = MatrixStackDepth;
+    static const Property FirstViewportProperty = ViewportBounds;
+    static const Property LastViewportProperty  = ViewportBounds;
     static const Property FirstLightingUnitProperty = LightingUnitEnabled;
     static const Property LastLightingUnitProperty  = LightingUnitSpecularColor;
 
@@ -127,6 +134,9 @@ public:
     template <Property p> static void getHardwareState(IDType id, Matrix & m);
     template <Property p> static void setHardwareState(IDType id, const Matrix & m);
 
+    template <Property p> static void getHardwareState(Region & r);
+    template <Property p> static void setHardwareState(const Region & r);
+
     template <Property p> static void getHardwareState(DifferenceType & stride);
     template <Property p> static void getHardwareState(void * & ptr);
     template <Property p, typename T> static void setHardwareState(T const * ptr, DifferenceType stride);
@@ -153,6 +163,14 @@ public:
     static void endPrimitive();
     static void renderVertexIndex(IndexType index);
     static void renderArrayRange(PrimitiveType type, IndexType from, SizeType count);
+    template <typename V>
+    static void renderVertexAt(const V & v);                    // Array vertex
+    template <typename S>
+    static void renderVertexAt(S s0, S s1);             // 2D vertex
+    template <typename S>
+    static void renderVertexAt(S s0, S s1, S s2);       // 3D vertex
+    template <typename S>
+    static void renderVertexAt(S s0, S s1, S s2, S s3); // 4D vertex
 
 
     // Functions used by the IMR::MatrixStack object
@@ -164,7 +182,9 @@ public:
     static void scaleMatrix(IDType id, geometry_t s);
     static void scaleMatrix(IDType id, const Vector3D & s);
     static void rotateMatrix(IDType id, geometry_t angle, const Vector3D & axis);
-    static void translateMatrix(IDType id, const Vector3D & offset);
+
+    template <typename V>
+    static void translateMatrix(IDType id, const V & v);
 };
 
 #endif

@@ -34,15 +34,16 @@ namespace inca {
 // the Statistics class. It expects the derived class to implement the
 // 'processElement(ElementType)' function.
 template <typename Derived, typename T>
-class inca::math::StatisticsBase : public inca::Array<T, 5> {
+class inca::math::StatisticsBase : public inca::Array<T, 6> {
 public:
     // Type definitions
     typedef T                               ElementType;
-    typedef inca::Array<ElementType, 5>     ElementArray;
+    typedef inca::Array<ElementType, 6>     ElementArray;
+    typedef inca::Array<int, 20>            Histogram;
 
     // Constructor
     explicit StatisticsBase()
-            : ElementArray(ElementType(0)), _count(0) {
+            : ElementArray(ElementType(0)), _count(0), _histogram(0) {
         min() = ElementType(1e38);
         max() = ElementType(-1e38);
     }
@@ -53,20 +54,25 @@ public:
     }
 
     // Access to statistics
-    ElementType & sum()      { return (*this)[0]; }
-    ElementType & min()      { return (*this)[1]; }
-    ElementType & max()      { return (*this)[2]; }
-    ElementType & mean()     { return (*this)[3]; }
-    ElementType & variance() { return (*this)[4]; }
-    int & count()            { return _count; }
-    const ElementType & sum()      const { return (*this)[0]; }
-    const ElementType & min()      const { return (*this)[1]; }
-    const ElementType & max()      const { return (*this)[2]; }
-    const ElementType & mean()     const { return (*this)[3]; }
-    const ElementType & variance() const { return (*this)[4]; }
-    const int         & count()    const { return _count; }
+    ElementType & sum()       { return (*this)[0]; }
+    ElementType & min()       { return (*this)[1]; }
+    ElementType & max()       { return (*this)[2]; }
+    ElementType & range()     { return (*this)[3]; }
+    ElementType & mean()      { return (*this)[4]; }
+    ElementType & variance()  { return (*this)[5]; }
+    Histogram   & histogram() { return _histogram; }
+    int         & count()     { return _count; }
+    const ElementType & sum()       const { return (*this)[0]; }
+    const ElementType & min()       const { return (*this)[1]; }
+    const ElementType & max()       const { return (*this)[2]; }
+    const ElementType & range()     const { return (*this)[3]; }
+    const ElementType & mean()      const { return (*this)[4]; }
+    const ElementType & variance()  const { return (*this)[5]; }
+    const Histogram   & histogram() const { return _histogram; }
+    const int         & count()     const { return _count; }
 
 protected:
+    Histogram _histogram;
     int _count;
 };
 
@@ -88,36 +94,52 @@ public:
     using Base::sum;
     using Base::min;
     using Base::max;
+    using Base::range;
     using Base::mean;
     using Base::variance;
+    using Base::histogram;
     using Base::count;
 
     // Constructor
     explicit Statistics()
-        : varSum(0), meanValid(false), varianceValid(false) { }
+        : varSum(0), recount(0), meanValid(false), varianceValid(false) { }
 
 
     // If we've not yet calculated the mean, add this element into our running
     // sum of elements. If we have, then accumulate it towards calculating
-    // the variance.
+    // the variance and histogram.
     void processElement(const ElementType & e) {
         if (! meanValid) {
             sum() += e;
             if (e < min())  min() = e;
             if (e > max())  max() = e;
+            ++count();
         } else {
             ElementType diff = mean() - e;
             varSum += diff * diff;
+            int bucket = e == max()
+                ? histogram().size() - 1
+                : static_cast<int>((e - min()) / bucketSize);
+            if (bucket >= 0 && bucket < histogram().size())
+                ++histogram()[bucket];
+            else
+                INCA_WARNING("Statistics: Sample " << e << " falls into out-of-"
+                             "bounds bucket " << bucket << " of histogram ["
+                             << min() << ',' << max() << ']');
+            ++recount;
         }
-        ++count();
     }
 
     // Finish the mean or variance calculation
     void done() {
         if (! meanValid) {
             if (count() > 0) {
+                // Calculate the mean and the range
                 mean() = sum() / count();
-                count() = 0;
+                range() = max() - min();
+
+                // Figure out how big a histogram bucket is
+                bucketSize = (max() - min()) / histogram().size();
             } else {
                 max() = 0;
                 min() = 0;
@@ -126,11 +148,20 @@ public:
         } else if (! varianceValid) {
             variance() = varSum / count();
             varianceValid = true;
+            if (count() != recount)
+                INCA_WARNING("Statistics: Variance pass had different number "
+                             "of samples: " << count() << " != " << recount);
         }
     }
 
+    // XXX This is a bit hacked
+    void setValid(bool valid) {
+        meanValid = varianceValid = valid;
+    }
+
 protected:
-    ElementType varSum;
+    ElementType varSum, bucketSize;
+    int recount;
     bool meanValid, varianceValid;
 };
 
@@ -160,8 +191,10 @@ public:
     using Base::sum;
     using Base::min;
     using Base::max;
+    using Base::range;
     using Base::mean;
     using Base::variance;
+    using Base::histogram;
     using Base::count;
 
 
@@ -185,14 +218,26 @@ public:
     // Calculate statistics of the distribution, then dump the cache
     void done() {
         if (count() > 0) {
-            // Calculate the mean
+            // Calculate the mean and the range
             mean() = sum() / count();
+            range() = max() - min();
 
-            // Calculate the variance
+            // Calculate the variance & the histogram
             ElementType varSum(0);
+            ElementType bucketSize = (max() - min()) / histogram().size();
             for (int i = 0; i < count(); ++i) {
                 ElementType diff = mean() - valueCache[i];
                 varSum += diff * diff;
+                int bucket = valueCache[i] == max()
+                    ? histogram().size() - 1
+                    : static_cast<int>((valueCache[i] - min()) / bucketSize);
+                if (bucket >= 0 && bucket < histogram().size())
+                    ++histogram()[bucket];
+                else
+                    INCA_WARNING("Statistics: Sample " << valueCache[i]
+                                 << " falls into out-of-bounds bucket "
+                                 << bucket << " of histogram ["
+                                 << min() << ',' << max() << ']');
             }
             variance() = varSum / count();
 
@@ -204,6 +249,9 @@ public:
             min() = 0;
         }
     }
+
+    // This is a bit hacked
+    void setValid(bool valid) { }
 
 protected:
     std::vector<ElementType> valueCache;

@@ -1,6 +1,6 @@
 /*
  * File: PassThruWidget.hpp
- * 
+ *
  * Author: Ryan L. Saunders
  *
  * Copyright 2004, Ryan L. Saunders. All rights reserved.
@@ -39,6 +39,9 @@ namespace inca {
 class inca::ui::PassThruWidget : public BasicWidget,
                                  virtual public WidgetPartContainer {
 private:
+    // self() function to get a shared_ptr to myself of the appropriate type
+    SHARED_PTR_TO_SELF(PassThruWidget);
+
     // Set this class up to contain properties
     PROPERTY_OWNING_OBJECT(PassThruWidget);
 
@@ -64,8 +67,18 @@ public:
         _widget = value;            // Set the new Widget
         acquireWidgetPart(_widget); // Tell him we got 'im
 
-        // Make sure the widget knows what size he is
-        if (_widget) _widget->resizeView(size);
+        // Tell the wrapped Widget about its context
+        if (_widget) {
+            _widget->resizeView(size);
+            _widget->setRenderer(this->_renderer);
+        }
+    }
+
+    // XXX HACK!
+    void setRenderer(RendererPtr r) {
+        BasicWidget::setRenderer(r);
+        if (_widget)
+            _widget->setRenderer(r);
     }
 
 
@@ -75,7 +88,7 @@ public:
 public:
     // Pass redisplay requests up to my parent
     void redisplay(WidgetPartConstPtr w) const { requestRedisplay(); }
-    
+
     // My sub-widget has same dimensions as me
     Dimension getSize(WidgetPartConstPtr w) const { return size; }
 

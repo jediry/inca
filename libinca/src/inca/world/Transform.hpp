@@ -122,12 +122,15 @@ public:
 
 
     // Local-coordinate relative controls
+    void moveLongitudinally(scalar_arg_t dist);
+    void moveLaterally(scalar_arg_t dist);
+    void moveVertically(scalar_arg_t dist);
+    void pan(scalar_arg_t hDist, scalar_arg_t vDist);
+    void dolly(scalar_arg_t fDist);
     void look(scalar_arg_t hAngle, scalar_arg_t vAngle);
     void yaw(scalar_arg_t angle);
     void pitch(scalar_arg_t angle);
     void roll(scalar_arg_t angle);
-    void pan(scalar_arg_t hDist, scalar_arg_t vDist);
-    void dolly(scalar_arg_t fDist);
 
 
 /*---------------------------------------------------------------------------*

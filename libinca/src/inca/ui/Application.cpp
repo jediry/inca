@@ -1,6 +1,6 @@
 /*
  * File: Application.cpp
- * 
+ *
  * Author: Ryan L. Saunders
  *
  * Copyright 2004, Ryan L. Saunders. All rights reserved.
@@ -42,9 +42,8 @@ Application::Application() : timer(this) {
     if (! instanceExists()) {
         _instance = this;   // Claim singleton-ness
     } else {
-        logger << "Application(): There is already an existing "
-                  "application instance.";
-        logger.error();
+        INCA_ERROR("Application(): There is already an existing "
+                   "application instance.")
         // XXX should this die a painful death?
     }
 }
@@ -77,8 +76,8 @@ void Application::initialize(int &argc, char **argv) {
  *---------------------------------------------------------------------------*/
 // Cause the application to terminate
 void Application::exit(int status, const string &msg) {
-    cerr << msg << endl;    // Print out the message...
-    ::exit(status);         // ...and bail out of the program
+    std::cerr << msg << endl;   // Print out the message...
+    ::exit(status);             // ...and bail out of the program
 };
 
 

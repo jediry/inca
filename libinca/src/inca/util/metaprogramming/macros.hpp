@@ -115,6 +115,7 @@
 #define IS_CONST(C)             ::boost::is_const< C >
 
 #define EQUAL(P1, P2)       typename ::boost::mpl::equal_to< P1 COMMA P2 >::type
+#define LESS(P1, P2)        typename ::boost::mpl::less< P1 COMMA P2 >::type
 #define PLUS(P1, P2)        typename ::boost::mpl::plus< P1 COMMA P2 >::type
 #define MINUS(P1, P2)       typename ::boost::mpl::minus< P1 COMMA P2 >::type
 #define TIMES(P1, P2)       typename ::boost::mpl::times< P1 COMMA P2 >::type
@@ -192,6 +193,7 @@
 #undef IS_CONST
 
 #undef EQUAL
+#undef LESS_THAN
 #undef PLUS
 #undef MINUS
 #undef TIMES

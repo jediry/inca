@@ -1,6 +1,6 @@
 /*
  * File: types.hpp
- * 
+ *
  * Author: Ryan L. Saunders
  *
  * Copyright 2004, Ryan L. Saunders. All rights reserved.
@@ -30,9 +30,9 @@ namespace inca {
             Quads               = 7,
             QuadStrip           = 8,
             Polygon             = 9,
-            BillboardSprite     = 10,
+//            BillboardSprite     = 10,
         };
-        const unsigned int ALL_PRIMITIVE_TYPES = BillboardSprite + 1;
+        const unsigned int ALL_PRIMITIVE_TYPES = Polygon + 1;
         inline ostream & operator<<(ostream &o, PrimitiveType type) {
             switch (type) {
                 case Points:            return o << "Points";
@@ -45,7 +45,7 @@ namespace inca {
                 case Quads:             return o << "Quads";
                 case QuadStrip:         return o << "QuadStrip";
                 case Polygon:           return o << "Polygon";
-                case BillboardSprite:   return o << "BillboardSprite";
+//                case BillboardSprite:   return o << "BillboardSprite";
                 default:                return o << "UNKNOWN PrimitiveType"
                                                  << int(type);
             }
@@ -94,7 +94,7 @@ namespace inca {
         enum RenderPass {
             // "Standard" render passes
             Opacity      = 0,   // Render only opaque parts
-            Wireframe    = 1,   // Render as wireframe
+//            Wireframe    = 1,   // Render as wireframe
             Transparency = 2,   // Render only transparent parts
 
             // Special render passes
@@ -106,7 +106,7 @@ namespace inca {
             switch (pass) {
                 case Opacity:       return o << "Opacity";
                 case Transparency:  return o << "Transparency";
-                case Wireframe:     return o << "Wireframe";
+//                case Wireframe:     return o << "Wireframe";
                 case Selection:     return o << "Selection";
                 default:            return o << "UNKNOWN RenderPass "
                                              << int(pass);

@@ -1,6 +1,6 @@
 /*
  * File: PassThruControl.hpp
- * 
+ *
  * Author: Ryan L. Saunders
  *
  * Copyright 2004, Ryan L. Saunders. All rights reserved.
@@ -63,6 +63,18 @@ public:
         releaseWidgetPart(_control);    // Let the old Control go
         _control = value;               // Set the new Control
         acquireWidgetPart(_control);    // Tell him we got 'im
+
+        // Tell the wrapped Control about its context
+        if (_control) {
+            _control->setRenderer(this->_renderer);
+        }
+    }
+
+    // XXX HACK!
+    void setRenderer(RendererPtr r) {
+        BasicControl::setRenderer(r);
+        if (_control)
+            _control->setRenderer(r);
     }
 
 

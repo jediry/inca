@@ -1,6 +1,6 @@
 /*
  * File: ui.hpp
- * 
+ *
  * Author: Ryan L. Saunders
  *
  * Copyright 2004, Ryan L. Saunders. All rights reserved.
@@ -89,7 +89,7 @@
 #include "ui/CompositeWidget.hpp"
 
 // Import specialized widget classes
-#include "ui/CameraControl.hpp"
+#include "ui/CameraNavigationWidget.hpp"
 #include "ui/MultiplexorWidget.hpp"
 
 // Import supported toolkit implementations

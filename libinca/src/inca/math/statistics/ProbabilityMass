@@ -1,0 +1,148 @@
+/** -*- C++ -*-
+ *
+ * \File ProbabilityMass
+ *
+ * \Author Ryan L. Saunders
+ *
+ * Copyright 2004, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ */
+
+#ifndef INCA_MATH_STATISTICS_PROBABILITY_MASS
+#define INCA_MATH_STATISTICS_PROBABILITY_MASS
+
+// Import system configuration
+#include <inca/inca-common.h>
+
+
+namespace inca {
+    namespace math {
+        // Forward declarations
+        template <typename ScalarT> class ProbabilityMass;
+    }
+}
+
+// Import container definitions
+#include <vector>
+
+// Import STL algorithms for working on vectors
+#include <algorithm>
+#include <functional>
+
+
+template <typename ScalarT>
+class inca::math::ProbabilityMass {
+public:
+    // Type definitions
+    typedef ScalarT                 Scalar;
+    typedef std::vector<Scalar>     ScalarArray;
+
+    // Special "don't care" value, indicating that this element evenly divides
+    // any unclaimed probability mass with the other "don't care" elements
+    static const Scalar REMAINDER = -1;
+
+    // Default (no-init) constructor
+    explicit ProbabilityMass() : _isValid(false) { }
+
+    // List-copy constructor
+    template <class ScalarList>
+    explicit ProbabilityMass(const ScalarList & el) {
+        add(el);
+    }
+
+    // PMF mutators
+    void clear() {
+        _elements.clear();
+        _mass.clear();
+        _isValid = false;
+    }
+    void add(const Scalar & e) {
+        _elements.push_back(e);     // Stick it into the list
+        _isValid = false;           // Mark our cumulative disto as invalid
+    }
+    template <class ScalarList>
+    void add(const ScalarList & el) {
+        // Make sure we don't have to repeatedly resize this
+        _elements.reserve(el.size());
+
+        // Add all the elements in the list
+        typename ScalarList::const_iterator it;
+        for (it = el.begin(); it != el.end(); ++it)
+            add(*it);
+    }
+        
+    // Element accessors
+    SizeType size() const { return _elements.size(); }
+          Scalar & element(IndexType i)       { return _elements[i]; }
+    const Scalar & element(IndexType i) const { return _elements[i]; }
+
+    // Cumulative probability value
+    const Scalar & mass(IndexType i) const {
+        ensureValid();
+        return _mass[i];
+    }
+
+    // Index of "bucket" corresponding to a value
+    IndexType indexFor(const Scalar & e) const {
+        // Make sure we have good data...
+        ensureValid();
+
+        // This is STL voodoo to do a search for the index
+        // of the smallest value in the cumulative probability
+        // distribution that is greater than the random value we
+        // generated. So, for example, if the cumulative probability
+        // distribution is ( 0.1, 0.5, 0.55, 1.0), and the random
+        // value is 0.51, then it will return index 2, corresponding
+        // to 0.55 (remember, C++ indexes starting from 0).
+        return (std::find_if(_mass.begin(), _mass.end(),
+                             std::bind1st(std::less_equal<Scalar>(), e))
+                - _mass.begin());
+    }
+
+
+protected:
+    // Calculate the cumulative distribution from the element array
+    void ensureValid() const {
+        if (! _isValid) {
+            // Make the mass function the right size
+            _mass.resize(_elements.size());
+
+            // Figure out how much mass to give to each "remainder" elements:
+            // If the elements that have a definite probability have already
+            // used up our budget of 1.0 mass, then the "remainde" elements get
+            // nothing and we have to scale down the others to fit.
+            Scalar massUsed = 0;
+            int remainderElementCount = 0;
+            for (IndexType i = 0; i < size(); ++i)
+                if (_elements[i] != REMAINDER)  massUsed += _elements[i];
+                else                            ++remainderElementCount;
+
+            Scalar portion, divisor;
+            if (massUsed > 1) {
+                portion = 0;
+                divisor = massUsed;
+            } else {
+                portion = massUsed / remainderElementCount;
+                divisor = 1;
+            }
+
+            // Calculate the PMF
+            Scalar sum = 0;
+            for (IndexType i = 0; i < size(); ++i) {
+                if (_elements[i] != REMAINDER)  sum += _elements[i];
+                else                            sum += portion;
+                _mass[i] = _elements[i] / divisor;
+            }
+
+            // Results are valid, sir!
+            _isValid = true;
+        }
+    }
+
+            ScalarArray _elements;
+    mutable ScalarArray _mass;
+    mutable bool _isValid;
+};
+
+#endif

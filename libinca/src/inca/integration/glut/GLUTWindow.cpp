@@ -157,6 +157,8 @@ void GLUTWindow::reshape(int w, int h) {
     size[0] = w; size[1] = h;           // Update our window dimensions
     if (widget) {
         if (! widgetInitialized) {      // We only call initializeView() once
+            this->_renderer.reset(new Renderer());
+            widget->setRenderer(this->_renderer);
             widget->initializeView();
             widgetInitialized = true;
         }
@@ -223,7 +225,11 @@ void GLUTWindow::special(int key, int x, int y) {
 void GLUTWindow::overlayDisplay() { /* Do nothing right now */ }
 void GLUTWindow::display() {
     if (widget) {
-        widget->renderView();
+        renderer().beginFrame();
+
+            widget->renderView();
+
+        renderer().endFrame();
         glutSwapBuffers();
     }
 }
@@ -290,10 +296,9 @@ KeyCode GLUTWindow::translateNormalKey(unsigned char key) {
         case 0x7F:              k = KeyDelete;          break;
         case 0x1B:              k = KeyEscape;          break;
         default:
-            logger << "translateNormalKey('" << key << "', 0x"
-                   << std::hex << int(key) << std::dec
-                   << "): Unrecognized keycode";
-            logger.warning();
+            INCA_WARNING("translateNormalKey('" << key << "', 0x"
+                         << std::hex << int(key) << std::dec
+                         << "): Unrecognized keycode")
             k = InvalidKey;
         }
     }
@@ -331,10 +336,9 @@ KeyCode GLUTWindow::translateSpecialKey(int key) {
         case GLUT_KEY_PAGE_DOWN:    k = KeyPageDown;   break;
         case GLUT_KEY_INSERT:       k = KeyInsert;     break;
         default:
-            logger << "translateSpecialKey(" << key << ", 0x"
-                   << std::hex << key << std::dec
-                   << "): Unrecognized keycode";
-            logger.warning();
+            INCA_WARNING("translateSpecialKey(" << key << ", 0x"
+                         << std::hex << key << std::dec
+                         << "): Unrecognized keycode")
             k = InvalidKey;
     }
 //    cerr << "Convert " << int(key) << " -> " << int(k) << endl;
@@ -387,17 +391,17 @@ void GLUTWindow::setFullScreen(bool fs) {
     if (fs && ! fullScreen) {       // ...then we must make it so
         fullScreen = true;              // We're going full-out
         restoreSize = size;             // Store the size for later
-        cerr << "Full screen\n";
+        INCA_INFO("Full screen")
         glutPushWindow();               // Store the previous window
             glutSetWindow(windowID);        // Pick this window
             glutFullScreen();               // Full-screen-ify it
         glutPopWindow();                // Restore the previous window
     } else if (!fs && fullScreen) { // ...OK...gotta put it back
-        cerr << "Un-full-screen\n";
+        INCA_INFO("Un-full-screen")
         restore();
     }
 #else
-    cerr << "Full-screen mode is not supported by this version of GLUT\n";
+    INCA_ERROR("Full-screen mode is not supported by this version of GLUT");
 #endif
 }
 
@@ -494,4 +498,3 @@ GLUTWindow::Dimension GLUTWindow::getScreenSize() const {
 }
 
 void GLUTWindow::requestRedisplay() const { glutPostRedisplay(); }
-

@@ -24,25 +24,72 @@
 
 
 RENDERER_TEMPLATE
-class RENDERER::Viewport : public RENDERER::Component {
+class RENDERER::Viewport
+    : public RENDERER::Component,
+      protected CachePolicy<API::FirstViewportProperty,
+                            API::LastViewportProperty> {
 /*---------------------------------------------------------------------------*
- | Type definitions
+ | Constructor & destructor
  *---------------------------------------------------------------------------*/
 public:
-    typedef inca::Region<2> Region;
+    // Constructor
+    explicit Viewport(RENDERER & r) : Component(r, 0) { }
+
+     // Destructor
+    virtual ~Viewport() { }
 
 
 /*---------------------------------------------------------------------------*
- | Constructors
+ | Viewport functions
  *---------------------------------------------------------------------------*/
 public:
-    Viewport(RENDERER & r) : Component(r, 0) { }
-
-    const Region & bounds() const;
-
+    const Region & bounds() const {
+        SYNC_CACHE_AND_RETURN(API::ViewportBounds, Region, _bounds);
+    }
+    void setBounds(const Region & b) {
+        WRITE_THRU_CACHE(API::ViewportBounds, Region, _bounds, b);
+    }
 
 protected:
-    Region viewportBounds;
+    mutable Region _bounds;
+
+
+/*---------------------------------------------------------------------------*
+ | Coordinate transformation functions
+ *---------------------------------------------------------------------------*/
+public:
+    Point3D transform(const Point3D & p) const {
+        const Region & b = bounds();
+        Point3D s;
+        s[0] = b.base(0) + b.size(0) * (p[0] + 1) / 2;
+        s[1] = b.base(1) + b.size(1) * (p[1] + 1) / 2;
+        s[2] = (p[2] + 1) / 2;
+        return s;
+    }
+    Vector3D transform(const Vector3D & v) const {
+        const Region & b = bounds();
+        Vector3D s;
+        s[0] = b.base(0) + b.size(0) * (v[0] + 1) / 2;
+        s[1] = b.base(1) + b.size(1) * (v[1] + 1) / 2;
+        s[2] = (v[2] + 1) / 2;
+        return s;
+    }
+    Point3D untransform(const Point3D & s) const {
+        const Region & b = bounds();
+        Point3D p;
+        p[0] = 2 * (s[0] - b.base(0)) / b.size(0) - 1;
+        p[1] = 2 * (s[1] - b.base(1)) / b.size(1) - 1;
+        p[2] = 2 * s[2] - 1;
+        return p;
+    }
+    Vector3D untransform(const Vector3D & s) const {
+        const Region & b = bounds();
+        Vector3D v;
+        v[0] = 2 * (s[0] - b.base(0)) / b.size(0) - 1;
+        v[1] = 2 * (s[1] - b.base(1)) / b.size(1) - 1;
+        v[2] = 2 * s[2] - 1;
+        return v;
+    }
 };
 
 #endif

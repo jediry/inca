@@ -23,6 +23,9 @@
 // Import rendering primitive data structure
 #include "PrimitiveArray"
 
+// Import metaprogramming tools
+#include <inca/util/metaprogramming/promote>
+
 
 RENDERER_TEMPLATE
 class RENDERER::Rasterizer
@@ -34,7 +37,7 @@ class RENDERER::Rasterizer
  *---------------------------------------------------------------------------*/
 public:
     // Constructor
-    Rasterizer(RENDERER &r) : Component(r, 0) { }
+    explicit Rasterizer(RENDERER &r) : Component(r, 0) { }
 
     // Destructor
     virtual ~Rasterizer() { }
@@ -60,6 +63,7 @@ public:
     VALUE_PROPERTY(ShadingModel,    ShadingModel,       shadingModel)
     VALUE_PROPERTY(geometry_t,      PointDiameter,      pointDiameter)
     VALUE_PROPERTY(geometry_t,      LineWidth,          lineWidth)
+    VALUE_PROPERTY(geometry_t,      PolygonOffset,      polygonOffset)
     VALUE_PROPERTY(Color,           CurrentColor,       currentColor)
     VALUE_PROPERTY(Normal,          CurrentNormal,      currentNormal)
     VALUE_PROPERTY(TexCoord,        CurrentTexCoord,    currentTexCoords)
@@ -67,7 +71,8 @@ public:
 
     // Scalar-list versions
     // FIXME: scalar versions of setNormal, etc.
-
+public:
+    void setSelectionID(IDType id) { }
 
 /*---------------------------------------------------------------------------*
  | Vertex-array functions
@@ -108,7 +113,25 @@ public:
     template <typename scalar, SizeType dim>
     void vertexAt(const math::Point<scalar, dim> & p) {
         ++_vertexCount;
-        API::renderVertex(p);
+        API::renderVertexAt(p);
+    }
+    template <typename S0, typename S1>
+    void vertexAt(S0 s0, S1 s1) {
+        typedef typename promote<S0, S1>::type S;
+        ++_vertexCount;
+        API::renderVertexAt(S(s0), S(s1));
+    }
+    template <typename S0, typename S1, typename S2>
+    void vertexAt(S0 s0, S1 s1, S2 s2) {
+        typedef typename promote<S0, S1, S2>::type S;
+        ++_vertexCount;
+        API::renderVertexAt(S(s0), S(s1), S(s2));
+    }
+    template <typename S0, typename S1, typename S2, typename S3>
+    void vertexAt(S0 s0, S1 s1, S2 s2, S3 s3) {
+        typedef typename promote<S0, S1, S2, S3>::type S;
+        ++_vertexCount;
+        API::renderVertexAt(S(s0), S(s1), S(s2), S(s3));
     }
 
     // Create a vertex using the data in the currently enabled arrays

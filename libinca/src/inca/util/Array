@@ -24,8 +24,9 @@ namespace inca {
 // Import iterator adapter definitions
 #include "iterators/ReverseIteratorAdapter"
 
-// Import STL function definitions
+// Import STL dependencies
 #include <algorithm>
+#include <sstream>
 
 // Import metaprogramming tools
 #include "metaprogramming/is_collection.hpp"
@@ -241,6 +242,19 @@ public:
  * Element-wise arithmetic operators & functions for numeric scalar types
  *****************************************************************************/
 namespace inca {
+//#define ARRAY_RESULT(ACTION) Array<typename ReturnType<T0, T1, ACTION>::type, dim>
+//#define ARRAY_TEMPLATE template <typename T0, typename T1, inca::SizeType dim>
+
+//    #define ARRAY_BIN_OP(OP, ACTION) \
+//        ARRAY_TEMPLATE              \
+//    ARRAY_RESULT(ACTION) operator OP(const T0 & t, const Array<T1, dim> & a) {
+
+//    template <typename T0, typename T1, inca::SizeType dim>
+//    Array<typename ReturnType<T0, T1, ACTION>::type, dim>
+//    operator OP (const T0 & t, const Array<T1, dim> & a) {
+//        function_requires< OperationDefinedConcept<T0, T1, ACTION> >();
+//        Array<typename ReturnType<T0, T1, Action>::type, dim> result;
+
     template <typename Scalar1, typename Scalar2, inca::SizeType dim>
     bool operator==(const Array<Scalar1, dim> & a1, const Array<Scalar2, dim> & a2) {
         for (IndexType i = 0; i < dim; ++i)

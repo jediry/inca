@@ -16,6 +16,7 @@
 #include <inca/util/metaprogramming/Nothing.hpp>
 using namespace inca;
 using namespace inca::rendering;
+using namespace inca::math;
 
 // Import C++-ified OpenGL
 #define GL_HPP_IMPORT_INCA
@@ -67,6 +68,12 @@ template <> struct gl_type<GLdouble> { static const GLenum value = GL_DOUBLE; };
 }
 #define GL_GET_INTEGER_VALUE(PROPERTY, VALUE) {                     \
     GL::glGetIntegerv(PROPERTY, &VALUE);                            \
+}
+#define GL_GET_FLOAT_VALUE(PROPERTY, VALUE) {                       \
+    GL::glGetFloatv(PROPERTY, &VALUE);                              \
+}
+#define GL_GET_DOUBLE_VALUE(PROPERTY, VALUE) {                      \
+    GL::glGetDoublev(PROPERTY, &VALUE);                             \
 }
 #define GL_GET_ARRAY_VALUE(PROPERTY, VALUE) {                       \
     GL::glGetArray(PROPERTY, VALUE);                                \
@@ -279,6 +286,46 @@ void API::setHardwareState<API::PolygonSmoothing>(bool enabled) {
 /*---------------------------------------------------------------------------*
  | IMR::Rasterizer -- Rasterization parameter functions
  *---------------------------------------------------------------------------*/
+// Background color
+template <>
+void API::getHardwareState<API::BackgroundColor>(RGB & color) {
+    GL_GET_ARRAY_VALUE(GL_COLOR_CLEAR_VALUE, color);
+}
+template <>
+void API::setHardwareState<API::BackgroundColor>(const RGB & color) {
+    glClearColor(color);
+}
+
+// Point diameter
+template <>
+void API::getHardwareState<API::PointDiameter>(GLfloat & diameter) {
+    GL_GET_FLOAT_VALUE(GL_POINT_SIZE, diameter);
+}
+template <>
+void API::setHardwareState<API::PointDiameter>(GLfloat diameter) {
+    glPointSize(diameter);
+}
+
+// Line width
+template <>
+void API::getHardwareState<API::LineWidth>(GLfloat & width) {
+    GL_GET_FLOAT_VALUE(GL_LINE_WIDTH, width);
+}
+template <>
+void API::setHardwareState<API::LineWidth>(GLfloat width) {
+    glLineWidth(width);
+}
+
+// Polygon offset
+template <>
+void API::getHardwareState<API::PolygonOffset>(GLfloat & offset) {
+    GL_GET_FLOAT_VALUE(GL_POLYGON_OFFSET_UNITS, offset);
+}
+template <>
+void API::setHardwareState<API::PolygonOffset>(GLfloat offset) {
+    glPolygonOffset(0.0f, offset);
+}
+
 // Shading mode
 template <>
 void API::getHardwareState<API::ShadingModel>(::inca::rendering::ShadingModel & model) {
@@ -297,16 +344,6 @@ void API::setHardwareState<API::ShadingModel>(::inca::rendering::ShadingModel mo
         case FlatShade:   glShadeModel(GL_FLAT);   break;
         default:          glShadeModel(GL_SMOOTH); break;
     }
-}
-
-// Background color
-template <>
-void API::getHardwareState<API::BackgroundColor>(RGB & color) {
-    GL_GET_ARRAY_VALUE(GL_COLOR_CLEAR_VALUE, color);
-}
-template <>
-void API::setHardwareState<API::BackgroundColor>(const RGB & color) {
-    glClearColor(color);
 }
 
 // Drawing color
@@ -494,6 +531,57 @@ NOTHING_ARRAY_SETTER(EdgeFlag, GL_EDGE_FLAG_ARRAY)
 
 
 /*---------------------------------------------------------------------------*
+ | IMR::Rasterizer -- Primitive rendering functions
+ *---------------------------------------------------------------------------*/
+
+// Start/end rendering a geometric primitive
+void API::beginPrimitive(PrimitiveType type) { GL::glBegin(translate(type)); }
+void API::endPrimitive() { GL::glEnd(); }
+
+// Render a vertex from the current vertex array
+void API::renderVertexIndex(IndexType i) { GL::glArrayElement(i); }
+
+// Render a range of vertices from the current arrays in a single call
+void API::renderArrayRange(PrimitiveType type, IndexType from, SizeType count) {
+    GL::glDrawArrays(translate(type), from, count);
+}
+
+
+#define RENDER_VERTEX(TYPE)                                                 \
+    template <>                                                             \
+    void API::renderVertexAt<TYPE>(TYPE x, TYPE y) {                        \
+        glVertex(x, y);                                                     \
+    }                                                                       \
+    template <>                                                             \
+    void API::renderVertexAt<TYPE>(TYPE x, TYPE y, TYPE z) {                \
+        glVertex(x, y, z);                                                  \
+    }                                                                       \
+    template <>                                                             \
+    void API::renderVertexAt<TYPE>(TYPE x, TYPE y, TYPE z, TYPE w) {        \
+        glVertex(x, y, z, w);                                               \
+    }                                                                       \
+    template <>                                                             \
+    void API::renderVertexAt<Point<TYPE, 2> >(const Point<TYPE, 2> & v) {   \
+        glVertex(v);                                                        \
+    }                                                                       \
+    template <>                                                             \
+    void API::renderVertexAt<Point<TYPE, 3> >(const Point<TYPE, 3> & v) {   \
+        glVertex(v);                                                        \
+    }                                                                       \
+    template <>                                                             \
+    void API::renderVertexAt<Point<TYPE, 4> >(const Point<TYPE, 4> & v) {   \
+        glVertex(v);                                                        \
+    }
+
+RENDER_VERTEX(GLshort)
+RENDER_VERTEX(GLint)
+RENDER_VERTEX(GLfloat)
+RENDER_VERTEX(GLdouble)
+
+#undef RENDER_VERTEX
+
+
+/*---------------------------------------------------------------------------*
  | IMR::MatrixStack -- stack depth functions
  *---------------------------------------------------------------------------*/
 
@@ -621,29 +709,28 @@ void API::rotateMatrix(IDType id, geometry_t angle, const Vector3D & around) {
 }
 
 // Translate by a vector
-void API::translateMatrix(IDType id, const Vector3D &v) {
-//    std::cerr << "xlate\n";
+template <>
+void API::translateMatrix<Point<GLfloat, 3> >(IDType id, const Point<GLfloat, 3> & v) {
+    GL::glTranslate(v);
+}
+template <>
+void API::translateMatrix<Vector<GLfloat, 3> >(IDType id, const Vector<GLfloat, 3> & v) {
     GL::glTranslate(v);
 }
 
 
 /*---------------------------------------------------------------------------*
- | IMR::Rasterizer -- Primitive rendering functions
+ | IMR::MatrixStack -- Matrix get/set/modify functions
  *---------------------------------------------------------------------------*/
-
-// Start/end rendering a geometric primitive
-void API::beginPrimitive(PrimitiveType type) { GL::glBegin(translate(type)); }
-void API::endPrimitive() { GL::glEnd(); }
-
-// Render a vertex at the specified coordinates
-//void API::renderVertexAt(...v) { GL::glVertex(v); }
-
-// Render a vertex from the current vertex array
-void API::renderVertexIndex(IndexType i) { GL::glArrayElement(i); }
-
-// Render a range of vertices from the current arrays in a single call
-void API::renderArrayRange(PrimitiveType type, IndexType from, SizeType count) {
-    GL::glDrawArrays(translate(type), from, count);
+template <>
+void API::getHardwareState<API::ViewportBounds>(Region & r) {
+    inca::Array<GLint, 2> bounds[2];
+    glGetIntegerv(GL_VIEWPORT, reinterpret_cast<GLint*>(bounds));
+    r.setBasesAndSizes(bounds[0], bounds[1]);
+}
+template <>
+void API::setHardwareState<API::ViewportBounds>(const Region & r) {
+    glViewport(r.base(0), r.base(1), r.size(0), r.size(1));
 }
 
 
@@ -651,6 +738,10 @@ void API::renderArrayRange(PrimitiveType type, IndexType from, SizeType count) {
  | IMR::LightingUnit -- Light functions
  *---------------------------------------------------------------------------*/
 // Light enabled
+template <>
+void API::getHardwareState<API::LightingUnitEnabled>(IDType id, bool & enabled) {
+    GL_GET_BOOLEAN_VALUE(id, enabled);
+}
 template <>
 void API::setHardwareState<API::LightingUnitEnabled>(IDType id, bool enabled) {
     GL_ENABLE(id, enabled);

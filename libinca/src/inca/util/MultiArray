@@ -1150,7 +1150,7 @@ public:
         CHECK_DIMENSIONALITY(dim, bs.size());
         CHECK_DIMENSIONALITY(dim, ex.size());
 
-        this->_bounds.setBounds(bs, ex);
+        this->_bounds.setBasesAndExtents(bs, ex);
         resizeMemory(preserveContents);
     }
 

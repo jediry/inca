@@ -1,6 +1,6 @@
 /*
  * File: WidgetPart.cpp
- * 
+ *
  * Author: Ryan L. Saunders
  *
  * Copyright 2004, Ryan L. Saunders. All rights reserved.
@@ -12,37 +12,37 @@
 #include "WidgetPart.hpp"
 using namespace inca::ui;
 
+typedef WidgetPart::Renderer    Renderer;
+typedef WidgetPart::RendererPtr RendererPtr;
+
 
 // Event-handler functions for reacting to how the container is
 // treating this WidgetPart.
 void WidgetPart::acquired(WidgetPartContainerPtr wpc) {
     // Make sure we weren't acquired by NULL
     if (! wpc) {
-        logger << "WidgetPart[" << name() << "] acquired by NULL?? Ignoring";
-        logger.warning();
+        INCA_WARNING("WidgetPart[" << name() << "] acquired by NULL?? Ignoring")
         return;
     }
 
     // Warn the user if things aren't quite kosher
     if (! _parent.expired()) {
         WidgetPartContainerPtr pp = parent();
-        logger << "WidgetPart[" << name() << "] acquired by " << wpc->name()
-               << " without being released by " << pp->name() << " first.";
-        logger.warning();
+        INCA_WARNING("WidgetPart[" << name() << "] acquired by "
+                     << wpc->name() << " without being released by "
+                     << pp->name() << " first.")
     }
 
     // Set the new parent and assume "active"
     _parent = wpc;
     _active = true;
-    logger << "WidgetPart[" << name() << "] acquired by " << wpc->name();
-    logger.info();
+    INCA_INFO("WidgetPart[" << name() << "] acquired by " << wpc->name())
 }
 void WidgetPart::released() {
     // Make sure a WidgetPart with no parent is not "released"
     if (_parent.expired()) {
-        logger << "WidgetPart[" << name() << "] released, but has no parent"
-                  "...ignoring.";
-        logger.warning();
+        INCA_WARNING("WidgetPart[" << name() << "] released, but has no "
+                     "parent...ignoring.")
         return;
     }
 
@@ -53,43 +53,39 @@ void WidgetPart::released() {
 void WidgetPart::activated() {
     // Make sure a WidgetPart with no parent is not "activated"
     if (_parent.expired()) {
-        logger << "WidgetPart[" << name() << "] activated, but has no parent"
-                  "...ignoring.";
-        logger.warning();
+        INCA_WARNING("WidgetPart[" << name() << "] activated, but has no "
+                     "parent...ignoring.")
         return;
     }
 
     // If we're already active, then why bother?
     if (_active) {
-        logger << "WidgetPart[" << name() << "] activated, but was already so.";
-        logger.warning();
+        INCA_WARNING("WidgetPart[" << name() << "] activated, "
+                     "but was already so.")
         return;
     }
 
     // OK...life is good, make the change
-    logger << "WidgetPart[" << name() << "] activated";
-    logger.info();
+    INCA_INFO("WidgetPart[" << name() << "] activated")
     _active = true;
 }
 void WidgetPart::suspended() {
     // Make sure a WidgetPart with no parent is not "suspended"
     if (_parent.expired()) {
-        logger << "WidgetPart[" << name() << "] suspended, but has no parent"
-                  "...ignoring.";
-        logger.warning();
+        INCA_WARNING("WidgetPart[" << name() << "] suspended, but has no "
+                     "parent...ignoring.")
         return;
     }
 
     // If we're already suspended, then why bother?
     if (! _active) {
-        logger << "WidgetPart[" << name() << "] suspended, but was already so.";
-        logger.warning();
+        INCA_WARNING("WidgetPart[" << name() << "] suspended, "
+                     "but was already so.")
         return;
     }
 
     // OK...life is good, make the change
-    logger << "WidgetPart[" << name() << "] suspended";
-    logger.info();
+    INCA_INFO("WidgetPart[" << name() << "] suspended")
     _active = false;
 }
 
@@ -121,3 +117,9 @@ WidgetPartContainerPtr WidgetPart::parent() const { return _parent.lock(); }
 
 // Are we active within our parent?
 bool WidgetPart::active() const { return ! _parent.expired() && _active; }
+
+
+// Renderer object accessors
+      Renderer & WidgetPart::renderer()       { return *_renderer; }
+const Renderer & WidgetPart::renderer() const { return *_renderer; }
+void WidgetPart::setRenderer(RendererPtr r) { _renderer = r; }

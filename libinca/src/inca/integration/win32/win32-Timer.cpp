@@ -25,9 +25,8 @@ clock_t inca::getSystemClockFrequency() {
     if (QueryPerformanceFrequency(&freq)) {
         return clock_t(freq.LowPart);
     } else {
-        logger << "getSystemClockFrequency(): "
-                  "No high-performance counter available on this system";
-        logger.error();
+        INCA_ERROR("getSystemClockFrequency(): "
+                   "No high-performance counter available on this system")
         return clock_t(0);
     }
 }
@@ -37,9 +36,8 @@ clock_t inca::getSystemClocks() {
     if (QueryPerformanceCounter(&count)) {
         return clock_t(count.LowPart);
     } else {
-        logger << "getSystemClocks(): "
-                  "No high-performance counter available on this system";
-        logger.error();
+        INCA_ERROR("getSystemClocks(): "
+                   "No high-performance counter available on this system")
         return clock_t(0);
     }
 }

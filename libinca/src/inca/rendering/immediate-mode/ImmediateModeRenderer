@@ -39,7 +39,7 @@
 namespace inca {
     namespace rendering {
         // Forward declarations
-        template <class APITraits, template <inca::IDType, inca::IDType> class CachePolicy>
+        template <class API, template <inca::IDType, inca::IDType> class CachePolicy>
             class ImmediateModeRenderer;
     };
 };
@@ -52,6 +52,8 @@ namespace inca {
 // Import rendering type definitions
 #include "types.hpp"
 
+// Import bounds checking utilities
+#include <inca/util/OutOfBoundsException.hpp>
 
 // Import container definitions
 #include <vector>
@@ -94,6 +96,7 @@ public:
     typedef typename API::TexCoord      TexCoord;
 
     // Screenspace type definitions
+    typedef typename API::Region        Region;
     typedef typename API::Pixel         Pixel;
     typedef typename API::Dimension     Dimension;
 
@@ -156,6 +159,7 @@ public:
         // Create the LightingUnit objects
         for (int i = 0; i < API::lightingUnitCount(); ++i)
             _lightingUnits.push_back(LightingUnit(*this, API::lightingUnitID(i)));
+        INCA_DEBUG(API::lightingUnitCount() << " lighting units")
 
         // Create the TexturingUnit objects
         for (int i = 0; i < API::texturingUnitCount(); ++i)
@@ -338,20 +342,24 @@ public:
         return viewMatrix().untransform(local);
     }
 
-    // Transform between world and screen coordinate spaces
-    Point3D worldToScreen(const Point3D & world) const {
+    // Transform between local and screen coordinate spaces
+    Point3D localToScreen(const Point3D & local) const {
         return  viewport().transform(
-                    projectionMatrix().transform(
-                        viewMatrix().transform(world)
-                    )
+                    projectionMatrix().transform(local)
                 );
     }
-    Point3D screenToWorld(const Point3D & screen) const {
-        return  viewMatrix().untransform(
-                    projectionMatrix().untransform(
-                        viewport().untransform(screen)
-                    )
+    Point3D screenToLocal(const Point3D & screen) const {
+        return  projectionMatrix().untransform(
+                    viewport().untransform(screen)
                 );
+    }
+
+    // Transform between world and screen coordinate spaces
+    Point3D worldToScreen(const Point3D & world) const {
+        return localToScreen(worldToLocal(world));
+    }
+    Point3D screenToWorld(const Point3D & screen) const {
+        return screenToLocal(localToWorld(screen));
     }
 
 
