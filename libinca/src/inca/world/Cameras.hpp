@@ -79,13 +79,13 @@ public:
     // Properties specific to perspective cameras
     rw_property(scalar_t, aperture, 0.0);
     rw_property(scalar_t, focalLength, 1.0);
-    rw_property_cm(scalar_t, horizViewAngle, math::PI<scalar_t>() / 4.0);
-        property_mutator(scalar_t, horizViewAngle) {
+    rw_property_custom_set(scalar_t, horizViewAngle, math::PI<scalar_t>() / 4.0);
+        void property_set(scalar_t, horizViewAngle) {
             _horizViewAngle = value;
             _aspectRatio = horizViewAngle / vertViewAngle;
         }
-    rw_property_cm(scalar_t, vertViewAngle, math::PI<scalar_t>() / 4.0);
-        property_mutator(scalar_t, vertViewAngle) {
+    rw_property_custom_set(scalar_t, vertViewAngle, math::PI<scalar_t>() / 4.0);
+        void property_set(scalar_t, vertViewAngle) {
             _vertViewAngle = value;
             _aspectRatio = horizViewAngle / vertViewAngle;
         }
@@ -113,13 +113,13 @@ public:
     OrthographicCamera() : viewWidth(this), viewHeight(this) { }
 
     // Properties specific to orthographic cameras
-    rw_property_cm(scalar_t, viewWidth, 1.0);
-        property_mutator(scalar_t, viewWidth) {
+    rw_property_custom_set(scalar_t, viewWidth, 1.0);
+        void property_set(scalar_t, viewWidth) {
             _viewWidth = value;
             _aspectRatio = _viewWidth / _viewHeight;
         }
-    rw_property_cm(scalar_t, viewHeight, 1.0);
-        property_mutator(scalar_t, viewHeight) {
+    rw_property_custom_set(scalar_t, viewHeight, 1.0);
+        void property_set(scalar_t, viewHeight) {
             _viewHeight = value;
             _aspectRatio = _viewWidth / _viewHeight;
         }

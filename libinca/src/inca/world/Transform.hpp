@@ -75,15 +75,15 @@ public:
     rw_property(Point, position, Point(0, 0, 0));
 
     // What direction is "up"
-    rw_property_cm(Vector, worldUp, Vector(0, 1, 0));
-        property_mutator(Vector, worldUp) {
+    rw_property_custom_set(Vector, worldUp, Vector(0, 1, 0));
+        void property_set(Vector, worldUp) {
             _worldUp = value;
             basisInvalid = true;
         }
 
     // The absolute rotation of our system w/r/t the world coordinate axes
-    rw_property_cm(Quaternion, rotation, Quaternion(1.0, 0.0, 0.0, 0.0));
-        property_mutator(Quaternion, rotation) {
+    rw_property_custom_set(Quaternion, rotation, Quaternion(1.0, 0.0, 0.0, 0.0));
+        void property_set(Quaternion, rotation) {
             _rotation = value;
             basisInvalid = true;
         }

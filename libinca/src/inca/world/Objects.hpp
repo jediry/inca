@@ -48,11 +48,15 @@ private:
 
 public:
     // Constructor
-    Object() : transform(this), materials(this) { }
+    Object() : transform(this) { }
+    //Object() : transform(this), materials(this) { }
 
     // The properties that make up an object
     rw_ptr_property(Transform, transform, new Transform());
-    rw_list_property(Material, materials);
+//    rw_list_property(Material, materials);
+
+    // General object update hook
+    virtual void update(CameraPtr camera, double time) { }
 };
 
 #endif
