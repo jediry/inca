@@ -38,24 +38,34 @@ namespace inca {
     namespace raster {
         // General form (less efficient, since it has to copy)
         template <typename R1, typename R2>
-        void calculateDFT(R1 & dest, const R2 & r2, bool DCInCenter);
+        void calculateDFT(R1 & dest, const R2 & r2);
+        template <typename R1, typename R2>
+        void calculateInverseDFT(R1 & dest, const R2 & r2);
 
 
-        // Specializations for float, double, long double (implemented by
-        // third-party FFT library)
+        // DFT Specializations for float, double and long double
+        // (implemented by third-party FFT library)
         template <>
         void calculateDFT(MultiArrayRaster< std::complex<float>, 2> & dest,
-                          const MultiArrayRaster< float, 2 > & src,
-                          bool DCInCenter);
+                          const MultiArrayRaster< float, 2 > & src);
         template <>
         void calculateDFT(MultiArrayRaster< std::complex<double>, 2> & dest,
-                          const MultiArrayRaster< double, 2 > & src,
-                          bool DCInCenter);
+                          const MultiArrayRaster< double, 2 > & src);
         template <>
         void calculateDFT(MultiArrayRaster< std::complex<long double>, 2> & dest,
-                          const MultiArrayRaster< long double, 2 > & src,
-                          bool DCInCenter);
+                          const MultiArrayRaster< long double, 2 > & src);
 
+        // Inverse DFT Specializations for float, double and long double
+        // (implemented by third-party FFT library)
+        template <>
+        void calculateInverseDFT(MultiArrayRaster< float, 2> & dest,
+                           const MultiArrayRaster< std::complex<float>, 2 > & src);
+        template <>
+        void calculateInverseDFT(MultiArrayRaster< double, 2> & dest,
+                           const MultiArrayRaster< std::complex<double>, 2 > & src);
+        template <>
+        void calculateInverseDFT(MultiArrayRaster< long double, 2> & dest,
+                           const MultiArrayRaster< std::complex<long double>, 2 > & src);
 
         // Time/space domain => frequency domain transformation operator
         template <typename R1>
@@ -69,9 +79,12 @@ namespace inca {
             typedef typename Superclass::IndexArray     IndexArray;
             
             // Constructor
-            DFTRasterOperator(R1 & r, bool DCInCenter) : Superclass(r) {
-                MultiArrayRaster<typename ElementType::value_type, dimensionality> input(r);
-                calculateDFT(dft, input, DCInCenter);
+            DFTRasterOperator(R1 & r) : Superclass(r) {
+                MultiArrayRaster<typename R1::ElementType, dimensionality> input(r);
+                calculateDFT(dft, input);
+                this->_bases = dft.bases();
+                this->_extents = dft.extents();
+                validateRegion();
             }
 
             // Evaluator function
@@ -85,11 +98,89 @@ namespace inca {
             MultiArrayRaster<ElementType, R1::dimensionality> dft;
         };
 
+        // Frequency domain => time/space domain transformation operator
+        template <typename R1>
+        class InverseDFTRasterOperator
+                    : public UnaryRasterOperator<R1, typename R1::ElementType::value_type >,
+                      public InMemoryRasterTag {
+        public:
+            typedef UnaryRasterOperator<R1, typename R1::ElementType::value_type > Superclass;
+            typedef InverseDFTRasterOperator<R1>        OperatorType;
+            typedef typename Superclass::ElementType    ElementType;
+            typedef typename Superclass::IndexArray     IndexArray;
+            
+            // Constructor
+            InverseDFTRasterOperator(R1 & r) : Superclass(r) {
+                MultiArrayRaster<typename R1::ElementType, dimensionality> input(r);
+                calculateInverseDFT(idft, input);
+                this->_bases = idft.bases();
+                this->_extents = idft.extents();
+                validateRegion();
+            }
+
+            // Evaluator function
+            template <class IndexList>
+            ElementType operator()(const IndexList &indices) const {
+                return idft(indices);
+            }
+
+        protected:
+            // The iDFT coefficients
+            MultiArrayRaster<ElementType, R1::dimensionality> idft;
+        };
+
+        // Expand non-redundant representation of DFT to be symmetrical
+        template <typename R1>
+        class ExpandDFTRasterOperator
+                    : public UnaryRasterOperator<R1, typename R1::ElementType> {
+        public:
+            typedef UnaryRasterOperator<R1, typename R1::ElementType> Superclass;
+            typedef ExpandDFTRasterOperator<R1>        OperatorType;
+            typedef typename Superclass::ElementType    ElementType;
+            typedef typename Superclass::IndexArray     IndexArray;
+            
+            // Constructor
+            ExpandDFTRasterOperator(R1 & r, bool _DCInCenter)
+                    : Superclass(r), DCInCenter(_DCInCenter) {
+#if 0
+                // Figure out how big we're supposed to be
+                
+                // Determine center elements
+                centerLeft((this->size(0) - 1) / 2,
+                           (this->size(1) - 1) / 2);
+                centerRight(centerLeft[0] + !(r.size(0) % 2),    // Up one?
+                       center[1] + !(r.size(1) % 2));
+#endif
+            }
+
+            // Evaluator function
+            template <class IndexList>
+            ElementType operator()(const IndexList &indices) const {
+                return idft(indices);
+            }
+
+        protected:
+            // Whether we want the DC component at the center or the corner
+            bool DCInCenter;
+            
+            // Calculation of our "center" points (may be identical)
+            IndexArray centerLeft, centerRight;
+        };
+
+        // Factory function for calculating the DFT and its inverse
+        template <typename R1>
+        DFTRasterOperator<R1> DFT(R1 &r) {
+            return DFTRasterOperator<R1>(r);
+        }
+        template <typename R1>
+        InverseDFTRasterOperator<R1> iDFT(R1 &r) {
+            return InverseDFTRasterOperator<R1>(r);
+        }
 
         // Factory function
         template <typename R1>
-        DFTRasterOperator<R1> DFT(R1 &r, bool DCInCenter = false) {
-            return DFTRasterOperator<R1>(r, DCInCenter);
+        ExpandDFTRasterOperator<R1> expand(R1 &r, bool DCInCenter = false) {
+            return ExpandDFTRasterOperator<R1>(r, DCInCenter);
         }
     };
 };

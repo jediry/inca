@@ -29,6 +29,19 @@ inline void unpackRaster(scalar * arr, const MultiArrayRaster<scalar, 2> & r) {
     for (idx[0] = r.base(0); idx[0] <= r.extent(0); ++idx[0])
         for (idx[1] = r.base(1); idx[1] <= r.extent(1); ++idx[1])
             arr[k++] = r(idx);
+    cerr << "Unpacked " << k << " elements\n";
+}
+
+// Locally-defined template functions for copying things around
+template <typename scalar, typename scalar2>
+inline void repackRaster(MultiArrayRaster<scalar, 2> & r, const scalar * arr,
+                         scalar2 normalizationFactor) {
+    int k = 0;
+    Array<IndexType, 2> idx;
+    for (idx[0] = r.base(0); idx[0] <= r.extent(0); ++idx[0])
+        for (idx[1] = r.base(1); idx[1] <= r.extent(1); ++idx[1])
+            r(idx) = arr[k++] * normalizationFactor;
+    cerr << "Repacked " << k << " elements\n";
 }
 
 template <typename scalar>
@@ -161,29 +174,29 @@ inline void repackRaster(MultiArrayRaster<scalar, 2> & r,
 }
 
 
-// Specializations for float, double, long double (implemented by
-// third-party FFT library)
+// DFT Specializations for float, double, and long double
 template <>
 void inca::raster::calculateDFT(MultiArrayRaster< std::complex<float>, 2> & dest,
-                                const MultiArrayRaster< float, 2 > & src,
-                                bool DCInCenter) {
+                                const MultiArrayRaster< float, 2 > & src) {
     float *in;
-    int w = src.size(0),
-        h = src.size(1),
-        sz = w * h;
     std::complex<float> *out;
     fftwf_plan p;
+    int inW = src.size(0),
+        inH = src.size(1),
+        outW = inW,
+        outH = (inH/2 + 1);
+    float normalizationFactor = 1.0f;// / std::sqrt((float)inW * inH);
 
-    in = (float*)fftwf_malloc(sizeof(float) * sz);
-    out = (std::complex<float>*)fftwf_malloc(sizeof(std::complex<float>) * sz);
-    p = fftwf_plan_dft_r2c_2d(w, h, in, (fftwf_complex*)out, FFTW_ESTIMATE);
+    in = (float*)fftwf_malloc(sizeof(float) * inW * inH);
+    out = (std::complex<float>*)fftwf_malloc(sizeof(std::complex<float>) * outW * outH);
+    p = fftwf_plan_dft_r2c_2d(inW, inH, in, (fftwf_complex*)out, FFTW_ESTIMATE);
 
     unpackRaster(in, src);
 
     fftwf_execute(p); /* repeat as needed */
 
-    dest.resize(src.sizes());
-    repackRaster(dest, out, DCInCenter);
+    dest.resize(outW, outH);
+    repackRaster(dest, out, normalizationFactor);
 
     fftwf_destroy_plan(p);
     fftwf_free(in); fftwf_free(out);
@@ -191,25 +204,26 @@ void inca::raster::calculateDFT(MultiArrayRaster< std::complex<float>, 2> & dest
 
 template <>
 void inca::raster::calculateDFT(MultiArrayRaster< std::complex<double>, 2> & dest,
-                                const MultiArrayRaster< double, 2 > & src,
-                                bool DCInCenter) {
+                                const MultiArrayRaster< double, 2 > & src) {
     double *in;
-    int w = src.size(0),
-        h = src.size(1),
-        sz = w * h;
     std::complex<double> *out;
     fftw_plan p;
+    int inW = src.size(0),
+        inH = src.size(1),
+        outW = inW,
+        outH = (inH/2 + 1);
+    double normalizationFactor = 1 / std::sqrt((double)inW * inH);
 
-    in = (double*)fftw_malloc(sizeof(double) * sz);
-    out = (std::complex<double>*)fftw_malloc(sizeof(std::complex<double>) * sz);
-    p = fftw_plan_dft_r2c_2d(w, h, in, (fftw_complex*)out, FFTW_ESTIMATE);
+    in = (double*)fftw_malloc(sizeof(double) * inW * inH);
+    out = (std::complex<double>*)fftw_malloc(sizeof(std::complex<double>) * outW * outH);
+    p = fftw_plan_dft_r2c_2d(inW, inH, in, (fftw_complex*)out, FFTW_ESTIMATE);
 
     unpackRaster(in, src);
 
     fftw_execute(p); /* repeat as needed */
 
-    dest.resize(src.sizes());
-    repackRaster(dest, out, DCInCenter);
+    dest.resize(outW, outH);
+    repackRaster(dest, out, normalizationFactor);
 
     fftw_destroy_plan(p);
     fftw_free(in); fftw_free(out);
@@ -217,26 +231,57 @@ void inca::raster::calculateDFT(MultiArrayRaster< std::complex<double>, 2> & des
 
 template <>
 void inca::raster::calculateDFT(MultiArrayRaster< std::complex<long double>, 2> & dest,
-                                const MultiArrayRaster< long double, 2 > & src,
-                                bool DCInCenter) {
+                                const MultiArrayRaster< long double, 2 > & src) {
     long double *in;
-    int w = src.size(0),
-        h = src.size(1),
-        sz = w * h;
     std::complex<long double> *out;
     fftwl_plan p;
+    int inW = src.size(0),
+        inH = src.size(1),
+        outW = inW,
+        outH = (inH/2 + 1);
+    long double normalizationFactor = 1 / std::sqrt((long double)inW * inH);
 
-    in = (long double*)fftwl_malloc(sizeof(long double) * sz);
-    out = (std::complex<long double>*)fftwl_malloc(sizeof(std::complex<long double>) * sz);
-    p = fftwl_plan_dft_r2c_2d(w, h, in, (fftwl_complex*)out, FFTW_ESTIMATE);
+    in = (long double*)fftwl_malloc(sizeof(long double) * inW * inH);
+    out = (std::complex<long double>*)fftwl_malloc(sizeof(std::complex<long double>) * outW * outH);
+    p = fftwl_plan_dft_r2c_2d(inW, inH, in, (fftwl_complex*)out, FFTW_ESTIMATE);
 
     unpackRaster(in, src);
 
     fftwl_execute(p); /* repeat as needed */
 
-    dest.resize(src.sizes());
-    repackRaster(dest, out, DCInCenter);
+    dest.resize(outW, outH);
+    repackRaster(dest, out, normalizationFactor);
 
     fftwl_destroy_plan(p);
     fftwl_free(in); fftwl_free(out);
 }
+
+
+// Inverse DFT Specializations for float, double, and long double
+template <>
+void inca::raster::calculateInverseDFT(MultiArrayRaster< float, 2> & dest,
+                                 const MultiArrayRaster< std::complex<float>, 2 > & src) {
+    std::complex<float> *in;
+    float *out;
+    fftwf_plan p;
+    int inW = src.size(0),
+        inH = src.size(1),
+        outW = inW,
+        outH = (inH - 1) * 2;
+    float normalizationFactor = 1 / ((float)outW * outH);
+
+    in = (std::complex<float>*)fftwf_malloc(sizeof(std::complex<float>) * inW * inH);
+    out = (float*)fftwf_malloc(sizeof(float) * outW * outH);
+    p = fftwf_plan_dft_c2r_2d(outW, outH, (fftwf_complex*)in, out, FFTW_ESTIMATE);
+
+    unpackRaster(in, src);
+
+    fftwf_execute(p); /* repeat as needed */
+
+    dest.resize(outW, outH);
+    repackRaster(dest, out, normalizationFactor);
+
+    fftwf_destroy_plan(p);
+    fftwf_free(in); fftwf_free(out);
+}
+
