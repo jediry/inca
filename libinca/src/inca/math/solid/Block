@@ -24,9 +24,9 @@
 // Import Inca library configuration
 #include <inca/inca-common.h>
 
-// This is part of the Inca raster processing library
+// This is part of the Inca math library
 namespace inca {
-    namespace raster {
+    namespace math {
         // Forward declarations
         template <typename scalar_t, inca::size_t dim> class Block;
     };
@@ -41,7 +41,7 @@ namespace inca {
 
 
 template <typename scalar, inca::size_t dim>
-class inca::raster::Block {
+class inca::math::Block {
 /*---------------------------------------------------------------------------*
  | Type/constant declarations
  *---------------------------------------------------------------------------*/
