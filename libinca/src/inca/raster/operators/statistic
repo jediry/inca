@@ -49,10 +49,7 @@ namespace inca {
             // Result accessor functions            
             const ElementType & min() const { return _minMax[0]; }
             const ElementType & max() const { return _minMax[1]; }
-            const Array<ElementType, 2> & minMax() const { return _minMax; }
-
-            // Cast to 2-element array of ElementType
-            operator const ElementArray &() const { return minMax(); }
+            const Array<ElementType, 2> & range() const { return _minMax; }
 
         protected:
             bool initialized;       // Do we have valid values?
@@ -65,7 +62,7 @@ namespace inca {
             typedef typename R1::ElementType T;
             Range<T> minmax;    // Create the range-measurement functor
             apply(minmax, r);   // Apply it to the raster
-            return minmax.minMax();   // Return its output (cast to array)
+            return minmax.range();   // Return its output (cast to array)
         }
 
 
@@ -100,17 +97,11 @@ namespace inca {
                 return _means[pwr];
             }
 
-            // Cast to ElementArray (calls accessor for all powers)
-            operator const ElementArray &() const { return means(); }
-
-            // Cast to ElementType (calls accessor for top-most power)
-            operator const ElementType &() const { return mean(power); }
-
         protected:
             void evaluate() const {
                 if (! evaluated) {
                     for (int i = 0; i < sums.size(); ++i)
-                        if (count == 0)     _means[i] = 0;
+                        if (count == 0)     _means[i] = T(0);
                         else                _means[i] = sums[i] / count;
                     evaluated = true;
                 }
@@ -123,9 +114,9 @@ namespace inca {
 
         // Simplifying macro
         #define MEAN(POWER) {                                               \
-            Mean<T, POWER> M;       /* Create mean-measurement functor  */  \
+            Mean<typename R1::ElementType, POWER> M;       /* Create mean-measurement functor  */  \
             apply(M, r);            /* Apply it to the raster           */  \
-            return M;               /* Return output (cast to T)        */  \
+            return M.mean(POWER);   /* Return output (cast to T)        */  \
         }
         template <class R1>
         ENABLE_IF_T( is_raster<R1>,
@@ -208,17 +199,11 @@ namespace inca {
                 return _moments[pwr];
             }
 
-            // Cast to ElementArray (calls accessor for all powers)
-            operator const ElementArray &() const { return moments(); }
-
-            // Cast to ElementType (calls accessor for top-most power)
-            operator const ElementType &() const { return moment(power); }
-
         protected:
             void evaluate() const {
                 if (! evaluated) {
                     for (int i = 0; i < sums.size(); ++i)
-                        if (count == 0)     _moments[i] = 0;
+                        if (count == 0)     _moments[i] = T(0);
                         else                _moments[i] = sums[i] / count;
                     evaluated = true;
                 }
@@ -235,7 +220,7 @@ namespace inca {
         #define MOMENT(POWER) {                                             \
             Mean<T, POWER> M;       /* Create moment-measurement functor  */\
             apply(M, r);            /* Apply it to the raster           */  \
-            return M;               /* Return output (cast to T)        */  \
+            return M.moment(POWER); /* Return output (cast to T)        */  \
         }
         template <class R1>
         ENABLE_IF_T( is_raster<R1>,

@@ -144,6 +144,9 @@
 					RelativePath=".\src\inca\raster\operators\Dft">
 				</File>
 				<File
+					RelativePath=".\src\inca\raster\operators\gaussian">
+				</File>
+				<File
 					RelativePath=".\src\inca\raster\operators\gradient">
 				</File>
 				<File

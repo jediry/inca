@@ -27,7 +27,95 @@
 namespace inca {
     namespace raster {
 
-        // Map a clamped input range to an output range
+        // Clamp the values in a raster to a certain range
+        template <class R1>
+        class ClampRasterOperator
+                    : public UnaryRasterOperator<R1, typename R1::ElementType> {
+        public:
+            typedef UnaryRasterOperator<R1, typename R1::ElementType> Superclass;
+            typedef ClampRasterOperator<R1>        OperatorType;
+            typedef typename Superclass::ElementType    ElementType;
+            typedef Array<ElementType, 2>               ElementRange;
+
+            // Constructor giving clamp-to range
+            ClampRasterOperator(R1 & r, const ElementRange & cRange)
+                    : Superclass(r), clampRange(cRange) { }
+
+            // Evaluator function -- clamp to valid range
+            template <class IndexList>
+            ElementType operator()(const IndexList &indices) const {
+                ElementType value = first(indices);
+                if (value < clampRange[0])      value = clampRange[0];
+                else if (value > clampRange[1]) value = clampRange[1];
+                return value;
+            }
+
+        protected:
+            // The range to clamp to
+            ElementRange clampRange;
+        };
+
+        // Rotate a raster around a point
+        template <class R1, typename scalar>
+        class RotateRasterOperator
+                    : public UnaryRasterOperator<R1, typename R1::ElementType> {
+        public:
+            typedef scalar TransformScalar;
+            typedef UnaryRasterOperator<R1, typename R1::ElementType> Superclass;
+            typedef RotateRasterOperator<R1, scalar>        OperatorType;
+            typedef typename Superclass::ElementType    ElementType;
+            typedef typename Superclass::IndexArray     IndexArray;
+            typedef math::Vector<TransformScalar, R1::dimensionality> Vector;
+            typedef math::Point<TransformScalar, R1::dimensionality> Point;
+
+            // Constructor giving rotation amount (radians), rotating around
+            // center of source raster XXX this won't work for arb-sz-raster
+            template <class ScalarList>
+            RotateRasterOperator(R1 & r, TransformScalar angle,
+                                 const ScalarList & axis)
+                    : Superclass(r), rotationAngle(-angle), rotationAxis(axis) {
+                // Make the transform point the centroid of the raster
+                for (IndexType d = 0; d < dimensionality; ++d)
+                    centerPoint[d] = (extent(d) + base(d)) / TransformScalar(2);
+
+                // Figure out what the new bounds of the raster should be
+                calculateBounds();
+            }
+
+            // Constructor giving transform rotation amount and center point
+            template <class ScalarList1, class ScalarList2>
+            RotateRasterOperator(R1 & r, TransformScalar angle,
+                                 const ScalarList1 & axis,
+                                 const ScalarList2 & center)
+                    : Superclass(r), rotationAngle(-angle), rotationAxis(axis),
+                      centerPoint(center) {
+                // Figure out what the new bounds of the raster should be
+                calculateBounds();
+            }
+
+            // Evaluator function -- transform
+            template <class IndexList>
+            ElementType operator()(const IndexList &indices) const {
+                Point p;
+                for (IndexType d = 0; d < dimensionality; ++d)
+                    p[d] = scalar(indices[d]);
+                IndexArray idx(math::rotate(p, rotationAngle, rotationAxis, centerPoint));
+                return first(idx);
+            }
+
+        protected:
+            // Resultant bounds calculation
+            void calculateBounds() {
+                // Not impl.
+            }
+
+            // Transformation parameters
+            TransformScalar rotationAngle;
+            Vector rotationAxis;
+            Point centerPoint;
+        };
+
+        // Linearly map (scale + offset) an input range to an output range
         template <class R1>
         class LinearMapRasterOperator
                     : public UnaryRasterOperator<R1, typename R1::ElementType> {
@@ -39,40 +127,36 @@ namespace inca {
 
             // Constructor giving input range and output range
             LinearMapRasterOperator(R1 & r,
-                                    const ElementRange iRange,
-                                    const ElementRange oRange)
-                    : Superclass(r), inputRange(iRange) {
+                                    const ElementRange & iRange,
+                                    const ElementRange & oRange)
+                    : Superclass(r) {
 
                 ElementType iDiff = iRange[1] - iRange[0];
                 if (! math::effectivelyZero(iDiff)) {
                     scale  = (oRange[1] - oRange[0]) / iDiff;
                     offset = oRange[0] - iRange[0] * scale;
                 } else {
+                    // Avoid division by zero
                     scale  = ElementType(0);
                     offset = iRange[0];
                 }
                 cerr << "Scale: " << scale << "   offset: " << offset << endl;
             }
 
-            // Constructor giving input range and transform
+            // Constructor giving transform parameters
             LinearMapRasterOperator(R1 & r,
-                    const ElementRange & iRange,
-                    const ElementType & sc, const ElementType & off)
-                    : Superclass(r), inputRange(iRange),
-                      scale(sc), offset(off) { }
+                                    const ElementType & sc,
+                                    const ElementType & off)
+                    : Superclass(r), scale(sc), offset(off) { }
 
-            // Evaluator function -- clamp and transform
+            // Evaluator function -- transform
             template <class IndexList>
             ElementType operator()(const IndexList &indices) const {
-                ElementType value = first(indices);
-                if (value < inputRange[0])      value = inputRange[0];
-                else if (value > inputRange[1]) value = inputRange[1];
-                return value * scale + offset;
+                return first(indices) * scale + offset;
             }
 
         protected:
-            // Input range, linear transform
-            ElementRange inputRange;
+            // Linear transform parameters
             ElementType scale, offset;
         };
 
@@ -124,25 +208,6 @@ namespace inca {
         X scale
 #endif
 
-        // Factory function taking raster and both source and target ranges
-        template <typename R1, class Collection1, class Collection2>
-        LinearMapRasterOperator<R1> linearMap(R1 &r,
-                                              const Collection1 & iRange,
-                                              const Collection2 & oRange) {
-            Array<typename R1::ElementType, 2> inRange(iRange), outRange(oRange);
-            return LinearMapRasterOperator<R1>(r, inRange, outRange);
-        }
-
-        // Factory function taking raster and target range
-        template <typename R1, class Collection>
-        LinearMapRasterOperator<R1> linearMap(R1 &r, const Collection & oRange) {
-            Array<typename R1::ElementType, 2> inRange, outRange;
-            inRange = range(r);
-            outRange = oRange;
-            cerr << "Trying to map [" << inRange[0] << "," << inRange[1] << "] to [" << outRange[0] << "," << outRange[1] << "]\n";
-            return LinearMapRasterOperator<R1>(r, inRange, outRange);
-        }
-
         template <class T, typename Enable = void>
         struct is_collection {
             typedef ::boost::mpl::false_ type;
@@ -154,18 +219,50 @@ namespace inca {
             static const bool value = type::value;
         };
         
+        // Factory function taking clamp-to range
+        template <typename R1, class Collection>
+        ClampRasterOperator<R1> clamp(R1 & r, const Collection & cRange) {
+            return ClampRasterOperator<R1>(r, cRange);
+        }
+
+        // Factory function taking raster and both source and target ranges
+        template <typename R1, class Collection1, class Collection2>
+        ENABLE_IF_T ( AND2( is_collection<Collection1>,
+                            is_collection<Collection2> ),
+        LinearMapRasterOperator<R1> ) linearMap(R1 &r,
+                                              const Collection1 & iRange,
+                                              const Collection2 & oRange) {
+            Array<typename R1::ElementType, 2> inRange(iRange), outRange(oRange);
+            return LinearMapRasterOperator<R1>(r, inRange, outRange);
+        }
+
+        // Factory function taking raster and target range.
+        // The input range is implicitly the range of the raster
+        template <typename R1, class Collection>
+        LinearMapRasterOperator<R1> linearMap(R1 &r, const Collection & oRange) {
+            Array<typename R1::ElementType, 2> inRange, outRange;
+            inRange = range(r);
+            outRange = oRange;
+            cerr << "Trying to map [" << inRange[0] << "," << inRange[1] << "] to [" << outRange[0] << "," << outRange[1] << "]\n";
+            return LinearMapRasterOperator<R1>(r, inRange, outRange);
+        }
+        
         // Factory function taking raster, source range and scale/offset amounts
-        template <typename R1, class Collection, typename scalar1, typename scalar2>
-        ENABLE_IF_T ( AND3( is_collection<Collection>,
-                            is_scalar<scalar1>,
+        template <typename R1, typename scalar1, typename scalar2>
+        ENABLE_IF_T ( AND2( is_scalar<scalar1>,
                             is_scalar<scalar2> ),
         LinearMapRasterOperator<R1> ) linearMap(R1 &r,
-                                              const Collection & iRange,
-                                              scalar1 scale,
-                                              scalar2 offset) {
+                                                scalar1 scale,
+                                                scalar2 offset) {
             typedef typename R1::ElementType T;
-            Array<typename R1::ElementType, 2> inRange(iRange);
-            return LinearMapRasterOperator<R1>(r, inRange, T(scale), T(offset));
+            return LinearMapRasterOperator<R1>(r, T(scale), T(offset));
+        }
+
+        // Factory function taking 2D raster and rotation angle
+        template <typename R1, typename scalar>
+        RotateRasterOperator<R1, scalar> rotate(R1 & r, const scalar & angle) {
+            return RotateRasterOperator<R1, scalar>(r, angle,
+                                                    math::Vector<scalar, 2>(scalar(0)));
         }
 
 #if 0

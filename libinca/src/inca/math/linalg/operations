@@ -71,23 +71,25 @@ namespace inca {
         A_TEMPLATE(1)   A_ASSIGN_A( P(D0), -=, P(D0) );         // P -= P
         A_TEMPLATE(1)   A_ASSIGN_A( P(D0), +=, V(D0) );         // P += V
         A_TEMPLATE(1)   A_ASSIGN_A( P(D0), -=, V(D0) );         // P -= V
-        A_TEMPLATE(1)   A_ASSIGN_S( P(D0), *=, S    );          // P *= S
-        A_TEMPLATE(1)   A_ASSIGN_S( P(D0), /=, S    );          // P /= S
+        A_TEMPLATE(1)   A_ASSIGN_S( P(D0), *=, S_ARG );         // P *= S
+        A_TEMPLATE(1)   A_ASSIGN_S( P(D0), /=, S_ARG );         // P /= S
 
         // Assignment operators for Vector
         A_TEMPLATE(1)   A_ASSIGN_A( V(D0), +=, P(D0) );         // V += P
         A_TEMPLATE(1)   A_ASSIGN_A( V(D0), -=, P(D0) );         // V -= P
         A_TEMPLATE(1)   A_ASSIGN_A( V(D0), +=, V(D0) );         // V += V
         A_TEMPLATE(1)   A_ASSIGN_A( V(D0), -=, V(D0) );         // V -= V
-        A_TEMPLATE(1)   A_ASSIGN_S( V(D0), *=, S    );          // V *= S
-        A_TEMPLATE(1)   A_ASSIGN_S( V(D0), /=, S    );          // V /= S
+        A_TEMPLATE(1)   A_ASSIGN_A( V(D0), *=, V(D0) );         // V *= V
+        A_TEMPLATE(1)   A_ASSIGN_A( V(D0), /=, V(D0) );         // V /= V
+        A_TEMPLATE(1)   A_ASSIGN_S( V(D0), *=, S_ARG );         // V *= S
+        A_TEMPLATE(1)   A_ASSIGN_S( V(D0), /=, S_ARG );         // V /= S
 
 // FIXME: Different storage orders won't work here...switch to iterators!!
         // Assignment operators for Matrix
         M_TEMPLATE(2,2) A_ASSIGN_A( M(D0,D1,AS0), +=, M(D0,D1,AS1) ); // M += M
         M_TEMPLATE(2,2) A_ASSIGN_A( M(D0,D1,AS0), -=, M(D0,D1,AS1) ); // M -= M
-        M_TEMPLATE(2,1) A_ASSIGN_S( M(D0,D1,AS0), *=, S        );     // M *= S
-        M_TEMPLATE(2,1) A_ASSIGN_S( M(D0,D1,AS0), /=, S        );     // M /= S
+        M_TEMPLATE(2,1) A_ASSIGN_S( M(D0,D1,AS0), *=, S_ARG    );     // M *= S
+        M_TEMPLATE(2,1) A_ASSIGN_S( M(D0,D1,AS0), /=, S_ARG    );     // M /= S
 
 
     /*-----------------------------------------------------------------------*
@@ -120,22 +122,22 @@ namespace inca {
 //        M_TEMPLATE(2,1) A_OP_A( M(D0,D1,AS0), M(D0,D1,AS0), /, M(D0,D1,AS0) );    // M = M / M
 
         // Binary operators for scaling list types
-        S_TEMPLATE      A_OP_S( Q, Q, *, S );               // Q = Q * S
-        S_TEMPLATE      A_OP_S( Q, Q, /, S );               // Q = Q / S
-        S_TEMPLATE      S_OP_A( Q, S, *, Q );               // Q = S * Q
-        S_TEMPLATE      S_OP_A( Q, S, /, Q );               // Q = S / Q
-        A_TEMPLATE(1)   A_OP_S( P(D0), P(D0), *, S     );   // P = P * S
-        A_TEMPLATE(1)   A_OP_S( P(D0), P(D0), /, S     );   // P = P / S
-        A_TEMPLATE(1)   S_OP_A( P(D0), S,     *, P(D0) );   // P = S * P
-        A_TEMPLATE(1)   S_OP_A( P(D0), S,     /, P(D0) );   // P = S / P
-        A_TEMPLATE(1)   A_OP_S( V(D0), V(D0), *, S     );   // V = V * S
-        A_TEMPLATE(1)   A_OP_S( V(D0), V(D0), /, S     );   // V = V / S
-        A_TEMPLATE(1)   S_OP_A( V(D0), S,     *, V(D0) );   // V = S * V
-        A_TEMPLATE(1)   S_OP_A( V(D0), S,     /, V(D0) );   // V = S / V
-        M_TEMPLATE(2,1) A_OP_S( M(D0,D1,AS0), M(D0,D1,AS0), *, S );// M = M * S
-        M_TEMPLATE(2,1) A_OP_S( M(D0,D1,AS0), M(D0,D1,AS0), /, S );// M = M / S
-        M_TEMPLATE(2,1) S_OP_A( M(D0,D1,AS0), S, *, M(D0,D1,AS0) );// M = S * M
-        M_TEMPLATE(2,1) S_OP_A( M(D0,D1,AS0), S, /, M(D0,D1,AS0) );// M = S / M
+        S_TEMPLATE      A_OP_S( Q, Q,     *, S_ARG );       // Q = Q * S
+        S_TEMPLATE      A_OP_S( Q, Q,     /, S_ARG );       // Q = Q / S
+        S_TEMPLATE      S_OP_A( Q, S_ARG, *, Q );           // Q = S * Q
+        S_TEMPLATE      S_OP_A( Q, S_ARG, /, Q );           // Q = S / Q
+        A_TEMPLATE(1)   A_OP_S( P(D0), P(D0), *, S_ARG );   // P = P * S
+        A_TEMPLATE(1)   A_OP_S( P(D0), P(D0), /, S_ARG );   // P = P / S
+        A_TEMPLATE(1)   S_OP_A( P(D0), S_ARG, *, P(D0) );   // P = S * P
+        A_TEMPLATE(1)   S_OP_A( P(D0), S_ARG, /, P(D0) );   // P = S / P
+        A_TEMPLATE(1)   A_OP_S( V(D0), V(D0), *, S_ARG );   // V = V * S
+        A_TEMPLATE(1)   A_OP_S( V(D0), V(D0), /, S_ARG );   // V = V / S
+        A_TEMPLATE(1)   S_OP_A( V(D0), S_ARG, *, V(D0) );   // V = S * V
+        A_TEMPLATE(1)   S_OP_A( V(D0), S_ARG, /, V(D0) );   // V = S / V
+        M_TEMPLATE(2,1) A_OP_S( M(D0,D1,AS0), M(D0,D1,AS0), *, S_ARG ); // M = M * S
+        M_TEMPLATE(2,1) A_OP_S( M(D0,D1,AS0), M(D0,D1,AS0), /, S_ARG ); // M = M / S
+        M_TEMPLATE(2,1) S_OP_A( M(D0,D1,AS0), S_ARG, *, M(D0,D1,AS0) ); // M = S * M
+        M_TEMPLATE(2,1) S_OP_A( M(D0,D1,AS0), S_ARG, /, M(D0,D1,AS0) ); // M = S / M
 
 
     /*-----------------------------------------------------------------------*
@@ -447,6 +449,37 @@ namespace inca {
             S alpha = signedAngle(v1, v2);
             return (alpha >= 0) ? alpha : 2 * PI<S>() + alpha;
         }
+
+        // Rotation of a vector around an axis vector
+        A_TEMPLATE(1)
+        V(D0) rotate(const V(D0) & v, S_ARG angle, const V(D0) & axis) {
+            if (D0 == 2)       // Call 2D-special case
+                return rotate(v, angle);
+            else {              // Haven't implemented this yet...
+                std::cerr << "rotate<scalar, " << D0 << "> -- not implemented\n";
+                return V(D0)(0);
+            }
+        }
+        // Special case for 2D vectors (doesn't need an 'axis' vector).
+        S_TEMPLATE
+        V(2) rotate(const V(2) & v, S_ARG angle) {
+            S mag_v = magnitude(v);    // Length of v
+            S cos_a = v[0] / mag_v,
+              sin_a = v[1] / mag_v,
+              cos_b = cos(angle),
+              sin_b = sin(angle);
+            return V(2)((cos_a * cos_b - sin_a * sin_b) * mag_v,
+                        (sin_a * cos_b + sin_b * cos_a) * mag_v);
+        }
+
+        // Rotation of a point around an axis and center point
+        A_TEMPLATE(1)
+        P(D0) rotate(const P(D0) & p, S_ARG angle,
+                     const V(D0) & axis, const P(D0) & center) {
+            // Change this into a vector rotation problem
+            return center + rotate(p - center, angle, axis);
+        }
+
 
 //        // Dot product
 //        A_TEMPLATE(1)

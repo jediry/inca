@@ -193,11 +193,8 @@ protected:
     }
 
     // Ensure each index is within the range [base, extent]
-    #define CHECK_INDICES(ITER_TYPE, COLLECTION) {                          \
-        CHECK_DIMENSIONALITY(COLLECTION);                                   \
-        ITER_TYPE it = COLLECTION.begin();                                  \
-        for (int i = 0; i < dimensionality; ++i, ++it)                      \
-            if (*it < base(i) || *it > extent(i)) {                         \
+    #define CHECK_IN_BOUNDS(COLLECTION) {                                   \
+        if (! isInBounds(COLLECTION)) {                                     \
                 IndexOutOfBoundsException e(i, *it, base(i), extent(i));    \
                 e << "Index along dimension " << dimension()                \
                   << " of " << index() << " is not within ["                \
@@ -211,7 +208,7 @@ protected:
     #define CHECK_DIMENSIONALITY(COLLECTION)
     #define CHECK_SAME_SIZE(ITER_TYPE, COLLECTION)
     #define CHECK_SIZES(ITER_TYPE, COLLECTION)
-    #define CHECK_INDICES(ITER_TYPE, COLLECTION)
+    #define CHECK_IN_BOUNDS(COLLECTION)
 #endif
 
 
@@ -388,6 +385,37 @@ public:
         reindex();
     }
 
+    // The linear index corresponding to a set of n-dim indices
+    template <class IndexList>
+    IndexType indexOf(const IndexList & indices) const {
+        CHECK_IN_BOUNDS(indices);
+
+        int idx = 0;
+        for (int i = 0; i < dimensionality; ++i)
+            idx += _offsets[i] + _strides[i] * (indices[i] - _bases[i]);
+        return idx;
+    }
+
+    // In-bounds test for a set of n-dim indices
+    template <class IndexList>
+    bool isInBounds(const IndexList & indices) const {
+        CHECK_DIMENSIONALITY(indices);
+
+        typename IndexList::const_iterator it = indices.begin();
+        for (int i = 0; i < dimensionality; ++i, ++it)
+            if (*it < base(i) || *it > extent(i))
+                return false;
+        return true;
+    }
+
+    #define CREATE_DIMENSIONAL_IN_BOUNDS_TEST(DIM)                          \
+        bool isInBounds(PARAMS(DIM, IndexType i)) const {                    \
+            BOOST_STATIC_ASSERT(dimensionality == DIM);                     \
+            return isInBounds(IndexArray(PARAMS(DIM, i)));                  \
+        }
+    FOR_ALL_DIMS(CREATE_DIMENSIONAL_IN_BOUNDS_TEST);
+    #undef CREATE_DIMENSIONAL_IN_BOUNDS_TEST
+
 protected:
     // Set the sizes of the array
     template <class SizeList>
@@ -429,6 +457,7 @@ public:
     ConstIterator iteratorAt(const IndexList & i) const { return ConstIterator(this, i); }
     #define CREATE_DIMENSIONAL_ITERATOR_AT(DIM)                             \
         ConstIterator iteratorAt(PARAMS(DIM, int i)) const {                \
+            BOOST_STATIC_ASSERT(dimensionality == DIM);                     \
             return ConstIterator(this, PARAMS(DIM, i));                     \
         }
     FOR_ALL_DIMS(CREATE_DIMENSIONAL_ITERATOR_AT);
@@ -444,6 +473,7 @@ public:
     }
     #define CREATE_DIMENSIONAL_ITERATOR_AT(DIM)                             \
         ConstReverseIterator reverseIteratorAt(PARAMS(DIM, int i)) const {  \
+            BOOST_STATIC_ASSERT(dimensionality == DIM);                     \
             return ReverseIterator(this, PARAMS(DIM, i));                   \
         }
     FOR_ALL_DIMS(CREATE_DIMENSIONAL_ITERATOR_AT);
@@ -454,17 +484,10 @@ public:
  | Element accessors
  *---------------------------------------------------------------------------*/
 public:
-    // The linear index corresponding to a set of n-dim indices
-    template <class IndexList>
-    IndexType indexOf(const IndexList & indices) const {
-        int idx = 0;
-        for (int i = 0; i < dimensionality; ++i)
-            idx += _offsets[i] + _strides[i] * (indices[i] - _bases[i]);
-        return idx;
-    }
-
     // Linear [] element accessor (always 1D)
-    ConstReference operator[](IndexType i) const { return elements()[i]; }
+    ConstReference operator[](IndexType i) const {
+        return elements()[i];
+    }
 
     // Arbitrary-dimensional element accessor
     template <class IndexList>
@@ -591,9 +614,11 @@ public:
     ConstIterator iteratorAt(const IndexList & i) const { return ConstIterator(this, i); }
     #define CREATE_DIMENSIONAL_ITERATOR_AT(DIM)                             \
         Iterator iteratorAt(PARAMS(DIM, int i)) {                           \
+            BOOST_STATIC_ASSERT(dimensionality == DIM);                     \
             return Iterator(this, PARAMS(DIM, i));                          \
         }                                                                   \
         ConstIterator iteratorAt(PARAMS(DIM, int i)) const {                \
+            BOOST_STATIC_ASSERT(dimensionality == DIM);                     \
             return ConstIterator(this, PARAMS(DIM, i));                     \
         }
     FOR_ALL_DIMS(CREATE_DIMENSIONAL_ITERATOR_AT);
@@ -615,9 +640,11 @@ public:
     }
     #define CREATE_DIMENSIONAL_ITERATOR_AT(DIM)                             \
         ReverseIterator reverseIteratorAt(PARAMS(DIM, int i)) {             \
+            BOOST_STATIC_ASSERT(dimensionality == DIM);                     \
             return ReverseIterator(this, PARAMS(DIM, i));                   \
         }                                                                   \
         ConstReverseIterator reverseIteratorAt(PARAMS(DIM, int i)) const {  \
+            BOOST_STATIC_ASSERT(dimensionality == DIM);                     \
             return ReverseIterator(this, PARAMS(DIM, i));                   \
         }
     FOR_ALL_DIMS(CREATE_DIMENSIONAL_ITERATOR_AT);
@@ -730,6 +757,7 @@ public:
         MultiArray(PARAMS(DIM, int e),                                      \
                    const StorageOrder so = CStorageOrder())                 \
                 : Superclass(IndexArray(0), so) {                           \
+            BOOST_STATIC_ASSERT(dimensionality == DIM);                     \
             resize(SizeArray(PARAMS(DIM, e)));                              \
         }
     FOR_ALL_DIMS(CREATE_DIMENSIONAL_CONSTRUCTOR);
@@ -796,6 +824,7 @@ public:
     // Dimensionality-specific versions
     #define CREATE_DIMENSIONAL_RESIZE(DIM)                                  \
         void resize(PARAMS(DIM, int e), bool preserveContents = false) {    \
+            BOOST_STATIC_ASSERT(dimensionality == DIM);                     \
             resize(SizeArray(PARAMS(DIM, e)), preserveContents);            \
         }
     FOR_ALL_DIMS(CREATE_DIMENSIONAL_RESIZE);

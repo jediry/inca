@@ -28,7 +28,7 @@ namespace inca {
         // Gradient operator
         template <typename R1>
         class GradientRasterOperator
-                    : public UnaryRasterOperator<R1, inca::math::Vector<typename R1::ElementType, dimensionality> > {
+                    : public UnaryRasterOperator<R1, inca::math::Vector<typename R1::ElementType, R1::dimensionality> > {
         public:
             typedef inca::math::Vector<typename R1::ElementType, dimensionality> Vector;
             typedef UnaryRasterOperator<R1, Vector> Superclass;
@@ -60,16 +60,52 @@ namespace inca {
         };
 
 
-        // Factory function for uniform differentials (defaults to 1)
-        template <typename R1, typename scalar>
-        GradientRasterOperator<R1> gradient(R1 &r, const scalar & d) {
-            return GradientRasterOperator<R1>(r, Array<scalar, R1::dimensionality>(d));
+        // Factory function for unity differentials
+        template <typename R1>
+        GradientRasterOperator<R1> gradient(R1 &r) {
+            typedef typename R1::ElementType T;
+            return GradientRasterOperator<R1>(r, Array<T, R1::dimensionality>(T(1)));
         }
 
-        // Factory function specifying differentials for each dimension
-        template <typename R1, class ScalarList>
-        GradientRasterOperator<R1> gradient(R1 &r, const ScalarList & d) {
-            return GradientRasterOperator<R1>(r, d);
+        // Factory function for uniform differentials
+        template <typename R1, typename scalar>
+        GradientRasterOperator<R1> gradient(R1 &r, const scalar & d) {
+            typedef typename R1::ElementType T;
+            return GradientRasterOperator<R1>(r, Array<T, R1::dimensionality>(T(d)));
+        }
+
+//        // Factory function specifying differentials for each dimension
+//        template <typename R1, class ScalarList>
+//        GradientRasterOperator<R1> gradient(R1 &r, const ScalarList & d) {
+//            return GradientRasterOperator<R1>(r, d);
+//        }
+
+        // Vector angle operator
+        template <typename R1>
+        class VectorMagnitudeRasterOperator
+                    : public UnaryRasterOperator<R1, typename R1::ElementType::scalar_t > {
+        public:
+            typedef UnaryRasterOperator<R1, typename R1::ElementType::scalar_t> Superclass;
+            typedef VectorMagnitudeRasterOperator<R1>     OperatorType;
+            typedef typename Superclass::ElementType    ElementType;
+            typedef Array<typename R1::ElementType, dimensionality> ScalarArray;
+            
+            // Constructor
+            VectorMagnitudeRasterOperator(R1 & r)
+                : Superclass(r) { }
+
+            // Evaluator function
+            template <class IndexList>
+            ElementType operator()(const IndexList &indices) const {
+                return magnitude(first(indices));
+            }
+        };
+
+        // Factory function XXX
+        template <typename R1>
+        ENABLE_IF_T( is_raster<R1>,
+        VectorMagnitudeRasterOperator<R1> ) vmag(R1 &r) {
+            return VectorMagnitudeRasterOperator<R1>(r);
         }
 
         // Vector angle operator
@@ -89,7 +125,8 @@ namespace inca {
             // Evaluator function
             template <class IndexList>
             ElementType operator()(const IndexList &indices) const {
-                return canonicalAngle(first(indices));
+                return canonicalAngle(typename R1::ElementType(1, 0),
+                                      first(indices));
             }
         };
 

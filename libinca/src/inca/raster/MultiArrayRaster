@@ -110,7 +110,7 @@ public:
                      const StorageOrder & so = CStorageOrder(),
                      ENABLE_FUNCTION_IF(is_raster<SrcRaster>))
             : _array(so) {
-        array().setBounds(r.bases(), r.extents());
+        array().resize(r.bases(), r.extents());
         copy(*this, r);                 // Copy all the elements
     }
 
@@ -130,7 +130,9 @@ public:
     #define CREATE_DIMENSIONAL_CONSTRUCTOR(DIM)                             \
         explicit MultiArrayRaster(PARAMS(DIM, SizeType e),                  \
                         const StorageOrder & so = CStorageOrder())          \
-            : _array(PARAMS(DIM, e), so) { }
+                : _array(PARAMS(DIM, e), so) {                              \
+            BOOST_STATIC_ASSERT(dimensionality == DIM);                     \
+        }
     FOR_ALL_DIMS(CREATE_DIMENSIONAL_CONSTRUCTOR);
     #undef CREATE_DIMENSIONAL_CONSTRUCTOR
 
@@ -179,7 +181,8 @@ public:
     ConstPointer origin() const { return array().origin(); }
 
 protected:
-    MultiArray _array;      // The MultiArray that does all the work
+    MultiArray _array;              // The MultiArray that does all the work
+    mutable ElementType _outOfBoundsElement;    // Where we go when we go OOB
 
 
 /*---------------------------------------------------------------------------*
@@ -221,6 +224,7 @@ public:
     // Dimensionality-specific resize functions
     #define CREATE_DIMENSIONAL_RESIZE(DIM)                                  \
         void resize(PARAMS(DIM, SizeType s)) {                              \
+            BOOST_STATIC_ASSERT(dimensionality == DIM);                     \
             array().resize(PARAMS(DIM, s));                                 \
         }
     FOR_ALL_DIMS(CREATE_DIMENSIONAL_RESIZE);
@@ -257,20 +261,64 @@ public:
 
     // Arbitrary-dimensional element accessors
     template <class IndexList>
-         Reference operator()(const IndexList &indices)       { return array()(indices); }
+    Reference operator()(const IndexList &indices) {
+        if (! array().isInBounds(indices)) {
+            _outOfBoundsElement = nearestInBoundsValue(indices);
+            return _outOfBoundsElement;
+        } else {
+            return array()(indices);
+        }
+    }
     template <class IndexList>
-    ConstReference operator()(const IndexList &indices) const { return array()(indices); }
+    ConstReference operator()(const IndexList &indices) const {
+        if (! array().isInBounds(indices)) {
+            _outOfBoundsElement = nearestInBoundsValue(indices);
+            return _outOfBoundsElement;
+        } else {
+            return array()(indices);
+        }
+    }
 
     #define CREATE_DIMENSIONAL_ACCESSOR(DIM)                                \
         Reference operator()(PARAMS(DIM, IndexType i)) {                    \
-            return array()(PARAMS(DIM, i));                                 \
+            BOOST_STATIC_ASSERT(dimensionality == DIM);                     \
+            if (! array().isInBounds(PARAMS(DIM, i))) {                     \
+                _outOfBoundsElement = nearestInBoundsValue(PARAMS(DIM, i)); \
+                return _outOfBoundsElement;                                 \
+            } else {                                                        \
+                return array()(PARAMS(DIM, i));                             \
+            }                                                               \
         }                                                                   \
         ConstReference operator()(PARAMS(DIM, IndexType i)) const {         \
-            return array()(PARAMS(DIM, i));                                 \
+            BOOST_STATIC_ASSERT(dimensionality == DIM);                     \
+            if (! array().isInBounds(PARAMS(DIM, i))) {                     \
+                _outOfBoundsElement = nearestInBoundsValue(PARAMS(DIM, i)); \
+                return _outOfBoundsElement;                                 \
+            } else {                                                        \
+                return array()(PARAMS(DIM, i));                             \
+            }                                                               \
         }
     FOR_ALL_DIMS(CREATE_DIMENSIONAL_ACCESSOR);
     #undef CREATE_DIMENSIONAL_ACCESSOR
 
+
+    template <class IndexList>
+    ConstReference nearestInBoundsValue(const IndexList & indices) const {
+        IndexArray idx(indices);
+        for (int i = 0; i < dimensionality; ++i) {
+            if (idx[i] < base(i))           idx[i] = base(i);
+            else if (idx[i] > extent(i))    idx[i] = extent(i);
+        }
+        return array()(idx);
+    }
+
+    #define CREATE_DIMENSIONAL_NEAREST_VALUE(DIM)                           \
+        ConstReference nearestInBoundsValue(PARAMS(DIM, IndexType i)) const {\
+            BOOST_STATIC_ASSERT(dimensionality == DIM);                     \
+            return nearestInBoundsValue(IndexArray(PARAMS(DIM, i)));        \
+        }
+    FOR_ALL_DIMS(CREATE_DIMENSIONAL_NEAREST_VALUE);
+    #undef CREATE_DIMENSIONAL_NEAREST_VALUE
 };
 
 
