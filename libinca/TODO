@@ -1,0 +1,196 @@
+Unsolved problems:
+    C# properties (w/defaults) -- Finish new version
+        property_traits
+        correct creation of accessors and overridability (outsource variable)
+        List type
+        Constraints
+        Direct assignment between properties of same type
+        Array accessors for Vector, Point, etc.
+    Robust OBJ reader
+    maybe POV reader too
+    Clean up dynamics
+    Fill out transform -- should there by multiple types?
+    Generic "dirty" dependency tracking -- needed for tessellations?
+    Generic listener notifications
+    Chained timers (needed to run a UI timer while the simulation is stopped)
+    Progress listener, DataFile
+
+Doc:
+    Macro "pseudolanguage" idiom
+    Link-time specialization idiom
+    traits and api template idioms
+
+Cleanups
+    Audit for right use of const
+    Look for index_t, size_t
+    Implement &ostream serializers (i.e. "toString"s)
+        use the return o << dlksldks form
+    Consider removing using namespace decls in non cpp files.
+
+Build:
+    Use Magick++-config et.al. to pick out system-specific compile options
+    Create an inca-config to do the same for others
+
+Poly/GLRenderer:
+    WEPolyMesh needs to be generalized -- there's no particular reason that it
+        has to have *polygons*. Why not bezier patches? Then, we could abstract
+        from the topological stuff the planar/gouraud values. No particular
+        reason that the mesh itself needs to be ANY-dimension -- it becomes a
+        purely topological entity.
+        Then, flattening a mesh becomes a generic operation external to the mesh
+        whereby a source type is mapped/converted to a destination type.
+    It should be easier to say "I don't have normals", or "I'm sharing a normal with someone else"
+    Renderer should be able to check/set various capabilities of the HW without me needing
+        direct GL calls. Probably also cache state changes in display list.
+    Our choice of how to reshape the camera should preserve size over time...
+
+Dynamics
+    A generator could also be an Operator (softBody), and maybe we could come
+        up with an appropriate base class for things that access the ParticleSystem.
+    Fix "3rd derivative" BS.
+    Allow operators to "request" information, which only gets generated if someone wants it.
+
+Optimizations:
+    Caching & validation in channels
+    caching in polynomial division
+    optimization in ray-marching code
+    optimization in ray-tracing (octrees, etc.)
+    Caching of triangles in PolygonMesh
+    Rasterization of polygons
+
+Util:
+    Functor should probably go back here.
+    Some sort of change-notification/dependency tracking would be really useful
+
+General:
+    code read thru
+    Can we make Functors easier to use?
+    Investigate aspect-OP for handling things like listeners, properties,
+        maybe also handling the trickier multi-dimensional things
+    Should we have a "die" function instead of'exit'?
+    Should exit write to the logger isntead of cerr?
+    Channels needs to be really examined and namespaced.
+    Do we need to cast to scalar_t or not?
+
+Math:
+    Make "transformations" complete (and test it)
+    Get rid of the nasty CPP crap in vector_types
+    Implement list-type constructors for higher dimensions
+    Should ScalarList subclass a "container" that has a fixed templated size?
+        It might be worthwhile later, when we have a comprehensive solution to
+        filtering...a matrix is a grid is an image...
+    Should we make EVERYTHING (including a scalar_t) a matrix??
+    Move curves/surfaces back here
+    Split off Point/Vector from algorithms file
+
+Geometry:
+    Some things not implemented...
+    evaluating surfaces is inefficient -- maybe something like RaytraceState
+    tostring casts for objects?
+    deBoors algo seems to have a hard-coded limit...
+    Make sure everything inherits from Shape
+    Some shapes don't seem to be generalized to n-D
+    MeshSubdivide should be a template func, not object
+    needs a robustness analysis
+    skim for proper use of scalar_t and scalar_arg_t
+    should shapes have canonical sizes, or variable?
+    Arc-length parametrizations?
+    efficient tesselator methods for surfaces, curves
+    do checks for non-manifold geometry (exceptions)
+    get surfaces working in RT
+
+Scene:
+    Interior::registerChannels -> Interior::initializeChannelGraph?
+    we could have ambient and spotlights really easily
+    We need some way to efficiently, non-intrusively do caching/dependency tracking...
+    Transforms need to be better, and for material
+    How should we do named objects?
+
+I/O:
+    Cast input variables to appropriate scalar_t
+    Make a DataFile class
+    we need the notion of a "install" directory, for finding schemas
+    Reference/IDs, file reading
+    Config file reading
+    POV File reading
+    Document schema-to-C++.xsl
+    Better consistency checks for elements
+    Texture definitions reading
+    concise symbolic notation:
+        '+': object creation
+        '-': object destruction
+        '->': reference resolution
+        '>>': deserialization
+        '<<': serialization
+        '?': query?
+        '!': error
+
+UI:
+    remappable key/button config for Controls
+    The WidgetContainer needs a bunch of work.
+    What other abstract GUI things do we want?
+
+Imaging:
+    Should/can filtering and edge-handling behavior be migrated into containers?
+    Can we do filtering more generally (multi-dimensionally)?
+    What exactly should be in Image?
+    Image could really use some more functions
+    What about the row/col -> height/width mapping?
+        Why not make everything column-major?
+    If we alter an image, how do we rebuild the MIPMap?
+    Should we move MIPMap up to the material level?
+    Should we use Ptr, or & ?
+
+Shading:
+    Merge Materials with Shaders?
+    Split PhongShader into PhongShader and ErgunShader
+    We need to be able to specify the background color
+    
+Materials:
+    Need way to handle materials
+    Some simple programmatic textures (checker, hexagon)
+    How do we map textures onto objects? Channel net might be too abstract
+    Bump mapping
+
+Util:
+    Timers need names! Friggin impossible to debug'em otherwise
+
+Channels:
+    FunctionEvaluator -- multivariable?
+    Caching
+    Cylindrical coordinates
+
+
+
+
+Data types:
+    Layer
+    Group
+    CSG
+    Path
+        BSpline
+        Parametric
+        Smooth (quad, cubic, quartic) thru points at certian times
+        Hermite
+        projection of another path onto a plane
+        piecewise composition of primitve paths
+
+        Can specify "up" as those funky curve basis from Math 311
+        Can specify "up" using another path
+    
+
+Be able to:
+    view and merge differences between files
+    Have a global and per-tool selection model
+    convert any surface primitive into polys
+    
+3d VIZ good points
+    object-defined rollups
+    checking/fixing for flipped normals and holes in surface
+    boolean operations/other modifiers on stack
+    options in choosing center for a transformation
+    layers
+
+3d VIZ bad points
+    sometimes clumsy interfacing with only one command window
+

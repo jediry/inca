@@ -1,0 +1,93 @@
+/* -*- C++ -*-
+ *
+ * File: Sphere
+ * 
+ * Author: Ryan L. Saunders
+ *
+ * Copyright 2002, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ */
+
+#ifndef INCA_MATH_SOLID_SPHERE
+#define INCA_MATH_SOLID_SPHERE
+
+
+// Include superclass definition
+#include "../Shape"
+
+
+// This is part of the Inca geometry library
+namespace Inca {
+    namespace Geometry {
+        // Forward declaration
+        template <class Scalar, unsigned int dim> class Sphere;
+    };
+};
+
+
+template <class Scalar, unsigned int dim>
+class Inca::Geometry::Sphere : public Shape<Scalar, dim> {
+private:
+    // Convenience typedefs
+    typedef Sphere<Scalar, dim>                 ThisType;
+    typedef Shape<Scalar, dim>                  Superclass;
+
+public:
+    // What dimensional space are we working in?
+    const static unsigned int dimension = dim;
+
+    // Template typedefs
+    typedef typename Superclass::scalar_t       scalar_t;
+    typedef typename Superclass::scalar_arg_t   scalar_arg_t;
+    typedef typename Superclass::Point          Point;
+    typedef typename Superclass::Vector         Vector;
+    typedef typename Superclass::Ray            Ray;
+
+protected:
+    // Sphere radius
+    scalar_t radius;
+
+
+/*---------------------------------------------------------------------------*
+ | Constructors
+ *---------------------------------------------------------------------------*/
+public:
+    Sphere() : radius(1) { }
+
+/*---------------------------------------------------------------------------*
+ | Accessor functions
+ *---------------------------------------------------------------------------*/
+public:
+    scalar_t getRadius() const { return radius; }
+    void setRadius(scalar_arg_t r) { radius = r; }
+    
+    scalar_t calculateDistance(const Ray &along) const {
+        Vector p_to_center = Point() - along.point();
+        scalar_t b = along.vector() * p_to_center,
+               delta = b * b + radius * radius - (p_to_center * p_to_center);
+
+        if (delta < 0)          //...no intersection
+            return POS_INF;
+        else if (delta == 0)    //...one hit
+            return b;
+        else {                  //...two hits
+            scalar_t sqrt_delta = sqrt(delta);
+            scalar_t intersect1 = b - sqrt_delta,
+                   intersect2 = b + sqrt_delta;
+            if (intersect1 > 0)
+                return intersect1;
+            else if (intersect2 > 0)
+                return intersect2;
+            else
+                return POS_INF;
+        }
+    }
+
+    Vector calculateNormal(const Ray &at) const {
+        Vector result = (at.point() - Point()) / radius;
+        return result;
+    }
+};
+
+#endif

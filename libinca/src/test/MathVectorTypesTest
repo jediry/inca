@@ -1,0 +1,300 @@
+/* -*- C++ -*-
+ *
+ * File: MathVectorTypesTest
+ *
+ * Author: Ryan L. Saunders
+ *
+ * Copyright 2004, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ *      The MathVectorTypesTest template class tests the Inca::Math library's
+ *      Vector implementation. While this is trivial to the
+ *      point of uselessness in the case of float/double scalars, this
+ *      becomes more important when using alternate (e.g., arbitrary
+ *      precision) implementations.
+ *
+ *      Note: since the Vector template class can be of arbitrary
+ *      dimensionality, we can't really write tests to exhaustively test
+ *      all possible instantiations of Vector, so we have (arbitrarily) picked
+ *      dim == 10 as sufficient overkill: some tests will fail if 'dim' is
+ *      higher than 10.
+ *
+ * Implementation note:
+ *      This file is designed to be included by IncaTestMain.cpp, and may not
+ *      work correctly otherwise, as it depends on IncaTestMain.cpp already
+ *      having included some other things.
+ */
+
+#ifndef TEST_MATH_VECTOR_TYPES
+#define TEST_MATH_VECTOR_TYPES
+
+// Import the Boost preprocessor metaprogramming library
+#include <boost/preprocessor/repetition/enum.hpp>
+
+
+template <typename scalar, size_t dim>
+class MathVectorTypesTest : public CppUnit::TestFixture {
+private:
+    // Convenience typedefs
+    typedef MathVectorTypesTest<scalar, dim> ThisTest;
+
+public:
+    // Mathematical typedefs
+    INCA_MATH_SCALAR_TYPEDEFS(scalar, IS_WITHIN_TEMPLATE, /* */, /* */);
+    INCA_MATH_VECTOR_TYPEDEFS(scalar, dim, /* */, /* */);
+    typedef inca::math::Matrix<scalar, 2, dim>      Matrix2xN;
+    typedef inca::math::Matrix<scalar, dim, dim>    MatrixNxN;
+
+protected:
+    // We use this to ASSERT a little more verbosely for tests we haven't
+    // gotten around to implementing yet.
+    static const bool not_implemented = false;
+
+    // These are the right size to make Points and Vectors
+    scalar_t e1[dim], e2[dim];
+
+    // These are the right size for Rays and 2xN Matrices
+    scalar_t e3[dim * 2], e4[dim * 2];
+
+    // These are the right size for NxN Matrices
+    scalar_t e5[dim * dim], e6[dim * dim];
+
+
+/*---------------------------------------------------------------------------*
+ | Test configuration
+ *---------------------------------------------------------------------------*/
+public:
+    void setUp() {
+        // Set up arrays for the array-style constructors
+        for (index_t i = 0; i < dim; i++) {
+            e1[i] = scalar_t(i);
+            e2[i] = scalar_t(i + 1);
+        }
+        for (index_t i = 0; i < 2 * dim; i++) {
+            e3[i] = scalar_t(i);
+            e4[i] = scalar_t(i + 1);
+        }
+        for (index_t i = 0; i < dim * dim; i++) {
+            e5[i] = scalar_t(i);
+            e6[i] = scalar_t(i + 1);
+        }
+    }
+
+    void tearDown() { }
+
+    // Create the CppUnit test suite
+    CPPUNIT_TEST_SUITE(ThisTest);
+        // Print a nice, friendly header for this suite
+        CPPUNIT_TEST(beginSuite);
+
+        // Constructor tests
+        CPPUNIT_TEST(testDefaultPointConstructor);
+        CPPUNIT_TEST(testDefaultVectorConstructor);
+        CPPUNIT_TEST(testDefaultRayConstructor);
+        CPPUNIT_TEST(testDefaultMatrixConstructor);
+        CPPUNIT_TEST(testScalarArgPointConstructor);
+        CPPUNIT_TEST(testScalarArgVectorConstructor);
+        CPPUNIT_TEST(testScalarArgRayConstructor);
+        CPPUNIT_TEST(testScalarArgMatrixConstructor);
+        CPPUNIT_TEST(testArrayPointConstructor);
+        CPPUNIT_TEST(testArrayVectorConstructor);
+        CPPUNIT_TEST(testArrayRayConstructor);
+        CPPUNIT_TEST(testArrayMatrixConstructor);
+
+        // Assignment operator tests
+        CPPUNIT_TEST(testPointAssignment);
+        CPPUNIT_TEST(testVectorAssignment);
+        CPPUNIT_TEST(testRayAssignment);
+        CPPUNIT_TEST(testMatrixAssignment);
+
+        // Cast-to-string tests
+        CPPUNIT_TEST(testPointToString);
+        CPPUNIT_TEST(testVectorToString);
+        CPPUNIT_TEST(testRayToString);
+        CPPUNIT_TEST(testMatrixToString);
+
+        // Print a nice, friendly footer for this suite
+        CPPUNIT_TEST(endSuite);
+    CPPUNIT_TEST_SUITE_END();
+
+
+/*---------------------------------------------------------------------------*
+ | Test suite information
+ *---------------------------------------------------------------------------*/
+    void beginSuite() {
+        cerr << "Testing vector <" << scalar_traits<scalar>::name()
+             << ", " << dim << "> types: ";
+    }
+
+    void endSuite() {
+        cerr << endl;
+    }
+
+
+/*---------------------------------------------------------------------------*
+ | Constructor tests (we consider these to also adequately test the '[]' op.)
+ *---------------------------------------------------------------------------*/
+    void testDefaultPointConstructor() {
+        // This really just has to compile, since no init is done
+        Point p;
+    }
+
+    void testDefaultVectorConstructor() {
+        // This really just has to compile, since no init is done
+        Vector v;
+    }
+
+    void testDefaultRayConstructor() {
+        // This really just has to compile, since no init is done
+        Ray r;
+    }
+
+    void testDefaultMatrixConstructor() {
+        // This really just has to compile, since no init is done
+        MatrixNxN m1;
+        Matrix2xN m2;
+    }
+
+    void testScalarArgPointConstructor() {
+        /** \todo Make scalar arg constructor tests work */
+    }
+
+    void testScalarArgVectorConstructor() {
+    }
+
+    void testScalarArgRayConstructor() {
+    }
+
+    void testScalarArgMatrixConstructor() {
+    }
+
+    void testArrayPointConstructor() {
+        Point p(e1);
+        for (index_t i = 0; i < dim; i++)
+            CPPUNIT_ASSERT(p[i] == e1[i]);
+    }
+
+    void testArrayVectorConstructor() {
+        Vector v(e1);
+        for (index_t i = 0; i < dim; i++)
+            CPPUNIT_ASSERT(v[i] == e1[i]);
+    }
+
+    void testArrayRayConstructor() {
+        Ray r(e3);
+        const Point & p = r.position();
+        const Vector & v = r.direction();
+        for (index_t i = 0; i < dim; i++) {
+            CPPUNIT_ASSERT(p[i] == e3[i]);
+            CPPUNIT_ASSERT(v[i] == e3[i + dim]);
+        }
+    }
+
+    void testArrayMatrixConstructor() {
+        Matrix2xN m1(e3);
+        MatrixNxN m2(e5);
+        index_t count = 0;
+        for (index_t i = 0; i < 2; i++)
+            for (index_t j = 0; j < dim; j++)
+                CPPUNIT_ASSERT(m1(i, j) == e3[count++]);
+        count = 0;
+        for (index_t i = 0; i < dim; i++)
+            for (index_t j = 0; j < dim; j++)
+                CPPUNIT_ASSERT(m2(i, j) == e5[count++]);
+    }
+
+
+/*---------------------------------------------------------------------------*
+ | Assignment operator tests
+ *---------------------------------------------------------------------------*/
+    void testPointAssignment() {
+        Point p1(e1);
+        Point p2(e2);
+        Point p = p1;
+        for (index_t i = 0; i < dim; i++)
+            CPPUNIT_ASSERT(p[i] == p1[i]);
+        p = p2;
+        for (index_t i = 0; i < dim; i++)
+            CPPUNIT_ASSERT(p[i] == p2[i]);
+    }
+
+    void testVectorAssignment() {
+        Vector v1(e1);
+        Vector v2(e2);
+        Vector v = v1;
+        for (index_t i = 0; i < dim; i++)
+            CPPUNIT_ASSERT(v[i] == v1[i]);
+        v = v2;
+        for (index_t i = 0; i < dim; i++)
+            CPPUNIT_ASSERT(v[i] == v2[i]);
+    }
+
+    void testRayAssignment() {
+        Ray r1(e1);
+        Ray r2(e2);
+        Ray r = r1;
+        for (index_t i = 0; i < dim; i++) {
+            CPPUNIT_ASSERT(r.position()[i] == r1.position()[i]);
+            CPPUNIT_ASSERT(r.direction()[i] == r1.direction()[i]);
+        }
+        r = r2;
+        for (index_t i = 0; i < dim; i++) {
+            CPPUNIT_ASSERT(r.position()[i] == r2.position()[i]);
+            CPPUNIT_ASSERT(r.direction()[i] == r2.direction()[i]);
+        }
+    }
+
+    void testMatrixAssignment() {
+        MatrixNxN m1(e5);
+        MatrixNxN m2(e6);
+        MatrixNxN m;
+        m = m1;
+        for (index_t i = 0; i < dim; i++)
+            for (index_t j = 0; j < dim; j++)
+                CPPUNIT_ASSERT(m(i, j) == m1(i, j));
+        m = m2;
+        for (index_t i = 0; i < dim; i++)
+            for (index_t j = 0; j < dim; j++)
+                CPPUNIT_ASSERT(m(i, j) == m2(i, j));
+    }
+
+
+/*---------------------------------------------------------------------------*
+ | Cast-to-string tests
+ *---------------------------------------------------------------------------*/
+    void testPointToString() {
+        Point p(e1);
+        string s = p;
+        ostringstream ss;
+        ss << "(";
+        for (index_t i = 0; i < dim; i++) {
+            ss << e1[i];
+            if (i != dim - 1) ss << ", ";
+        }
+        ss << ")";
+        CPPUNIT_ASSERT(s == ss.str());
+    }
+
+    void testVectorToString() {
+        Vector v(e1);
+        string s = v;
+        ostringstream ss;
+        ss << "(";
+        for (index_t i = 0; i < dim; i++) {
+            ss << e1[i];
+            if (i != dim - 1) ss << ", ";
+        }
+        ss << ")";
+        CPPUNIT_ASSERT(s == ss.str());
+    }
+
+    void testRayToString() {
+        CPPUNIT_ASSERT(not_implemented);
+    }
+
+    void testMatrixToString() {
+        CPPUNIT_ASSERT(not_implemented);
+    }
+};
+
+#endif

@@ -1,0 +1,294 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- This has some problems:
+     1) We ought to support the definition of <complexType>s at the
+        top level
+     2) We should also have support for poly-meshes, channel nets, etc.
+-->
+<xsd:schema xmlns="http://halogyn.com/inca/scene"
+            xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+            xmlns:cpp="http://halogyn.com/inca/c++"
+            targetNamespace="http://halogyn.com/inca/scene">
+
+  <xsd:attributeGroup name="reference-attributes">
+    <xsd:attribute name="id" type="xsd:ID" cpp:identifier="XML_ID"
+                   cpp:property="id()" cpp:type="id"/>
+    <xsd:attribute name="ref" type="xsd:string" cpp:identifier="XML_REFERENCE"
+                   cpp:property="reference()" cpp:type="reference"/>
+  </xsd:attributeGroup>
+
+  <xsd:complexType name="point" cpp:type="Point3D">
+    <xsd:attributeGroup ref="reference-attributes"/>
+    <xsd:attribute name="x" type="xsd:double" cpp:identifier="XML_X"
+                   cpp:property="operator[](0)" cpp:type="scalar"/>
+    <xsd:attribute name="y" type="xsd:double" cpp:identifier="XML_Y"
+                   cpp:property="operator[](1)" cpp:type="scalar"/>
+    <xsd:attribute name="z" type="xsd:double" cpp:identifier="XML_Z"
+                   cpp:property="operator[](2)" cpp:type="scalar"/>
+  </xsd:complexType>
+
+  <xsd:complexType name="vector" cpp:type="Vector3D">
+    <xsd:attributeGroup ref="reference-attributes"/>
+    <xsd:attribute name="i" type="xsd:double"
+                   cpp:identifier="XML_I"
+                   cpp:property="operator[](0)" cpp:type="scalar"/>
+    <xsd:attribute name="j" type="xsd:double" cpp:identifier="XML_J"
+                   cpp:property="operator[](1)" cpp:type="scalar"/>
+    <xsd:attribute name="k" type="xsd:double" cpp:identifier="XML_K"
+                   cpp:property="operator[](2)" cpp:type="scalar"/>
+  </xsd:complexType>
+
+  <!--xsd:complexType name="tex-coord" cpp:type="TextureCoordinate">
+    <xsd:attributeGroup ref="reference-attributes"/>
+    <xsd:attribute name="u" type="xsd:double"
+                   cpp:identifier="XML_U" cpp:property="[0]" cpp:type="scalar"/>
+    <xsd:attribute name="v" type="xsd:double"
+                   cpp:identifier="XML_V" cpp:property="[1]" cpp:type="scalar"/>
+    <xsd:attribute name="w" type="xsd:double"
+                   cpp:identifier="XML_W" cpp:property="[2]" cpp:type="scalar"/>
+  </xsd:complexType-->
+
+  <xsd:complexType name="color" cpp:type="ColorRGBA">
+    <xsd:attributeGroup ref="reference-attributes"/>
+    <xsd:attribute name="r" type="xsd:double" cpp:identifier="XML_R"
+                   cpp:property="operator[](0)" cpp:type="scalar"/>
+    <xsd:attribute name="g" type="xsd:double" cpp:identifier="XML_G"
+                   cpp:property="operator[](1)" cpp:type="scalar"/>
+    <xsd:attribute name="b" type="xsd:double" cpp:identifier="XML_B"
+                   cpp:property="operator[](2)" cpp:type="scalar"/>
+    <xsd:attribute name="a" type="xsd:double" default="1.0" cpp:identifier="XML_A"
+                   cpp:property="operator[](3)" cpp:type="scalar"/>
+  </xsd:complexType>
+
+  <xsd:simpleType name="channel-network" cpp:type="string">
+    <xsd:restriction base="xsd:string">
+      <xsd:whiteSpace value="collapse"/>
+    </xsd:restriction>
+  </xsd:simpleType>
+
+
+<!-- ================ Top-level container elements ================== -->
+  <xsd:element name="scene" cpp:identifier="XML_SCENE">
+    <xsd:complexType cpp:type="Scene">
+      <xsd:choice maxOccurs="unbounded">
+        <xsd:element ref="camera" cpp:property="addCamera" minOccurs="1"/>
+        <xsd:element ref="object" cpp:property="addObject"/>
+        <xsd:element ref="light" cpp:property="addLight"/>
+      </xsd:choice>
+      <xsd:attributeGroup ref="reference-attributes"/>
+    </xsd:complexType>
+  </xsd:element>
+
+
+<!-- ================ Scene-level elements ========================== -->
+  <xsd:element name="camera" cpp:identifier="XML_CAMERA">
+    <xsd:complexType cpp:type="Camera">
+      <xsd:all>
+        <xsd:element ref="transform" cpp:property="transform()" maxOccurs="1"/>
+      </xsd:all>
+      <xsd:attributeGroup ref="reference-attributes"/>
+      <xsd:attribute name="horizontal-angle" type="xsd:double" default="30.0"
+                     cpp:identifier="XML_CAMERA_H_ANGLE" 
+                     cpp:property="horizontalViewAngle()" cpp:type="scalar"/>
+      <xsd:attribute name="vertical-angle" type="xsd:double" default="30.0"
+                     cpp:identifier="XML_CAMERA_V_ANGLE"
+                     cpp:property="verticalViewAngle()" cpp:type="scalar"/>
+      <xsd:attribute name="focal-length" type="xsd:double" default="1.0"
+                     cpp:identifier="XML_CAMERA_FOCAL_LENGTH"
+                     cpp:property="focalLength()" cpp:type="scalar"/>
+      <xsd:attribute name="aperture" type="xsd:double" default="0.0"
+                     cpp:identifier="XML_CAMERA_APERTURE"
+                     cpp:property="apertureDiameter()" cpp:type="scalar"/>
+    </xsd:complexType>
+  </xsd:element>
+
+  <xsd:element name="light" cpp:identifier="XML_LIGHT">
+    <xsd:complexType cpp:type="Light">
+      <xsd:all>
+        <xsd:element ref="transform" cpp:property="transform()"/>
+        <xsd:element name="color" type="color"
+                     cpp:identifier="XML_COLOR" cpp:property="color()"/>
+      </xsd:all>
+      <xsd:attributeGroup ref="reference-attributes"/>
+      <xsd:attribute name="intensity" type="xsd:double" default="1.0"
+                     cpp:identifier="XML_LIGHT_INTENSITY"
+                     cpp:property="intensity()" cpp:type="scalar"/> 
+    </xsd:complexType>
+  </xsd:element>
+
+  <xsd:element name="object" cpp:identifier="XML_OBJECT">
+    <xsd:complexType cpp:type="Object">
+      <xsd:all>
+        <xsd:element ref="geometry" cpp:property="geometry()"/>
+        <xsd:element ref="transform" cpp:property="transform()"/>
+        <!--xsd:element ref="material" cpp:property="material()"/ -->
+      </xsd:all>
+      <xsd:attributeGroup ref="reference-attributes"/>
+    </xsd:complexType>
+  </xsd:element>
+
+
+<!-- ================ Transformation elements ======================= -->
+  <xsd:element name="transform" cpp:identifier="XML_TRANSFORM">
+    <xsd:complexType cpp:type="Transform">
+      <xsd:all>
+        <xsd:element name="location" type="point"
+                     cpp:identifier="XML_TRANSFORM_LOCATION"
+                     cpp:property="locationPoint()"/>
+        <xsd:element name="look-at" type="point"
+                     cpp:identifier="XML_TRANSFORM_LOOK_AT" 
+                     cpp:property="lookAtPoint()"/>
+        <xsd:element name="world-up" type="vector"
+                     cpp:identifier="XML_TRANSFORM_WORLD_UP" 
+                     cpp:property="worldUpVector()"/>
+      </xsd:all>
+      <xsd:attributeGroup ref="reference-attributes"/>
+    </xsd:complexType>
+  </xsd:element>
+
+
+<!-- ================ Geometry elements ============================= -->
+  <xsd:element name="geometry" cpp:identifier="XML_GEOMETRY">
+    <xsd:complexType cpp:type="Geometry">
+      <!-- All sub-types must be cast to Shape3D. -->
+      <xsd:choice cpp:type="Shape3D">
+        <xsd:element name="plane" cpp:identifier="XML_PLANE"
+                     cpp:property="shape()">
+          <xsd:complexType cpp:type="Plane3D">
+            <xsd:attributeGroup ref="reference-attributes"/>
+          </xsd:complexType>
+        </xsd:element>
+        <xsd:element name="sphere" cpp:identifier="XML_SPHERE"
+                     cpp:property="shape()">
+          <xsd:complexType cpp:type="Sphere3D">
+            <xsd:attributeGroup ref="reference-attributes"/>
+            <xsd:attribute name="radius" type="xsd:double"
+                           cpp:identifier="XML_RADIUS"
+                           cpp:property="radius()" cpp:type="scalar"/>
+          </xsd:complexType>
+        </xsd:element>
+        <xsd:element name="cube" cpp:identifier="XML_CUBE"
+                     cpp:property="shape()">
+          <xsd:complexType cpp:type="Cube3D">
+            <xsd:attributeGroup ref="reference-attributes"/>
+            <xsd:attribute name="x-size" type="xsd:double"
+                           cpp:identifier="XML_X_SIZE"
+                           cpp:property="xSize()" cpp:type="scalar"/>
+            <xsd:attribute name="y-size" type="xsd:double"
+                           cpp:identifier="XML_Y_SIZE"
+                           cpp:property="ySize()" cpp:type="scalar"/>
+            <xsd:attribute name="z-size" type="xsd:double"
+                           cpp:identifier="XML_Z_SIZE"
+                           cpp:property="zSize()" cpp:type="scalar"/>
+          </xsd:complexType>
+        </xsd:element>
+        <!--xsd:element name="polynomial" cpp:identifier="XML_POLYNOMIAL"
+                     cpp:property="shape()">
+          <xsd:complexType cpp:type="PolynomialSurface3D">
+            <xsd:attributeGroup ref="reference-attributes"/>
+            <xsd:attribute name="degree" type="xsd:integer"
+                           cpp:identifier="XML_POLY_DEGREE"
+                           cpp:property="degree()" cpp:type="int"/>
+            <xsd:attribute name="coefficients" type="xsd:string"
+                           cpp:identifier="XML_POLY_COEFF"
+                           cpp:property="coefficients()" cpp:type="string"/>
+          </xsd:complexType>
+        </xsd:element -->
+      </xsd:choice>
+      <xsd:attributeGroup ref="reference-attributes"/>
+    </xsd:complexType>
+  </xsd:element>
+
+
+<!-- ================ PolygonMesh elements ========================== -->
+  <xsd:element name="mesh" cpp:identifier="XML_MESH" type="xsd:PolygonMesh3D">
+    <xsd:complexType>
+      <xsd:attributeGroup ref="reference-attributes"/>
+      <xsd:all maxOccurs="unbounded">
+        <!-- ++++++++++++++ PolygonMesh sub-elements +++++++++++++++++++ -->
+        <xsd:element name="vertex" cpp:identifier="XML_MESH_VERTEX"
+                     type="xsd:Vertex3D" cpp:property="Vertex">
+          <xsd:complexType>
+            <xsd:attributeGroup ref="reference-attributes"/>
+            <xsd:attributeGroup ref="point-attributes"/>
+          </xsd:complexType>
+        </xsd:element>
+
+        <!-- ++++++++++++++ PolygonMesh sub-elements +++++++++++++++++++ -->
+      </xsd:all>
+    </xsd:complexType>
+  </xsd:element>
+
+  <xsd:element name="face" cpp:identifier="XML_MESH_FACE" type="xsd:Face3D">
+    <xsd:complexType>
+      <xsd:attributeGroup ref="reference-attributes"/>
+    </xsd:complexType>
+  </xsd:element>
+
+  <xsd:element name="face-normal" cpp:identifier="XML_MESH_FACE_NORMAL" type="xsd:Vector3D">
+    <xsd:complexType>
+      <xsd:attributeGroup ref="reference-attributes"/>
+      <xsd:attributeGroup ref="vector-attributes"/>
+    </xsd:complexType>
+  </xsd:element>
+
+  <xsd:element name="vertex-normal" cpp:identifier="XML_MESH_VERTEX_NORMAL" 
+           type="xsd:Vector3D">
+    <xsd:complexType>
+      <xsd:attributeGroup ref="reference-attributes"/>
+      <xsd:attributeGroup ref="vector-attributes"/>
+    </xsd:complexType>
+  </xsd:element>
+
+  <xsd:element name="texture-coordinate" cpp:identifier="XML_MESH_TEX_COORD" 
+           type="xsd:Vector3D">
+    <xsd:complexType>
+      <xsd:attributeGroup ref="reference-attributes"/>
+      <xsd:attributeGroup ref="texture-attributes"/>
+    </xsd:complexType>
+  </xsd:element>
+
+
+<!-- ================ Material elements ============================= -->
+  <!--xsd:element name="material" cpp:identifier="XML_MATERIAL">
+    <xsd:complexType cpp:type="Material">
+      <xsd:all>
+        <xsd:element ref="transform" cpp:property="transform()"/>
+        <xsd:element name="surface" cpp:identifier="XML_SURFACE"
+                     cpp:property="surface()">
+          <xsd:complexType cpp:type="Surface">
+            <xsd:all>
+              <xsd:element name="channels" type="channel-network"
+                           cpp:identifier="XML_CHANNELS"
+                           cpp:property="parseChannelExpression"/>
+            </xsd:all>
+            <xsd:attributeGroup ref="reference-attributes"/>
+            <xsd:attribute name="type" type="xsd:string"
+                           cpp:identifier="XML_TYPE"
+                           cpp:property="type()" cpp:type="string"/>
+          </xsd:complexType>
+        </xsd:element>
+        <xsd:element name="interior" cpp:identifier="XML_INTERIOR"
+                     cpp:property="interior()">
+          <xsd:complexType cpp:type="Interior">
+            <xsd:all>
+              <xsd:element name="channels" type="channel-network"
+                           cpp:identifier="XML_CHANNELS"
+                           cpp:property="parseChannelExpression"/>
+            </xsd:all>
+            <xsd:attributeGroup ref="reference-attributes"/>
+          </xsd:complexType>
+        </xsd:element>
+      </xsd:all>
+      <xsd:attributeGroup ref="reference-attributes"/>
+    </xsd:complexType>
+  </xsd:element -->
+
+  <!-- xsd:element name="voxel-data" type="xsd:string"
+               cpp:identifier="XML_VOXEL_DATA"
+               cpp:property="" cpp:type="LatticeAdapter<double, double>">
+    <xsd:complexType>
+      <xsd:attributeGroup ref="reference-attributes"/>
+    </xsd:complexType>
+  </xsd:element -->
+
+</xsd:schema>

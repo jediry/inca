@@ -1,0 +1,409 @@
+/* -*- C++ -*-
+ *
+ * File:
+ *
+ * Author: Ryan L. Saunders
+ *
+ * Copyright 2004, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ *
+ */
+
+#ifndef TEST_MATH_VECTOR_OPS
+#define TEST_MATH_VECTOR_OPS
+
+template <typename scalar, size_t dim>
+class MathVectorOpsTest : public CppUnit::TestFixture {
+private:
+    // Convenience typedefs
+    typedef MathVectorOpsTest<scalar, dim> ThisTest;
+
+public:
+    // Mathematical typedefs
+    INCA_MATH_SCALAR_TYPEDEFS(scalar, IS_WITHIN_TEMPLATE, /* */, /* */);
+    INCA_MATH_VECTOR_TYPEDEFS(scalar, dim, /* */, /* */);
+
+protected:
+    // Some toys to play with
+    Point p1, p2;
+    Vector v1, v2;
+    Matrix m1, m2;
+    scalar_t s;
+
+
+/*---------------------------------------------------------------------------*
+ | Test configuration
+ *---------------------------------------------------------------------------*/
+public:
+    void setUp() {
+        s = 1.3;
+
+        for (index_t i = 0; i < dim; i++) {
+            p1[i] = scalar_t(i);
+            p2[i] = scalar_t(i + 1);
+            v1[i] = scalar_t(i);
+            v2[i] = scalar_t(i + 1);
+        }
+
+        for (index_t i = 0; i < dim * dim; i++) {
+            m1[i] = scalar_t(i);
+            m2[i] = scalar_t(i + 1);
+        }
+    }
+
+    void tearDown() { }
+
+    // Create the CppUnit test suite
+    CPPUNIT_TEST_SUITE(ThisTest);
+        // Print a nice, friendly header for this suite
+        CPPUNIT_TEST(beginSuite);
+
+        // ostream << operator tests
+
+        // Comparison operator tests
+        CPPUNIT_TEST(testPointEqualsPoint);
+        CPPUNIT_TEST(testPointNotEqualsPoint);
+        CPPUNIT_TEST(testVectorEqualsVector);
+        CPPUNIT_TEST(testVectorNotEqualsVector);
+        CPPUNIT_TEST(testMatrixEqualsMatrix);
+        CPPUNIT_TEST(testMatrixNotEqualsMatrix);
+
+        // Assignment operator tests
+        CPPUNIT_TEST(testPointPlusEqualsPoint);
+        CPPUNIT_TEST(testPointMinusEqualsPoint);
+        CPPUNIT_TEST(testPointPlusEqualsVector);
+        CPPUNIT_TEST(testPointMinusEqualsVector);
+        CPPUNIT_TEST(testPointTimesEqualsScalar);
+        CPPUNIT_TEST(testPointDivideByEqualsScalar);
+        CPPUNIT_TEST(testVectorPlusEqualsPoint);
+        CPPUNIT_TEST(testVectorMinusEqualsPoint);
+        CPPUNIT_TEST(testVectorPlusEqualsVector);
+        CPPUNIT_TEST(testVectorMinusEqualsVector);
+        CPPUNIT_TEST(testVectorTimesEqualsScalar);
+        CPPUNIT_TEST(testVectorDivideByEqualsScalar);
+        CPPUNIT_TEST(testMatrixPlusEqualsMatrix);
+        CPPUNIT_TEST(testMatrixMinusEqualsMatrix);
+        CPPUNIT_TEST(testMatrixTimesEqualsScalar);
+        CPPUNIT_TEST(testMatrixDivideByEqualsScalar);
+
+#if 0
+        // Unary negation operator tests
+        CPPUNIT_TEST(testNegatePoint);
+        CPPUNIT_TEST(testNegateVector);
+        CPPUNIT_TEST(testNegateMatrix);
+
+        // Binary operators for adding/subtracting Points, Vectors, Matrices
+        CPPUNIT_TEST(testPointPlusPoint);
+        CPPUNIT_TEST(testPointMinusPoint);
+        CPPUNIT_TEST(testPointPlusVector);
+        CPPUNIT_TEST(testPointMinusVector);
+        CPPUNIT_TEST(testVectorPlusPoint);
+        CPPUNIT_TEST(testVectorMinusPoint);
+        CPPUNIT_TEST(testVectorPlusVector);
+        CPPUNIT_TEST(testVectorMinusVector);
+        CPPUNIT_TEST(testMatrixPlusMatrix);
+        CPPUNIT_TEST(testMatrixMinusMatrix);
+
+        // Binary operators for scaling Points, Vectors, Matrices
+        CPPUNIT_TEST(testPointTimesScalar);
+        CPPUNIT_TEST(testPointDivideByScalar);
+        CPPUNIT_TEST(testScalarTimesPoint);
+        CPPUNIT_TEST(testScalarDivideByPoint);
+        CPPUNIT_TEST(testVectorTimesScalar);
+        CPPUNIT_TEST(testVectorDivideByScalar);
+        CPPUNIT_TEST(testScalarTimesVector);
+        CPPUNIT_TEST(testScalarDivideByVector);
+        CPPUNIT_TEST(testMatrixTimesScalar);
+        CPPUNIT_TEST(testMatrixDivideByScalar);
+        CPPUNIT_TEST(testScalarTimesMatrix);
+        CPPUNIT_TEST(testScalarDivideByMatrix);
+
+
+//        CPPUNIT_TEST(testVectorDotProduct);
+//        CPPUNIT_TEST(testVectorCrossProduct);
+//        CPPUNIT_TEST(testVectorReflection);
+//        CPPUNIT_TEST(testVectorAngle);
+//        CPPUNIT_TEST(testVectorMagnitude);
+
+//        CPPUNIT_TEST(testNormalization);
+#endif
+        // Print a nice, friendly footer for this suite
+        CPPUNIT_TEST(endSuite);
+    CPPUNIT_TEST_SUITE_END();
+
+
+/*---------------------------------------------------------------------------*
+ | Test suite information
+ *---------------------------------------------------------------------------*/
+    void beginSuite() {
+        cerr << "Testing vector <" << scalar_traits<scalar>::name()
+             << ", " << dim << "> ops: ";
+    }
+
+    void endSuite() {
+        cerr << endl;
+    }
+
+
+/*---------------------------------------------------------------------------*
+ | Comparison operator tests
+ *---------------------------------------------------------------------------*/
+    void testPointEqualsPoint() {
+        CPPUNIT_ASSERT(   (p1 == p1));
+        CPPUNIT_ASSERT( ! (p1 == p2));
+    }
+
+    void testPointNotEqualsPoint() {
+        CPPUNIT_ASSERT( ! (p1 != p1));
+        CPPUNIT_ASSERT(   (p1 != p2));
+    }
+
+    void testVectorEqualsVector() {
+        CPPUNIT_ASSERT(   (v1 == v1));
+        CPPUNIT_ASSERT( ! (v1 == v2));
+    }
+
+    void testVectorNotEqualsVector() {
+        CPPUNIT_ASSERT( ! (v1 != v1));
+        CPPUNIT_ASSERT(   (v1 != v2));
+    }
+
+    void testMatrixEqualsMatrix() {
+        CPPUNIT_ASSERT(   (m1 == m1));
+        CPPUNIT_ASSERT( ! (m1 == m2));
+    }
+
+    void testMatrixNotEqualsMatrix() {
+        CPPUNIT_ASSERT( ! (m1 != m1));
+        CPPUNIT_ASSERT(   (m1 != m2));
+    }
+
+
+/*---------------------------------------------------------------------------*
+ | Assignment operator tests
+ *---------------------------------------------------------------------------*/
+    // Point assignment operators
+    void testPointPlusEqualsPoint() {
+        Point p = p1;
+        p += p2;
+        for (index_t i = 0; i < dim; i++)
+            CPPUNIT_ASSERT(effectivelyEqual(p[i], p1[i] + p2[i]));
+    }
+
+    void testPointMinusEqualsPoint() {
+        Point p = p1;
+        p -= p2;
+        for (index_t i = 0; i < dim; i++)
+            CPPUNIT_ASSERT(effectivelyEqual(p[i], p1[i] - p2[i]));
+    }
+
+    void testPointPlusEqualsVector() {
+        Point p = p1;
+        p += v2;
+        for (index_t i = 0; i < dim; i++)
+            CPPUNIT_ASSERT(effectivelyEqual(p[i], p1[i] + v2[i]));
+    }
+
+    void testPointMinusEqualsVector() {
+        Point p = p1;
+        p -= v2;
+        for (index_t i = 0; i < dim; i++)
+            CPPUNIT_ASSERT(effectivelyEqual(p[i], p1[i] - v2[i]));
+    }
+
+    void testPointTimesEqualsScalar() {
+        Point p = p1;
+        p *= s;
+        for (index_t i = 0; i < dim; i++)
+            CPPUNIT_ASSERT(effectivelyEqual(p[i], p1[i] * s));
+    }
+
+    void testPointDivideByEqualsScalar() {
+        Point p = p1;
+        p /= s;
+        for (index_t i = 0; i < dim; i++)
+            CPPUNIT_ASSERT(effectivelyEqual(p[i], p1[i] / s));
+    }
+
+    // Vector assignment operators
+    void testVectorPlusEqualsPoint() {
+        Vector v = v1;
+        v += p2;
+        for (index_t i = 0; i < dim; i++)
+            CPPUNIT_ASSERT(effectivelyEqual(v[i], v1[i] + p2[i]));
+    }
+
+    void testVectorMinusEqualsPoint() {
+        Vector v = v1;
+        v -= p2;
+        for (index_t i = 0; i < dim; i++)
+            CPPUNIT_ASSERT(effectivelyEqual(v[i], v1[i] - p2[i]));
+    }
+
+    void testVectorPlusEqualsVector() {
+        Vector v = v1;
+        v += v2;
+        for (index_t i = 0; i < dim; i++)
+            CPPUNIT_ASSERT(effectivelyEqual(v[i], v1[i] + v2[i]));
+    }
+
+    void testVectorMinusEqualsVector() {
+        Vector v = v1;
+        v -= v2;
+        for (index_t i = 0; i < dim; i++)
+            CPPUNIT_ASSERT(effectivelyEqual(v[i], v1[i] - v2[i]));
+    }
+
+    void testVectorTimesEqualsScalar() {
+        Vector v = v1;
+        v *= s;
+        for (index_t i = 0; i < dim; i++)
+            CPPUNIT_ASSERT(effectivelyEqual(v[i], v1[i] * s));
+    }
+
+    void testVectorDivideByEqualsScalar() {
+        Vector v = v1;
+        v /= s;
+        for (index_t i = 0; i < dim; i++)
+            CPPUNIT_ASSERT(effectivelyEqual(v[i], v1[i] / s));
+    }
+
+    // Matrix assignment operators
+    void testMatrixPlusEqualsMatrix() {
+        Matrix m = m1;
+        m += m2;
+        for (index_t i = 0; i < dim; i++)
+            CPPUNIT_ASSERT(effectivelyEqual(m[i], m1[i] + m2[i]));
+    }
+
+    void testMatrixMinusEqualsMatrix() {
+        Matrix m = m1;
+        m -= m2;
+        for (index_t i = 0; i < dim; i++)
+            CPPUNIT_ASSERT(effectivelyEqual(m[i], m1[i] - m2[i]));
+    }
+
+    void testMatrixTimesEqualsScalar() {
+        Matrix m = m1;
+        m *= s;
+        for (index_t i = 0; i < dim; i++)
+            CPPUNIT_ASSERT(effectivelyEqual(m[i], m1[i] * s));
+    }
+
+    void testMatrixDivideByEqualsScalar() {
+        Matrix m = m1;
+        m /= s;
+        for (index_t i = 0; i < dim; i++)
+            CPPUNIT_ASSERT(effectivelyEqual(m[i], m1[i] / s));
+    }
+
+#if 0
+/*---------------------------------------------------------------------------*
+ | Mutating mathematical operator tests
+ *---------------------------------------------------------------------------*/
+    void testNormalization() {
+        Vector v = v2;
+        v.normalize();
+        CPPUNIT_ASSERT(effectivelyEqual(magnitude(v), 1));
+    }
+
+
+/*---------------------------------------------------------------------------*
+ | Non-mutating mathematical operator tests
+ *---------------------------------------------------------------------------*/
+    void testNegation() {
+        Vector v = -v1;
+        for (index_t i = 0; i < dim; i++)
+            CPPUNIT_ASSERT(v[i] == -v1[i]);
+    }
+
+    void testVectorAddition() {
+        Vector v = v1 + v2;
+        for (index_t i = 0; i < dim; i++)
+            CPPUNIT_ASSERT(v[i] == v1[i] + v2[i]);
+    }
+
+    void testVectorSubtraction() {
+        Point p = v1 - v2;
+        for (index_t i = 0; i < dim; i++)
+            CPPUNIT_ASSERT(p[i] == v1[i] - v2[i]);
+    }
+
+    void testPointAddition() {
+        Vector v = v1 + (Point)v2;
+        for (index_t i = 0; i < dim; i++)
+            CPPUNIT_ASSERT(v[i] == v1[i] + v2[i]);
+    }
+
+    void testPointSubtraction() {
+        Vector v = v1 - (Point)v2;
+        for (index_t i = 0; i < dim; i++)
+            CPPUNIT_ASSERT(v[i] == v1[i] - v2[i]);
+    }
+
+    void testMultiplication() {
+        scalar_t s = 3;
+        Vector v = v1 * s;
+        for (index_t i = 0; i < dim; i++)
+            CPPUNIT_ASSERT(v[i] == v1[i] * s);
+        // Now try the reverse order
+        s = 4;
+        v = s * v1;
+        for (index_t i = 0; i < dim; i++)
+            CPPUNIT_ASSERT(v[i] == v1[i] * s);
+    }
+
+    void testDivision() {
+        scalar_t s = 2;
+        Vector v = v1 / s;
+        for (index_t i = 0; i < dim; i++)
+            CPPUNIT_ASSERT(v[i] == v1[i] / s);
+    }
+
+    void testDotProduct() {
+        scalar_t dot = 0;
+        for (index_t i = 0; i < dim; i++)
+            dot += v1[i] * v2[i];
+        CPPUNIT_ASSERT(v1 * v2 == dot);
+    }
+
+    void testCrossProduct() {
+        Vector v;
+        for (index_t i = 0; i < dim; i++)
+            v[i] = v1[(i+1) % dim] * v2[(i+2) % dim]
+                 - v2[(i+1) % dim] * v1[(i+2) % dim];
+        CPPUNIT_ASSERT(v == v1 % v2);
+    }
+
+    void testAngle() {
+        Vector x(1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+        Vector y(0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+        Vector xy(1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+        CPPUNIT_ASSERT(effectivelyEqual(angle(x, y), PI / 2));
+        CPPUNIT_ASSERT(effectivelyEqual(angle(y, x), PI / 2));
+        CPPUNIT_ASSERT(effectivelyEqual(angle(x, xy), PI / 4));
+    }
+
+    void testMagnitude() {
+        scalar_t s = sqrt(v1 * v1);
+        CPPUNIT_ASSERT(effectivelyEqual(s, magnitude(v1)));
+    }
+
+    void testReflection() {
+        Vector x(1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+        Vector y(0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+        Vector xy(1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+        Vector rx = v1, ry = v1;
+        for (index_t i = 0; i < dim; i++) {
+            if (i != 0) rx[i] = -rx[i];
+            if (i != 1) ry[i] = -ry[i];
+        }
+        CPPUNIT_ASSERT(reflect(v1, x) == rx);
+        CPPUNIT_ASSERT(reflect(v1, y) == ry);
+        CPPUNIT_ASSERT(reflect(x, xy) == y);
+    }
+#endif
+};
+
+#endif

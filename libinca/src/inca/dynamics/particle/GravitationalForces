@@ -1,0 +1,68 @@
+/* -*- C++ -*-
+ *
+ * File: Force
+ * 
+ * Author: Ryan L. Saunders
+ *
+ * Copyright 2003, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ */
+
+#ifndef INCA_DYNAMICS_GRAVITATIONAL_FORCES
+#define INCA_DYNAMICS_GRAVITATIONAL_FORCES
+
+// Import superclass definition
+#include "Operator"
+
+// This is part of the Inca dynamics library
+namespace Inca {
+    namespace Dynamics {
+        // Forward declarations
+        template <class Scalar, unsigned int dim> class MicroGravityForce;
+    };
+};
+
+
+template <class Scalar, unsigned int dim>
+class Inca::Dynamics::MicroGravityForce : public Operator<Scalar, dim> {
+private:
+    // Convenience typedefs
+    typedef Operator<Scalar, dim> Superclass;
+
+public:
+    // What dimensional space are we working in?
+    const static unsigned int dimension = dim;
+
+    // Template typedefs
+    typedef typename Superclass::scalar_t       scalar_t;
+    typedef typename Superclass::scalar_arg_t   scalar_arg_t;
+    typedef typename Superclass::Point          Point;
+    typedef typename Superclass::Vector         Vector;
+
+    typedef typename Superclass::Particle       Particle;
+    typedef typename Superclass::ParticleState  ParticleState;
+
+
+/*---------------------------------------------------------------------------*
+ | Constructor
+ *---------------------------------------------------------------------------*/
+public:
+    MicroGravityForce(const Vector &ga) : gravitationalAcceleration(ga) { }
+
+protected:
+    Vector gravitationalAcceleration;
+
+
+/*---------------------------------------------------------------------------*
+ | Calculation of the force exerted by this object
+ *---------------------------------------------------------------------------*/
+public:
+    // Calculation of forces exterted on all particles affected by this object
+    virtual void apply(ParticleState &state, scalar_arg_t dt) {
+        for (unsigned int i = 0; i < state.particleCount; i++)
+            state.force[i] += gravitationalAcceleration * state.particle[i]->mass;
+    }
+};
+
+#endif

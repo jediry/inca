@@ -1,0 +1,92 @@
+/* -*- C++ -*-
+ *
+ * File: RandomGaussian
+ * 
+ * Author: Ryan L. Saunders
+ *
+ * Copyright 2003, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ *      The RandomGaussian template class generates random scalar numbers
+ *      according to a gaussian distribution, specified with a mean and a
+ *      standard deviation.
+ *
+ *      The gaussian generator algorithm was adapted from an example coded
+ *      by Dr. Donald H. House, Texas A&M University.
+ */
+
+#ifndef INCA_MATH_GENERATOR_RANDOM_GAUSSIAN
+#define INCA_MATH_GENERATOR_RANDOM_GAUSSIAN
+
+// Import system configuration
+#include <inca/inca-common.h>
+
+// This is part of the Inca math library
+namespace inca {
+    namespace math {
+        // Forward declaration
+        template <typename scalar> class RandomGaussian;
+    };
+};
+
+
+template <typename scalar>
+class inca::math::RandomGaussian {
+private:
+    // Convenience typedefs
+    typedef RandomGaussian<scalar>      ThisType;
+
+public:
+    // Import scalar typedefs
+    INCA_MATH_SCALAR_TYPEDEFS(scalar, IS_WITHIN_TEMPLATE, /* */, /* */);
+
+    // Constructors
+    RandomGaussian()
+        : mean(*this), stddev(*this) { }
+    RandomGaussian(scalar_arg_t _mean, scalar_arg_t _stddev)
+        : mean(*this, _mean), stddev(*this, _stddev) { }
+
+    // Distribution parameters
+    rw_property(scalar_t, mean, 1.0);
+    rw_property(scalar_t, stddev, 1.0);
+
+    // Function-call operator (generator function)
+    scalar_t operator()() const {
+        // Inverse gaussian function lookup table
+        const static int TABLE_MAX = 20;
+        static scalar_t inverseGauss[] = {
+            0.00000E+00, 6.27500E-02, 1.25641E-01, 1.89000E-01,
+            2.53333E-01, 3.18684E-01, 3.85405E-01, 4.53889E-01,
+            5.24412E-01, 5.97647E-01, 6.74375E-01, 7.55333E-01,
+            8.41482E-01, 9.34615E-01, 1.03652E+00, 1.15048E+00,
+            1.28167E+00, 1.43933E+00, 1.64500E+00, 1.96000E+00,
+            3.87000E+00
+        };
+      
+        // Compute a uniform random number in [0.0, 0.5], and a +/- sign
+        scalar_t u = rand() / (scalar_t)RAND_MAX;
+        bool negative;
+        if (u >= 0.5) {
+            negative = false;
+            u = u - 0.5;
+        } else
+            negative = true;
+
+        // Lookup/interpolate the gaussian value from the table
+        scalar_t lookup = u * 2 * TABLE_MAX;
+        scalar_t delta;
+        index_t index = (index_t)lookup;
+        if (index == TABLE_MAX)
+            delta = inverseGauss[TABLE_MAX];
+        else {
+            scalar_t diff = lookup - index;
+            delta = inverseGauss[index]
+                  + (inverseGauss[index + 1] - inverseGauss[index]) * diff;
+        }
+        scalar_t result = mean + stddev * (negative? -delta : delta);
+        return result;
+    }
+};
+
+#endif
+

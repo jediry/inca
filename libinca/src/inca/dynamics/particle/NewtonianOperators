@@ -1,0 +1,232 @@
+/* -*- C++ -*-
+ *
+ * File: NewtonianOperators
+ * 
+ * Author: Ryan L. Saunders
+ *
+ * Copyright 2003, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ */
+
+#ifndef INCA_DYNAMICS_PARTICLE_NEWTONIAN_OPERATORS
+#define INCA_DYNAMICS_PARTICLE_NEWTONIAN_OPERATORS
+
+
+// Import superclass definition
+#include "Operator"
+
+// This is part of the Inca dynamics library
+namespace Inca {
+    namespace Dynamics {
+        // Forward declarations
+        template <class Scalar, unsigned int dim> class AppliedForce;
+        template <class Scalar, unsigned int dim> class AppliedAcceleration;
+        template <class Scalar, unsigned int dim> class AppliedVelocity;
+
+        template <class Scalar, unsigned int dim> class ConstantAcceleration;
+        template <class Scalar, unsigned int dim> class ConstantVelocity;
+        template <class Scalar, unsigned int dim> class ConstantPosition;
+    };
+};
+
+
+template <class Scalar, unsigned int dim>
+class Inca::Dynamics::AppliedForce : public Operator<Scalar, dim> {
+private:
+    // Convenience typedefs
+    typedef Operator<Scalar, dim> Superclass;
+
+public:
+    // What dimensional space are we working in?
+    const static unsigned int dimension = dim;
+
+    // Template typedefs
+    typedef typename Superclass::scalar_t       scalar_t;
+    typedef typename Superclass::scalar_arg_t   scalar_arg_t;
+    typedef typename Superclass::Point          Point;
+    typedef typename Superclass::Vector         Vector;
+
+    typedef typename Superclass::Particle       Particle;
+    typedef typename Superclass::ParticleState  ParticleState;
+
+    // Set the acceleration based on the accumulated force and the mass
+    virtual void apply(ParticleState &state, scalar_arg_t dt) {
+        for (unsigned int i = 0; i < state.particleCount; i++)
+            state.acceleration[i] = state.force[i] / state.particle[i]->mass;
+    }
+};
+
+template <class Scalar, unsigned int dim>
+class Inca::Dynamics::AppliedAcceleration : public Operator<Scalar, dim> {
+private:
+    // Convenience typedefs
+    typedef Operator<Scalar, dim> Superclass;
+
+public:
+    // What dimensional space are we working in?
+    const static unsigned int dimension = dim;
+
+    // Template typedefs
+    typedef typename Superclass::scalar_t       scalar_t;
+    typedef typename Superclass::scalar_arg_t   scalar_arg_t;
+    typedef typename Superclass::Point          Point;
+    typedef typename Superclass::Vector         Vector;
+
+    typedef typename Superclass::Particle       Particle;
+    typedef typename Superclass::ParticleState  ParticleState;
+
+    // Add in the acceleration to the current velocity
+    virtual void apply(ParticleState &state, scalar_arg_t dt) {
+        for (unsigned int i = 0; i < state.particleCount; i++)
+            state.velocity[i] += state.acceleration[i] * dt;
+    }
+};
+
+template <class Scalar, unsigned int dim>
+class Inca::Dynamics::AppliedVelocity : public Operator<Scalar, dim> {
+private:
+    // Convenience typedefs
+    typedef Operator<Scalar, dim> Superclass;
+
+public:
+    // What dimensional space are we working in?
+    const static unsigned int dimension = dim;
+
+    // Template typedefs
+    typedef typename Superclass::scalar_t       scalar_t;
+    typedef typename Superclass::scalar_arg_t   scalar_arg_t;
+    typedef typename Superclass::Point          Point;
+    typedef typename Superclass::Vector         Vector;
+
+    typedef typename Superclass::Particle       Particle;
+    typedef typename Superclass::ParticleState  ParticleState;
+
+    // Set the acceleration based on the accumulated force and the mass
+    virtual void apply(ParticleState &state, scalar_arg_t dt) {
+        for (unsigned int i = 0; i < state.particleCount; i++)
+            state.position[i] += state.velocity[i] * dt;
+    }
+};
+
+template <class Scalar, unsigned int dim>
+class Inca::Dynamics::ConstantAcceleration : public Operator<Scalar, dim> {
+private:
+    // Convenience typedefs
+    typedef Operator<Scalar, dim> Superclass;
+
+public:
+    // What dimensional space are we working in?
+    const static unsigned int dimension = dim;
+
+    // Template typedefs
+    typedef typename Superclass::scalar_t       scalar_t;
+    typedef typename Superclass::scalar_arg_t   scalar_arg_t;
+    typedef typename Superclass::Point          Point;
+    typedef typename Superclass::Vector         Vector;
+
+    typedef typename Superclass::Particle       Particle;
+    typedef typename Superclass::ParticleState  ParticleState;
+
+    vector<Particle *> particles;
+    Vector acceleration;
+
+
+    // Constructor
+    ConstantAcceleration(const Vector &a = Vector(0.0), Particle *p = NULL)
+             : acceleration(a) {
+        if (p != NULL)
+            addParticle(p);
+    }
+    
+    void addParticle(Particle *p) {
+        particles.push_back(p);
+    }
+
+    // Unconditionally set the particle's acceleration to the constant value
+    virtual void apply(ParticleState &state, scalar_arg_t dt) {
+        for (unsigned int i = 0; i < particles.size(); i++)
+            state.acceleration[particles[i]->index] = acceleration;
+    }
+};
+
+template <class Scalar, unsigned int dim>
+class Inca::Dynamics::ConstantVelocity : public Operator<Scalar, dim> {
+private:
+    // Convenience typedefs
+    typedef Operator<Scalar, dim> Superclass;
+
+public:
+    // What dimensional space are we working in?
+    const static unsigned int dimension = dim;
+
+    // Template typedefs
+    typedef typename Superclass::scalar_t       scalar_t;
+    typedef typename Superclass::scalar_arg_t   scalar_arg_t;
+    typedef typename Superclass::Point          Point;
+    typedef typename Superclass::Vector         Vector;
+
+    typedef typename Superclass::Particle       Particle;
+    typedef typename Superclass::ParticleState  ParticleState;
+
+    vector<Particle *> particles;
+    Vector velocity;
+
+
+    // Constructor
+    ConstantVelocity(const Vector &v = Vector(0.0), Particle *p = NULL) : velocity(v) {
+        if (p != NULL)
+            addParticle(p);
+    }
+    
+    void addParticle(Particle *p) {
+        particles.push_back(p);
+    }
+
+    // Unconditionally set the particle's velocity to the constant value
+    virtual void apply(ParticleState &state, scalar_arg_t dt) {
+        for (unsigned int i = 0; i < particles.size(); i++)
+            state.velocity[particles[i]->index] = velocity;
+    }
+};
+
+template <class Scalar, unsigned int dim>
+class Inca::Dynamics::ConstantPosition : public Operator<Scalar, dim> {
+private:
+    // Convenience typedefs
+    typedef Operator<Scalar, dim> Superclass;
+
+public:
+    // What dimensional space are we working in?
+    const static unsigned int dimension = dim;
+
+    // Template typedefs
+    typedef typename Superclass::scalar_t       scalar_t;
+    typedef typename Superclass::scalar_arg_t   scalar_arg_t;
+    typedef typename Superclass::Point          Point;
+    typedef typename Superclass::Vector         Vector;
+
+    typedef typename Superclass::Particle       Particle;
+    typedef typename Superclass::ParticleState  ParticleState;
+
+    vector<Particle *> particles;
+    Point position;
+
+    // Constructor
+    ConstantPosition(const Point &pos = Position(0.0), Particle *p = NULL) : position(pos) {
+        if (p != NULL)
+            addParticle(p);
+    }
+    
+    void addParticle(Particle *p) {
+        particles.push_back(p);
+    }
+
+    // Unconditionally set the particle's position to the constant value
+    virtual void apply(ParticleState &state, scalar_arg_t dt) {
+        for (unsigned int i = 0; i < particles.size(); i++)
+            state.position[particles[i]->index] = position;
+    }
+};
+
+#endif

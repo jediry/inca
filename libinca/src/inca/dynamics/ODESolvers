@@ -1,0 +1,134 @@
+/* -*- C++ -*-
+ *
+ * File: ODESolvers
+ * 
+ * Author: Ryan L. Saunders
+ *
+ * Copyright 2003, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ *      The ExplicitODESolver family of templates use explicit (forward)
+ *      methods to derive the next system state from the current state, plus
+ *      the rules of motion imposed by the system.
+ *
+ *      One of the template parameters for ExplicitODESolver is the order of
+ *      the method, which describes how many terms of the Taylor expansion
+ *      of the system dynamics equation are used to derive new states from
+ *      old ones. So, for example, a 1st order ExplicitODESolver uses
+ *      standard Euler integration, a 2nd order solver uses Runge-Kutta 2, etc.
+ */
+
+#ifndef INCA_DYNAMICS_ODE_SOLVERS
+#define INCA_DYNAMICS_ODE_SOLVERS
+
+// This is part of the Inca dynamics library
+namespace Inca {
+    namespace Dynamics {
+        // Forward declaration
+        template <class DynObj, unsigned int order> class ExplicitODESolver;
+    };
+};
+
+// Import DynamicSystem definition
+#include "DynamicSystem"
+
+
+namespace Inca {
+    namespace Dynamics {
+        /*****************************************************************************
+         * The first-order specialization of an explicit ODE solver is exactly
+         * equivalent to forward-Euler integration.
+         *****************************************************************************/
+        template <class DynObj>
+        class ExplicitODESolver<DynObj, 1> {
+            // Template typedefs
+            typedef DynObj                              Object;
+            typedef DynamicSystem<Object, 1>            DynamicSystem;
+            typedef typename DynamicSystem::SystemState SystemState;
+
+            typedef typename Object::scalar_t           scalar_t;
+            typedef typename Object::scalar_arg_t       scalar_arg_t;
+
+        public:
+            // Constructor
+            ExplicitODESolver(const DynamicSystem & sys) : system(sys) { }
+
+            // Step the system forward
+            SystemState operator()(const SystemState &X, scalar_arg_t newTime) {
+                scalar_t dt = newTime - X.time();
+                SystemState K = system.calculateDelta(X, dt);
+                return X + K;
+            }
+
+        protected:
+            const DynamicSystem & system;
+        };
+
+
+        /*****************************************************************************
+         * The second-order specialization of an explicit ODE solver is exactly
+         * equivalent to forward Runge-Kutta second-order integration,
+         * a.k.a. "the midpoint method".
+         *****************************************************************************/
+        template <class DynObj>
+        class ExplicitODESolver<DynObj, 2> {
+            // Template typedefs
+            typedef DynObj                              Object;
+            typedef DynamicSystem<Object, 2>            DynamicSystem;
+            typedef typename DynamicSystem::SystemState SystemState;
+
+            typedef typename Object::scalar_t           scalar_t;
+            typedef typename Object::scalar_arg_t       scalar_arg_t;
+
+        public:
+            // Constructor
+            ExplicitODESolver(const DynamicSystem & sys) : system(sys) { }
+
+            // Step the system forward
+            SystemState operator()(const SystemState &X, scalar_arg_t newTime) {
+                scalar_t dt = newTime - X.time();
+                SystemState K1 = system.calculateDelta(X,            dt);
+                SystemState K2 = system.calculateDelta(X + K1 / 2.0, dt);
+                return X + K2;
+            }
+
+        protected:
+            const DynamicSystem & system;
+        };
+
+
+        /*****************************************************************************
+         * The fourth-order specialization of an explicit ODE solver is exactly
+         * equivalent to forward Runge-Kutta fourth-order integration.
+         *****************************************************************************/
+        template <class DynObj>
+        class ExplicitODESolver<DynObj, 4> {
+            // Template typedefs
+            typedef DynObj                              Object;
+            typedef DynamicSystem<Object, 4>            DynamicSystem;
+            typedef typename DynamicSystem::SystemState SystemState;
+
+            typedef typename Object::scalar_t           scalar_t;
+            typedef typename Object::scalar_arg_t       scalar_arg_t;
+
+        public:
+            // Constructor
+            ExplicitODESolver(const DynamicSystem & sys) : system(sys) { }
+
+            // Step the system forward
+            SystemState operator()(const SystemState &X, scalar_arg_t newTime) {
+                scalar_t dt = newTime - X.time();
+                SystemState K1 = system.calculateDelta(X,            dt);
+                SystemState K2 = system.calculateDelta(X + K1 / 2.0, dt);
+                SystemState K3 = system.calculateDelta(X + K2 / 2.0, dt);
+                SystemState K4 = system.calculateDelta(X + K3,       dt);
+                return X + (K1 + (K2 * 2.0) + (K3 * 2.0) + K4) / 6.0;
+            }
+
+        protected:
+            const DynamicSystem & system;
+        };
+    };
+};
+
+#endif

@@ -1,0 +1,88 @@
+/* -*- C++ -*-
+ *
+ * File: PolyQuadSurface
+ * 
+ * Author: Ryan L. Saunders
+ * 
+ * Copyright 2002, Ryan L. Saunders. All rights reserved.
+ * 
+ * Description:
+ *      The PolyQuadSurface template is a concrete subclass of
+ *      ControlPointSurface, representing piecewise-planar, continuous surfaces
+ *      made up of adjacent quadrilaterals. One potential use of this class is
+ *      to visually represent the control grid of another surface.
+ *
+ *      PolyQuadSurface is the surface analogue of PolyLineCurve;
+ *
+ *      The surface is parameterized such that each quadrilateral face of the
+ *      surface occupies the same extent in the S and T parameter domains,
+ *      irrespective of the arc-length of that face.
+ */
+
+#ifndef INCA_MATH_POLY_QUAD_SURFACE
+#define INCA_MATH_POLY_QUAD_SURFACE
+
+// Include superclass definition
+#include "ControlPointSurface"
+
+
+// This is part of the Inca geometry library
+namespace Inca {
+    namespace Geometry {
+        // Forward declaration
+        template <class Scalar, unsigned int dim> class PolyQuadSurface;
+    };
+};
+
+
+template <typename Scalar, unsigned int dim>
+class Inca::Geometry::PolyQuadSurface : public ControlPointSurface<Scalar, dim> {
+private:
+    // Convenience typedefs
+    typedef PolyQuadSurface<Scalar, dim>        ThisType;
+    typedef ControlPointSurface<Scalar, dim>    Superclass;
+
+public:
+    // What dimensional space are we working in?
+    const static unsigned int dimension = dim;
+
+    // Template typedefs
+    typedef typename Superclass::scalar_t       scalar_t;
+    typedef typename Superclass::scalar_arg_t   scalar_arg_t;
+    typedef typename Superclass::Point          Point;
+    typedef typename Superclass::Vector         Vector;
+    typedef typename Superclass::Ray            Ray;
+
+
+/*---------------------------------------------------------------------------*
+ | Constructors
+ *---------------------------------------------------------------------------*/
+public:
+    PolyQuadSurface(unsigned int sDim, unsigned int tDim)
+        : Superclass(sDim, tDim) { }
+    PolyQuadSurface(const Container::Grid<Point> &cp) : Superclass(cp) { }
+    PolyQuadSurface(const Superclass &s) : Superclass(s) { }
+
+
+/*---------------------------------------------------------------------------*
+ | Realization of ParametricSurface abstract functions
+ *---------------------------------------------------------------------------*/
+    scalar_t getMinimumS() { return 0; }
+    scalar_t getMaximumS() { return (scalar_t)controlPoints.columns(); }
+    scalar_t getMinimumT() { return 0; }
+    scalar_t getMaximumT() { return (scalar_t)controlPoints.rows(); }
+    Point evaluateSurface(scalar_arg_t s, scalar_arg_t t) {
+        cerr << "PolyQuadSurface::evaluateSurface -- NOT IMPLEMENTED\n";
+        return Point();
+    }
+    Vector evaluateNormal(scalar_arg_t s, scalar_arg_t t) {
+        cerr << "PolyQuadSurface::evaluateNormal -- NOT IMPLEMENTED\n";
+        return Vector();
+    }
+    scalar_t evaluateGaussianCurvature(scalar_arg_t s, scalar_arg_t t) {
+        cerr << "PolyQuadSurface::evaluateGaussianCurvature -- NOT IMPLEMENTED\n";
+        return 0;
+    }
+};
+
+#endif

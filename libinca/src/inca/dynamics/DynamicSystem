@@ -1,0 +1,417 @@
+/* -*- C++ -*-
+ *
+ * File: DynamicSystem
+ * 
+ * Author: Ryan L. Saunders
+ *
+ * Copyright 2003, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ *      The DynamicSystem template class implements a generic dynamic system,
+ *      composed of objects that may collide or otherwise interact.
+ *
+ *      Conceptually, the DynamicSystem acts as a quasi-realtime "controller"
+ *      of a set of objects, calculating the appropriate motion of the objects
+ *      and executing callbacks to propagate the changes back into the actual
+ *      objects.
+ *
+ *      In order to step the system forward in time, the DynamicSystem requires
+ *      one or more "dynamic objects" (the dynamic reflection of the "real"
+ *      object), a "state" object (containing the computed values for the
+ *      entire system at a particular point in time), and a "solver" object
+ *      (containing the algorithm for solving the differential equations
+ *      modeling the system). Dynamic effects are represented by "operators"
+ *      (functor objects that know how to operate on the dynamic objects, given
+ *      a state vector and a time value.
+ */
+
+#ifndef INCA_DYNAMIC_SYSTEM
+#define INCA_DYNAMIC_SYSTEM
+
+// This is part of the Inca dynamics library
+namespace Inca {
+    namespace Dynamics {
+        // Forward declaration
+        template <class DynObj> class Operator;
+        template <class DynObj> class ThirdDerivativeOperator;
+        template <class DynObj> class SecondDerivativeOperator;
+        template <class DynObj> class FirstDerivativeOperator;
+        template <class DynObj> class ZerothDerivativeOperator;
+        template <class DynObj, unsigned int odeMethod> class DynamicSystem;
+    };
+};
+
+// Import the state vector types and ODE solvers
+#include "StateVector"
+#include "ODESolvers"
+
+// Import our random-access/linked-list combo structure
+#include <util/random_access_list>
+
+
+/*****************************************************************************
+ * An Operator is ???
+ *****************************************************************************/
+template <class DynObj>
+class Inca::Dynamics::Operator {
+public:
+    // Template typedefs
+    typedef DynObj                          Object;
+    typedef typename Object::ObjectPtr      ObjectPtr;
+    typedef typename Object::State          State;
+    typedef typename Object::Calculation    Calculation;
+    typedef random_access_list<ObjectPtr>   ObjectPtrList;
+    typedef StateVectorProxy<State>         SystemState;
+    typedef StateVectorProxy<Calculation>   SystemCalculation;
+
+    typedef typename Object::Point          Point;
+    typedef typename Object::Vector         Vector;
+    typedef typename Object::Quaternion     Quaternion;
+    typedef typename Object::scalar_t       scalar_t;
+    typedef typename Object::scalar_arg_t   scalar_arg_t;
+
+    // Destructor must be virtual so we can clean up appropriately
+    virtual ~Operator() { }
+};
+
+
+template <class DynObj>
+class Inca::Dynamics::ThirdDerivativeOperator : virtual public Operator<DynObj> {
+public:
+    typedef typename Operator<DynObj>::SystemState          SystemState;
+    typedef typename Operator<DynObj>::SystemCalculation    SystemCalculation;
+    typedef typename Operator<DynObj>::ObjectPtrList        ObjectPtrList;
+
+    // Apply third-derivative modification to the system
+    virtual void modifyThirdDerivative(SystemState &delta,
+                                       SystemCalculation &calc,
+                                 const SystemState &prev,
+                                 const ObjectPtrList &objects) = 0;
+};
+
+
+template <class DynObj>
+class Inca::Dynamics::SecondDerivativeOperator : virtual public Operator<DynObj> {
+public:
+    typedef typename Operator<DynObj>::SystemState          SystemState;
+    typedef typename Operator<DynObj>::SystemCalculation    SystemCalculation;
+    typedef typename Operator<DynObj>::ObjectPtrList        ObjectPtrList;
+
+    // Apply second-derivative modification to the system
+    virtual void modifySecondDerivative(SystemState &delta,
+                                        SystemCalculation &calc,
+                                  const SystemState &prev,
+                                  const ObjectPtrList &objects) = 0;
+};
+
+
+template <class DynObj>
+class Inca::Dynamics::FirstDerivativeOperator : virtual public Operator<DynObj> {
+public:
+    typedef typename Operator<DynObj>::SystemState          SystemState;
+    typedef typename Operator<DynObj>::SystemCalculation    SystemCalculation;
+    typedef typename Operator<DynObj>::ObjectPtrList        ObjectPtrList;
+
+    // Apply second-derivative modification to the system
+    virtual void modifyFirstDerivative(SystemState &delta,
+                                       SystemCalculation &calc,
+                                 const SystemState &prev,
+                                 const ObjectPtrList &objects) = 0;
+};
+
+
+template <class DynObj>
+class Inca::Dynamics::ZerothDerivativeOperator : virtual public Operator<DynObj> {
+public:
+    typedef typename Operator<DynObj>::SystemState          SystemState;
+    typedef typename Operator<DynObj>::SystemCalculation    SystemCalculation;
+    typedef typename Operator<DynObj>::ObjectPtrList        ObjectPtrList;
+
+    // Apply second-derivative modification to the system
+    virtual void modifyZerothDerivative(SystemState &delta,
+                                        SystemCalculation &calc,
+                                  const SystemState &prev,
+                                  const ObjectPtrList &objects) = 0;
+};
+
+
+/*****************************************************************************
+ * A DynamicSystem 
+ *****************************************************************************/
+template <class DynObj, unsigned int odeMethod>
+class Inca::Dynamics::DynamicSystem {
+public:
+    // The ODE solver we're using XXX how to handle this?
+    typedef ExplicitODESolver<DynObj, odeMethod> Solver;
+
+
+    // Object/state typedefs
+    typedef DynObj                          Object;
+    typedef typename Object::ObjectPtr      ObjectPtr;
+    typedef typename Object::State          State;
+    typedef typename Object::Calculation    Calculation;
+
+    typedef random_access_list<ObjectPtr>   ObjectPtrList;
+    typedef StateVectorProxy<State>         SystemState;
+    typedef StateVectorProxy<Calculation>   SystemCalculation;
+
+
+    // Mathematical typedefs
+    typedef typename Object::scalar_t       scalar_t;
+    typedef typename Object::scalar_arg_t   scalar_arg_t;
+
+
+    // Operator typedefs
+    typedef Operator<Object>                    Operator;
+    typedef ThirdDerivativeOperator<Object>     ThirdDerivativeOperator;
+    typedef SecondDerivativeOperator<Object>    SecondDerivativeOperator;
+    typedef FirstDerivativeOperator<Object>     FirstDerivativeOperator;
+    typedef ZerothDerivativeOperator<Object>    ZerothDerivativeOperator;
+    
+    typedef Operator *                          OperatorPtr;
+    typedef ThirdDerivativeOperator *           ThirdDerivativeOperatorPtr;
+    typedef SecondDerivativeOperator *          SecondDerivativeOperatorPtr;
+    typedef FirstDerivativeOperator *           FirstDerivativeOperatorPtr;
+    typedef ZerothDerivativeOperator *          ZerothDerivativeOperatorPtr;
+
+    typedef list<OperatorPtr>                   OperatorPtrList;
+    typedef list<ThirdDerivativeOperatorPtr>    ThirdDerivativeOperatorPtrList;
+    typedef list<SecondDerivativeOperatorPtr>   SecondDerivativeOperatorPtrList;
+    typedef list<FirstDerivativeOperatorPtr>    FirstDerivativeOperatorPtrList;
+    typedef list<ZerothDerivativeOperatorPtr>   ZerothDerivativeOperatorPtrList;
+
+
+/*---------------------------------------------------------------------------*
+ | Constructors
+ *---------------------------------------------------------------------------*/
+public:
+    // Default Initializer
+    DynamicSystem(scalar_arg_t time)
+        : _currentTime(time), ode(*this), _objects(Object::MAX_OBJECTS) { }
+
+    // Destructor
+    ~DynamicSystem() {
+        // Clean up the operators we own
+// XXX This should delete each group of operators separately...but what if an
+// operator is in more than one group? Maybe we should convert to using shared_ptr?
+//
+// XXX Also, should we delete the Objects too??
+//        typename OperatorPtrList::iterator op;
+//        for (op = _operators.begin(); op != _operators.end(); op++)
+//            delete *op;
+    }
+
+protected:
+    scalar_t _currentTime;
+    ObjectPtrList _objects;
+    ThirdDerivativeOperatorPtrList  _thirdDerivOps;
+    SecondDerivativeOperatorPtrList _secondDerivOps;
+    FirstDerivativeOperatorPtrList  _firstDerivOps;
+    ZerothDerivativeOperatorPtrList _zerothDerivOps;
+    Solver ode;
+
+
+/*---------------------------------------------------------------------------*
+ | Object management functions
+ *---------------------------------------------------------------------------*/
+public:
+    // Object management
+    void add(ObjectPtr obj) { _objects.push_back(obj); }
+    void remove(ObjectPtr obj) { _objects.erase(obj); }
+          ObjectPtrList & objects()       { return _objects; }
+    const ObjectPtrList & objects() const { return _objects; }
+
+
+    // Third derivative operators
+    void add(ThirdDerivativeOperatorPtr op) {
+        _thirdDerivOps.push_back(op);
+    }
+    void remove(ThirdDerivativeOperatorPtr op) {
+        _thirdDerivOps.remove(op);
+    }
+    const ThirdDerivativeOperatorPtrList & thirdDerivativeOperators() const {
+        return _thirdDerivOps;
+    }
+
+
+    // Second derivative operators
+    void add(SecondDerivativeOperatorPtr op) {
+        _secondDerivOps.push_back(op);
+    }
+    void remove(SecondDerivativeOperatorPtr op) {
+        _secondDerivOps.remove(op);
+    }
+    const SecondDerivativeOperatorPtrList & secondDerivativeOperators() const {
+        return _secondDerivOps;
+    }
+
+
+    // First derivative operators
+    void add(FirstDerivativeOperatorPtr op) {
+        _firstDerivOps.push_back(op);
+    }
+    void remove(FirstDerivativeOperatorPtr op) {
+        _firstDerivOps.remove(op);
+    }
+    const FirstDerivativeOperatorPtrList & firstDerivativeOperators() const {
+        return _firstDerivOps;
+    }
+
+
+    // Zeroth derivative operators
+    void add(ZerothDerivativeOperatorPtr op) {
+        _zerothDerivOps.push_back(op);
+    }
+    void remove(ZerothDerivativeOperatorPtr op) {
+        _zerothDerivOps.remove(op);
+    }
+    const ZerothDerivativeOperatorPtrList & zerothDerivativeOperators() const {
+        return _zerothDerivOps;
+    }
+
+
+/*---------------------------------------------------------------------------*
+ | Simulation run-time functions
+ *---------------------------------------------------------------------------*/
+public:
+    scalar_t currentTime() const { return _currentTime; }
+
+    // Retrieve state information from our objects
+    SystemState currentState() {
+        // Make a state of the right size, at the right time
+        SystemState current(_currentTime, objects().size());
+
+        // Add each object's data to the system state vector
+        for (index_t i = 0; i < objects().size(); i++)
+            current[i] = objects()[i]->retrieveState();
+
+        // Return it
+        return current;
+    }
+
+    // Push state information back to the objects
+    void propagate(const SystemState &state) {
+        _currentTime = state.time();
+        for (index_t i = 0; i < objects().size(); i++)
+            objects()[i]->propagateState(state[i]);
+    }
+
+    void update(scalar_arg_t newTime) {
+        // Enable random-access to our objects
+        objects().lock();
+
+        // Initialize the current state
+        SystemState current = currentState();
+
+        // Tell the ODE solver to give us the next state
+        SystemState next = ode(current, newTime);
+
+        // Push changes out to managed objects
+        propagate(next);
+
+        // Re-enable modifications to our object list
+        objects().unlock();
+    }
+
+    // This function calculates the change in state caused by evaluating the
+    // system dynamics function starting at the state 'current' and linearly
+    // stepping forward the system by 'step' time units. It is important to
+    // note that the result of this function is the DIFFERENCE between the
+    // current state and the next: it must be added to the current state to
+    // yield the actual next state.
+    SystemState calculateDelta(const SystemState &current,
+                               scalar_arg_t step) const {
+        SystemCalculation calculation(current.time(), objects().size());
+        SystemState delta(step, objects().size());
+
+        // Do any initialization we need to do
+        for (index_t i = 0; i < objects().size(); i++)
+            calculation[i].initialize(current[i], *objects()[i]);
+
+        // Accumulate the effects of any 1st derivative operators
+        typename ThirdDerivativeOperatorPtrList::const_iterator it3;
+        for (it3 = _thirdDerivOps.begin(); it3 != _thirdDerivOps.end(); it3++)
+            (*it3)->modifyThirdDerivative(delta, calculation,
+                                          current, objects());
+
+        // XXX There is no genuine "3rd" deriv support.
+        // This is a hack to support pre-force AI calculations
+
+        // Accumulate the effects of any 2nd derivative operators
+        typename SecondDerivativeOperatorPtrList::const_iterator it2;
+        for (it2 = _secondDerivOps.begin(); it2 != _secondDerivOps.end(); it2++)
+            (*it2)->modifySecondDerivative(delta, calculation,
+                                           current, objects());
+
+        // Evaluate the resulting 1st derivative
+        for (index_t i = 0; i < objects().size(); i++)
+            delta[i].evaluateFirstDerivativeDelta(calculation[i], current[i],
+                                                  *objects()[i], step);
+
+        // Accumulate the effects of any 1st derivative operators
+        typename FirstDerivativeOperatorPtrList::const_iterator it1;
+        for (it1 = _firstDerivOps.begin(); it1 != _firstDerivOps.end(); it1++)
+            (*it1)->modifyFirstDerivative(delta, calculation,
+                                          current, objects());
+
+        // Evaluate the resulting 0th derivative
+        for (index_t i = 0; i < objects().size(); i++)
+            delta[i].evaluateZerothDerivativeDelta(calculation[i], current[i],
+                                                   *objects()[i], step);
+
+        // Accumulate the effects of any 0th derivative operators
+        typename ZerothDerivativeOperatorPtrList::const_iterator it0;
+        for (it0 = _zerothDerivOps.begin(); it0 != _zerothDerivOps.end(); it0++)
+            (*it0)->modifyZerothDerivative(delta, calculation,
+                                           current, objects());
+
+        // Return the delta for reaching our new state
+        return delta;
+    }
+};
+
+// This stuff is old, and should be deleted eventually
+#if 0
+    SystemState calculateState(SystemState &current,
+                                 scalar_arg_t newTime) {
+        ParticleState next(current);
+        scalar_t dt = newTime - current.time;
+
+        // Apply force, acceleration, velocity, and position operators
+        typename OperatorArray::iterator oi;
+        for (oi = operatorStack.begin(); oi != operatorStack.end(); oi++)
+            (*oi)->apply(next, dt);
+
+        // Go find any collisions that occured
+        for (unsigned int i = 0; i < next.particleCount; i++)
+            for (unsigned int j = 0; j < poly.size(); j++) {
+                Polygon &polygon = poly[j];
+                Vector before = current.position[i] - polygon[0],
+                       after = next.position[i] - polygon[0];
+
+                // Rats. Must check more closely
+                if ((before * polygon.normal) * (after * polygon.normal) <= 0) {
+                    Vector diff = next.position[i] - current.position[i];
+                    scalar_t t = polygon.normal * (current.position[i] - polygon[0])
+                               / (polygon.normal * diff);
+                    Point intersect = current.position[i] + diff * t;
+
+                    // Yep. Really gotta bounce it.
+                    if (polygon.inside(intersect)) {
+                        Vector overshoot = next.position[i] - intersect;
+                        Vector poffset = -(1 + next.particle[i]->elasticity) * (overshoot * polygon.normal) * polygon.normal;
+                        next.position[i] += poffset;
+
+                        Vector voffset = -(1 + next.particle[i]->elasticity) * (next.velocity[i] * polygon.normal) * polygon.normal;
+                        next.velocity[i] += voffset;
+                    }
+                }
+            }
+
+        // Return the modified state
+        next.time = newTime;
+        return next;
+    }
+#endif
+
+#endif

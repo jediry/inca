@@ -1,0 +1,707 @@
+/** -*- C++ -*-
+ *
+ * \file Timer
+ *
+ * Author: Ryan L. Saunders <rls@tamu.edu>
+ *
+ * Copyright 2003, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ *      The Timer class is a real-time timer that sends timer events to
+ *      listening objects at periodic intervals and whenever a significant
+ *      change occurs (e.g., the timer stops). This can be used to drive a
+ *      real-time process, such as the DynaMol simulation.
+ *
+ *      In order for a Timer to work, its runTimer() function must be called
+ *      periodically. Each time this function is called, the timer queries the
+ *      operating system for the current time and uses the elapsed time since
+ *      the last call to runTimer to determine by how much to advance the time.
+ *
+ *      How much the timer advances also depends on the value of
+ *      'timeScaleFactor'. If this is 1.0, the timer runs in real-time. Values
+ *      greater than 1.0 will cause the timer to run faster than real-time,
+ *      while values between 0.0 and 1.0 will cause the timer to run slower.
+ *      Negative values are not permitted.
+ *
+ *      Besides generating events when the timer is started, stopped, reset,
+ *      and set to a particular value, Timer objects can also generate "pulses"
+ *      at fixed intervals. This allows a Timer to be used to control the
+ *      rate of another process. NOTE: while increasing the 'timeScaleFactor'
+ *      and decreasing the 'pulseInterval' both have the effect of causing
+ *      pulses to occur more frequently, they result in different time values
+ *      being sent with each pulse, as 'timeScaleFactor' actually alters the
+ *      flow of time, while 'pulseInterval' just affects how often in timer-time
+ *      pulses are sent.
+ *
+ *      If the runTimer function is not called frequently enough, then the timer
+ *      will be forced to skip some of the pulses that it would have sent, in
+ *      order to "keep up". Alternately, it can be configured not to skip
+ *      pulses; in this mode, it will run more slowly than real-time if
+ *      necessary to ensure that all pulses are sent.
+ *
+ *      The timer is capable of running in either direction (i.e., forward or
+ *      backward), and may be set to stop when it reaches its limit, to loop
+ *      around to the other limit, or to bounce back in the opposite direction.
+ *
+ * Implementation Note:
+ *      This implementation is not thread-safe. Maybe I'll fix it later, if
+ *      I need to and if I can figure out what exactl a "thread safe timer"
+ *      would be...
+ *
+ * Things to doc:
+ *      How we handle pulses around extrema
+ *
+ * Things to test:
+ *      Pulsing
+ *      Notifiers (especially dead culling)
+ */
+
+
+#ifndef INCA_UTIL_TIMER
+#define INCA_UTIL_TIMER
+
+// Import system configuration
+#include <inca/inca-common.h>
+
+// This is part of the Inca utilities collection
+namespace inca {
+    // Forward declarations
+    template <typename scalar> class TimerListener;
+    template <typename scalar, bool generateEvents> class Timer;
+
+    // OS-integration function prototypes
+    clock_t getSystemClockFrequency();
+    clock_t getSystemClocks();
+
+    // What do we do when we hit one end or the other?
+    enum BoundaryResponse { Stop, Bounce, Loop };
+
+    inline ostream & operator<<(ostream &o, BoundaryResponse r) {
+        switch (r) {
+            case Stop:  return o << "Stop";
+            case Bounce:return o << "Bounce";
+            case Loop:  return o << "Loop";
+            default:    return o << "Invalid BoundaryReponse(" << int(r) << ')';
+        }
+    }
+};
+
+// Import scalar math support
+#include <inca/math.hpp>
+
+// Import listener notification support
+#include <inca/util/ListenerNotifier>
+
+
+/*****************************************************************************
+ * Classes that want to be notified when timer events occur need to inherit
+ * from this class.
+ *****************************************************************************/
+template <typename scalar>
+class inca::TimerListener {
+public:
+    // Definition of the timer scalar type
+    INCA_MATH_SCALAR_TYPEDEFS(scalar, IS_WITHIN_TEMPLATE, time_, /* */);
+
+    // Listener callback functions
+    virtual void timerStarted(time_scalar_arg_t time) { }
+    virtual void timerStopped(time_scalar_arg_t time) { }
+    virtual void timerSet(time_scalar_arg_t time) { }
+    virtual void timerPulsed(time_scalar_arg_t time) { }
+};
+
+
+/*****************************************************************************
+ * The Timer class, documented extensively above.
+ *****************************************************************************/
+template <typename scalar, bool generateEvents = false>
+class inca::Timer {
+public:
+    // Definition of the timer scalar type (for representing real time amounts)
+    INCA_MATH_SCALAR_TYPEDEFS(scalar, IS_WITHIN_TEMPLATE, /* */, /* */);
+
+    // Definition of listener notification stuff
+    typedef TimerListener<scalar>                   Listener;
+    typedef ListenerNotifier<Listener>              ListenerNotifier;
+    typedef typename ListenerNotifier::ListenerPtr  ListenerPtr;
+
+
+/*---------------------------------------------------------------------------*
+ | Constructors & initialization
+ *---------------------------------------------------------------------------*/
+public:
+    explicit Timer(scalar_arg_t startTime     = scalar_t(0),
+                   scalar_arg_t minTime       = scalar_traits::min(),
+                   scalar_arg_t maxTime       = scalar_traits::max(),
+                   scalar_arg_t pulseInterval = scalar_t(0.0),
+                   scalar_arg_t timeWarp      = scalar_t(1.0))
+            : _running(false), _reversed(false), _maySkipPulses(true),
+              _boundaryResponse(Stop) {
+
+        // timeWarpFactor() and systemClockFrequency() must be valid
+        // before we can do anything else
+        querySystemClockFrequency();
+        setTimeWarpFactor(timeWarp);
+        setPulseInterval(pulseInterval);
+
+        // Convert everything into clock_t's
+        _minimumTimeClocks = timeToClocks(minTime);
+        _maximumTimeClocks = timeToClocks(maxTime);
+
+        // Do some sanity checks on our bounds
+        if (_minimumTimeClocks >= _maximumTimeClocks) {
+            // Complain about it...
+            logger << "Timer(): requested bounds [" 
+                   << clocksToTime(_minimumTimeClocks) << ", "
+                   << clocksToTime(_maximumTimeClocks) << "] are invalid. ";
+
+            // ...fix it...
+            _minimumTimeClocks = timeToClocks(scalar_traits::min());
+            _maximumTimeClocks = timeToClocks(scalar_traits::max());
+            
+            // ...then tell 'em what you did
+            logger << "Defaulting to ["
+                   << clocksToTime(_minimumTimeClocks) << ", "
+                   << clocksToTime(_maximumTimeClocks) << "]";
+            logger.warning();
+        }
+
+        // Make sure our initial time is in the legal range
+        setElapsedClocks(timeToClocks(startTime));// This will catch out-of-bounds
+        _initialTimeClocks = elapsedClocks();
+    }
+
+    /**
+     * Queries the operating system's clock frequency and stores this value
+     * for future use.
+     */
+    void querySystemClockFrequency() {
+        _systemClockFrequency = getSystemClockFrequency();
+    }
+
+
+/*---------------------------------------------------------------------------*
+ | Timer update functions
+ *---------------------------------------------------------------------------*/
+public:
+    /**
+     * Updates the timer based on the current time reported by the operating
+     * system. This function must be run periodically (e.g., in an event loop
+     * or from its own thread) in order for pulse events to be generated
+     * correctly. It is not necessary for you to do this if you only wish
+     * to use the timer as a stopwatch, or if you only need start/stop/set
+     * events, as this function is called by various other functions, such as
+     * stop() and set(time).
+     */
+    void updateTimer() {
+        if (running()) {
+            // Calculate the elapsed clock ticks and advance counter
+            clock_t newClocks = getSystemClocks();
+            clock_t deltaClocks = newClocks - _lastSystemClocks;
+            _lastSystemClocks = newClocks;
+
+            // If we're going in reverse, we negate our delta
+            if (reversed()) deltaClocks = -deltaClocks;
+
+            // Add this to our internal counter and check boundary conditions
+            setInternalCounter(elapsedClocks() + deltaClocks);
+
+            // See if we need to pulse anybody
+            if (generateEvents && math::abs(_pulseIntervalClocks) > 0) {
+                size_t missed = math::abs(_lastPulseClocks - elapsedClocks())
+                              / math::abs(_pulseIntervalClocks);
+
+                if (maySkipPulses()) {  // ...its OK to ignore missed pulses
+                    _lastPulseClocks += missed * _pulseIntervalClocks;
+                    firePulsed(clocksToTime(_lastPulseClocks));
+
+                } else {                // We must hit every pulse
+                    _lastPulseClocks += _pulseIntervalClocks;
+                    firePulsed(clocksToTime(_lastPulseClocks));
+
+                    // See if we need to rewind to catch more pulses
+                    if (missed > 1) // Uh oh...have to go back
+                        _elapsedClocks = _lastPulseClocks;
+                }
+            }
+        }
+    }
+
+    /**
+     * Returns the value of the internal counter, in clock ticks.
+     *
+     * Note that this does not directly equate to real elapsed time, as the
+     * frequency of the system's counter varies by platform, and time-warping
+     * may be in effect.
+     *
+     * \return an integer number of clock ticks elapsed
+     */
+    clock_t elapsedClocks() const { return _elapsedClocks; }
+
+    /**
+     * Sets the value of the internal counter, in clock ticks. The actual value
+     * that is set is constrained by the minimum and maximum bounds for the
+     * timer. Setting the timer value in this way bypasses the pulsing
+     * mechanism: it is as if we're skipping around in time, rather than just
+     * traversing it really quickly. Do not pass go, do not collect $200.
+     *
+     * Note that this does not directly equate to real elapsed time, as the
+     * frequency of the system's counter varies by platform, and time-warping
+     * may be in effect.
+     *
+     * \param   the desired value of the internal counter, in clock ticks
+     * \return  the actual value to which the internal counter is set
+     */
+    clock_t setElapsedClocks(clock_t clocks) {
+        clock_t result = setInternalCounter(clocks); // Call the internal version
+        _lastPulseClocks = result;  // Start pulsing from here
+        return result;
+    }
+
+    /**
+     * Retrieves the current time represented by this timer in scalar time
+     * units.
+     *
+     * \return a scalar representing the current time elapsed on this timer
+     */
+    scalar_t time() const { return clocksToTime(elapsedClocks()); }
+
+    /**
+     * Sets the current time represented by this timer. The actual time that
+     * is set depends on the minimum and maximum bounds on the timer and on
+     * the quantization caused by conversion to the internal \c clock_t used
+     * to represent time.
+     *
+     * This is equivalent to calling
+     * \code setElapsedClocks(timeToClocks(t)); \endcode
+     *
+     * \param t the desired time to which to set the timer
+     * \return  the actual time to which the timer is set
+     */
+    scalar_t setTime(scalar_arg_t t) {
+        setElapsedClocks(timeToClocks(t));
+        return time();
+    }
+    /**
+     * Retrieves the current time represented by this timer in scalar time
+     * units.
+     *
+     * This is an alias for \code time(). \endcode
+     *
+     * \return a scalar representing the current time elapsed on this timer
+     */
+
+    scalar_t operator()() const { return time(); }
+
+    /**
+     * Sets the current time represented by this timer.
+     *
+     * This is an alias for \code setTime(scalar_arg_t). \endcode
+     *
+     * \param t the desired time to which to set the timer
+     * \return  the actual time to which the timer is set
+     */
+    scalar_t operator=(scalar_arg_t t) { return setTime(t); }
+
+
+    void enforceBoundaryConstraints() {
+        // First, check to see if we've overshot our upper limit
+        if (_elapsedClocks > _maximumTimeClocks) {
+            switch (_boundaryResponse) {
+            case Stop:
+                // Stop right at the boundary
+                _elapsedClocks   = _maximumTimeClocks;
+                _lastPulseClocks = _maximumTimeClocks;
+
+                _running = false;                   // Stop moving!
+                break;
+            case Bounce:
+                // Reflect counter and last pulse across endpoint
+                _elapsedClocks   = _maximumTimeClocks
+                                 - (_elapsedClocks - _maximumTimeClocks);
+                _lastPulseClocks = _maximumTimeClocks
+                                 - (_lastPulseClocks - _maximumTimeClocks);
+
+                _reversed = ~_reversed;             // Bounce!
+                _pulseIntervalClocks = -_pulseIntervalClocks;
+                break;
+            case Loop:
+                // Wrap counter and last pulse around endpoints
+                _elapsedClocks   = _minimumTimeClocks
+                                 + (_elapsedClocks - _maximumTimeClocks);
+                _lastPulseClocks = _minimumTimeClocks
+                                 + (_lastPulseClocks - _maximumTimeClocks);
+                break;
+            default:
+                logger << "Timer::enforceBoundaryConstraints(): Invalid "
+                          "BoundaryResponse(" << int(boundaryResponse()) << ")";
+                logger.error();
+            }
+
+        // Now, see if we've overshot the lower limit
+        } else if (_elapsedClocks < _minimumTimeClocks) {
+            switch (_boundaryResponse) {
+            case Stop:
+                // Stop right at the boundary
+                _elapsedClocks = _minimumTimeClocks;
+                _lastPulseClocks = _minimumTimeClocks;
+
+                _running = false;                   // Stop moving!
+                break;
+            case Bounce:
+                // Reflect counter and last pulse across endpoint
+                _elapsedClocks   = _minimumTimeClocks
+                                 - (_elapsedClocks - _minimumTimeClocks);
+                _lastPulseClocks = _minimumTimeClocks
+                                 - (_lastPulseClocks - _lastPulseClocks);
+
+                _reversed = ~_reversed;             // Bounce!
+                _pulseIntervalClocks = -_pulseIntervalClocks;
+                break;
+            case Loop:
+                // Wrap counter and last pulse around endpoints
+                _elapsedClocks   = _maximumTimeClocks
+                                 + (_elapsedClocks - _minimumTimeClocks);
+                _lastPulseClocks = _maximumTimeClocks
+                                 + (_lastPulseClocks - _minimumTimeClocks);
+                break;
+            default:
+                logger << "Timer::enforceBoundaryConstraints(): Invalid "
+                          "BoundaryResponse(" << int(boundaryResponse()) << ")";
+                logger.error();
+            }
+        }
+    }
+
+    /**
+     * Returns the value in seconds corresponding to the given number of clock
+     * ticks.
+     *
+     * Note that this function uses the value of timeWarpFactor() to transform
+     * the result, meaning that the value this function returns may not reflect
+     * real-world time values in seconds.
+     *
+     * \param   a value in system clock ticks
+     * \return  the corresponding value in scalar time units
+     */
+    scalar_t clocksToTime(clock_t clocks) const {
+        return clocks * timeWarpFactor() / _systemClockFrequency;
+    }
+
+    /**
+     * Returns the nearest value in clock ticks corresponding to the given
+     * value in scalar time units. Since the domain of scalar values is
+     * normally the real numbers, and clock ticks are integral, this implies
+     * that any use of this function will result in some sort of quantization
+     * error. Furthermore, if the scalar's value in clock ticks exceeds the
+     * legal range for clock_t's, this function will saturate (clamp to the
+     * max or min clock_t value).
+     *
+     * This function simply does a straight conversion, and does not consider
+     * the values of \c minimumTime() and \c maximumTime().
+     *
+     * Just like its sister function clocksToTime(clock_t), this function
+     * uses the value of timeWarpFactor() to transform scalar time values,
+     * and thus, the results may not reflect real-world time values in seconds.
+     *
+     * \param   a scalar time value
+     * \return  the nearest number of clock ticks corresponding to this
+     */
+    clock_t timeToClocks(scalar_arg_t time) const {
+        // See if this exceeds clock_t's abilities
+        if (time > _maxRepresentableTime)
+            return scalar_traits<clock_t>::max();
+        else if (time < _minRepresentableTime)
+            return scalar_traits<clock_t>::min();
+        else
+            return clock_t(time * _systemClockFrequency / timeWarpFactor());
+    }
+
+protected:
+    // Used internally to set the value of elapsedClocks()
+    clock_t setInternalCounter(clock_t clocks) {
+        _elapsedClocks = clocks;        // Set our tentative new value
+        enforceBoundaryConstraints();   // Make sure it's kosher
+        return elapsedClocks();         // Tell 'em what we did
+    }
+
+    clock_t _elapsedClocks;         // Our internal counter, representing time
+
+    // Stuff for interfacing with the system
+    clock_t _lastSystemClocks;      // The last time we talked to the OS
+    clock_t _systemClockFrequency;  // The ticks/sec resolution of his counter
+
+    // Stuff for sending out periodic pulses
+    clock_t _pulseIntervalClocks;   // How many clocks to wait before pulsing
+    clock_t _lastPulseClocks;       // The value of elapsedClocks() when we
+                                    // last pulsed our listeners
+
+    // Time-warping factor, which is multiplied by the actual time value
+    scalar_t _timeWarpFactor;
+
+    // Hard scalar-time constraints, imposed by the limits of clock_t
+    scalar_t _maxRepresentableTime, _minRepresentableTime;
+
+    // Soft timer constraints, representing the timer's valid range
+    clock_t _minimumTimeClocks,     // The largest and smallest values we'll
+            _maximumTimeClocks;     // allow the timer to have
+
+    clock_t _initialTimeClocks;     // The value to load on a reset()
+
+
+/*---------------------------------------------------------------------------*
+ | Timer state control functions
+ *---------------------------------------------------------------------------*/
+public:
+    /**
+     * Stops the timer (if it is currently running) and resets it to the
+     * initial value (supplied at construction time).
+     */
+    void reset() {
+        stop();
+        setElapsedClocks(_initialTimeClocks);
+    }
+
+    /**
+     * Toggles the timer between the "running" and "not running" states. That
+     * is, if the timer is currently running, it will be stopped, and vice
+     * versa. This function does not reset the accumulated time on the timer,
+     * so a timer may be toggled multiple times, just like an ordinary
+     * stopwatch.
+     */
+    void toggleRunning() {
+        _running = ! _running;  // Switch states
+
+        if (_running) {         // ...then we were just started
+            _lastSystemClocks = getSystemClocks();
+            if (generateEvents)    // Do we tell anyone about this?
+                fireStarted(clocksToTime(elapsedClocks()));
+        } else {                // ...then we were just stopped
+            updateTimer();          // Catch up to "now"
+            if (generateEvents)    // Do we tell anyone about this?
+                fireStopped(clocksToTime(elapsedClocks()));
+        }
+    }
+
+    /**
+     * Ensures that the timer is in the specified running state. If the timer
+     * is already in the requested state, there is no effect and \c false is
+     * returned. Otherwise, the running state is toggled and \c true is
+     * returned.
+     *
+     * \return  true if the timer had to be toggled in order to assume this
+     *          state
+     */
+    bool setRunning(bool run) {
+        if (run == _running) {  // No state change. Go home.
+            return false;
+        } else {                // Transition to the opposite state
+            toggleRunning();
+            return true;    // a state change happened
+        }
+    }
+
+    /**
+     * Returns the current running state of the timer.
+     *
+     * \return \c true if the timer is currently running, or \c false otherwise
+     */
+    bool running() const { return _running; }
+
+    /**
+     * Starts the timer running. This function is equivalent to
+     * \c setRunning(true).
+     */
+    void start() { setRunning(true); }
+
+    /**
+     * Stops (pauses) the timer. This function is equivalent to
+     * \c setRunning(false).
+     */
+    void stop() { setRunning(false); }
+
+    /**
+     * Toggles the timer between the "reversed" and "not reversed" states. That
+     * is, if the timer is currently reversed (i.e., headed toward negative
+     * infinity), it will begin heading toward positive infinity, and vice
+     * versa. This function does not reset the accumulated time on the timer,
+     * so a timer may be toggled multiple times, just like an ordinary
+     * stopwatch.
+     */
+    void toggleReversed() {
+        updateTimer();  // Make sure we're current!
+        _reversed = ! _reversed;
+        _pulseIntervalClocks = -_pulseIntervalClocks;
+    }
+
+    bool setReversed(bool rev) {
+        if (rev == _reversed) { // No state change. Go home.
+            return false;
+        } else {                // Transition to the opposite state
+            toggleReversed();
+            return true;    // a state change happened
+        }
+    }
+
+    /**
+     * Returns whether or not the timer is running in reversed mode.
+     *
+     * \return \c true if the timer is currently reversed, or \c false otherwise
+     */
+    bool reversed() const { return _reversed; }
+
+    BoundaryResponse boundaryResponse() const { return _boundaryResponse; }
+    void setBoundaryResponse(BoundaryResponse r) { _boundaryResponse = r; }
+    bool maySkipPulses() const { return _maySkipPulses; }
+    void setMaySkipPulses(bool s) { _maySkipPulses = s; }
+    
+protected:
+    // Timer state flags
+    bool _running, _reversed, _maySkipPulses;
+    BoundaryResponse _boundaryResponse;
+
+
+/*---------------------------------------------------------------------------*
+ | Timer pulse interval, warping, and bounds
+ *---------------------------------------------------------------------------*/
+public:
+    scalar_t pulseInterval() const { return clocksToTime(_pulseIntervalClocks); }
+
+    void setPulseInterval(scalar_arg_t interval) {
+        // If this would be negative, throw a fit
+        if (interval < scalar_t(0)) {
+            logger << "Timer::setPulseInterval(" << interval << "): "
+                      "Negative pulse intervals are not allowed -- ignoring";
+            logger.warning();
+
+        // Otherwise, do it
+        } else {
+           _pulseIntervalClocks = timeToClocks(interval);
+        }
+    }
+
+    scalar_t timeWarpFactor() const { return _timeWarpFactor; }
+
+    void setTimeWarpFactor(scalar_arg_t warp) {
+        // If this would be non-positive, throw a fit
+        if (warp <= scalar_t(0)) {
+            logger << "Timer::setTimeWarpFactor(" << warp << "): "
+                      "Time warp factors must be positive -- ignoring";
+            logger.warning();
+
+        // Otherwise, do it
+        } else {
+            _timeWarpFactor = warp;
+
+            // The limits imposed by clock_t have now changed, so recalculate
+            _minRepresentableTime = clocksToTime(scalar_traits<clock_t>::min());
+            _maxRepresentableTime = clocksToTime(scalar_traits<clock_t>::max());
+        }
+    }
+
+    scalar_t minimumTime() const { return clocksToTime(_minimumTimeClocks); }
+
+    void setMinimumTime(scalar_arg_t min) {
+        clock_t minClocks = timeToClocks(min);
+
+        // If this would cause an invalid range, throw a fit
+        if (minClocks >= _maximumTimeClocks) {
+            logger << "Timer::setMinimumTime(" << min << "): Setting new "
+                   << "minimum would result in invalid bounds ["
+                   << min << ", " << clocksToTime(_maximumTimeClocks)
+                   << "] -- ignoring";
+            logger.warning();
+
+        // Otherwise, do it, and fix the damage
+        } else {
+            _minimumTimeClocks = minClocks;
+            enforceBoundaryConstraints();   // Make elapsedClocks obedient
+        }
+    }
+
+    scalar_t maximumTime() const { return clocksToTime(_maximumTimeClocks); }
+
+    void setMaximumTime(scalar_arg_t max) {
+        clock_t maxClocks = timeToClocks(max);
+
+        // If this would cause an invalid range, throw a fit
+        if (maxClocks <= _minimumTimeClocks) {
+            logger << "Timer::setMaximumTime(" << max << "): Setting new "
+                   << "maximum would result in invalid bounds ["
+                   << clockstToTime(_minimumTimeClocks) << ", " << max
+                   << "] -- ignoring";
+            logger.warning();
+
+        // Otherwise, do it, and fix the damage
+        } else {
+            _maximumTimeClocks = maxClocks;
+            enforceBoundaryConstraints();   // Make elapsedClocks obedient
+        }
+    }
+
+
+/*---------------------------------------------------------------------------*
+ | Timer-listener functions: other objects that inherit from TimerListener
+ | may register themselves to receive notifications when various types of
+ | timer events occur. Note that these operations will refuse to compile if
+ | called on a timer with generateEvents == false.
+ *---------------------------------------------------------------------------*/
+public:
+    // Listener management
+    void addTimerListener(ListenerPtr ls) {
+        //BOOST_STATIC_ASSERT(generateEvents);   // Make sure we're equipped...
+        notifier.add(ls);
+    }
+
+    void removeTimerListener(ListenerPtr ls) {
+        //BOOST_STATIC_ASSERT(generateEvents);   // Make sure we're equipped...
+        notifier.remove(ls);
+    }
+
+protected:
+    // Send timerStarted events to each listener who is still alive
+    void fireStarted(scalar_arg_t time) {
+        //BOOST_STATIC_ASSERT(generateEvents);   // Make sure we're equipped...
+        ListenerPtr ls = notifier.firstListener();
+        while (ls) {
+            ls->timerStarted(time);
+            ls = notifier.nextListener();
+        }
+    }
+
+    // Send timerStopped events to each listener who is still alive
+    void fireStopped(scalar_arg_t time) {
+        //BOOST_STATIC_ASSERT(generateEvents);   // Make sure we're equipped...
+        ListenerPtr ls = notifier.firstListener();
+        while (ls) {
+            ls->timerStopped(time);
+            ls = notifier.nextListener();
+        }
+    }
+
+    // Send timerSet events to each listener who is still alive
+    void fireSet(scalar_arg_t time) {
+        //BOOST_STATIC_ASSERT(generateEvents);   // Make sure we're equipped...
+        ListenerPtr ls = notifier.firstListener();
+        while (ls) {
+            ls->timerSet(time);
+            ls = notifier.nextListener();
+        }
+    }
+
+    // Sends timerPulsed events to each listener who is still alive.
+    // Prints a warning if this timer was compiled w/o notification support.
+    void firePulsed(scalar_arg_t time) {
+        //BOOST_STATIC_ASSERT(generateEvents);   // Make sure we're equipped...
+        ListenerPtr ls = notifier.firstListener();
+        while (ls) {
+            ls->timerPulsed(time);
+            ls = notifier.nextListener();
+        }
+    }
+
+    // This little guy helps us manage our "audience"
+    ListenerNotifier notifier;
+};
+
+#endif

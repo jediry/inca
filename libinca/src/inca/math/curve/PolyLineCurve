@@ -1,0 +1,86 @@
+/* -*- C++ -*-
+ *
+ * File: PolyLineCurve
+ * 
+ * Author: Ryan L. Saunders
+ * 
+ * Copyright 2002, Ryan L. Saunders. All rights reserved.
+ * 
+ * Description:
+ *      The PolyLineCurve template is a concrete subclass of ControlPointCurve,
+ *      representing a piecewise-linear, continuous curve defined by an array of
+ *      control points. One potential use of this class is to visually
+ *      represent the control polygon of another curve.
+ *
+ *      The curve is paramterized such that each segment of the curve is of
+ *      equal parameter-length, regardless of the arc-length of that segment.
+ */
+
+#ifndef INCA_MATH_POLY_LINE_CURVE
+#define INCA_MATH_POLY_LINE_CURVE
+
+// This is part of the Inca geometry library
+namespace Inca {
+    namespace Geometry {
+        // Forward declaration
+        template <class Scalar, unsigned int dim> class PolyLineCurve;
+    };
+};
+
+
+// Include related curve definitions
+#include "ControlPointCurve"
+
+
+template <class Scalar, unsigned int dim>
+class Inca::Geometry::PolyLineCurve : public ControlPointCurve<Scalar, dim> {
+private:
+    // Convenience typedefs
+    typedef PolyLineCurve<Scalar, dim>          ThisType;
+    typedef ControlPointCurve<Scalar, dim>      Superclass;
+
+public:
+    // What dimensional space are we working in?
+    const static unsigned int dimension = dim;
+
+    // Template typedefs
+    typedef typename Superclass::scalar_t       scalar_t;
+    typedef typename Superclass::scalar_arg_t   scalar_arg_t;
+    typedef typename Superclass::Point          Point;
+    typedef typename Superclass::Vector         Vector;
+    typedef typename Superclass::Ray            Ray;
+
+
+/*---------------------------------------------------------------------------*
+ | Constructors
+ *---------------------------------------------------------------------------*/
+public:
+    PolyLineCurve(unsigned int size) : Superclass(size) { }
+    PolyLineCurve(const Container::Array<Point> &cp) : Superclass(cp) { }
+    PolyLineCurve(const Superclass &c) : Superclass(c) { }
+
+
+/*---------------------------------------------------------------------------*
+ | Realization of ParametricCurve abstract functions
+ *---------------------------------------------------------------------------*/
+public:
+    scalar_t getMinimumT() { return 0.0; }
+    scalar_t getMaximumT() { return (scalar_t)controlPoints().size(); }
+    Point evaluateCurve(scalar_arg_t t) {
+        // Make sure 't' is within the domain
+        clampToParameterDomain(t);
+        unsigned int segment = (int)t;   // floor(t) gives us our segment
+        t -= segment;           // now 't' is fraction along current segment
+        return _controlPoints[segment] * (1 - t) + _controlPoints[segment + 1] * t;
+    }
+    Vector evaluateTangent(scalar_arg_t t) {
+        // Make sure 't' is within the domain
+        clampToParameterDomain(t);
+        unsigned int segment = (int)t;   // floor(t) gives us our segment
+        if (segment > getMaximumT())    // ...in case we're at the end
+            segment--;
+        return _controlPoints[segment + 1] - _controlPoints[segment];
+    }
+};
+
+#endif

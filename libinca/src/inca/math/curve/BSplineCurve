@@ -1,0 +1,156 @@
+/* -*- C++ -*-
+ *
+ * File: BSplineCurve
+ * 
+ * Author: Ryan L. Saunders
+ * 
+ * Copyright 2002, Ryan L. Saunders. All rights reserved.
+ * 
+ * Description:
+ *      The BSplineCurve template is a concrete subclass of ControlPointCurve,
+ *      representing locally-controllable curves defined by an array of control 
+ *      points and an array of "knots". These curves are defined according to
+ *      the B-Spline basis functions, and can be broken up into a set of
+ *      BezierCurves.
+ */
+
+#ifndef INCA_MATH_BSPLINE_CURVE
+#define INCA_MATH_BSPLINE_CURVE
+
+// Import superclass definition
+#include "ControlPointCurve"
+
+// Import related curve definition
+#include "BezierCurve"
+
+
+// This is part of the Inca geometry library
+namespace Inca {
+    namespace Geometry {
+        // Forward declaration
+        template <class Scalar, unsigned int dim> class BSplineCurve;
+    };
+};
+
+
+template <typename Scalar, unsigned int dim>
+class Inca::Geometry::BSplineCurve : public ControlPointCurve<Scalar, dim> {
+private:
+    // Convenience typedefs
+    typedef BSplineCurve<Scalar, dim>           ThisType;
+    typedef ControlPointCurve<Scalar, dim>      Superclass;
+
+public:
+    // What dimensional space are we working in?
+    const static unsigned int dimension = dim;
+
+    // Template typedefs
+    typedef typename Superclass::scalar_t       scalar_t;
+    typedef typename Superclass::scalar_arg_t   scalar_arg_t;
+    typedef typename Superclass::Point          Point;
+    typedef typename Superclass::Vector         Vector;
+    typedef typename Superclass::Ray            Ray;
+    typedef typename Superclass::PointArray     PointArray;
+    typedef Container::StaticArray<scalar_t>    ScalarArray;
+
+protected:
+    // BSpline knot vector
+    ScalarArray knots;
+    unsigned int degree;
+
+
+/*---------------------------------------------------------------------------*
+ | Constructors
+ *---------------------------------------------------------------------------*/
+public:
+    BSplineCurve(unsigned int size) : Superclass(size) { }
+    BSplineCurve(const PointArray &cp, const ScalarArray &k, unsigned int d)
+        : Superclass(cp), knots(k), degree(d) { }
+    BSplineCurve(const Superclass &c, const ScalarArray &k, unsigned int d)
+        : Superclass(c), knots(k), degree(d) { }
+
+
+/*---------------------------------------------------------------------------*
+ | Realization of ParametricCurve abstract functions
+ *---------------------------------------------------------------------------*/
+public:
+    scalar_t getMinimumT() { return knots[degree - 1]; }
+    scalar_t getMaximumT() { return knots[knots.size() - degree]; }
+    Point evaluateCurve(scalar_arg_t t) {
+        // Clamp t to parameter space
+        t = clampParameterToDomain(t);
+//        cout << "Evaluating BSpline(" << t << ")\n";
+
+        //---- deBoor's algorithm -----
+        unsigned int j = degree;
+        scalar_t weight;
+        const unsigned int MAX_DEGREE = 6;
+        Point deBoorPoints[MAX_DEGREE + 1][MAX_DEGREE + 1];
+
+        // Find the right span
+        while (knots[j + 1] <= t && j < knots.size() - degree)
+            j++;
+//        cout << "j = " << j << endl;
+        // Initialize starting control points
+        for (unsigned int cp = j - degree; cp <= j; cp++)
+            deBoorPoints[0][cp - j + degree] = controlPoints[cp];
+        // Now do it.
+        for (unsigned int p = 1; p <= degree; p++) {
+            for (unsigned int i = j - degree + p; i <= j; i++) {
+                weight = (t - knots[i]) / (knots[i+degree-(p-1)] - knots[i]);
+                deBoorPoints[p][i-j+degree].x
+                    = deBoorPoints[p-1][i-j+degree].x * weight
+                    + deBoorPoints[p-1][i-j+degree-1].x * (1.0 - weight);
+                deBoorPoints[p][i-j+degree].y
+                    = deBoorPoints[p-1][i-j+degree].y * weight
+                    + deBoorPoints[p-1][i-j+degree-1].y * (1.0 - weight);
+                deBoorPoints[p][i-j+degree].z
+                    = deBoorPoints[p-1][i-j+degree].z * weight
+                    + deBoorPoints[p-1][i-j+degree-1].z * (1.0 - weight);
+                deBoorPoints[p][i-j+degree].w
+                    = deBoorPoints[p-1][i-j+degree].w * weight
+                    + deBoorPoints[p-1][i-j+degree-1].w * (1.0 - weight);
+                cout << "P" << p << "/" << i << " = ("
+                    << deBoorPoints[p][i-j+degree].x << ", "
+                    << deBoorPoints[p][i-j+degree].y << ", "
+                    << deBoorPoints[p][i-j+degree].z << ", "
+                    << deBoorPoints[p][i-j+degree].w << ")\n";
+            }
+        }
+        return deBoorPoints[degree][degree]; 
+    }
+
+//    unsigned int splitBezierCurves(BezierCurveType *beziers[]) {
+//        unsigned int numBeziers = controlPoints.size() - degree;
+/* Unfinished ---------------------
+    for (unsigned int i = 0; i < numBeziers) {
+        PointArray points(degree + 1);
+        if (degree == 3) {  // handle the cubic case
+            points[1].x = controlPoints[1 + i].x * 0.66666 + controlPoints[2 + i] * 0.3333;
+            points[1].y = controlPoints[1 + i].y * 0.66666 + controlPoints[2 + i] * 0.3333;
+            points[1].z = controlPoints[1 + i].z * 0.66666 + controlPoints[2 + i] * 0.3333;
+            points[1].w = controlPoints[1 + i].w * 0.66666 + controlPoints[2 + i] * 0.3333;
+            points[2].x = controlPoints[1 + i].x * 0.33333 + controlPoints[2 + i] * 0.666666;
+            points[2].y = controlPoints[1 + i].y * 0.33333 + controlPoints[2 + i] * 0.666666;
+            points[2].z = controlPoints[1 + i].z * 0.33333 + controlPoints[2 + i] * 0.666666;
+            points[2].w = controlPoints[1 + i].w * 0.33333 + controlPoints[2 + i] * 0.666666;
+        
+    
+        Point intPoints[MAX_DEGREE + 1][MAX_DEGREE + 1];
+        for (unsigned int j = 0; j < degree + 1; j++)  // copy initial points
+            intPoints[0][j] = controlPoints[j + i];
+
+        for (unsigned int j = 0; j < sdkso; j++) {   // Calculate intermediate points
+
+        }
+
+        for (unsigned int j = 0; j < finalPoints.size(); i++)
+            finalPoints[i] = intPoints(0);
+        beziers[i] = new BezierCurve(points);
+    }
+*/
+//        return numBeziers;
+//    }
+};
+
+#endif

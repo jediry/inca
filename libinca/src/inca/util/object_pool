@@ -1,0 +1,194 @@
+/* -*- C++ -*-
+ *
+ * File: object_pool
+ * 
+ * Author: Ryan L. Saunders
+ *
+ * Copyright 2004, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ *      The ObjectPool template is a container for pooling reusable objects.
+ *      This allows the cost of dynamic memory allocation to be minimized by
+ *      doing it once at the beginning of the application, while still
+ *      permitting "new" and "delete" type operations to be used for invidual
+ *      objects.
+ *
+ *      The pool pre-allocates memory for some number of objects and dispenses
+ *      them on request. If a dispense request is made when all objects are
+ *      "occupied", the pool will allocate another chunk of objects, so that
+ *      future requests can be satisfied.
+ *
+ *      When the application finishes using an object, it should release it, so
+ *      that it may be given out in later requests.
+ *
+ *      Since the ResourcePool object owns the memory for the objects, when it
+ *      is destroyed, it takes all of them with it, allowing for an easy
+ *      clean-up.
+ *
+ *      Possible uses of a ResourcePool include managing triangle objects for a
+ *      variable level-of-detail algorithm, and holding the vertices of a
+ *      polygon mesh.
+ *
+ *      For creating and destroying the pooled objects the ObjectPool calls
+ *      creator and destroyer functors, which may be provided as template
+ *      parameters (the default versions simply call 'new' with no arguments
+ *      and 'delete'). Additionally, before handing out an object via
+ *      'acquire()', the ObjectPool calls a resetter functor, which should
+ *      restore the object to an initial state (the default is a no-op).
+ */
+
+#ifndef INCA_UTIL_OBJECT_POOL
+#define INCA_UTIL_OBJECT_POOL
+
+// Import system configuration
+#include <inca/inca-common.h>
+
+// This is part of the Inca utilities collection
+namespace inca {
+    // Forward declarations
+    template <class T> struct default_reset;
+    template <class T> struct default_create;
+    template <class T> struct default_destroy;
+    template <class T, class _rst, class _crt, class _dstr> class object_pool;
+};
+
+// The 'reset(T *)' functor should restore its argument to a clean state. The
+// default implementation does nothing.
+template <class T>
+struct inca::default_reset {
+    void operator() (T *ptr) const { }
+};
+
+// The 'create(unsigned int)' functor should create an object of the correct
+// type and return it. The unsigned int passed as its argument is the new
+// object's index within the ObjectPool. The default implementation simply
+// calls 'new' with a no-arg constructor.
+template <class T>
+struct inca::default_create {
+    T * operator() (unsigned int index) const {
+        return new T();
+    }
+};
+
+// The 'destroy(T *) functor should dispose of an object. The default
+// implementation simply calls delete on the object.
+template <class T>
+struct inca::default_destroy {
+    void operator() (T *ptr) const {
+        delete ptr;
+    }
+};
+
+
+// The ObjectPool manages a grow-able collection of objects, as described above.
+// As much as I think the STL's API is ugly, I guess we might as well conform
+// to it, for the sake of consistency...at least I can document my code better
+// than SGI and HP did!
+template <class T, class _reset = inca::default_reset<T>,
+                   class _create = inca::default_create<T>,
+                   class _destroy = inca::default_destroy<T> >
+class inca::object_pool {
+public:
+    // Template typedefs
+    typedef T                               value_type;
+    typedef T *                             pointer;
+    typedef const T *                       const_pointer;
+    typedef std::vector<pointer>            vector_type;
+    typedef std::list<pointer>              list_type;
+    typedef typename list_type::size_type   size_type;
+    typedef size_type                       index_type;
+    
+    // Delegate functors
+    typedef _reset                          resetter;
+    typedef _create                         creator;
+    typedef _destroy                        destroyer;
+
+
+    // Default allocation parameters
+    static const size_type DEFAULT_CAPACITY = 20;
+    static const size_type DEFAULT_CHUNK_SIZE = 20;
+
+
+/*---------------------------------------------------------------------------*
+ | Constructors
+ *---------------------------------------------------------------------------*/
+public:
+    // Constructor, with optional allocation parameters
+    object_pool(size_type n = DEFAULT_CAPACITY, size_type s = DEFAULT_CHUNK_SIZE)
+            : chunkSize(s) {
+
+        reserve(n); // Allocate 'initial capacity' objects
+    }
+
+    // Destructor; destroys all objects
+    ~object_pool() {
+        // Clean up our objects (both living and dead ones)
+        typename vector_type::iterator i;
+        for (i = objects.begin(); i != objects.end(); i++)
+            destroy(*i);
+    }
+
+
+protected:
+    // Pointers to our objects
+    vector_type objects;
+    list_type freeObjects;
+    
+    // Instances of our delegate functors
+    creator create;
+    destroyer destroy;
+    resetter reset;
+
+    // How many extra objects do we allocate at once?
+    const size_type chunkSize;
+
+
+/*---------------------------------------------------------------------------*
+ | Object allocation/release functions
+ *---------------------------------------------------------------------------*/
+public:
+    // Dispense an object to the caller
+    pointer acquire() {
+        if (freeObjects.size() == 0)    // Allocate some more
+            reserve(capacity() + chunkSize);
+
+        // Return the next free object after resetting it and removing it from the "free" list
+        pointer obj = freeObjects.front();
+        reset(obj);
+        freeObjects.pop_front();
+        return obj;
+    }
+
+    // Reclaim an object whose job is done
+    void release(pointer obj) {
+        freeObjects.push_back(obj);
+    }
+
+
+/*---------------------------------------------------------------------------*
+ | Capacity/usage functions
+ *---------------------------------------------------------------------------*/
+public:
+    size_type capacity()  const { return objects.size(); }
+    size_type available() const { return freeObjects.size(); }
+    size_type size()      const { return capacity() - freeObjects.size(); }
+
+    // Ensure that at least 'n' objects are available 
+    void reserve(size_type n) {
+        if (n > capacity()) {
+            // For performance, reserve enough space in our object vector
+            objects.reserve(n);
+
+            // Create as many more objects as we need to meet our quota
+            size_type diff = n - capacity();
+//            cerr << "Adding capacity of " << diff << " to pool" << endl;
+            for (size_type i = 0; i < diff; i++) {
+                pointer v = create(objects.size());
+                objects.push_back(v);
+                freeObjects.push_back(v);
+            }
+        }
+    }
+};
+
+#endif

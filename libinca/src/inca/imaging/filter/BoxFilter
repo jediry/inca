@@ -1,0 +1,72 @@
+/* -*- C++ -*-
+ *
+ * File: BoxFilter
+ * 
+ * Author: Ryan L. Saunders
+ *
+ * Copyright 2003, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ *      The BoxFilter template class implements an axis-aligned rectangular
+ *      filter in which all filtered pixels contribute equally to the resulting
+ *      color.
+ */
+
+#ifndef INCA_IMAGING_BOX_FILTER
+#define INCA_IMAGING_BOX_FILTER
+
+
+// Import superclass definition
+#include "RectangularFilter"
+
+// This is part of the Inca imaging library
+namespace Inca {
+    namespace Imaging {
+        // Forward declarations
+        template <typename Color> class BoxFilter;
+    };
+};
+
+
+template <typename Color>
+class Inca::Imaging::BoxFilter : public RectangularFilter<Color> {
+private:
+    // Convenience typedefs
+    typedef RectangularFilter<Color> Superclass;
+
+public:
+    // Template typedefs
+    typedef typename Superclass::scalar_t       scalar_t;
+    typedef typename Superclass::scalar_arg_t   scalar_arg_t;
+
+
+/*---------------------------------------------------------------------------*
+ | Constructors
+ *---------------------------------------------------------------------------*/
+public:
+    // Constructor
+    BoxFilter(scalar_arg_t width, scalar_arg_t height)
+        : Superclass(width, height) { }
+
+
+/*---------------------------------------------------------------------------*
+ | Filtering functions
+ *---------------------------------------------------------------------------*/
+public:
+    // Calculate the filtered pixel color, centered at the specified coordinates
+    Color filter(const Image<Color> &src, scalar_arg_t cx, scalar_arg_t cy) {
+        Color result(0, 0, 0, 0);
+
+        int minX = (int)(cx - halfFilterWidth),
+            minY = (int)(cy - halfFilterHeight),
+            maxX = (int)(cx + halfFilterWidth + 1),
+            maxY = (int)(cy + halfFilterHeight + 1);
+        for (int x = minX; x <= maxX; x++)
+            for (int y = minY; y <= maxY; y++)
+                result += src(x, y) * fractionCovered(x, y, cx, cy);
+        result /= area;
+        return src((int)cx, (int)cy); //result;
+    }
+};
+
+#endif

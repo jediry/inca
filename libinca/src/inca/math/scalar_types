@@ -1,0 +1,239 @@
+/** -*- C++ -*-
+ *
+ * File: scalar_types
+ *
+ * Author: Ryan L. Saunders
+ *
+ * Copyright 2004, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ *      This file defines the scalar_traits template, which describes the
+ *      details of a type used to implement scalar mathematical operations.
+ *      The Inca scalar model is highly extensible, as described later in
+ *      this file.
+ *
+ *      This file also declares a macro for typedefing the set of
+ *      related scalar types. For example, calling:
+ *          INCA_MATH_SCALAR_TYPEDEFS(double, IS_WITHIN_TEMPLATE, , )
+ *      creates a list of typedefs something like:
+ *          typedef typename inca::math::scalar_traits<double>::value_type scalar_t;
+ *          typedef typename inca::math::scalar_traits<double>::arg_type scalar_arg_t;
+ *          .
+ *          .
+ *          .
+ *      This permits the scalar types to typedef'd fairly effortlessly. The
+ *      second argument should be one of the values IS_WITHIN_TEMPLATE or
+ *      IS_NOT_WITHIN_TEMPLATE, depending on the context where the macro is
+ *      instantiated (this is necessary because the C++ standard doesn't permit
+ *      the "typename" keyword outside of template definitions. Note that
+ *      either of the last two arguments to the macros (the prefix and suffix)
+ *      may be omitted.
+ *
+ * Implementation note:
+ *      Ah...the joys and trials of template metaprogramming...
+ *
+ *      Hi there. If you've found your way to this file, you must be interested
+ *      in implementing a new type of scalar math for libinca (or for your own
+ *      application). If that last sentence caused you to begin shrieking like
+ *      a cheerleader in a horror movie, I recommend that you go no further.
+ *      This is not for the faint of heart. Or for the metaprogramming ignorant.
+ *
+ *      Why are you still here? I said "get lost"!!
+ *
+ *      If you're still reading, there are several things you need to do:
+ *          1) Implement the usual set of arithmetic operators (such as
+ *             + - * / and the related assignment operators)
+ *
+ *          2) Create your own specialization of the scalar_traits template,
+ *             defined in this file. This template is similar in purpose to the
+ *             std::numeric_limits<> template that is part of the C++ standard
+ *             library, but it has a few extra goodies, such as a
+ *             human-readable string identifying the scalar model, and an
+ *             infinity() function that returns the maximum value rather than
+ *             zero (which seems to be the behavior under GCC).
+ *
+ *             It also contains typedefs for the various ways the type might be
+ *             used (value, reference, const reference...). Of particular
+ *             importance is the typedef "arg_type" (and the boolean
+ *             "pass_by_value", which should be set consistently), which
+ *             dictate how scalars of this type should be passed to functions.
+ *             If your scalar type is a larger object (e.g., the GMP scalar
+ *             types), you really should switch these to be "scalar const &"
+ *             and "false", respectively, for performance reasons. The
+ *             functions defined in "scalar_ops" (and other places in the
+ *             inca::math library) make use of these values to determine
+ *             which overloaded functions get called.
+ *
+ *             This template class also contains a set of boolean flags
+ *             which describe other characteristics of the scalar type:
+ *
+ *                  is_integral:
+ *                      whether or not this is an integral type. Certain
+ *                      operations only make sense for integers (e.g.,
+ *                      factorial), while others do not make sense for
+ *                      integers (e.g., arctan).
+ *
+ *                  is_signed:
+ *                      whether or not this type supports signed values.
+ *                      Unsigned types have extremely trivial implementations
+ *                      of a few functions, such as abs(x).
+ *
+ *                  is_group:
+ *                      whether or not this type implements the mathematical
+ *                      concept of a "group", meaning that XXX
+ *
+ *                  is_ring:
+ *                      whether or not this type implements the mathematical
+ *                      concept of a "ring", mening that XXX
+ *
+ *                  is_field:
+ *                      whether or not this type implements the mathematical
+ *                      concept of a "field", meaning that XXX
+ *
+ *          3) Create your own specializations, as necessary, of the scalar
+ *             function implementation templates defined in "scalar_ops".
+ *             Depending on what sort of numeric type you're using, it may
+ *             not make sense to implement some of the operations (e.g.,
+ *             transcendental functions are pretty pointless for integer math).
+ */
+
+#ifndef INCA_MATH_SCALAR_TYPES
+#define INCA_MATH_SCALAR_TYPES
+
+// Import system configuration
+#include <inca/inca-common.h>
+
+// This is part of the Inca math library
+namespace inca {
+    namespace math {
+        // Forward declarations
+        template <typename scalar> struct scalar_traits;
+        template <typename scalar> struct scalar_simple_specialization;
+    };
+};
+
+// Import numeric limits and type_traits templates
+#include <limits>
+
+
+// This is the default, unspecialized template, and is valid for all the
+// builtin types, largely because it delegates type-specific stuff to a
+// specialization of scalar_simple_specialization<> and to the C++ standard
+// library template numeric_limits<>.
+template <typename scalar>
+struct inca::math::scalar_traits {
+public:
+    // Delegate traits typedefs
+    typedef ::std::numeric_limits<scalar>           nl;
+    typedef scalar_simple_specialization<scalar>    ss;
+
+    // A human-readable string that identifies this scalar type
+    static string name() { return ss::name(); }
+
+    // Scalar typedefs
+    typedef scalar          value_type;     // The plain type
+    typedef scalar &        reference;      // A non-const reference to this
+    typedef const scalar &  const_reference;//...and a const one
+    typedef scalar *        pointer;        // A pointer to this type
+    typedef scalar          arg_type;       // How we pass this to functions
+    static const bool       pass_by_value = ss::pass_by_value;
+
+    // Limit conditions
+    static value_type min() {
+        return is_exact ? nl::min() : -nl::max();
+    }
+    static value_type max() { return nl::max(); }
+    static value_type infinity() {
+        return has_infinity ? nl::infinity() : nl::max();
+    }
+
+    // Implementation details
+    static const bool is_builtin   = ss::is_builtin;// Is this a fundamental?
+    static const bool is_signed    = nl::is_signed; // Is this a signed type?
+    static const bool is_exact     = nl::is_exact;  // Not quite sure...
+    static const bool has_nan      = nl::has_quiet_NaN; // Does this have NaN?
+    static const bool has_infinity = nl::has_infinity;  // How 'bout inf?
+
+    // Mathematical characteristics
+    static const bool is_integral = ss::is_integral;
+    static const bool is_group = ss::is_group;
+    static const bool is_ring  = ss::is_ring;
+    static const bool is_field = ss::is_field;
+    static const bool supports_integer_ops        = ss::supports_integer_ops;
+    static const bool supports_arithmetic_ops     = ss::supports_arithmetic_ops;
+    static const bool supports_algebraic_ops      = ss::supports_algebraic_ops;
+    static const bool supports_transcendental_ops = ss::supports_transcendental_ops;
+};
+
+
+// Neither of these are part of the public API and are only used internally.
+namespace inca {
+    namespace math {
+        // Default implementation
+        template <typename scalar> struct scalar_simple_specialization {
+            static string name() {
+                return string("Unknown scalar type (")
+                        + typeid(scalar).name() + ')';
+            }
+
+            // Assume not a builtin type
+            static const bool is_builtin = false;
+            static const bool pass_by_value = false;
+
+            // Assume real number characteristics
+            static const bool is_integral = false;
+            static const bool is_group = true;
+            static const bool is_ring  = true;
+            static const bool is_field = true;
+            static const bool supports_integer_ops          = true;
+            static const bool supports_arithmetic_ops       = true;
+            static const bool supports_algebraic_ops        = true;
+            static const bool supports_transcendental_ops   = true;
+        };
+
+        // Specializations for known scalar types
+#define BUILTIN_TYPE_SPECIALIZATION(SCALAR)                                 \
+        template <> struct scalar_simple_specialization<SCALAR> {           \
+            typedef ::std::numeric_limits<SCALAR> nl;                       \
+            static string name() { return #SCALAR; }                        \
+            static const bool pass_by_value = true;                         \
+            static const bool is_builtin = true;                            \
+            static const bool is_integral = nl::is_integer;                 \
+            static const bool is_group = true;                              \
+            static const bool is_ring  = true;                              \
+            static const bool is_field = true;                              \
+            static const bool supports_integer_ops          = is_integral;  \
+            static const bool supports_arithmetic_ops       = true;         \
+            static const bool supports_algebraic_ops        = ! is_integral;\
+            static const bool supports_transcendental_ops   = ! is_integral;\
+        };
+        BUILTIN_TYPE_SPECIALIZATION(bool);
+        BUILTIN_TYPE_SPECIALIZATION(char);
+        BUILTIN_TYPE_SPECIALIZATION(unsigned char);
+        BUILTIN_TYPE_SPECIALIZATION(signed char);
+        BUILTIN_TYPE_SPECIALIZATION(short);
+        BUILTIN_TYPE_SPECIALIZATION(unsigned short);
+        BUILTIN_TYPE_SPECIALIZATION(int);
+        BUILTIN_TYPE_SPECIALIZATION(unsigned int);
+        BUILTIN_TYPE_SPECIALIZATION(long);
+        BUILTIN_TYPE_SPECIALIZATION(unsigned long);
+        BUILTIN_TYPE_SPECIALIZATION(long long);
+        BUILTIN_TYPE_SPECIALIZATION(unsigned long long);
+        BUILTIN_TYPE_SPECIALIZATION(float);
+        BUILTIN_TYPE_SPECIALIZATION(double);
+        BUILTIN_TYPE_SPECIALIZATION(long double);
+#undef  BUILTIN_TYPE_SPECIALIZATION
+    };
+};
+
+
+// Macro to easily typedef scalar thingies
+#define IS_WITHIN_TEMPLATE      typename
+#define IS_NOT_WITHIN_TEMPLATE  
+#define INCA_MATH_SCALAR_TYPEDEFS(SCALAR, TYPENAME, PREF, SUFF)             \
+    typedef inca::math::scalar_traits<SCALAR> scalar_traits;                \
+    typedef TYPENAME scalar_traits::value_type PREF ## scalar_t     ## SUFF;\
+    typedef TYPENAME scalar_traits::arg_type   PREF ## scalar_arg_t ## SUFF;
+
+#endif
+

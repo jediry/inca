@@ -1,0 +1,51 @@
+/* -*- C++ -*-
+ *
+ * File: Operator
+ * 
+ * Author: Ryan L. Saunders
+ *
+ * Copyright 2003, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ */
+
+#ifndef INCA_DYNAMICS_PARTICLE_OPERATOR
+#define INCA_DYNAMICS_PARTICLE_OPERATOR
+
+
+// Import the Inca math libraries
+#include <math/Math.hpp>
+
+// Import the ParticleState definition
+#include "Particle"
+
+// This is part of the Inca dynamics library
+namespace Inca {
+    namespace Dynamics {
+        // Forward declaration
+        template <class Scalar, unsigned int dim> class Operator;
+    };
+};
+
+
+template <class Scalar, unsigned int dim>
+class Inca::Dynamics::Operator : protected Scalar {
+public:
+    // What dimensional space are we working in?
+    const static unsigned int dimension = dim;
+
+    // Template typedefs
+    typedef typename Scalar::type       scalar_t;
+    typedef typename Scalar::arg_type   scalar_arg_t;
+    typedef Math::Point<Scalar, dim>    Point;
+    typedef Math::Vector<Scalar, dim>   Vector;
+
+    typedef Particle<Scalar, dim>       Particle;
+    typedef Particle *                  ParticlePtr;
+    typedef ParticleState<Scalar, dim>  ParticleState;
+
+    // Modify the ParticleState
+    virtual void apply(ParticleState &state, scalar_arg_t dt) = 0;
+};
+
+#endif

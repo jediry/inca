@@ -1,0 +1,97 @@
+/* -*- C++ -*-
+ *
+ * File: ParametricSurface
+ * 
+ * Author: Ryan L. Saunders
+ * 
+ * Copyright 2002, Ryan L. Saunders. All rights reserved.
+ * 
+ * Description:
+ *      The ParametricSurface template is the abstract superclass for all types
+ *      of parametrically defined surfaces. Concrete subclasses must implement
+ *      the following pure virtual functions:
+ *          scalar_t getMinimumT()
+ *          scalar_t getMaximumT()
+ *          scalar_t getMinimumS()
+ *          scalar_t getMaximumS()
+ *          ParametricCurve getIsoparameterCurveS(scalar_t s)
+ *          ParametricCurve getIsoparameterCurveT(scalar_t t)
+ *          Point evaluateSurface(scalar_t t, scalar_t s)
+ *          Vector evaluateNormal(scalar_t t, scalar_t s)
+ *          scalar_t evaluateGaussianCurvature(scalar_t t, scalar_t s)
+ *
+ *      The template is instantiated with a particular point type and vector
+ *      type, which are the point/vector types that result from evaluating the
+ *      surface's properties. This allows the same algorithms to be used for
+ *      surfaces of different dimensionality (3D, 4D, etc.).
+ */
+
+#ifndef INCA_MATH_PARAMETRIC_SURFACE
+#define INCA_MATH_PARAMETRIC_SURFACE
+
+// Import superclass definition
+#include "../Shape"
+
+// Import related curve definition
+#include "../curves/ParametricCurve"
+
+
+// This is part of the Inca geometry library
+namespace Inca {
+    namespace Geometry {
+        // Forward declaration
+        template <class Scalar, unsigned int dim> class ParametricSurface;
+    };
+};
+
+
+template <class Scalar, unsigned int dim>
+class Inca::Geometry::ParametricSurface : public Shape<Scalar, dim> {
+private:
+    // Convenience typedefs
+    typedef ParametricSurface<Scalar, dim>      ThisType;
+    typedef Shape<Scalar, dim>                  Superclass;
+
+public:
+    // What dimensional space are we working in?
+    const static unsigned int dimension = dim;
+
+    // Template typedefs
+    typedef typename Superclass::scalar_t       scalar_t;
+    typedef typename Superclass::scalar_arg_t   scalar_arg_t;
+    typedef typename Superclass::Point          Point;
+    typedef typename Superclass::Vector         Vector;
+    typedef typename Superclass::Ray            Ray;
+
+
+/*---------------------------------------------------------------------------*
+ | Abstract functions: must be implemented by subclasses
+ *---------------------------------------------------------------------------*/
+public:
+    virtual scalar_t getMinimumS() = 0;
+    virtual scalar_t getMaximumS() = 0;
+    virtual scalar_t getMinimumT() = 0;
+    virtual scalar_t getMaximumT() = 0;
+//    virtual ParametricCurveType getIsoparameterCurveS(scalar_arg_t s) = 0;
+//    virtual ParametricCurveType getIsoparameterCurveT(scalar_arg_t t) = 0;
+    virtual Point evaluateSurface(scalar_arg_t s, scalar_arg_t t) = 0;
+    virtual Vector evaluateNormal(scalar_arg_t s, scalar_arg_t t) = 0;
+    virtual scalar_t evaluateGaussianCurvature(scalar_arg_t s, scalar_arg_t t) = 0;
+
+protected:
+    void clampToParameterDomain(scalar_t &s, scalar_t &t) {
+        // Clamp our 's' value
+        if (s < getMinimumS())
+            s = getMinimumS();
+        else if (s > getMaximumS())
+            s = getMaximumS();
+
+        // Clamp our 't' value
+        if (t < getMinimumT())
+            t = getMinimumT();
+        else if (t > getMaximumT())
+            t = getMaximumT();
+    }
+};
+
+#endif

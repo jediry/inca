@@ -1,0 +1,86 @@
+/* -*- C++ -*-
+ *
+ * File: RectangularFilter
+ * 
+ * Author: Ryan L. Saunders
+ *
+ * Copyright 2003, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ *      The RectangularFilter template class is the base class for rectangular
+ *      Image Filters, which combine (in some fashion) the pixels inside of
+ *      an (axis-aligned) rectangle. Box and Pyramid are two examples of this
+ *      sort of filter.
+ */
+
+#ifndef INCA_IMAGING_RECTANGULAR_FILTER
+#define INCA_IMAGING_RECTANGULAR_FILTER
+
+
+// Import superclass definition
+#include "Filter"
+
+// This is part of the Inca imaging library
+namespace Inca {
+    namespace Imaging {
+        // Forward declarations
+        template <typename Color> class RectangularFilter;
+    };
+};
+
+
+template <typename Color>
+class Inca::Imaging::RectangularFilter : public Filter<Color> {
+private:
+    // Convenience typedefs
+    typedef Filter<Color> Superclass;
+
+public:
+    // Template typedefs
+    typedef typename Superclass::scalar_t       scalar_t;
+    typedef typename Superclass::scalar_arg_t   scalar_arg_t;
+
+
+/*---------------------------------------------------------------------------*
+ | Constructors
+ *---------------------------------------------------------------------------*/
+public:
+    // Constructor
+    RectangularFilter(scalar_arg_t width, scalar_arg_t height) {
+        area = width * height;
+        halfFilterWidth = width / 2;
+        halfFilterHeight = height / 2;
+        testPixelX = halfFilterWidth - 0.5;
+        testPixelY = halfFilterHeight - 0.5;
+    }
+
+
+/*---------------------------------------------------------------------------*
+ | Filtering functions
+ *---------------------------------------------------------------------------*/
+public:
+    // Figure out what fraction of this pixel [0.0, 1.0] is covered by the
+    // filter's rectangular window (this tells us how much to weight it)
+    scalar_t fractionCovered(int x, int y, scalar_t cx, scalar_t cy) const {
+        scalar_t tx = abs(x - cx) - testPixelX,
+                 ty = abs(y - cy) - testPixelY;
+
+        // See if we can trivially discard this as outside
+        if (tx > 1.0 || ty > 1.0)
+            return 0;
+
+        // If < 0.0, total coverage, else partially covered
+        scalar_t fractionX = (tx > 0.0) ? (1.0 - tx) : 1.0,
+                 fractionY = (ty > 0.0) ? (1.0 - ty) : 1.0;
+        return fractionX * fractionY;
+    }
+
+protected:
+    scalar_t filterWidth, filterHeight, // Size of the rectangular window...
+             halfFilterWidth, halfFilterHeight, // ...divided by two
+             area,                      // How much area is in it?
+             testPixelX, testPixelY;    // testPixelX = filterWidth / 2 - 0.5
+                                        // this is common, so we precompute
+};
+
+#endif

@@ -1,0 +1,315 @@
+/* -*- C++ -*-
+ *
+ * File: Tag
+ * 
+ * Author: Ryan L. Saunders
+ *
+ * Copyright 2003, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ *      The Tag operator causes particles to try to play a game of "tag". One
+ *      particle is "it", and has the following goals:
+ *          1) Collide with another particle
+ *          2) Stay reasonably close to the center of the group
+ *          3) Maintain a target speed
+ *      The other particles don't want to be caught, and so they have the
+ *      following goals:
+ *          1) Avoid colliding with nearby particles
+ *          2) Avoid being tagged by "it"
+ *          3) Stay reasonably close to the center of the group
+ *          4) Maintain a target speed
+ *
+ *      These orderings reflect the relative priorities of the goals,
+ *      though the distances between particles will cause the weightings of
+ *      goals to change (particles that are distant from "it" worry more about
+ *      staying with the group than about avoiding "it").
+ *
+ *      To make the simulation more interesting, "it" has a higher maximum
+ *      speed than the other particles, and will rapidly accelerate towards
+ *      a particle if it gets close enough.
+ *
+ *      In order to keep speeds reasonable, there is a SpeedControl operator
+ *      that forcibly keeps speed at or under a maximum value. It is a hack
+ *      that should be merged into Tag, once Tag is able to be both accel and 
+ *      velocity operator.
+ */
+
+#ifndef INCA_DYNAMICS_TAG
+#define INCA_DYNAMICS_TAG
+
+// Define this to gravitate towards the origin, rather than the group center
+#define STAY_NEAR_ORIGIN
+
+// Import superclass definition
+#include "../particle/Operator"
+
+// This is part of the Inca dynamics library
+namespace Inca {
+    namespace Dynamics {
+        // Forward declarations
+        template <class Scalar, unsigned int dim> class Tag;
+        template <class Scalar, unsigned int dim> class SpeedControl;
+    };
+};
+
+
+template <class Scalar, unsigned int dim>
+class Inca::Dynamics::Tag : public Operator<Scalar, dim> {
+private:
+    // Convenience typedefs
+    typedef Operator<Scalar, dim> Superclass;
+
+public:
+    // What dimensional space are we working in?
+    const static unsigned int dimension = dim;
+
+    // Template typedefs
+    typedef typename Superclass::scalar_t       scalar_t;
+    typedef typename Superclass::scalar_arg_t   scalar_arg_t;
+    typedef typename Superclass::Point          Point;
+    typedef typename Superclass::Vector         Vector;
+
+    typedef typename Superclass::Particle       Particle;
+    typedef typename Superclass::ParticleState  ParticleState;
+
+
+/*---------------------------------------------------------------------------*
+ | Constructors & properties
+ *---------------------------------------------------------------------------*/
+public:
+    // Tag/flee properties
+    PROPERTY(it, Particle *, NULL, setIt);
+    PROPERTY(lastIt, Particle *, NULL, setLastIt);
+    PROPERTY(tagRadius, scalar_t, scalar_t(1), setTagRadius);
+    PROPERTY(fleeItRadius, scalar_t, scalar_t(3), setFleeItRadius);
+    PROPERTY(itAttackRadius, scalar_t, scalar_t(5), setItAttackRadius);
+
+    // Group-coherence properties
+    PROPERTY(rejoinThresholdRadius, scalar_t, scalar_t(10), setRejoinThresholdRadius);
+    PROPERTY(boundaryRadius, scalar_t, scalar_t(20), setBoundaryRadius);
+
+    // Collision-avoidance properties
+    PROPERTY(collisionAlertRadius, scalar_t, scalar_t(2), setCollisionAlertRadius);
+    PROPERTY(collisionRadius, scalar_t, scalar_t(1), setCollisionRadius);
+
+    // Speed-matching properties
+    PROPERTY(playerTargetSpeed, scalar_t, scalar_t(1), setPlayerTargetSpeed);
+    PROPERTY(itTargetSpeed, scalar_t, scalar_t(3), setItTargetSpeed);
+
+    // Decision-weight properties
+    PROPERTY(itAttackPriority, scalar_t, scalar_t(1), setItAttackPriority);
+    PROPERTY(playerFleePriority, scalar_t, scalar_t(1), setPlayerFleePriority);
+    PROPERTY(avoidCollisionPriority, scalar_t, scalar_t(1), setAvoidCollisionPriority);
+    PROPERTY(itRejoinPriority, scalar_t, scalar_t(1), setItRejoinPriority);
+    PROPERTY(playerRejoinPriority, scalar_t, scalar_t(1), setPlayerRejoinPriority);
+    PROPERTY(itMatchSpeedPriority, scalar_t, scalar_t(1), setItMatchSpeedPriority);
+    PROPERTY(playerMatchSpeedPriority, scalar_t, scalar_t(1), setPlayerMatchSpeedPriority);
+
+
+/*---------------------------------------------------------------------------*
+ | Operator evaluation
+ *---------------------------------------------------------------------------*/
+public:
+    virtual void apply(ParticleState &state, scalar_arg_t dt) {
+        Point centroid = computeCentroid(state);
+
+        // See if "it" has tagged someone
+        unsigned int itIndex = findIt(state);
+        const Point &itPos = state.position[itIndex];
+        for (unsigned int i = 0; i < state.particleCount; i++) {
+            // It can't tag himself, or the last guy
+            if (i == itIndex || state.particle[i] == lastIt())
+                continue;
+            if (magnitude(itPos - state.position[i]) <= tagRadius()) {
+                // OK! Contact!
+                setLastIt(it());
+                setIt(state.particle[i]);
+            }
+        }
+
+        for (unsigned int i = 0; i < state.particleCount; i++) {
+            const Point &pos = state.position[i];
+
+            // Find relevent directions and magnitudes 
+            scalar_t nearestDist = POS_INF, // How far to the nearest guy?
+                     itDist,                // How far to 'it'?
+                     centerDist;            // How far to the center of group?
+            Vector   toNearest,             // Vector towards 'it'
+                     toIt,                  // Vector towards nearest guy
+                     toCenter;              // Vector towards centroid
+
+            // Distance to group center
+            toCenter = centroid - state.position[i];
+            centerDist = magnitude(toCenter);
+            toCenter /= centerDist;
+
+            // Distance to 'it'
+            if (i != itIndex) {
+                toIt = itPos - pos;
+                itDist = magnitude(toIt);
+                toIt /= itDist;
+            }
+
+            // Speed differential
+            scalar_t currentSpeed = magnitude(state.velocity[i]);
+            scalar_t targetSpeed = (i == itIndex)
+                ? itTargetSpeed()
+                : playerTargetSpeed();
+
+            // Distance to nearest player
+            for (unsigned int j = 0; j < state.particleCount; j++) {
+                if (j == i || j == itIndex)
+                    continue;   // Don't check self or 'it'
+                if (i == itIndex && state.particle[j] == lastIt())
+                    continue;   // It can't tag the last guy
+                else {
+                    Vector toPlayer = state.position[j] - pos;
+                    scalar_t dist = magnitude(toPlayer);
+                    if (dist < nearestDist) {
+                        nearestDist = dist;
+                        toNearest = toPlayer;
+                    }
+                }
+            }
+
+            // Do we need to move towards the center?
+            scalar_t rejoinUrgency = (centerDist >= rejoinThresholdRadius())
+                ? min(1.0, (centerDist - rejoinThresholdRadius())
+                         / (boundaryRadius() - rejoinThresholdRadius()))
+                : 0.0;
+
+            // Do we need to flee 'it'?
+            scalar_t fleeUrgency = (i != itIndex && itDist <= fleeItRadius())
+                ? min(1.0, 1.0 - (itDist - tagRadius()) / (fleeItRadius() - tagRadius()))
+                : 0.0;
+            
+            // Do we need to avoid a collision?
+            scalar_t avoidCollisionUrgency = (i == itIndex)
+                // It uses an attack radius
+                ? (nearestDist <= itAttackRadius())
+                    ? min(1.0, 1.0 - (nearestDist - tagRadius()) / (itAttackRadius() - tagRadius()))
+                    : 0.0
+                // Others have an avoidance radius
+                : (nearestDist <= collisionAlertRadius())
+                    ? min(1.0, 1.0 - (nearestDist - collisionRadius()) / (collisionAlertRadius() - collisionRadius()))
+                    : 0.0;
+
+            // Are we speeding?
+            scalar_t matchSpeedUrgency =
+                min(1.0, abs(currentSpeed - targetSpeed));
+
+            // Alter priorities based on weights
+            if (i == itIndex) {     // 'It' marches to its own drummer
+                rejoinUrgency *= itRejoinPriority();
+                avoidCollisionUrgency *= -itAttackPriority();// Negative == attack
+                matchSpeedUrgency *= itMatchSpeedPriority();
+
+            } else {                // This is a normal player
+                rejoinUrgency *= playerRejoinPriority();
+                fleeUrgency *= playerFleePriority();
+                avoidCollisionUrgency *= avoidCollisionPriority();
+                matchSpeedUrgency *= playerMatchSpeedPriority();
+            }
+
+            // Now, let's take action, based on our priorities
+            if (rejoinUrgency != 0.0)
+                headTowardsDirection(state, i, toCenter, rejoinUrgency);
+            if (avoidCollisionUrgency != 0.0)
+                headTowardsDirection(state, i, -toNearest, avoidCollisionUrgency);
+            if (fleeUrgency != 0.0)
+                headTowardsDirection(state, i, -toIt, fleeUrgency);
+            if (matchSpeedUrgency != 0.0)
+                attemptMatchSpeed(state, i, currentSpeed,
+                                  targetSpeed, matchSpeedUrgency);
+        }
+    }
+
+
+/*---------------------------------------------------------------------------*
+ | Simulation query/control functions
+ *---------------------------------------------------------------------------*/
+protected:
+    Point computeCentroid(const ParticleState &state) const {
+#if defined (STAY_NEAR_ORIGIN)
+        return Point(0.0);
+#else
+        // Find the centroid of the group
+        Point centroid = Point(0.0);  // Sum up the positions of particles
+        for (unsigned int i = 0; i < state.particleCount; i++)
+            centroid += state.position[i];
+        centroid /= state.particleCount;     // ...and average
+        return centroid;
+#endif
+    }
+
+    unsigned int findIt(const ParticleState &state) const {
+        for (unsigned int i = 0; i < state.particleCount; i++)
+            if (state.particle[i] == it())
+                return i;
+        // This hould never happen!
+        cerr << "Ack! Couldn't find 'it'!\n";
+        return 0;
+    }
+
+    void headTowardsDirection(ParticleState &state, unsigned int index,
+                              const Vector &v, scalar_arg_t urgency) {
+        state.acceleration[index] += v * urgency;
+    }
+
+    void attemptMatchSpeed(ParticleState &state, unsigned int index,
+                           scalar_arg_t current, scalar_arg_t match,
+                           scalar_arg_t urgency) {
+        Vector dir = state.velocity[index] / current;
+        state.acceleration[index] += (match - current) * urgency * dir;
+    }
+};
+
+
+template <class Scalar, unsigned int dim>
+class Inca::Dynamics::SpeedControl : public Operator<Scalar, dim> {
+private:
+    // Convenience typedefs
+    typedef Operator<Scalar, dim> Superclass;
+
+public:
+    // What dimensional space are we working in?
+    const static unsigned int dimension = dim;
+
+    // Template typedefs
+    typedef typename Superclass::scalar_t       scalar_t;
+    typedef typename Superclass::scalar_arg_t   scalar_arg_t;
+    typedef typename Superclass::Point          Point;
+    typedef typename Superclass::Vector         Vector;
+
+    typedef typename Superclass::Particle       Particle;
+    typedef typename Superclass::ParticleState  ParticleState;
+
+    typedef Tag<Scalar, dim> Tag;
+
+/*---------------------------------------------------------------------------*
+ | Constructors & properties
+ *---------------------------------------------------------------------------*/
+public:
+    PROPERTY(tagController, Tag *, NULL, setTagController);
+
+    PROPERTY(playerMaximumSpeed, scalar_t, scalar_t(2), setPlayerMaximumSpeed);
+    PROPERTY(itMaximumSpeed, scalar_t, scalar_t(5), setItMaximumSpeed);
+
+
+/*---------------------------------------------------------------------------*
+ | Operator evaluation
+ *---------------------------------------------------------------------------*/
+public:
+    virtual void apply(ParticleState &state, scalar_arg_t dt) {
+        for (unsigned int i = 0; i < state.particleCount; i++) {
+            scalar_t speed = magnitude(state.velocity[i]);
+            scalar_t max = (state.particle[i] == tagController()->it())
+                ? itMaximumSpeed()
+                : playerMaximumSpeed();
+            if (speed > max)
+                state.velocity[i] *= max / speed;
+        }
+    }
+};
+
+#endif

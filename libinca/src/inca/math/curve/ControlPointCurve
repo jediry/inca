@@ -1,0 +1,111 @@
+/* -*- C++ -*-
+ *
+ * File: ControlPointCurve
+ * 
+ * Author: Ryan L. Saunders
+ * 
+ * Copyright 2002, Ryan L. Saunders. All rights reserved.
+ * 
+ * Description:
+ *      The ControlPointCurve template is the abstract superclass for all
+ *      parametric curve types specified using an array of control points.
+ *      Concrete subclasses must implement the pure virtual functions specified
+ *      in the ParametricCurve class.
+ *
+ *      This class encapsulates the details of managing the control point array.
+ */
+
+#ifndef INCA_MATH_CONTROL_POINT_CURVE
+#define INCA_MATH_CONTROL_POINT_CURVE
+
+// Import superclass definition
+#include "ParametricCurve"
+
+// Include Array definition
+#include <util/StaticArray>
+
+
+// This is part of the Inca geometry library
+namespace Inca {
+    namespace Geometry {
+        // Forward declaration
+        template <class Scalar, unsigned int dim> class ControlPointCurve;
+    };
+};
+
+
+template <class Scalar, unsigned int dim>
+class Inca::Geometry::ControlPointCurve : public ParametricCurve<Scalar, dim> {
+private:
+    // Convenience typedefs
+    typedef ControlPointCurve<Scalar, dim>      ThisType;
+    typedef ParametricCurve<Scalar, dim>        Superclass;
+
+public:
+    // What dimensional space are we working in?
+    const static unsigned int dimension = dim;
+
+    // Template typedefs
+    typedef typename Superclass::scalar_t       scalar_t;
+    typedef typename Superclass::scalar_arg_t   scalar_arg_t;
+    typedef typename Superclass::Point          Point;
+    typedef typename Superclass::Vector         Vector;
+    typedef typename Superclass::Ray            Ray;
+    typedef Container::StaticArray<Point>       PointArray;
+//    typedef list<Point>                         PointList;
+
+
+/*---------------------------------------------------------------------------*
+ | Constructors
+ *---------------------------------------------------------------------------*/
+public:
+    ControlPointCurve(unsigned int tDimension) : _controlPoints(tDimension) { }
+    ControlPointCurve(const PointArray &cp) : _controlPoints(cp) { }
+    ControlPointCurve(const ThisType &c) : _controlPoints(c.controlPoints()) { }
+
+
+/*---------------------------------------------------------------------------*
+ | Control-point accessors
+ *---------------------------------------------------------------------------*/
+public:
+    PointArray & controlPoints() { return _controlPoints; }
+    const PointArray & controlPoints() const { return _controlPoints; }
+//    unsigned int size() const { return _controlPoints.size(); }
+//    void clear() { _controlPoints.clear(); }
+
+    Point & operator[](unsigned int index) {
+        return _controlPoints[index];
+    }
+    const Point & operator[](unsigned int index) const {
+        return _controlPoints[index];
+    }
+#if 0
+    Point & operator[](unsigned int index) {
+        PointList::iterator it = _controlPoints.begin();
+        for (unsigned int i = 0; i < index, it != _controlPoints.end(); i++)
+            it++;
+        return *it;
+    }
+
+    const Point & operator[](unsigned int i) const {
+        PointList::const_iterator it = _controlPoints.begin();
+        for (unsigned int i = 0; i < index, it != _controlPoints.end(); i++)
+            it++;
+        return *it;
+    }
+
+    void push_front(const Point &p) {
+        _controlPoints.push_front(p);
+    }
+
+    void push_back(const Point &p) {
+        _controlPoints.push_back(p);
+    }
+#endif
+
+protected:
+    // The array of points that controls this curve
+    PointArray _controlPoints;
+};
+
+#endif

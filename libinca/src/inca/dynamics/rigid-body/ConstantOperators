@@ -1,0 +1,133 @@
+/* -*- C++ -*-
+ *
+ * File: ConstantOperators
+ * 
+ * Author: Ryan L. Saunders
+ *
+ * Copyright 2003, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ */
+
+#ifndef INCA_DYNAMICS_RIGID_BODY_CONSTANT_OPERATORS
+#define INCA_DYNAMICS_RIGID_BODY_CONSTANT_OPERATORS
+
+// This is part of the Inca dynamics library
+namespace Inca {
+    namespace Dynamics {
+        // Forward declarations
+        template <class Scalar> class ConstantForce;
+        template <class Scalar> class ConstantTorque;
+        template <class Scalar> class ConstantLinearMomentum;
+        template <class Scalar> class ConstantAngulararMomentum;
+        template <class Scalar> class ConstantPosition;
+        template <class Scalar> class ConstantRotation;
+    };
+};
+
+
+// Import superclass definition
+#include "../DynamicSystem"
+
+// Import RigidBody definition
+#include "RigidBody"
+
+ 
+template <class Scalar>
+class Inca::Dynamics::ConstantForce
+        : public SecondDerivativeOperator< RigidBody<Scalar> > {
+public:
+    // Template typedefs
+    typedef typename Object             Object;
+    typedef typename ObjectPtr          ObjectPtr;
+    typedef typename State              State;
+    typedef typename Calculation        Calculation;
+    typedef typename ObjectPtrList      ObjectPtrList;
+    typedef typename SystemState        SystemState;
+    typedef typename SystemCalculation  SystemCalculation;
+
+    typedef typename Point              Point;
+    typedef typename Vector             Vector;
+    typedef typename Quaternion         Quaternion;
+    typedef typename scalar_t           scalar_t;
+    typedef typename scalar_arg_t       scalar_arg_t;
+
+    // Constructor
+    ConstantForce(ObjectPtr obj, const Vector &f, const Vector &c = Vector(0.0))
+        : _object(obj), _force(f), _contact(c) { }
+
+    // Accessor functions
+    ObjectPtr object() const { return _object; }
+    void setObject(ObjectPtr obj) { _object = obj; }
+    const Vector & force() const { return _force; }
+    void setForce(const Vector &f) { _force = f; }
+    const Vector & contact() const { return _contact; }
+    void setContact(const Vector &c) { _contact = c; }
+
+protected:
+    ObjectPtr _object;  // The object we're acting on
+    Vector _force;      // The force we're exerting
+    Vector _contact;    // Offset from the body's origin where the force acts
+
+public:
+    // Apply second-derivative modification to the system
+    void modifySecondDerivative(SystemState &delta,
+                                SystemCalculation &calc,
+                          const SystemState &prev,
+                          const ObjectPtrList &objects) {
+        index_t i = objects.index_of(object());
+        if (i != objects.NOT_FOUND) {
+            calc[i].F += _force;
+            calc[i].T += _force % _contact;
+        }
+    }
+};
+
+
+template <class Scalar>
+class Inca::Dynamics::ConstantTorque
+        : public SecondDerivativeOperator< RigidBody<Scalar> > {
+public:
+    // Template typedefs
+    typedef typename Object             Object;
+    typedef typename ObjectPtr          ObjectPtr;
+    typedef typename State              State;
+    typedef typename Calculation        Calculation;
+    typedef typename ObjectPtrList      ObjectPtrList;
+    typedef typename SystemState        SystemState;
+    typedef typename SystemCalculation  SystemCalculation;
+
+    typedef typename Point              Point;
+    typedef typename Vector             Vector;
+    typedef typename Quaternion         Quaternion;
+    typedef typename scalar_t           scalar_t;
+    typedef typename scalar_arg_t       scalar_arg_t;
+
+    // Constructor
+    ConstantTorque(ObjectPtr obj, const Vector &t)
+        : _object(obj), _torque(t) { }
+
+    // Accessor functions
+    ObjectPtr object() const { return _object; }
+    void setObject(ObjectPtr obj) { _object = obj; }
+    const Vector & torque() const { return _torque; }
+    void setForce(const Vector &f) { _torque = f; }
+
+protected:
+    ObjectPtr _object;  // The object we're acting on
+    Vector _torque;      // The torque we're exerting
+
+public:
+    // Apply second-derivative modification to the system
+    void modifySecondDerivative(SystemState &delta,
+                                SystemCalculation &calc,
+                          const SystemState &prev,
+                          const ObjectPtrList &objects) {
+        index_t i = objects.index_of(object());
+        if (i != objects.NOT_FOUND) {
+            calc[i].T += _torque;
+        }
+    }
+};
+
+#endif

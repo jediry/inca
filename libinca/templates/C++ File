@@ -1,0 +1,28 @@
+/** -*- C++ -*-
+ *
+ * File:
+ *
+ * Author: Ryan L. Saunders
+ *
+ * Copyright 2004, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ */
+
+#ifndef INCA_
+#define INCA_
+
+// Import system configuration
+#include <inca/inca-common.h>
+
+// This is part of the Inca XXX library
+namespace inca {
+    namespace XXX {
+        // Forward declarations
+
+        // Pointer typedefs
+
+    };
+};
+
+#endif

@@ -1,0 +1,73 @@
+/* -*- C++ -*-
+ *
+ * File: Filter
+ * 
+ * Author: Ryan L. Saunders
+ *
+ * Copyright 2003, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ *      The Filter template class implements a generic Image filter, which may
+ *      be applied to an Image to produce an altered version of the Image.
+ *      Subclasses must implement the 'filter' function, which calculates the
+ *      filtered color of a (destination) single pixel.
+ */
+
+#ifndef INCA_IMAGING_FILTER
+#define INCA_IMAGING_FILTER
+
+
+// Import Image definition
+#include "../Image"
+
+// This is part of the Inca imaging library
+namespace Inca {
+    namespace Imaging {
+        // Forward declarations
+        template <typename Color> class Filter;
+    };
+};
+
+
+// Create an (appropriately scaled) filtered version of 'src' as 'dest'
+template <typename Color>
+class Inca::Imaging::Filter {
+public:
+    // XXX Total hack
+    typedef double scalar_t;
+    typedef double       scalar_arg_t;
+
+
+/*---------------------------------------------------------------------------*
+ | Filtering functions
+ *---------------------------------------------------------------------------*/
+public:
+    // Calculate the filtered pixel color, centered at the specified coordinates
+    virtual Color filter(const Image<Color> &src, scalar_t x, scalar_t y) = 0;
+
+    // Make 'dest' a filtered version of 'src'
+    void apply(Image<Color> &dest, const Image<Color> &src) {
+        // Figure out our to/from dimensions
+        unsigned int srcWidth = src.width(),
+                     srcHeight = src.height(),
+                     destWidth = dest.width(),
+                     destHeight = dest.height();
+
+        // Figure out how much a pixel in 'dest' corresponds to in 'src'
+        scalar_t dx = srcWidth / (scalar_t)destWidth,
+               dy = srcHeight / (scalar_t)destHeight;
+
+        // Iterate across each pixel in 'dest'
+        scalar_t srcX = (dx - 1) / 2;
+        for (unsigned int x = 0; x < destWidth; x++) {
+            scalar_t srcY = (dy - 1) / 2;
+            for (unsigned int y = 0; y < destHeight; y++) {
+                dest(x, y) = filter(src, srcX, srcY);    // Filtered pixel color
+                srcY += dy;
+            }
+            srcX += dx;
+        }
+    }
+};
+
+#endif

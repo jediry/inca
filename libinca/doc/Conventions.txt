@@ -1,0 +1,32 @@
+CamelCaseFilenames indicate there's a class defined/implemented inside
+old_c_style_filenames indicate functions/variable decl's
+an exception to this is the stuff in util, which tries to conform to STL
+
+if there's more than one similar thingy in a file, and they're both of
+equivalent importance (i.e., not a "helper"), the file will be named
+generically: Doodad, SuperDoodad, UltraDoodad could all be in Doodads.hpp
+
+If the stuff in the file is mostly templates, the extension will be omitted,
+a la the STL: so "Point" is a file containing a template class
+
+If the stuff in the file is concrete functions/classes, the extension will
+be .cpp/.hpp
+
+If the stuff in the file is variable decls, configuration, etc., then it
+has a .h extension.
+
+Aaaaaaaargggghhhh! Coding conventions! OK, for now, we'll try this scheme:
+    If a class is a STL-like class (e.g., generic container), then it will be
+    written in STL style (foo_holder<>)
+
+    STL conventions will also hold for behind-the-scenes template
+    metaprogramming constructs (e.g., traits objects).
+
+    If a class is a "user class" (Vector, Renderer, Transform...), then it
+    will follow Java/QT coding conventions.
+
+    Namespaces will be all lowercase, and single-word.
+
+    This will (hopefully) create a clean break between the implementation
+    details (STL, boost, other impl things I make) and the library's published
+    API.

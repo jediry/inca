@@ -1,0 +1,481 @@
+/* -*- C++ -*-
+ *
+ * File: MathScalarTest
+ *
+ * Author: Ryan L. Saunders
+ *
+ * Copyright TWO002, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ *      The MathScalarTest template class puts the Inca::Math library's
+ *      scalar implementation through its paces.
+ *
+ *  XXX cast-from-primitve, assign from primitve
+ *  XXX Should we be checking for error conditions too?
+ *  XXX This should do all trans. funcs and needs to be reexamined after scalar redo
+ *  XXX need templated tests for conditionally compiling (potentionally) illegal expressions
+ *
+ * Implementation note:
+ *      This file is designed to be included by IncaTestMain.cpp, and may not
+ *      work correctly otherwise, as it depends on IncaTestMain.cpp already
+ *      having included some other things.
+ */
+
+#ifndef TEST_MATH_SCALAR
+#define TEST_MATH_SCALAR
+
+using namespace inca::math;
+
+
+/*---------------------------------------------------------------------------*
+ | Arithmetic function tests
+ *---------------------------------------------------------------------------*/
+// Default template, with no-op tests
+template <bool supported>
+struct ArithmeticOperationsTests {
+    void testNegation() { }
+    void testAddition() { }
+    void testSubtraction() { }
+    void testMultiplication() { }
+    void testDivision() { }
+    void testModulus() { }
+
+    void testAbsoluteValue() { }
+    void testMin() { }
+    void testMax() { }
+    void testInfinity() { }
+};
+
+// Activated template, used only when scalar support these operations
+template <>
+struct ArithmeticOperationsTests<true> {
+};
+
+template <typename scalar>
+class MathScalarTest : public CppUnit::TestFixture {
+private:
+    // Convenience typedefs
+    typedef MathScalarTest<scalar> ThisTest;
+
+public:
+    // Import the scalar typedefs
+    INCA_MATH_SCALAR_TYPEDEFS(scalar, IS_WITHIN_TEMPLATE, /* */, /* */);
+
+    // Create CppUnit test suite
+    CPPUNIT_TEST_SUITE(ThisTest);
+        // Print a nice, friendly header for this suite
+        CPPUNIT_TEST(beginSuite);
+
+        // Comparison operator tests
+        CPPUNIT_TEST(testEquality);
+        CPPUNIT_TEST(testInequality);
+        CPPUNIT_TEST(testGreaterThan);
+        CPPUNIT_TEST(testGreaterThanOrEquals);
+        CPPUNIT_TEST(testLessThan);
+        CPPUNIT_TEST(testLessThanOrEquals);
+
+        // Assignment operator tests
+        CPPUNIT_TEST(testAssignment);
+        CPPUNIT_TEST(testAddAssignment);
+        CPPUNIT_TEST(testSubtractAssignment);
+        CPPUNIT_TEST(testMultiplyAssignment);
+        CPPUNIT_TEST(testDivideAssignment);
+
+        // Arithmetic operator tests
+        CPPUNIT_TEST(testNegation);
+        CPPUNIT_TEST(testAddition);
+        CPPUNIT_TEST(testSubtraction);
+        CPPUNIT_TEST(testMultiplication);
+        CPPUNIT_TEST(testDivision);
+
+        // Constant definition tests
+        CPPUNIT_TEST(testConstants);
+
+        // Algebraic function tests
+        CPPUNIT_TEST(testMin);
+        CPPUNIT_TEST(testMax);
+        CPPUNIT_TEST(testAbs);
+        CPPUNIT_TEST(testFloor);
+        CPPUNIT_TEST(testCeiling);
+        CPPUNIT_TEST(testRound);
+        CPPUNIT_TEST(testSqrt);
+
+        // Transcendental function tests
+        CPPUNIT_TEST(testSin);
+        CPPUNIT_TEST(testCos);
+        CPPUNIT_TEST(testTan);
+        CPPUNIT_TEST(testArcSin);
+        CPPUNIT_TEST(testArcCos);
+        CPPUNIT_TEST(testArcTan);
+        CPPUNIT_TEST(testLog);
+        CPPUNIT_TEST(testPow);
+        CPPUNIT_TEST(testExp);
+
+        // Print a nice, friendly footer for this suite
+        CPPUNIT_TEST(endSuite);
+    CPPUNIT_TEST_SUITE_END();
+
+
+/*---------------------------------------------------------------------------*
+ | Test suite setup
+ *---------------------------------------------------------------------------*/
+public:
+    // Constructor
+    MathScalarTest()
+        : ZERO(0), ONE(1), TWO(2), THREE(3), FOUR(4), FIVE(5), SIX(6),
+          ONE_FOURTH(0.25), ONE_HALF(0.5),
+          THREE_FOURTHS(0.75), THREE_HALVES(1.5) { }
+    
+    void beginSuite() {
+        cerr << "Testing scalar<" << scalar_traits<scalar>::name() << ">: ";
+    }
+
+    void endSuite() {
+        cerr << endl;
+    }
+
+    void setUp() {
+        s1 = TWO;
+        s2 = THREE;
+    }
+
+    void tearDown() { }
+
+protected:
+    scalar_t s1, s2;
+    const scalar_t ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX,
+                   ONE_FOURTH, ONE_HALF, THREE_FOURTHS, THREE_HALVES;
+
+
+/*---------------------------------------------------------------------------*
+ | Comparison operator tests
+ *---------------------------------------------------------------------------*/
+public:
+    void testEquality() {
+        CPPUNIT_ASSERT(   (s1 == s1));
+        CPPUNIT_ASSERT(   (s2 == s2));
+        CPPUNIT_ASSERT( ! (s1 == s2));
+    }
+
+    void testInequality() {
+        CPPUNIT_ASSERT( ! (s1 != s1));
+        CPPUNIT_ASSERT( ! (s2 != s2));
+        CPPUNIT_ASSERT(   (s1 != s2));
+    }
+
+    void testGreaterThan() {
+        CPPUNIT_ASSERT( ! (s1 > s1));
+        CPPUNIT_ASSERT( ! (s1 > s2));
+        CPPUNIT_ASSERT(   (s2 > s1));
+    }
+
+    void testGreaterThanOrEquals() {
+        CPPUNIT_ASSERT(   (s1 >= s1));
+        CPPUNIT_ASSERT( ! (s1 >= s2));
+        CPPUNIT_ASSERT(   (s2 >= s1));
+    }
+
+    void testLessThan() {
+        CPPUNIT_ASSERT( ! (s1 < s1));
+        CPPUNIT_ASSERT(   (s1 < s2));
+        CPPUNIT_ASSERT( ! (s2 < s1));
+    }
+
+    void testLessThanOrEquals() {
+        CPPUNIT_ASSERT(   (s1 <= s1));
+        CPPUNIT_ASSERT(   (s1 <= s2));
+        CPPUNIT_ASSERT( ! (s2 <= s1));
+    }
+
+
+/*---------------------------------------------------------------------------*
+ | Assignment operator tests
+ *---------------------------------------------------------------------------*/
+public:
+    void testAssignment() {
+        scalar_t tmp = s1;
+        CPPUNIT_ASSERT(tmp == s1);
+        CPPUNIT_ASSERT(tmp != s2);
+        tmp = s2;
+        CPPUNIT_ASSERT(tmp != s1);
+        CPPUNIT_ASSERT(tmp == s2);
+    }
+
+    void testAddAssignment() {
+        s2 += s1;
+        CPPUNIT_ASSERT(s2 == FIVE);
+    }
+
+    void testSubtractAssignment() {
+        s2 -= s1;
+        CPPUNIT_ASSERT(s2 == ONE);
+    }
+
+    void testMultiplyAssignment() {
+        s2 *= s1;
+        CPPUNIT_ASSERT(s2 == SIX);
+    }
+
+    void testDivideAssignment() {
+        s2 /= s1;
+        CPPUNIT_ASSERT(s2 == scalar_t(3.0 / 2.0));
+    }
+
+
+/*---------------------------------------------------------------------------*
+ | Arithmetic operator tests
+ *---------------------------------------------------------------------------*/
+public:
+    void testNegation() {
+        if (scalar_traits::is_signed) {
+            CPPUNIT_ASSERT(-s1 == -TWO);
+            CPPUNIT_ASSERT(-s2 == -THREE);
+        }
+    }
+
+    void testAddition() {
+        if (scalar_traits::supports_arithmetic_ops) {
+            CPPUNIT_ASSERT(s1 + s2 == FIVE);
+            CPPUNIT_ASSERT(s2 + s1 == FIVE);
+        }
+    }
+
+    void testSubtraction() {
+        if (scalar_traits::supports_arithmetic_ops) {
+            CPPUNIT_ASSERT(s2 - s1 == ONE);
+            if (scalar_traits::is_signed) {
+                CPPUNIT_ASSERT(s1 - s2 == -ONE);
+            }
+        }
+    }
+
+    void testMultiplication() {
+        if (scalar_traits::supports_arithmetic_ops) {
+            CPPUNIT_ASSERT(s1 * s2 == SIX);
+            CPPUNIT_ASSERT(s2 * s1 == SIX);
+        }
+    }
+
+    void testDivision() {
+        if (scalar_traits::supports_arithmetic_ops) {
+            CPPUNIT_ASSERT(effectivelyEqual(scalar_t(s1 / s2), scalar_t(2.0 / 3.0)));
+            CPPUNIT_ASSERT(effectivelyEqual(scalar_t(s2 / s1), scalar_t(3.0 / 2.0)));
+        }
+    }
+
+
+/*---------------------------------------------------------------------------*
+ | Constant definition tests
+ *---------------------------------------------------------------------------*/
+public:
+    void testConstants() {
+        // This really just needs to compile
+        scalar_t s;
+        if (scalar_traits::supports_arithmetic_ops) {
+            s = INF<scalar_t>();
+        }
+        if (scalar_traits::supports_transcendental_ops) {
+            s = PI<scalar_t>();
+            s = E<scalar_t>();
+        }
+    }
+
+
+/*---------------------------------------------------------------------------*
+ | Algebraic function tests
+ *---------------------------------------------------------------------------*/
+public:
+    void testMin() {
+        if (scalar_traits::supports_arithmetic_ops) {
+            CPPUNIT_ASSERT(min(s1, s2) == s1);
+        }
+    }
+
+    void testMax() {
+        if (scalar_traits::supports_arithmetic_ops) {
+            CPPUNIT_ASSERT(max(s1, s2) == s2);
+        }
+    }
+
+    void testAbs() {
+        if (scalar_traits::supports_arithmetic_ops) {
+            CPPUNIT_ASSERT(abs(s1) == s1);
+            CPPUNIT_ASSERT(abs(-s1) == s1);
+        }
+    }
+
+    void testFloor() {
+        if (scalar_traits::supports_arithmetic_ops) {
+            CPPUNIT_ASSERT(floor(s1 + scalar_t(0.1)) == TWO);
+            CPPUNIT_ASSERT(floor(s2 + scalar_t(0.1)) == THREE);
+            if (scalar_traits::is_signed) {
+                CPPUNIT_ASSERT(floor(-s1 + scalar_t(0.1)) == -TWO);
+                CPPUNIT_ASSERT(floor(-s2 + scalar_t(0.1)) == -THREE);
+            }
+        }
+    }
+
+    void testCeiling() {
+        if (scalar_traits::supports_arithmetic_ops) {
+            CPPUNIT_ASSERT(ceiling(s1 + scalar_t(0.1)) == THREE);
+            CPPUNIT_ASSERT(ceiling(s2 + scalar_t(0.1)) == FOUR);
+            if (scalar_traits::is_signed) {
+                CPPUNIT_ASSERT(ceiling(-s1 + scalar_t(0.1)) == -ONE);
+                CPPUNIT_ASSERT(ceiling(-s2 + scalar_t(0.1)) == -TWO);
+            }
+        }
+    }
+
+    void testRound() {
+        if (scalar_traits::supports_arithmetic_ops) {
+            CPPUNIT_ASSERT(round(scalar_t(s1 + 0.1)) == TWO);
+            CPPUNIT_ASSERT(round(scalar_t(s1 - 0.1)) == TWO);
+            CPPUNIT_ASSERT(round(scalar_t(s2 + 0.1)) == THREE);
+            CPPUNIT_ASSERT(round(scalar_t(s2 - 0.1)) == THREE);
+            CPPUNIT_ASSERT(round(scalar_t(-s1 + 0.1)) == -TWO);
+            CPPUNIT_ASSERT(round(scalar_t(-s1 - 0.1)) == -TWO);
+            CPPUNIT_ASSERT(round(scalar_t(-s2 + 0.1)) == -THREE);
+            CPPUNIT_ASSERT(round(scalar_t(-s2 - 0.1)) == -THREE);
+        }
+    }
+
+    void testSqrt() {
+        if (scalar_traits::supports_algebraic_ops) {
+            CPPUNIT_ASSERT(effectivelyEqual(sqrt(s1), scalar_t(1.4142135623730950488016887242097)));
+            CPPUNIT_ASSERT(effectivelyEqual(sqrt(s2), scalar_t(1.7320508075688772935274463415059)));
+        }
+    }
+
+
+/*---------------------------------------------------------------------------*
+ | Transcendental function tests
+ *---------------------------------------------------------------------------*/
+public:
+    void testSin() {
+        if (scalar_traits::supports_transcendental_ops) {
+            scalar_t s = ZERO;
+            CPPUNIT_ASSERT(effectivelyEqual(sin(s), ZERO));
+            s = PI<scalar_t>() * ONE_FOURTH;
+            CPPUNIT_ASSERT(effectivelyEqual(sin(s), sqrt(TWO) / TWO));
+            s = PI<scalar_t>() * ONE_HALF;
+            CPPUNIT_ASSERT(effectivelyEqual(sin(s), ONE));
+            s = PI<scalar_t>();
+            CPPUNIT_ASSERT(effectivelyEqual(sin(s), ZERO));
+            s = PI<scalar_t>() * THREE_HALVES;
+            CPPUNIT_ASSERT(effectivelyEqual(sin(s), -ONE));
+        }
+    }
+
+    void testCos() {
+        if (scalar_traits::supports_transcendental_ops) {
+            scalar_t s = ZERO;
+            CPPUNIT_ASSERT(effectivelyEqual(cos(s), ONE));
+            s = PI<scalar_t>() * ONE_FOURTH;
+            CPPUNIT_ASSERT(effectivelyEqual(cos(s), sqrt(TWO) / TWO));
+            s = PI<scalar_t>() * ONE_HALF;
+            CPPUNIT_ASSERT(effectivelyEqual(cos(s), ZERO));
+            s = PI<scalar_t>();
+            CPPUNIT_ASSERT(effectivelyEqual(cos(s), -ONE));
+            s = PI<scalar_t>() * THREE_HALVES;
+            CPPUNIT_ASSERT(effectivelyEqual(cos(s), ZERO));
+        }
+    }
+
+    void testTan() {
+        if (scalar_traits::supports_transcendental_ops) {
+            scalar_t s = ZERO;
+            CPPUNIT_ASSERT(effectivelyEqual(tan(s), ZERO));
+            s = PI<scalar_t>() * ONE_FOURTH;
+            CPPUNIT_ASSERT(effectivelyEqual(tan(s), ONE));
+            s = PI<scalar_t>() * ONE_HALF;
+            CPPUNIT_ASSERT(effectivelyEqual(tan(s), INF<scalar_t>()));
+            s = PI<scalar_t>();
+            CPPUNIT_ASSERT(effectivelyEqual(tan(s), ZERO));
+            s = PI<scalar_t>() * THREE_HALVES;
+            CPPUNIT_ASSERT(effectivelyEqual(tan(s), INF<scalar_t>()));
+        }
+    }
+
+    void testArcSin() {
+        if (scalar_traits::supports_transcendental_ops) {
+            scalar_t s = ZERO;
+            CPPUNIT_ASSERT(effectivelyEqual(arcsin(s), ZERO));
+            s = sqrt(TWO) / TWO;
+            CPPUNIT_ASSERT(effectivelyEqual(arcsin(s), PI<scalar_t>() * ONE_FOURTH));
+            s = ONE;
+            CPPUNIT_ASSERT(effectivelyEqual(arcsin(s), PI<scalar_t>() * ONE_HALF));
+            s = -ONE;
+            CPPUNIT_ASSERT(effectivelyEqual(arcsin(s), -PI<scalar_t>() * ONE_HALF));
+        }
+    }
+
+    void testArcCos() {
+        if (scalar_traits::supports_transcendental_ops) {
+            scalar_t s = ZERO;
+            CPPUNIT_ASSERT(effectivelyEqual(arccos(s), PI<scalar_t>() * ONE_HALF));
+            s = sqrt(TWO) / TWO;
+            CPPUNIT_ASSERT(effectivelyEqual(arccos(s), PI<scalar_t>() * ONE_FOURTH));
+            s = ONE;
+            CPPUNIT_ASSERT(effectivelyEqual(arccos(s), ZERO));
+            s = -ONE;
+            CPPUNIT_ASSERT(effectivelyEqual(arccos(s), PI<scalar_t>()));
+        }
+    }
+
+    void testArcTan() {
+        if (scalar_traits::supports_transcendental_ops) {
+            // Test the one-arg version
+            scalar_t s = ZERO;
+            CPPUNIT_ASSERT(effectivelyEqual(arctan(s), ZERO));
+            s = ONE;
+            CPPUNIT_ASSERT(effectivelyEqual(arctan(s), PI<scalar_t>() * ONE_FOURTH));
+            s = -ONE;
+            CPPUNIT_ASSERT(effectivelyEqual(arctan(s), -PI<scalar_t>() * ONE_FOURTH));
+            s = INF<scalar_t>();
+            CPPUNIT_ASSERT(effectivelyEqual(arctan(s), PI<scalar_t>() * ONE_HALF));
+
+            // Test the two-arg version
+            scalar_t sine   = sin(PI<scalar_t>() * ONE_FOURTH),
+                     cosine = cos(PI<scalar_t>() * ONE_FOURTH);
+            CPPUNIT_ASSERT(effectivelyEqual(arctan(sine, cosine), PI<scalar_t>() * ONE_FOURTH));
+            cosine = -cosine;
+            CPPUNIT_ASSERT(effectivelyEqual(arctan(sine, cosine), PI<scalar_t>() * THREE_FOURTHS));
+            sine = -sine;
+            CPPUNIT_ASSERT(effectivelyEqual(arctan(sine, cosine), -PI<scalar_t>() * THREE_FOURTHS));
+            cosine = -cosine;
+            CPPUNIT_ASSERT(effectivelyEqual(arctan(sine, cosine), -PI<scalar_t>() * ONE_FOURTH));
+        }
+    }
+
+    void testExp() {
+        if (scalar_traits::supports_transcendental_ops) {
+            scalar_t tmp = exp(THREE);
+            CPPUNIT_ASSERT(effectivelyEqual(tmp, E<scalar_t>() * E<scalar_t>() * E<scalar_t>()));
+        }
+    }
+
+    void testLn() {
+        if (scalar_traits::supports_transcendental_ops) {
+            scalar_t tmp = exp(THREE);
+            CPPUNIT_ASSERT(effectivelyEqual(ln(tmp), THREE));
+            CPPUNIT_ASSERT(effectivelyEqual(ln(E<scalar_t>()), ONE));
+        }
+    }
+
+    void testPow() {
+        if (scalar_traits::supports_transcendental_ops) {
+            scalar_t tmp = pow(scalar_t(3.5), TWO);
+            CPPUNIT_ASSERT(effectivelyEqual(tmp, scalar_t(3.5) * scalar_t(3.5)));
+        }
+    }
+
+    void testLog() {
+        if (scalar_traits::supports_transcendental_ops) {
+            // Test the variable-base version
+            scalar_t tmp = pow(scalar_t(3.5), scalar_t(5.6));
+            CPPUNIT_ASSERT(effectivelyEqual(log(scalar_t(3.5), tmp), scalar_t(5.6)));
+        }
+    }
+};
+
+#endif

@@ -1,0 +1,133 @@
+/* -*- C++ -*-
+ *
+ * File: BezierSurface
+ * 
+ * Author: Ryan L. Saunders
+ * 
+ * Copyright 2002, Ryan L. Saunders. All rights reserved.
+ * 
+ * Description:
+ *      The BezierSurface template is a concrete subclass of
+ *      ControlPointSurface, representing smooth, continuous polynomial
+ *      surfaces defined by a grid of control points, corresponding to
+ *      Bernstein basis functions.
+ *
+ *      This patch may be of arbitrary dimension in both the S and T dimensions.
+ */
+
+#ifndef INCA_MATH_BEZIER_SURFACE
+#define INCA_MATH_BEZIER_SURFACE
+
+// Import superclass definition
+#include "ControlPointSurface"
+
+// Include related curve definition
+#include "../curves/BezierCurve"
+
+
+// This is part of the Inca geometry library
+namespace Inca {
+    namespace Geometry {
+        // Forward declaration
+        template <class Scalar, unsigned int dim> class BezierSurface;
+    };
+};
+
+
+template <class Scalar, unsigned int dim>
+class Inca::Geometry::BezierSurface : public ControlPointSurface<Scalar, dim> {
+private:
+    // Convenience typedefs
+    typedef BezierSurface<Scalar, dim>          ThisType;
+    typedef ControlPointSurface<Scalar, dim>    Superclass;
+
+public:
+    // What dimensional space are we working in?
+    const static unsigned int dimension = dim;
+
+    // Template typedefs
+    typedef typename Superclass::scalar_t       scalar_t;
+    typedef typename Superclass::scalar_arg_t   scalar_arg_t;
+    typedef typename Superclass::Point          Point;
+    typedef typename Superclass::Vector         Vector;
+    typedef typename Superclass::Ray            Ray;
+    typedef typename Superclass::PointArray     PointArray;
+    typedef BezierCurve<Scalar, dim>       BezierCurve;
+
+
+/*---------------------------------------------------------------------------*
+ | Constructors
+ *---------------------------------------------------------------------------*/
+public:
+    BezierSurface(unsigned int sDim, unsigned int tDim)
+        : Superclass (sDim, tDim) { }
+    BezierSurface(const Container::Grid<Point> &cp) : Superclass(cp) { }
+    BezierSurface(const Superclass &s) : Superclass(s) { }
+
+
+/*---------------------------------------------------------------------------*
+ | Realization of ParametricSurface abstract functions
+ *---------------------------------------------------------------------------*/
+public:
+    scalar_t getMinimumS() { return 0; }
+    scalar_t getMaximumS() { return 1; }
+    scalar_t getMinimumT() { return 0; }
+    scalar_t getMaximumT() { return 1; }
+    BezierCurve getIsoparameterCurveS(scalar_arg_t s) {
+        // Our resulting curve goes here:
+        PointArray isoControlPoints(getDimensionT());
+
+        // Run deCasteljou on each row of control points
+        for (unsigned int i = 0; i < getDimensionT(); i++)
+            isoControlPoints[i] = BezierCurve(controlPoints.row(i)).evaluateCurve(s);
+        // The evaluated points define our isoparameter curve
+        return BezierCurve(isoControlPoints);
+    }
+    BezierCurve getIsoparameterCurveT(scalar_arg_t t) {
+        // Our resulting curve goes here:
+        PointArray isoControlPoints(getDimensionS());
+
+        // Run deCasteljou on each column of control points
+        for (unsigned int i = 0; i < getDimensionS(); i++)
+            isoControlPoints[i] = BezierCurve(controlPoints.column(i)).evaluateCurve(t);
+        // The evaluated points define our isoparameter curve
+        return BezierCurve(isoControlPoints);
+    }
+    Point evaluateSurface(scalar_arg_t s, scalar_arg_t t) {
+        // Make sure 's' and 't' are legal
+        clampToParameterDomain(s, t);
+        // Evaluate the surface in two steps (not efficient...I know)
+        return getIsoparameterCurveS(s).evaluateCurve(t);
+    }
+    Vector evaluateNormal(scalar_arg_t s, scalar_arg_t t) {
+        // Make sure 's' and 't' are legal
+        clampToParameterDomain(s, t);
+        // Get tangent in each of 's' and 't' directions
+        Vector tangentS = getIsoparameterCurveT(t).evaluateTangent(s);
+        Vector tangentT = getIsoparameterCurveS(s).evaluateTangent(t);
+        
+        // Normal is their cross product
+        Vector normal = tangentT % tangentS;
+        normal.normalize();
+//        cout << "tangentS <" << tangentS.i << ", " << tangentS.j << ", " << tangentS.k << "> ";
+//        cout << "tangentT <" << tangentT.i << ", " << tangentT.j << ", " << tangentT.k << "> ";
+//        cout << "normal <" << normal.i << ", " << normal.j << ", " << normal.k << ">\n";
+        return normal;
+    }
+    
+    scalar_t evaluateGaussianCurvature(scalar_arg_t s, scalar_arg_t t) {
+        Vector tangentS = getIsoparameterCurveT(t).evaluateTangent(s);
+        Vector tangentT = getIsoparameterCurveS(s).evaluateTangent(t);
+        Vector normal = evaluateNormal(s, t);
+        scalar_t E = tangentS * tangentS;
+        scalar_t F = tangentS * tangentT;
+        scalar_t G = tangentT * tangentT;
+        scalar_t L = normal * normal;
+        scalar_t M = normal * normal;
+        scalar_t N = normal * normal;
+        scalar_t k = (L * N - M * M) / (E * G - F * F);
+        return k;
+    }
+};
+
+#endif

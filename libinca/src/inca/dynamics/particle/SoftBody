@@ -1,0 +1,179 @@
+/* -*- C++ -*-
+ *
+ * File: SoftBody
+ * 
+ * Author: Ryan L. Saunders
+ *
+ * Copyright 2003, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ */
+
+#ifndef INCA_DYNAMICS_SOFT_BODY
+#define INCA_DYNAMICS_SOFT_BODY
+
+// Import superclass definition
+#include "Operator"
+
+// Import damped spring definitions
+#include "DampedSprings"
+
+// Import Inca polygon-modeling library
+#include <poly/Poly.hpp>
+
+// This is part of the Inca dynamics library
+namespace Inca {
+    namespace Dynamics {
+        // Forward declarations
+        template <class Scalar, unsigned int dim> class SoftBody;
+    };
+};
+
+
+template <class Scalar, unsigned int dim>
+class Inca::Dynamics::SoftBody : public Operator<Scalar, dim> {
+private:
+    // Convenience typedefs
+    typedef Operator<Scalar, dim> Superclass;
+
+public:
+    // What dimensional space are we working in?
+    const static unsigned int dimension = dim;
+
+    // Template typedefs
+    typedef typename Superclass::scalar_t       scalar_t;
+    typedef typename Superclass::scalar_arg_t   scalar_arg_t;
+    typedef typename Superclass::Point          Point;
+    typedef typename Superclass::Vector         Vector;
+
+    typedef typename Superclass::Particle       Particle;
+    typedef typename Superclass::ParticlePtr    ParticlePtr;
+    typedef typename Superclass::ParticleState  ParticleState;
+
+    typedef ParticleSystem<Scalar, dim>         ParticleSystem;
+    typedef ParticleSystem *                    ParticleSystemPtr;
+
+    typedef DampedLinearSpring<Scalar, dim>     DampedLinearSpring;
+    typedef DampedAngularSpring<Scalar, dim>    DampedAngularSpring;
+
+    typedef Poly::WEPolygonMesh<Scalar, dim>    PolygonMesh;
+    typedef PolygonMesh *                       PolygonMeshPtr;
+    typedef typename PolygonMesh::Vertex        Vertex;
+    typedef typename PolygonMesh::VertexPtr     VertexPtr;
+    typedef typename PolygonMesh::Edge          Edge;
+    typedef typename PolygonMesh::EdgePtr       EdgePtr;
+    typedef typename PolygonMesh::Face          Face;
+    typedef typename PolygonMesh::FacePtr       FacePtr;
+
+    typedef hash_map<VertexPtr, ParticlePtr>    VertexParticleMap;
+
+
+/*---------------------------------------------------------------------------*
+ | Constructor & Destructor
+ *---------------------------------------------------------------------------*/
+public:
+    SoftBody(ParticleSystemPtr sys, PolygonMeshPtr pMesh,
+             scalar_arg_t m, scalar_arg_t d, scalar_arg_t k_linear,
+             scalar_arg_t k_angular)
+              : system(sys), mesh(pMesh),
+                mass(m), damping(d), linearK(k_linear), angularK(k_angular) {
+
+        // Create a particle-spring representation of the mesh
+        buildModelReflection();
+    }
+    
+    ~SoftBody() {
+        // Remove each particle from the system and delete it
+        for (unsigned int i = 0; i < particles.size(); i++) {
+            system->removeParticle(particles[i]);
+            delete particles[i];
+        }
+    }
+
+    ParticlePtr particle(index_t i) { return particles[i]; }
+
+protected:
+    ParticleSystemPtr system;   // Our integrator
+    PolygonMeshPtr mesh;        // The mesh we're representing
+
+    // Default physical constants for the mass/spring system
+    scalar_t mass, damping, linearK, angularK;
+
+    // Particles and springs that make this body do that thing it does
+    VertexParticleMap particleFor;
+    vector<ParticlePtr> particles;
+    vector<DampedLinearSpring> linearSprings;
+    vector<DampedAngularSpring> angularSprings;
+
+
+    // Build a dynamics reflection of the model
+    void buildModelReflection() {
+        typename PolygonMesh::VertexPtrList vertices = mesh->vertices();
+        for (unsigned int i = 0; i < vertices.size(); i++)
+            addParticle(vertices[i]);
+
+        typename PolygonMesh::EdgePtrList edges = mesh->edges();
+        for (unsigned int i = 0; i < edges.size(); i++) {
+            addLinearSpring(edges[i]);
+            addAngularSpring(edges[i]);
+        }
+    }
+
+    // Add a particle to the system
+    void addParticle(VertexPtr v) {
+        ParticlePtr p = new Particle(v->getLocation(), Vector(0.0), 0.0, 0.0, mass);
+        particleFor[v] = p;
+        particles.push_back(p);
+        system->addParticle(p);
+    }
+
+    // Add a linear spring connecting two vertices
+    void addLinearSpring(EdgePtr e) {
+        ParticlePtr p1 = particleFor[e->getStartVertex()],
+                    p2 = particleFor[e->getEndVertex()];
+        scalar_t restLength = magnitude(p1->position - p2->position);
+        linearSprings.push_back(DampedLinearSpring(p1, p2, restLength,
+                                                   linearK, damping));
+    }
+    
+    // Add a angular spring connecting two faces
+    void addAngularSpring(EdgePtr e) {
+        VertexPtr vh1 = e->getStartVertex(),
+                  vh2 = e->getEndVertex(),
+                  vp1 = e->getCCWEdge(vh2)->getOtherVertex(vh2),
+                  vp2 = e->getCWEdge(vh2)->getOtherVertex(vh2);
+        ParticlePtr h1 = particleFor[vh1],
+                    h2 = particleFor[vh2],
+                    p1 = particleFor[vp1],
+                    p2 = particleFor[vp2];
+        Vector toP1 = p1->position - h1->position,
+               toP2 = p2->position - h1->position,
+               hinge = h2->position - h1->position,
+               n1 = hinge % toP1,
+               n2 = toP2 % hinge;
+        n1.normalize();
+        n2.normalize();
+        hinge.normalize();
+        scalar_t restAngle = angle(n1, n2, hinge);
+        angularSprings.push_back(DampedAngularSpring(h1, h2, p1, p2,
+                                                     restAngle, angularK));
+    }
+
+
+/*---------------------------------------------------------------------------*
+ | Calculation of the force exerted by this object
+ *---------------------------------------------------------------------------*/
+public:
+    // Calculation of forces exterted on all particles affected by this object
+    virtual void apply(ParticleState &state, scalar_arg_t dt) {
+        // First apply the linear springs
+        for (index_t i = 0; i < linearSprings.size(); i++)
+            linearSprings[i].apply(state, dt);
+            
+        // Now apply the angular springs
+        for (index_t i = 0; i < angularSprings.size(); i++)
+            angularSprings[i].apply(state, dt);
+    }
+};
+
+#endif

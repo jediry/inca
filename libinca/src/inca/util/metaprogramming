@@ -1,0 +1,7 @@
+
+namespace inca {
+    template <bool, typename type = int>
+    struct constraint { typedef type satisfy; };
+    
+    template <> struct constraint<false> { /* No typedef, causes subst. failure */};
+}

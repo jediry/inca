@@ -1,0 +1,362 @@
+/** -*- C++ -*-
+ *
+ * File: ImmediateModeRenderer
+ * 
+ * Author: Ryan L. Saunders
+ *
+ * Copyright 2004, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ *      This file declares the classes and functions for rendering objects in
+ *      "immediate mode". In immediate mode, primitives (points, lines, curves,
+ *      bezier patches, etc.) are rendered one-at-a-time using a local lighting
+ *      model (as opposed to a global lighting model, such as in raytracing,
+ *      which considers the entire scene as a whole for the purpose of
+ *      calculating the lighting. Because an immediate-mode renderer can
+ *      deal with primitives independent of each other, the renderer can be
+ *      designed as a state-machine, such that the programmer sets the
+ *      renderer's "current" attributes (transformation matrix stack, color,
+ *      lighting mode, etc.) and then draws the primitives using the current
+ *      state. DirectX and OpenGL are two examples of
+ *      immediate mode rendering APIs.
+ *
+ *      The OpenGLRenderer is a subclass of Renderer designed to
+ *      offer a higher-level interface around a low-level rendering API like
+ *      OpenGL. It provides wrapper functions allowing the low-level API's
+ *      functions to be invoked with the corresponding Inca::World objects and
+ *      the rendering primitives declared in this file.
+ *
+ *      OpenGLRenderer can be used in either of two modes:
+ *      true-immediate or semi-immediate. In true-immediate mode, the renderer
+ *      behaves in the same manner as the underlying low-level API. To use the
+ *      renderer in this way, simply call the high-level functions
+ *      in the same order as you would have called the corresponding low-level
+ *      API functions. In this way, it is possible to create a
+ *      rendering-system-independent application, and to switch between
+ *      multiple renderers as desired.
+ *
+ *      In semi-immediate mode, the renderer attempts to optimize the rendering
+ *      process by reordering the necessary operations. For example, since
+ *      loading and switching textures may be a computationally expensive
+ *      operation, the renderer will collate sets of primitives using the
+ *      same texture and draw them consecutively, thus saving the expense of
+ *      making that texture "current" multiple times. This could be done
+ *      manually in true-immediate mode, but when materials are shared between
+ *      different objects, this might get messy.
+ *      
+ *      
+ */
+
+#ifndef INCA_RENDERING_IMMEDIATE_MODE_RENDERER
+#define INCA_RENDERING_IMMEDIATE_MODE_RENDERER
+
+// Import system configuration
+#include <inca/inca-common.h>
+
+
+// This is part of the Inca rendering subsystem
+namespace inca {
+    namespace rendering {
+        // Forward declarations
+        template <typename RenderingAPI> class ImmediateModeRenderer;
+    };
+};
+
+
+// Import superclass definition
+#include "Renderer.hpp"
+
+// Import the traits template that interfaces with the underlying API
+#include "immediate_mode_rendering_api"
+
+// Import our statistics keeper
+#include "RenderStatistics"
+
+// Import rendering type definitions
+#include "types.hpp"
+
+// Import types from other Inca libraries
+#include <inca/math.hpp>
+#include <inca/imaging.hpp>
+
+
+template <typename RenderingAPI>
+class inca::rendering::ImmediateModeRenderer : public Renderer {
+public:
+    // Implementation traits definitions
+    typedef immediate_mode_rendering_api<RenderingAPI> api;
+
+    // Rendering statistics counter defintion
+    typedef RenderStatistics<float, ALL_PRIMITIVE_TYPES, ALL_RENDER_PASSES>
+        RenderStatistics;
+
+
+/*---------------------------------------------------------------------------*
+ | Performance & statistics
+ *---------------------------------------------------------------------------*/
+public:
+    const RenderStatistics & frameStatistics() const { return _frameStats; }
+    const RenderStatistics & totalStatistics() const { return _totalStats; }
+
+protected:
+    RenderStatistics _frameStats, _totalStats;
+
+
+/*---------------------------------------------------------------------------*
+ | Initialization functions
+ *---------------------------------------------------------------------------*/
+public:
+    void initialize() {
+        _frameStats.reset();
+        _totalStats.reset();
+        api::enable_z_buffer(true);
+    }
+
+
+/*---------------------------------------------------------------------------*
+ | Framebuffer control functions
+ *---------------------------------------------------------------------------*/
+    // Clear the framebuffer
+    void clear() {
+        api::clear_framebuffer();
+    }
+
+    // Access the framebuffer (or some sub-region)
+    //ImagePtr framebuffer() const;
+    //ImagePtr framebuffer(index_t x, index_t y, size_t w, size_t h) const;
+    //Color framebuffer(index_t x, index_t y) const;
+
+    // Change the framebuffer's size
+    void resize(size_t w, size_t h) {
+        api::resize_framebuffer(w, h);
+    }
+
+
+/*---------------------------------------------------------------------------*
+ | Rendering-state control functions (TI)
+ *---------------------------------------------------------------------------*/
+    void setShadingMode(ShadingMode mode) {
+        switch (mode) {
+        case SmoothShade:
+            api::enable_lighting(true);
+            api::set_shading_mode(SmoothShade);
+            //glLightModelf(GL_LIGHT_MODEL_TWO_SIDE, GL_FALSE);
+            break;
+        case FlatShade:
+            api::enable_lighting(true);
+            api::set_shading_mode(FlatShade);
+            //glLightModelf(GL_LIGHT_MODEL_TWO_SIDE, GL_FALSE);
+            break;
+        case Paint:
+            api::enable_lighting(false);
+            break;
+        default:
+            logger << "IMR::setShadingMode(" << mode << "): not supported";
+            logger.warning();
+        }
+    }
+
+    void enableLight(world::LightPtr lite);
+    void disableLight(world::LightPtr lite);
+    void setBackgroundColor(world::Material::Color &c) {
+        api::set_background_color(c);
+    }
+    template <typename scalar, imaging::ColorSpace cs, bool hasAlpha>
+    void setColor(const imaging::Color<scalar, cs, hasAlpha> &c) {
+        api::set_drawing_color(c);
+    }
+
+    template <typename scalar, size_t dim>
+    void setNormal(const math::Vector<scalar, dim> &n) {
+        api::set_normal(n);
+    }
+
+    template <typename scalar, size_t dim>
+    void setTexCoords(const math::Point<scalar, dim> &t) {
+        api::set_texture_coordinates(t);
+    }
+
+    void setMaterial(world::MaterialPtr mtl);
+
+
+/*---------------------------------------------------------------------------*
+ | Transformation matrix functions (TI)
+ *---------------------------------------------------------------------------*/
+    void resetTransform() {
+        api::select_transformation_matrix();
+        api::reset_selected_matrix();
+    }
+    void resetCameraProjection() {
+        api::select_projection_matrix();
+        api::reset_selected_matrix();
+        api::select_transformation_matrix();
+    }
+    void pushTransform() {
+        api::push_matrix();
+    }
+    void pushTransform(world::TransformPtr xform) {
+        api::push_matrix();
+        applyTransform(xform);  // Just call my buddy!
+    }
+    void popTransform() {
+        api::pop_matrix();
+    }
+    void applyCameraProjection(world::CameraPtr cam) {
+        // Make life simpler
+        typedef world::Camera::scalar_t     scalar_t;
+        typedef math::Vector<scalar_t, 2>   Vector;
+
+        // Make sure we're not crazy here...
+        if (! cam) {
+            logger << "applyCameraProjection(CameraPtr): NULL pointer";
+            logger.warning();
+            return;     // Go home...we're done here
+        }
+
+        // See if this is a perspective camera
+        world::PerspectiveCameraPtr pCam
+            = dynamic_pointer_cast<world::PerspectiveCamera>(cam);
+        if (pCam) {
+            cerr << "Uhhh...Perspective???\n";
+            // Extract camera view parameters
+            Vector angles, clipping;
+            angles[0] = scalar_t(pCam->horizViewAngle);
+            angles[1] = scalar_t(pCam->vertViewAngle);
+            clipping[0] = scalar_t(pCam->nearClip);
+            clipping[1] = scalar_t(pCam->farClip);
+
+            // Multiply in the projection matrix
+            api::select_projection_matrix();
+            api::apply_perspective_projection(angles, clipping);
+            api::select_transformation_matrix();
+            return;     // Go home...we're done here
+        }
+
+        // See if this is an orthographic camera
+        world::OrthographicCameraPtr oCam
+            = dynamic_pointer_cast<world::OrthographicCamera>(cam);
+        if (oCam) {
+            cerr << "Yay! Ortho cam\n";
+            // Extract camera view parameters
+            Vector extents, clipping;
+            extents[0] = scalar_t(oCam->viewWidth);
+            extents[1] = scalar_t(oCam->viewHeight);
+            clipping[0] = scalar_t(oCam->nearClip);
+            clipping[1] = scalar_t(oCam->farClip);
+
+            // Multiply in the projection matrix
+            api::select_projection_matrix();
+            api::apply_orthographic_projection(extents, clipping);
+            api::select_transformation_matrix();
+            return;     // Go home...we're done here
+        }
+
+        // OK...you're on crack. What the $#%@ is this??
+        logger << "applyCameraProjection(CameraPtr): Unsupported Camera type "
+               << typeid(cam).name();
+        logger.warning();
+    }
+    void applyCameraTransform(world::CameraPtr cam) {
+        // Since camera transformation is effectively the inverse model
+        // transformation, we just need to send the camera's xform thru backwards
+        unapplyTransform(cam->transform);
+    }
+
+    void applyTransform(world::TransformPtr xform) {
+        // Translate, rotate, and scale
+        apply_translation(xform->position());
+        apply_rotation(xform->rotation());
+        apply_scaling(xform->scaling());
+    }
+    void unapplyTransform(world::TransformPtr xform) {
+        // Unscale, unrotate, and untranslate
+        api::unapply_scaling(xform->scaling());
+        api::unapply_rotation(xform->rotation());
+        api::unapply_translation(xform->position());
+    }
+
+
+
+/*---------------------------------------------------------------------------*
+ | True-immediate mode rendering functions (TI)
+ *---------------------------------------------------------------------------*/
+    void beginFrame() {
+        _frameStats.reset();
+        _frameStats.beginFrame();
+        _totalStats.beginFrame();
+    }
+
+    void endFrame() {
+        _frameStats.endFrame();
+        _totalStats.endFrame();
+    }
+
+    void beginRenderPass(RenderPass pass) {
+        // Begin timing this render pass
+        _currentRenderPass = pass;
+        _frameStats.beginRenderPass(pass);
+        _totalStats.beginRenderPass(pass);
+
+        switch (pass) {
+        case Opacity:
+            api::set_polygon_fill_mode(Filled);  // Draw filled polyons
+            api::enable_alpha_blending(false);   // No transparency
+            api::lock_z_buffer(false);           // Normal Z-buffer use
+            api::enable_polgon_culling(true);    // Cull back-faces
+            break;
+        case Wireframe:
+            api::set_polygon_fill_mode(Outline); // Draw wireframe
+            api::enable_alpha_blending(false);   // No transparency
+            api::lock_z_buffer(false);           // Normal Z-buffer use
+            api::enable_polygon_culling(false);  // Don't cull faces
+            break;
+        case Transparency:
+            api::set_polygon_fill_mode(Filled);  // Draw filled polygons
+            api::enable_alpha_blending(true);    // Enable transparency
+            api::lock_z_buffer(true);            // Don't update Z-buffer
+            api::enable_polygon_culling(false);  // Don't cull faces
+            break;
+        case Selection:
+            break;
+        default:
+            logger << "IMR::initializeRenderPass(" << pass << "): not supported";
+            logger.warning();
+        }
+    }
+
+    void endRenderPass() {
+        _frameStats.endRenderPass(_currentRenderPass);
+        _totalStats.endRenderPass(_currentRenderPass);
+    }
+
+    void beginRenderImmediate(PrimitiveType type) {
+        _currentPrimitiveType = type;
+        api::begin_render_immediate(type);
+    }
+    void endRenderImmediate() {
+        api::end_render_immediate();
+    }
+
+//    template <PrimitiveType p, NormalType n, TextureType t>
+//    void renderImmediate(const Primitive<p, n, t> &prim);
+
+    template <typename scalar, size_t dim>
+    void renderVertex(const math::Point<scalar, dim> &p) {
+        _frameStats.vertexRendered(_currentPrimitiveType, _currentRenderPass);
+        _totalStats.vertexRendered(_currentPrimitiveType, _currentRenderPass);
+        api::render_vertex(p);
+    }
+
+protected:
+    RenderPass _currentRenderPass;
+    PrimitiveType _currentPrimitiveType;
+
+
+/*---------------------------------------------------------------------------*
+ | Semi-immediate mode functions
+ *---------------------------------------------------------------------------*/
+public:
+    void render() { }
+};
+
+#endif

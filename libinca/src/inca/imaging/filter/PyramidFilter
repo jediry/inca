@@ -1,0 +1,93 @@
+/* -*- C++ -*-
+ *
+ * File: PyramidFilter
+ * 
+ * Author: Ryan L. Saunders
+ *
+ * Copyright 2003, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ *      The PyramidFilter template class implements an axis-aligned rectangular
+ *      filter in which all filtered pixels contribute equally to the resulting
+ *      color.
+ */
+
+#ifndef INCA_IMAGING_PYRAMID_FILTER
+#define INCA_IMAGING_PYRAMID_FILTER
+
+
+// Import superclass definition
+#include "RectangularFilter"
+
+// This is part of the Inca imaging library
+namespace Inca {
+    namespace Imaging {
+        // Forward declarations
+        template <typename Color> class PyramidFilter;
+    };
+};
+
+
+template <typename Color>
+class Inca::Imaging::PyramidFilter : public RectangularFilter<Color> {
+private:
+    // Convenience typedefs
+    typedef RectangularFilter<Color> Superclass;
+
+public:
+    // Template typedefs
+    typedef typename Superclass::scalar_t       scalar_t;
+    typedef typename Superclass::scalar_arg_t   scalar_arg_t;
+
+
+/*---------------------------------------------------------------------------*
+ | Constructors
+ *---------------------------------------------------------------------------*/
+public:
+    // Constructor
+    PyramidFilter(scalar_arg_t width, scalar_arg_t height)
+        : Superclass(width, height) {
+        
+        w = (int)width;
+        h = (int)height;
+        weights = new double*[w];
+        for (int i = 0; i < w; i++)
+            weights[i] = new double[h];
+        area = 0;
+        double dx = 1;
+        for (int i = 0; i < w; i++) {
+            double dy = 1;
+            for (int j = 0; j < h; j++) {
+                weights[i][j] = dx + dy;
+                area += weights[i][j];
+                if (j < h / 2)  dy++;
+                else            dy--;
+            }
+            if (i < w / 2)  dx++;
+            else            dx--;
+        }
+    }
+
+int w, h;
+double **weights;
+
+/*---------------------------------------------------------------------------*
+ | Filtering functions
+ *---------------------------------------------------------------------------*/
+public:
+    // Calculate the filtered pixel color, centered at the specified coordinates
+    Color filter(const Image<Color> &src, scalar_arg_t cx, scalar_arg_t cy) {
+        Color result;
+//        Color result(0, 0, 0, 0);
+
+        int startX = (int)(cx - w / 2),
+            startY = (int)(cy - h / 2);
+
+        for (int i = 0; i < w; i++)
+            for (int j = 0; j < h; j++)
+                result += src(startX + i, startY + j) * weights[i][j];
+        return result / area;
+    }
+};
+
+#endif

@@ -1,0 +1,277 @@
+/* -*- C++ -*-
+ *
+ * File: RigidBody
+ * 
+ * Author: Ryan L. Saunders
+ *
+ * Copyright 2003, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ *      The RigidBody template class represents a non-deformable object
+ *      that can undergo translations and rotations as the result of
+ *      forces acting on it.
+ *
+ *      A 3D polygon-mesh is used to represent the object during the
+ *      simulation (and therefore, any object that has a 3D mesh representation
+ *      may be used as a rigid body).
+ *
+ *      This has the consequence that only 3D objects may be used for this
+ *      implementation of rigid-body dynamics. This constraint is further
+ *      imposed by the use of quaternions (which are inherently 3D) to
+ *      represent rotation. Higher- and lower-dimensional objects are an
+ *      area for future research.
+ */
+
+#ifndef INCA_DYNAMICS_RIGID_BODY
+#define INCA_DYNAMICS_RIGID_BODY
+
+// This is part of the Inca dynamics library
+namespace Inca {
+    namespace Dynamics {
+        // Forward declarations
+        template <class Scalar> class RigidBody;
+    };
+};
+
+
+// Import the Inca::Math library
+#include <math/Math.hpp>
+
+// Import the Inca real-world objects
+#include <world/Objects.hpp>
+
+
+template <class _Scalar>
+class Inca::Dynamics::RigidBody {
+public:
+    // What dimensional space are we working in?
+    const static unsigned int dimension = 3;
+
+    // Mathematical type definitions
+    typedef _Scalar                                 Scalar;
+    typedef Math::Point<Scalar, dimension>          Point;
+    typedef Math::Vector<Scalar, dimension>         Vector;
+    typedef Math::Quaternion<Scalar>                Quaternion;
+    typedef Math::SquareMatrix<Scalar, dimension>   Matrix;
+    typedef typename Scalar::type                   scalar_t;
+    typedef typename Scalar::arg_type               scalar_arg_t;
+
+    // Dynamics object definitions
+    typedef RigidBody<Scalar>               Object;
+    typedef Object *                        ObjectPtr;
+
+    // Real-world object definitions
+    typedef World::SolidObject3D            WorldObject;
+    typedef World::SolidObject3DPtr         WorldObjectPtr;
+    typedef World::TransformPtr             TransformPtr;
+    typedef WorldObject::LinearApproximationPtr PolygonMeshPtr;
+
+    // Maximum number of bodies to allow in a system
+    static const unsigned int MAX_OBJECTS = 100;
+
+    // Inner classes (required by DynamicSystem)
+    class State;
+    class Calculation;
+
+
+/*---------------------------------------------------------------------------*
+ | Constructor & Destructor
+ *---------------------------------------------------------------------------*/
+public:
+    RigidBody(WorldObjectPtr wo, scalar_arg_t mass,
+              const Vector &P0 = Vector(0.0), const Vector &L0 = Vector(0.0))
+            : worldObject(wo), xform(wo->transform),
+              inverseM(1.0/mass), P(P0), L(L0) {
+
+        // Get access to the object's polygonal approximation
+        PolygonMeshPtr mesh = worldObject->approximation(0);
+
+        // Calculate the object's center of mass, and move to put it at origin
+        Vector diff = center(*mesh);
+        xform->translate(-diff);        // Fix initial position
+
+        // Calculate the moment of inertia matrix
+        Vector dim = extent(*mesh);
+        const Vector &scale = xform->scale();
+        for (index_t i = 0; i < 3; i++)
+            dim[i] *= scale[i];
+
+        Matrix I(0.0);
+        scalar_t xx = dim[0] * dim[0];
+        scalar_t yy = dim[1] * dim[1];
+        scalar_t zz = dim[2] * dim[2];
+        I(0, 0) = mass / 12.0 * (yy + zz);
+        I(1, 1) = mass / 12.0 * (zz + xx);
+        I(2, 2) = mass / 12.0 * (xx + yy);
+
+//        PolygonMesh::PointList &points = mesh->locations();
+//        scalar_t massPerPoint = mass / points.size();
+//        PolygonMesh::PointList::const_iterator it;
+//        for (it = points.begin(); it != points.end(); it++) {
+//            Point p = (*it) * massPerPoint;
+//            scalar_t xx = p[0] * p[0], yy = p[1] * p[1], zz = p[2] * p[2],
+//                     xy = p[0] * p[1], yz = p[1] * p[2], zx = p[2] * p[0];
+//            I(0, 0) += yy + zz; I(1, 0) -= xy;      I(2, 0) -= zx;
+//            I(0, 1) -= xy;      I(1, 1) += xx + zz; I(2, 1) -= yz;
+//            I(0, 2) -= zx;      I(1, 2) -= yz;      I(2, 2) += xx + yy;
+//        }
+        inverseI = inverse(I);
+
+//        Matrix test;
+//        test(0, 0) = 1; test(0, 1) = 2; test(0, 2) = 3;
+//        test(1, 0) = 4; test(1, 1) = 5; test(1, 2) = 7;
+//        test(2, 0) = 7; test(2, 1) = 8; test(2, 2) = 10;
+//        cerr << "Constructed rigid body for object:\n"
+//                "\tPosition: " << *xform->locationPoint() << "\n"
+//                "\tRotation: " << xform->rotation() << "\n"
+//                "\tInverse M: " << inverseM << "\n"
+//                "\tI:         " << I << "\n"
+//                "\tInverse I: " << inverseI << "\n";
+//                "\tIdentity:  " << inverseI % I << "\n"
+//                "\tTest:      " << test << "\n"
+//                "\tInvTest:   " << inverse(test) << "\n"
+//                "\tIdent:     " << test % inverse(test) << "\n";
+    }
+
+    // Make our state what we're told and push the pertinent values out to
+    // the real-world object we're mirroring
+    void propagateState(const State &state) {
+        // Tell our puppet
+        *xform->locationPoint() = Point(state.x);
+        xform->setRotation(state.q);
+
+        // Copy over state variables
+        P = state.P;
+        L = state.L;
+
+//        cerr << "Propagating position: " << state.x << "\n"
+//                "            rotation: " << state.q << "\n\n";
+    }
+
+    // Create a state with the same values we have right now
+    State retrieveState() const {
+        State state;
+
+        // Slurp these from the object we're mirroring
+        state.x = Vector(*xform->locationPoint());
+        state.q = xform->rotation();
+        state.P = P;
+        state.L = L;
+        return state;
+    }
+
+//protected:
+    WorldObjectPtr worldObject; // The world object we're representing
+    TransformPtr   xform;       // Its transformation object
+//    Vector     x;       // The position of the centroid of the obejct
+//    Quaternion q;       // The 3D rotation of the object
+    Vector     P,       // The linear and angular momenta of the object, which
+               L;       // we use instead of velocities, for simplicity
+    scalar_t inverseM;  // The inverse of mass
+    Matrix inverseI;    // The inverse of the moment-of-inertia matrix in
+                        // the body's default orientation
+
+
+/*---------------------------------------------------------------------------*
+ | The Calculation inner class contains the auxillary variables needed to
+ | calculate state changes, but which are not part of the persistent state of
+ | the body. This includes things like the forces and torques on the body,
+ | and the moment-of-inertia matrix for the current rotation.
+ *---------------------------------------------------------------------------*/
+    class Calculation {
+    public:
+        // Our parent type
+        typedef Object Object;
+
+        // Initialization function
+        void initialize(const State &state, const Object &object) {
+            F = Vector(0.0);
+            T = Vector(0.0);
+            R = Matrix(state.q);
+            inverseI = R % object.inverseI % transpose(R);
+            v = object.inverseM * state.P;
+            w = inverseI * state.L;
+//            cerr << "P     : " << state.P << '\n';
+//            cerr << "Speed : " << magnitude(v) << "\n\n";
+        }
+
+        // Data fields
+        Vector F;           // The net force on the body
+        Vector T;           // The net torque on the body
+        Vector v;           // The linear velocity of the body
+        Vector w;           // The angular velocity of the body
+        Matrix R;           // The rotation matrix corresponding to 'q'
+        Matrix inverseI;    // The M.o.I. about the axis of rotation
+    };
+
+
+/*---------------------------------------------------------------------------*
+ | The State inner class represents the parts of the dynamic state of a
+ | RigidBody that we keep track of over time: its position and rotation,
+ | and linear and angular momenta.
+ *---------------------------------------------------------------------------*/
+    class State {
+    public:
+        // Our parent type
+        typedef Object Object;
+
+        // Data fields
+        Vector     x;       // Its position
+        Quaternion q;       // Its rotation
+        Vector     P;       // Its linear momentum
+        Vector     L;       // Its angular momentum
+
+        // Function to calculate the 1st-derivative terms based on the
+        // previous State, a differential and a time-step
+        void evaluateFirstDerivativeDelta(Calculation &calc,
+                                    const State &prev,
+                                    const Object &object,
+                                          scalar_arg_t step) {
+            // There are no persistent 2nd-derivative terms, so we can just
+            // integrate the 2nd-derivative terms from the Calculation
+            P = calc.F * step;
+            L = calc.T * step;
+        }
+
+        // Function to calculate the 0th-derivative terms based on the
+        // previous State, a differential and a time-step
+        void evaluateZerothDerivativeDelta(Calculation &calc,
+                                     const State &prev,
+                                     const Object &object,
+                                           scalar_arg_t step) {
+            // The previous state contains 1st-derivative terms that we
+            // must consider when calculating the 0th-derivative terms
+                    Vector     dx = object.inverseM * (prev.P + P);
+            Quaternion dq = Quaternion(calc.inverseI * (prev.L + L))
+                          * prev.q * 0.5;
+            x = dx * step;
+            q = dq * step;
+        }
+
+        State & operator+=(const State &s) {
+            x += s.x;   q += s.q;
+            P += s.P;   L += s.L;
+            return *this;
+        }
+
+        State & operator-=(const State &s) {
+            x -= s.x;   q -= s.q;
+            P -= s.P;   L -= s.L;
+            return *this;
+        }
+
+        State & operator*=(scalar_arg_t s) {
+            x *= s;     q *= s;
+            P *= s;     L *= s;
+            return *this;
+        }
+
+        State & operator/=(scalar_arg_t s) {
+            x /= s;     q /= s;
+            P /= s;     L /= s;
+            return *this;
+        }
+    };
+};
+
+#endif

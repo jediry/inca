@@ -1,0 +1,78 @@
+/* -*- C++ -*-
+ *
+ * File: ControlPointSurface
+ * 
+ * Author: Ryan L. Saunders
+ * 
+ * Copyright 2002, Ryan L. Saunders. All rights reserved.
+ * 
+ * Description:
+ *      The ControlPointSurface template is the abstract superclass for all
+ *      parametric surfaces types specified using a grid of control points.
+ *      Concrete subclasses must implement the pure virtual functions specified
+ *      in the ParametricSurface class.
+ */
+
+#ifndef INCA_MATH_CONTROL_POINT_SURFACE
+#define INCA_MATH_CONTROL_POINT_SURFACE
+
+// Import superclass definitions
+#include "ParametricSurface"
+
+// Import Grid definition
+#include <util/StaticGrid>
+
+// This is part of the Inca geometry library
+namespace Inca {
+    namespace Geometry {
+        // Forward declaration
+        template <class Scalar, unsigned int dim> class ControlPointSurface;
+    };
+};
+
+
+template <class Scalar, unsigned int dim>
+class Inca::Geometry::ControlPointSurface : public ParametricSurface<Scalar, dim> {
+private:
+    // Convenience typedefs
+    typedef ControlPointSurface<Scalar, dim>    ThisType;
+    typedef ParametricSurface<Scalar, dim>      Superclass;
+
+public:
+    // What dimensional space are we working in?
+    const static unsigned int dimension = dim;
+
+    // Template typedefs
+    typedef typename Superclass::scalar_t       scalar_t;
+    typedef typename Superclass::scalar_arg_t   scalar_arg_t;
+    typedef typename Superclass::Point          Point;
+    typedef typename Superclass::Vector         Vector;
+    typedef typename Superclass::Ray            Ray;
+    typedef Container::StaticGrid<Point>        PointGrid;
+
+protected:
+    // The grid of points that controls this surface
+    PointGrid controlPoints;
+
+
+/*---------------------------------------------------------------------------*
+ | Constructors
+ *---------------------------------------------------------------------------*/
+public:
+    ControlPointSurface(unsigned int sDim, unsigned int tDim)
+        : controlPoints(sDim, tDim) { }
+    ControlPointSurface(const Container::Grid<Point> &cp) : controlPoints(cp) { }
+    ControlPointSurface(const ThisType &s) : controlPoints(s.controlPoints) { }
+
+
+/*---------------------------------------------------------------------------*
+ | Accessor functions
+ *---------------------------------------------------------------------------*/
+public:
+    Point & operator()(unsigned int i, unsigned int j) { return controlPoints(i, j); }
+    PointGrid & getControlPoints() { return controlPoints; }
+//    unsigned int getDimensionS() { return controlPoints.columns(); }
+//    unsigned int getDimensionT() { return controlPoints.rows(); }
+};
+
+#endif

@@ -1,0 +1,39 @@
+Ryan L. Saunders
+Physically Based Modeling, Fall 2003
+
+Homework 5: Rigid bodies
+
+Running the programs:
+    For this assignment, as I haven't gotten around to implement any sort of
+    parameter file loading, there are several executables. They all have the
+    same controls:
+    You can reposition the view using the mouse:
+        Ctrl + Alt + Left mouse -- zoom in/out
+        Alt + Middle mouse      -- pan
+        Alt + Right mouse       -- spin
+    Press Escape to quit, and space ' ' to start/pause the simulation
+
+
+Status:
+    I got RK4 integration working for this project (yay!).
+    I can now load OBJ files to create the geometry for my model.
+    Moment of inertia is calculated using just the vertices of the model,
+        rather than an actual integration.
+    I haven't gotten to collisions yet.
+
+The guided tour:
+    The physical dynamics stuff is in src/dynamics/ and its 'rigid-body' subdir.
+    The interesting files are:
+        DynamicSystem -- generic physically based system (particle, rigid body)
+        ODESolvers    -- Euler, RK2, and RK4 explicit integrators
+        StateVector   -- exactly what it sounds like
+        rigid-body/RigidBody -- RB specialization of the generic PBM stuff
+        ConstantOperators -- simple operators that apply a constant force/torque
+        GravityOperators -- gravity
+        SpringOperators -- RB version of a damped spring
+
+    You may also want to look at GLUTWorldView.c++ (in src/), as this contains
+    most of the setup code.
+
+Ryan
+rls@tamu.edu

@@ -1,0 +1,44 @@
+/* -*- C++ -*-
+ *
+ * File: ImplicitSurface
+ * 
+ * Author: Ryan L. Saunders
+ * 
+ * Copyright 2002, Ryan L. Saunders. All rights reserved.
+ * 
+ * Description:
+ *      The ImplicitSurface template is the abstract superclass for all types
+ *      of implicitly defined surfaces. Concrete subclasses must implement
+ *      the following pure virtual functions:
+ */
+
+#ifndef INCA_MATH_IMPLICIT_SURFACE
+#define INCA_MATH_IMPLICIT_SURFACE
+
+// Import superclass definition
+#include "../Shape"
+
+// This is part of the Inca geometry library
+namespace Inca {
+    namespace Geometry {
+        // Forward declaration
+        template <class Scalar, unsigned int dim> class ImplicitSurface;
+    };
+};
+
+
+template <class Scalar, unsigned int dim>
+class Inca::Geometry::ImplicitSurface : public Shape<Scalar, dim> {
+public:
+    // What dimensional space are we working in?
+    const static unsigned int dimension = dim;
+
+    // Template typedefs
+//    typedef typename Superclass::scalar_t       scalar_t;
+//    typedef typename Superclass::scalar_arg_t   scalar_arg_t;
+//    typedef typename Superclass::Point          Point;
+//    typedef typename Superclass::Vector         Vector;
+//    typedef typename Superclass::Ray            Ray;
+};
+
+#endif

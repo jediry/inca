@@ -1,0 +1,177 @@
+/* -*- C++ -*-
+ *
+ * File: DampedSprings
+ * 
+ * Author: Ryan L. Saunders
+ *
+ * Copyright 2003, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ */
+
+#ifndef INCA_DYNAMICS_DAMPED_SPRINGS
+#define INCA_DYNAMICS_DAMPED_SPRINGS
+
+// Import superclass definition
+#include "Operator"
+
+
+// This is part of the Inca dynamics library
+namespace Inca {
+    namespace Dynamics {
+        // Forward declarations
+        template <class Scalar, unsigned int dim> class DampedLinearSpring;
+        template <class Scalar, unsigned int dim> class DampedAngularSpring;
+    };
+};
+
+
+template <class Scalar, unsigned int dim>
+class Inca::Dynamics::DampedLinearSpring : public Operator<Scalar, dim> {
+private:
+    // Convenience typedefs
+    typedef Operator<Scalar, dim> Superclass;
+
+public:
+    // What dimensional space are we working in?
+    const static unsigned int dimension = dim;
+
+    // Template typedefs
+    typedef typename Superclass::scalar_t       scalar_t;
+    typedef typename Superclass::scalar_arg_t   scalar_arg_t;
+    typedef typename Superclass::Point          Point;
+    typedef typename Superclass::Vector         Vector;
+
+    typedef typename Superclass::Particle       Particle;
+    typedef typename Superclass::ParticlePtr    ParticlePtr;
+    typedef typename Superclass::ParticleState  ParticleState;
+
+    typedef ParticleSystem<Scalar, dim>         ParticleSystem;
+    typedef ParticleSystem *                    ParticleSystemPtr;
+
+
+/*---------------------------------------------------------------------------*
+ | Constructor & Destructor
+ *---------------------------------------------------------------------------*/
+public:
+    DampedLinearSpring(ParticlePtr pt1, ParticlePtr pt2,
+                       scalar_arg_t rest, scalar_arg_t spring, scalar_arg_t damping)
+            : p1(pt1), p2(pt2), restLength(rest), k(spring), d(damping) { }
+    
+protected:
+    ParticlePtr p1, p2;
+    scalar_t restLength, k, d;
+
+
+/*---------------------------------------------------------------------------*
+ | Calculation of the force exerted by this object
+ *---------------------------------------------------------------------------*/
+public:
+    // Calculation of forces exterted on all particles affected by this object
+    virtual void apply(ParticleState &state, scalar_arg_t dt) {
+        // Find our "spot" in the ParticleState
+        index_t i1 = p1->index,
+                   i2 = p2->index;
+
+        // See how far apart the points are
+        Vector u = state.position[i1] - state.position[i2];
+        scalar_t springLength = magnitude(u);
+        u /= springLength;
+
+        // Figure out the force due to a stretched/compressed spring
+        Vector force = k * (springLength - restLength) * u;
+
+        // Add in the damping action
+        force += dot(state.velocity[i1] - state.velocity[i2], u) * d * u;
+        
+        // Use the force, Luke!
+        state.force[i1] -= force;
+        state.force[i2] += force;
+    }
+};
+
+template <class Scalar, unsigned int dim>
+class Inca::Dynamics::DampedAngularSpring : public Operator<Scalar, dim> {
+private:
+    // Convenience typedefs
+    typedef Operator<Scalar, dim> Superclass;
+
+public:
+    // What dimensional space are we working in?
+    const static unsigned int dimension = dim;
+
+    // Template typedefs
+    typedef typename Superclass::scalar_t       scalar_t;
+    typedef typename Superclass::scalar_arg_t   scalar_arg_t;
+    typedef typename Superclass::Point          Point;
+    typedef typename Superclass::Vector         Vector;
+
+    typedef typename Superclass::Particle       Particle;
+    typedef typename Superclass::ParticlePtr    ParticlePtr;
+    typedef typename Superclass::ParticleState  ParticleState;
+
+    typedef ParticleSystem<Scalar, dim>         ParticleSystem;
+    typedef ParticleSystem *                    ParticleSystemPtr;
+
+
+/*---------------------------------------------------------------------------*
+ | Constructor & Destructor
+ *---------------------------------------------------------------------------*/
+public:
+    DampedAngularSpring(ParticlePtr h1, ParticlePtr h2,
+                        ParticlePtr pt1, ParticlePtr pt2,
+                        scalar_arg_t rest, scalar_arg_t spring)
+            : hinge1(h1), hinge2(h2), p1(pt1), p2(pt2),
+              restAngle(rest), k(spring) { }
+    
+protected:
+    ParticlePtr hinge1, hinge2, p1, p2; // Hinge particles and target particles
+    scalar_t restAngle, k;
+
+
+/*---------------------------------------------------------------------------*
+ | Calculation of the force exerted by this object
+ *---------------------------------------------------------------------------*/
+public:
+    // Calculation of forces exterted on all particles affected by this object
+    virtual void apply(ParticleState &state, scalar_arg_t dt) {
+        // Find our "spot" in the ParticleState
+        index_t ih1 = hinge1->index,
+                   ih2 = hinge2->index,
+                   ip1 = p1->index,
+                   ip2 = p2->index;
+
+        // Figure out the normal vectors for each face, etc.
+        Vector hinge = state.position[ih2] - state.position[ih1],
+               toP1 = state.position[ip1] - state.position[ih1],
+               toP2 = state.position[ip2] - state.position[ih1],
+               n1 = hinge % toP1,
+               n2 = toP2 % hinge;
+        n1.normalize();
+        n2.normalize();
+        hinge.normalize();
+        
+        // Find the torque due to this spring and the r vectors to each point
+        Vector torque = (k * (angle(n1, n2, hinge) - restAngle)) * hinge,
+               r1 = project(toP1, hinge),
+               r2 = project(toP2, hinge);
+               
+        scalar_t d1 = magnitude(r1),
+                 d2 = magnitude(r2);
+        r1 /= d1;
+        r2 /= d2;
+        
+        // Find the force on each point
+        Vector f_p1 = (torque % r1) / d1,
+               f_p2 = (torque % r2) / -d2,
+               f_hinge = (f_p1 + f_p2) / -2.0;
+
+        // Use the force, Luke!
+        state.force[ip1] += f_p1;
+        state.force[ip2] += f_p2;
+        state.force[ih1] += f_hinge;
+        state.force[ih2] += f_hinge;
+    }
+};
+
+#endif

@@ -1,0 +1,97 @@
+/* -*- C++ -*-
+ *
+ * File: Orbit
+ * 
+ * Author: Ryan L. Saunders
+ *
+ * Copyright 2003, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ *      The Orbit operator causes a single particle to try
+ *      to orbit around a point, given an "up" vector. It uses the
+ *      component of velocity that is not along the up vector to
+ *      determine the appropriate acceleration in order to achieve
+ *      a circular orbit.
+ */
+
+#ifndef INCA_DYNAMICS_ORBIT
+#define INCA_DYNAMICS_ORBIT
+
+// Import superclass definition
+#include "../particle/Operator"
+
+// This is part of the Inca dynamics library
+namespace Inca {
+    namespace Dynamics {
+        // Forward declarations
+        template <class Scalar, unsigned int dim> class Orbit;
+    };
+};
+
+
+template <class Scalar, unsigned int dim>
+class Inca::Dynamics::Orbit : public Operator<Scalar, dim> {
+private:
+    // Convenience typedefs
+    typedef Operator<Scalar, dim> Superclass;
+
+public:
+    // What dimensional space are we working in?
+    const static unsigned int dimension = dim;
+
+    // Template typedefs
+    typedef typename Superclass::scalar_t       scalar_t;
+    typedef typename Superclass::scalar_arg_t   scalar_arg_t;
+    typedef typename Superclass::Point          Point;
+    typedef typename Superclass::Vector         Vector;
+
+    typedef typename Superclass::Particle       Particle;
+    typedef typename Superclass::ParticleState  ParticleState;
+
+
+/*---------------------------------------------------------------------------*
+ | Constructor
+ *---------------------------------------------------------------------------*/
+public:
+    Orbit(Particle *orb, Point *center, Vector *normal)
+        : orbiter(orb), orbitCenter(center), orbitNormal(normal) { }
+
+protected:
+    Vector *orbitNormal;
+    Point *orbitCenter;
+    Particle *orbiter;
+
+
+/*---------------------------------------------------------------------------*
+ | Operator evaluation
+ *---------------------------------------------------------------------------*/
+public:
+    virtual void apply(ParticleState &state, scalar_arg_t dt) {
+        int index = state.indexOf(orbiter);
+
+        Vector n = normalize(*orbitNormal);
+        const Point &center = *orbitCenter;
+        const Vector &v = state.velocity[index];
+        const Point &x = state.position[index];
+
+        // Find the orthogonal component of velocity
+        Vector v_orthogonal = project(v, n);
+        scalar_t mag_v = magnitude(v_orthogonal);
+
+        // Find perpendicular distance to the ray we're orbiting
+        Vector r = perpendicular(center, x, n);
+        scalar_t distance = magnitude(r);
+//        cout << "  x " << x << '\n'
+//             << "  v " << v << "   magn: " << magnitude(v) << '\n'
+//             << "    " << v_orthogonal << "   magn: " << mag_v << '\n'
+//             << "  r " << r << "   dist: " << distance << endl;
+        r /= distance;
+
+        //
+        // Accelerate to maintain a circular orbit
+        state.acceleration[index] += r * (mag_v * mag_v / distance);
+//        cout << "applying " << state.acceleration[index] << "    magn: " << magnitude(state.acceleration[index]) << endl;
+    }
+};
+
+#endif

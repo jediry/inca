@@ -1,0 +1,106 @@
+/* -*- C++ -*-
+ *
+ * File: SpringOperators
+ * 
+ * Author: Ryan L. Saunders
+ *
+ * Copyright 2003, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ */
+
+#ifndef INCA_DYNAMICS_RIGID_BODY_SPRING_OPERATORS
+#define INCA_DYNAMICS_RIGID_BODY_SPRING_OPERATORS
+
+// This is part of the Inca dynamics library
+namespace Inca {
+    namespace Dynamics {
+        // Forward declarations
+        template <class Scalar> class AnchoredSpringForce;
+    };
+};
+
+
+// Import superclass definition
+#include "../DynamicSystem"
+
+// Import RigidBody definition
+#include "RigidBody"
+
+ 
+template <class Scalar>
+class Inca::Dynamics::AnchoredSpringForce
+        : public SecondDerivativeOperator< RigidBody<Scalar> > {
+public:
+    // Template typedefs
+    typedef typename Object             Object;
+    typedef typename ObjectPtr          ObjectPtr;
+    typedef typename State              State;
+    typedef typename Calculation        Calculation;
+    typedef typename ObjectPtrList      ObjectPtrList;
+    typedef typename SystemState        SystemState;
+    typedef typename SystemCalculation  SystemCalculation;
+
+    typedef typename Point              Point;
+    typedef typename Vector             Vector;
+    typedef typename Quaternion         Quaternion;
+    typedef typename scalar_t           scalar_t;
+    typedef typename scalar_arg_t       scalar_arg_t;
+
+    // Constructor
+    AnchoredSpringForce(ObjectPtr obj, const Point &ap, const Vector &cp,
+                        scalar_arg_t springL, scalar_arg_t springK,
+                        scalar_arg_t springD)
+        : _object(obj), _anchor(ap), _contact(cp),
+          _l(springL), _k(springK), _d(springD) { }
+
+    // Accessor functions
+    ObjectPtr object() const { return _object; }
+    void setObject(ObjectPtr obj) { _object = obj; }
+    const Point & anchor() const { return _anchor; }
+    void setAnchor(const Point &ap) { _anchor = ap; }
+    const Vector & contact() const { return _contact; }
+    void setContact(const Vector &c) { _contact = c; }
+
+protected:
+    ObjectPtr _object;  // The object we're acting on
+    Point _anchor;      // The point (in world space) that this spring is anchored to
+    Vector _contact;    // Offset (in body coordinates) where the spring is attached
+    scalar_t _l;        // The spring's rest length
+    scalar_t _k;        // The spring's force constant
+    scalar_t _d;        // The spring's damping factor
+
+public:
+    // Apply second-derivative modification to the system
+    void modifySecondDerivative(SystemState &delta,
+                                SystemCalculation &calc,
+                          const SystemState &prev,
+                          const ObjectPtrList &objects) {
+        index_t i = objects.index_of(object());
+        if (i != objects.NOT_FOUND) {
+            // First, find the contact point in world space
+            const Quaternion &q = prev[i].q;
+            Vector offset(q * Quaternion(contact()) * inverse(q));
+            Vector r = prev[i].x + offset;
+
+            // Velocity of the contact point
+            Vector v = calc[i].v + calc[i].w % r;
+
+            // Spring axis connecting the two points
+            Vector u = r - Vector(anchor());
+            scalar_t length = magnitude(u);
+            u /= length;
+
+            // Figure out the force due to a stretched/compressed spring
+            Vector f = _k * (_l - length) * u;
+
+            // Add in the damping action
+            f += dot(-v, u) * _d * u;
+
+            calc[i].F += f;
+            calc[i].T += offset % f;
+        }
+    }
+};
+
+#endif

@@ -1,0 +1,610 @@
+/** -*- C++ -*-
+ *
+ * File: scalar_ops
+ *
+ * Author: Ryan L. Saunders
+ *
+ * Copyright 2004, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ *      This file declares the various operations that work on scalar types.
+ *      It contains template functions for doing all the normal mathmatical
+ *      operations.
+ *
+ *      First off, this file implements free-floating functions defined in the
+ *      inca::math namespace. These functions (which you don't really want to
+ *      mess with) handle correctly passing their arguments by value or by
+ *      reference (see the scalar_types for further discussion on this) and
+ *      just pass-thru to the real implementations in the scalar_*_functions
+ *      templates (these extra function calls will be optimized away at compile
+ *      time). If you want to implement a specialized version of these
+ *      functions, you should specialize one or more of the following templates:
+ *          scalar_arithmetic_functions
+ *          scalar_transcendental_functions
+ */
+
+#ifndef INCA_MATH_SCALAR_OPS
+#define INCA_MATH_SCALAR_OPS
+
+namespace inca {
+    namespace math {
+        // Forward declarations
+        template <typename scalar> struct scalar_integer_functions;
+        template <typename scalar> struct scalar_arithmetic_functions;
+        template <typename scalar> struct scalar_algebraic_functions;
+        template <typename scalar> struct scalar_transcendental_functions;
+
+        namespace math_h {
+            // Import math.h, but into a sandbox namespace, to keep if from
+            // competing with the templates we're about to declare
+            extern "C";
+            #undef _MATH_H      // Guarantee this happens, in case somebody else
+            #include <math.h>
+        };
+    };
+};
+
+// These preprocessor macros are only used locally within this file, and
+// help make all the template crap readable. They should all be #undef'd at
+// the end of this file.
+#define TRAITS      scalar_traits<scalar>
+#define MATH_H      inca::math::math_h
+
+// These macros represent allow us to choose which overload of each function
+// gets called, based on whether the scalar_traits for this type of scalar
+// says the scalar should be passed by value or by reference. Whee!
+#define PASS_BY_VALUE     typename constraint< TRAITS::pass_by_value >::satisfy = 0
+#define PASS_BY_REFERENCE typename constraint< ! TRAITS::pass_by_value >::satisfy = 0
+
+// These macros allow us to constrain whether a function will even be
+// considered as a possible overload for a particular scalar type.
+#define CONSTRAINT_INTEGER          typename constraint< TRAITS::supports_integer_ops >::satisfy = 0
+#define CONSTRAINT_ARITHMETIC       typename constraint< TRAITS::supports_arithmetic_ops >::satisfy = 0
+#define CONSTRAINT_ALGEBRAIC        typename constraint< TRAITS::supports_algebraic_ops >::satisfy = 0
+#define CONSTRAINT_TRANSCENDENTAL   typename constraint< TRAITS::supports_transcendental_ops >::satisfy = 0
+
+// These macros let us define the scalar pass-thru functions in only one
+// line apiece. They all have nearly identical structure, having two separate
+// versions, one of which takes its arguments by value and the other of which
+// takes them by reference. Both types simply pass their arguments through to
+// the real function implementations which are contained in the
+// scalar_*_functions templates, which is where specialization should be done
+// for new scalar models.
+#define SCALAR_FUNCTION_1_ARG(RETURN, NAME, CATEGORY, CONSTRAINT)           \
+    template <typename scalar>                                              \
+    RETURN NAME(scalar const s, PASS_BY_VALUE, CONSTRAINT) {                \
+        return scalar_##CATEGORY##_functions<scalar>::NAME(s);              \
+    }                                                                       \
+    template <typename scalar>                                              \
+    RETURN NAME(scalar const & s, PASS_BY_REFERENCE, CONSTRAINT) {          \
+        return scalar_##CATEGORY##_functions<scalar>::NAME(s);              \
+    }
+    
+#define SCALAR_FUNCTION_2_ARG(RETURN, NAME, CATEGORY, CONSTRAINT)           \
+    template <typename scalar>                                              \
+    RETURN NAME(scalar const s1, scalar const s2, PASS_BY_VALUE, CONSTRAINT) {\
+        return scalar_##CATEGORY##_functions<scalar>::NAME(s1, s2);         \
+    }                                                                       \
+    template <typename scalar>                                              \
+    RETURN NAME(scalar const & s1, scalar const & s2, PASS_BY_REFERENCE, CONSTRAINT) {\
+        return scalar_##CATEGORY##_functions<scalar>::NAME(s1, s2);         \
+    }
+    
+#define SCALAR_INTEGER_FUNCTION_1_ARG(RETURN, NAME)                      \
+    SCALAR_FUNCTION_1_ARG(RETURN, NAME, integer, CONSTRAINT_INTEGER)
+
+#define SCALAR_INTEGER_FUNCTION_2_ARG(RETURN, NAME)                      \
+    SCALAR_FUNCTION_2_ARG(RETURN, NAME, integer, CONSTRAINT_INTEGER)
+
+#define SCALAR_ARITHMETIC_FUNCTION_1_ARG(RETURN, NAME)                      \
+    SCALAR_FUNCTION_1_ARG(RETURN, NAME, arithmetic, CONSTRAINT_ARITHMETIC)
+
+#define SCALAR_ARITHMETIC_FUNCTION_2_ARG(RETURN, NAME)                      \
+    SCALAR_FUNCTION_2_ARG(RETURN, NAME, arithmetic, CONSTRAINT_ARITHMETIC)
+
+#define SCALAR_ALGEBRAIC_FUNCTION_1_ARG(RETURN, NAME)                      \
+    SCALAR_FUNCTION_1_ARG(RETURN, NAME, algebraic, CONSTRAINT_ALGEBRAIC)
+
+#define SCALAR_ALGEBRAIC_FUNCTION_2_ARG(RETURN, NAME)                      \
+    SCALAR_FUNCTION_2_ARG(RETURN, NAME, algebraic, CONSTRAINT_ALGEBRAIC)
+
+#define SCALAR_TRANSCENDENTAL_FUNCTION_1_ARG(RETURN, NAME)                      \
+    SCALAR_FUNCTION_1_ARG(RETURN, NAME, transcendental, CONSTRAINT_TRANSCENDENTAL)
+
+#define SCALAR_TRANSCENDENTAL_FUNCTION_2_ARG(RETURN, NAME)                      \
+    SCALAR_FUNCTION_2_ARG(RETURN, NAME, transcendental, CONSTRAINT_TRANSCENDENTAL)
+
+// Import the Inca template metaprogramming utilities
+#include <inca/util/metaprogramming>
+
+
+// These are the free-floating scalar math functions. All of the usual
+// functions are implemented, but as you can see, they simply pass-thru to
+// the real implementations which are in the scalar_*_functions template
+// classes. For each function, there are two versions: one that takes scalar
+// parameters by value and one that takes them by reference. This allows
+// different scalar implementations to pass their arguments in different ways
+// (e.g., it would be bad to pass GMP arbitrary-precision reals by value!).
+namespace inca {
+    namespace math {
+    /*-----------------------------------------------------------------------*
+     | Arithmetic functions
+     *-----------------------------------------------------------------------*/
+        // $0.99 calculator stuff
+        SCALAR_ARITHMETIC_FUNCTION_1_ARG(scalar, negate);       // -x
+        SCALAR_ARITHMETIC_FUNCTION_2_ARG(scalar, sum);          // x + y
+        SCALAR_ARITHMETIC_FUNCTION_2_ARG(scalar, difference);   // x - y
+        SCALAR_ARITHMETIC_FUNCTION_2_ARG(scalar, product);      // x * y
+        SCALAR_ARITHMETIC_FUNCTION_2_ARG(scalar, quotient);     // x / y
+        SCALAR_ARITHMETIC_FUNCTION_2_ARG(scalar, modulus);      // x % y
+
+        // Selection functions
+        SCALAR_ARITHMETIC_FUNCTION_2_ARG(scalar, min);          // min(x, y)
+        SCALAR_ARITHMETIC_FUNCTION_2_ARG(scalar, max);          // max(x, y)
+
+        // Boolean comparison functions
+        SCALAR_ARITHMETIC_FUNCTION_1_ARG(scalar, isNan);            // isNaN(x)
+        SCALAR_ARITHMETIC_FUNCTION_1_ARG(scalar, effectivelyZero);  // x ~= 0
+        SCALAR_ARITHMETIC_FUNCTION_2_ARG(scalar, effectivelyEqual); // x ~= y
+
+        // Non numbers
+        template <typename scalar>
+        scalar INF() { return scalar_traits<scalar>::infinity(); }
+
+        // Single argument arithmetic functions
+        SCALAR_ARITHMETIC_FUNCTION_1_ARG(scalar, abs);          // |x|
+        SCALAR_ARITHMETIC_FUNCTION_1_ARG(scalar, floor);        // |.x.|
+        SCALAR_ARITHMETIC_FUNCTION_1_ARG(scalar, ceiling);      // |'x'|
+        SCALAR_ARITHMETIC_FUNCTION_1_ARG(scalar, round);        // round(x)
+
+
+    /*-----------------------------------------------------------------------*
+     | Algebraic Functions
+     *-----------------------------------------------------------------------*/
+        // Determine the square root of a scalar
+        SCALAR_ALGEBRAIC_FUNCTION_1_ARG(scalar, sqrt);          // sqrt(x)
+
+
+    /*-----------------------------------------------------------------------*
+     | Transcendental Functions
+     *-----------------------------------------------------------------------*/
+        // Power/log functions
+        SCALAR_TRANSCENDENTAL_FUNCTION_2_ARG(scalar, pow);      // x^y
+        SCALAR_TRANSCENDENTAL_FUNCTION_2_ARG(scalar, log);      // log_x(y)
+        SCALAR_TRANSCENDENTAL_FUNCTION_1_ARG(scalar, exp);      // e^x
+        SCALAR_TRANSCENDENTAL_FUNCTION_1_ARG(scalar, ln);       // ln(x)
+
+        // Trigonometric functions (in radians)
+        SCALAR_TRANSCENDENTAL_FUNCTION_1_ARG(scalar, sin);      // sin(x)
+        SCALAR_TRANSCENDENTAL_FUNCTION_1_ARG(scalar, cos);      // cos(x)
+        SCALAR_TRANSCENDENTAL_FUNCTION_1_ARG(scalar, tan);      // tan(x)
+        SCALAR_TRANSCENDENTAL_FUNCTION_1_ARG(scalar, cot);      // cot(x)
+        SCALAR_TRANSCENDENTAL_FUNCTION_1_ARG(scalar, sec);      // sec(x)
+        SCALAR_TRANSCENDENTAL_FUNCTION_1_ARG(scalar, csc);      // csc(x)
+        SCALAR_TRANSCENDENTAL_FUNCTION_1_ARG(scalar, arcsin);   // sin^-1(x)
+        SCALAR_TRANSCENDENTAL_FUNCTION_1_ARG(scalar, arccos);   // cos^-1(x)
+        SCALAR_TRANSCENDENTAL_FUNCTION_1_ARG(scalar, arctan);   // tan^-1(x)
+        SCALAR_TRANSCENDENTAL_FUNCTION_2_ARG(scalar, arctan);   // tan^-1(x,y)
+        SCALAR_TRANSCENDENTAL_FUNCTION_1_ARG(scalar, arccot);   // cot^-1(x)
+        SCALAR_TRANSCENDENTAL_FUNCTION_2_ARG(scalar, arccot);   // cot^-1(x,y)
+        SCALAR_TRANSCENDENTAL_FUNCTION_1_ARG(scalar, arcsec);   // sec^-1(x)
+        SCALAR_TRANSCENDENTAL_FUNCTION_1_ARG(scalar, arccsc);   // csc^-1(x)
+
+        // Transcendental numbers
+#if 0
+        template <typename scalar>
+        scalar PI(CONSTRAINT_TRANSCENDENTAL) { return scalar_transcendental_functions<scalar>::PI(); }
+        template <typename scalar>
+        scalar E(CONSTRAINT_TRANSCENDENTAL) { return scalar_transcendental_functions<scalar>::E(); }
+#endif
+        template <typename scalar>
+        scalar PI() { return scalar_transcendental_functions<scalar>::PI(); }
+        template <typename scalar>
+        scalar E() { return scalar_transcendental_functions<scalar>::E(); }
+
+
+    /*-----------------------------------------------------------------------*
+     | Conversion functions
+     *-----------------------------------------------------------------------*/
+        SCALAR_TRANSCENDENTAL_FUNCTION_1_ARG(scalar, radiansToDegrees);
+        SCALAR_TRANSCENDENTAL_FUNCTION_1_ARG(scalar, degreesToRadians);
+    };
+};
+
+
+// The default implementation is sufficient for integral types
+template <typename scalar>
+struct inca::math::scalar_arithmetic_functions {
+    // Make aliases for the associated types
+    typedef scalar_traits<scalar>       traits;
+    typedef typename traits::value_type value_type;
+    typedef typename traits::arg_type   arg_type;
+
+    // Tolerances for effectivelyXXX functions
+    static value_type absoluteTolerance() { return 0; }
+    static value_type relativeTolerance() { return 0; }
+
+    // Standard 4-function calculator stuff
+    static value_type negate(arg_type s)                    { return -s; }
+    static value_type add(arg_type s1, arg_type s2)         { return s1 + s2; }
+    static value_type subtract(arg_type s1, arg_type s2)    { return s1 - s2; }
+    static value_type multiply(arg_type s1, arg_type s2)    { return s1 * s2; }
+    static value_type quotient(arg_type s1, arg_type s2)    { return s1 / s2; }
+    static value_type modulus(arg_type s1, arg_type s2)     { return s1 % s2; }
+
+    // Selection functions
+    static value_type min(arg_type s1, arg_type s2) { return (s1 < s2 ? s1 : s2); }
+    static value_type max(arg_type s1, arg_type s2) { return (s1 > s2 ? s1 : s2); }
+
+    // Comparison functions (trivial for integers)
+    static bool isNaN(arg_type s) { return false; }
+    static bool effectivelyZero(arg_type s)  { return s == 0; }
+    static bool effectivelyEqual(arg_type s1, arg_type s2) { return s1 == s2; }
+
+    // Determine the absolute value of a scalar
+    static value_type abs(arg_type s) {
+        // Unsigned scalars are trivial...else call the math.h version
+        if (! traits::is_signed)    return s;
+        else if (s < 0)             return -s;
+        else                        return s;
+    }
+
+    // Rounding functions (trivial for integers)
+    static value_type floor(arg_type s)    { return s; }
+    static value_type ceiling(arg_type s)  { return s; }
+    static value_type round(arg_type s)    { return s; }
+};
+
+
+// Workaround to fix obnoxious "specializing in different namespace" GCC bug
+namespace inca {
+    namespace math {
+        template <> struct scalar_arithmetic_functions<float>;
+        template <> struct scalar_arithmetic_functions<double>;
+        template <> struct scalar_arithmetic_functions<long double>;
+    };
+};
+
+// Specialization for IEEE single-precision floating point numbers
+template <>
+struct inca::math::scalar_arithmetic_functions<float> {
+    // Make aliases for the associated types
+    typedef scalar_traits<float>        traits;
+    typedef traits::value_type          value_type;
+    typedef traits::arg_type            arg_type;
+
+    // Tolerances for effectivelyXXX functions
+    static value_type absoluteTolerance() { return 1e-7; }
+    static value_type relativeTolerance() { return 1e-7; }
+
+    // Standard 4-function calculator stuff
+    static value_type add(arg_type s1, arg_type s2)        { return s1 + s2; }
+    static value_type subtract(arg_type s1, arg_type s2)   { return s1 - s2; }
+    static value_type multiply(arg_type s1, arg_type s2)   { return s1 * s2; }
+    static value_type quotient(arg_type s1, arg_type s2)   { return s1 / s2; }
+    static value_type modulus(arg_type s1, arg_type s2) { return MATH_H::fmodf(s1, s2); }
+
+    // Selection functions
+    static value_type min(arg_type s1, arg_type s2) { return (s1 < s2 ? s1 : s2); }
+    static value_type max(arg_type s1, arg_type s2) { return (s1 > s2 ? s1 : s2); }
+
+    // Comparison functions
+    static bool isNaN(arg_type s) { return false; }//MATH_H::isnan(s); }
+    static bool effectivelyZero(arg_type s)  { return abs(s) <= absoluteTolerance(); }
+    static bool effectivelyEqual(arg_type s1, arg_type s2) {
+        value_type diff = abs(s1 - s2);
+        if (diff <=absoluteTolerance())        // Absolutely close together?
+            return true;
+        else                                    // Relatively close together?
+            return diff <= relativeTolerance() * max(abs(s1), abs(s2));
+    }
+
+    // Determine the absolute value of a scalar
+    static value_type abs(arg_type s) { return MATH_H::fabsf(s); }
+
+    // Rounding functions
+    static value_type floor(arg_type s)    { return MATH_H::floorf(s); }
+    static value_type ceiling(arg_type s)  { return MATH_H::ceilf(s); }
+    static value_type round(arg_type s)    { return MATH_H::roundf(s); }
+};
+
+
+// Specialization for IEEE double-precision floating point numbers
+template <>
+struct inca::math::scalar_arithmetic_functions<double> {
+    // Make aliases for the associated types
+    typedef scalar_traits<double>       traits;
+    typedef traits::value_type          value_type;
+    typedef traits::arg_type            arg_type;
+
+    // Tolerances for effectivelyXXX functions
+    static value_type absoluteTolerance() { return 1e-15; }
+    static value_type relativeTolerance() { return 1e-15; }
+
+    // Standard 4-function calculator stuff
+    static value_type add(arg_type s1, arg_type s2)        { return s1 + s2; }
+    static value_type subtract(arg_type s1, arg_type s2)   { return s1 - s2; }
+    static value_type multiply(arg_type s1, arg_type s2)   { return s1 * s2; }
+    static value_type quotient(arg_type s1, arg_type s2)   { return s1 / s2; }
+    static value_type modulus(arg_type s1, arg_type s2) { return MATH_H::fmod(s1, s2); }
+
+    // Selection functions
+    static value_type min(arg_type s1, arg_type s2) { return (s1 < s2 ? s1 : s2); }
+    static value_type max(arg_type s1, arg_type s2) { return (s1 > s2 ? s1 : s2); }
+
+    // Comparison functions
+    static bool isNaN(arg_type s) { return false; }//MATH_H::isnan(s); }
+    static bool effectivelyZero(arg_type s)  { return abs(s) <= absoluteTolerance(); }
+    static bool effectivelyEqual(arg_type s1, arg_type s2) {
+        value_type diff = abs(s1 - s2);
+        if (diff <=absoluteTolerance())        // Absolutely close together?
+            return true;
+        else                                    // Relatively close together?
+            return diff <= relativeTolerance() * max(abs(s1), abs(s2));
+    }
+
+    // Determine the absolute value of a scalar
+    static value_type abs(arg_type s) { return MATH_H::fabs(s); }
+
+    // Rounding functions
+    static value_type floor(arg_type s)    { return MATH_H::floor(s); }
+    static value_type ceiling(arg_type s)  { return MATH_H::ceil(s); }
+    static value_type round(arg_type s)    { return MATH_H::round(s); }
+};
+
+
+// Specialization for super-huge floating point numbers
+template <>
+struct inca::math::scalar_arithmetic_functions<long double> {
+    // Make aliases for the associated types
+    typedef scalar_traits<long double>  traits;
+    typedef traits::value_type          value_type;
+    typedef traits::arg_type            arg_type;
+
+    // Tolerances for effectivelyXXX functions
+    static value_type absoluteTolerance() { return 1e-24; }
+    static value_type relativeTolerance() { return 1e-24; }
+
+    // Standard 4-function calculator stuff
+    static value_type add(arg_type s1, arg_type s2)        { return s1 + s2; }
+    static value_type subtract(arg_type s1, arg_type s2)   { return s1 - s2; }
+    static value_type multiply(arg_type s1, arg_type s2)   { return s1 * s2; }
+    static value_type quotient(arg_type s1, arg_type s2)   { return s1 / s2; }
+    static value_type modulus(arg_type s1, arg_type s2) { return MATH_H::fmodl(s1, s2); }
+
+    // Selection functions
+    static value_type min(arg_type s1, arg_type s2) { return (s1 < s2 ? s1 : s2); }
+    static value_type max(arg_type s1, arg_type s2) { return (s1 > s2 ? s1 : s2); }
+
+    // Comparison functions
+    static bool isNaN(arg_type s) { return false; }//MATH_H::isnan(s); }
+    static bool effectivelyZero(arg_type s)  { return abs(s) <= absoluteTolerance(); }
+    static bool effectivelyEqual(arg_type s1, arg_type s2) {
+        value_type diff = abs(s1 - s2);
+        if (diff <=absoluteTolerance())        // Absolutely close together?
+            return true;
+        else                                    // Relatively close together?
+            return diff <= relativeTolerance() * max(abs(s1), abs(s2));
+    }
+
+    // Determine the absolute value of a scalar
+    static value_type abs(arg_type s) { return MATH_H::fabsl(s); }
+
+    // Rounding functions
+    static value_type floor(arg_type s)    { return MATH_H::floorl(s); }
+    static value_type ceiling(arg_type s)  { return MATH_H::ceill(s); }
+    static value_type round(arg_type s)    { return MATH_H::roundl(s); }
+};
+
+
+// Workaround to fix obnoxious "specializing in different namespace" GCC bug
+namespace inca {
+    namespace math {
+        template <> struct scalar_algebraic_functions<float>;
+        template <> struct scalar_algebraic_functions<double>;
+        template <> struct scalar_algebraic_functions<long double>;
+    };
+};
+
+// Specialization for IEEE single-precision floating point numbers
+template <>
+struct inca::math::scalar_algebraic_functions<float> {
+    // Make aliases for the associated types
+    typedef scalar_traits<float>        traits;
+    typedef traits::value_type          value_type;
+    typedef traits::arg_type            arg_type;
+
+    static value_type sqrt(arg_type s) { return MATH_H::sqrtf(s); }
+};
+
+
+// Specialization for IEEE double-precision floating point numbers
+template <>
+struct inca::math::scalar_algebraic_functions<double> {
+    // Make aliases for the associated types
+    typedef scalar_traits<double>       traits;
+    typedef traits::value_type          value_type;
+    typedef traits::arg_type            arg_type;
+
+    static value_type sqrt(arg_type s) { return MATH_H::sqrt(s); }
+};
+
+
+// Specialization for super-huge floating point numbers
+template <>
+struct inca::math::scalar_algebraic_functions<long double> {
+    // Make aliases for the associated types
+    typedef scalar_traits<long double>  traits;
+    typedef traits::value_type          value_type;
+    typedef traits::arg_type            arg_type;
+
+    static value_type sqrt(arg_type s) { return MATH_H::sqrtl(s); }
+};
+
+
+// The default implementation is sufficient for integral types
+template <typename scalar>
+struct inca::math::scalar_transcendental_functions {
+    // Make aliases for the associated types
+    typedef scalar_traits<scalar>        traits;
+    typedef typename traits::value_type  value_type;
+    typedef typename traits::arg_type    arg_type;
+
+    // Our favorite transcendental numbers
+    static const value_type PI() { return 3; }      // Our good old friend, 3.14159...
+    static const value_type E()  { return 2; }      // E. That's right, E.
+
+};
+
+
+// Workaround to fix obnoxious "specializing in different namespace" GCC bug
+namespace inca {
+    namespace math {
+        template <> struct scalar_transcendental_functions<float>;
+        template <> struct scalar_transcendental_functions<double>;
+        template <> struct scalar_transcendental_functions<long double>;
+    };
+};
+
+// Specialization for IEEE single-precision floating point numbers
+template <>
+struct inca::math::scalar_transcendental_functions<float> {
+    // Make aliases for the associated types
+    typedef scalar_traits<float>        traits;
+    typedef traits::value_type          value_type;
+    typedef traits::arg_type            arg_type;
+
+    // Our favorite transcendental numbers
+    static const value_type PI() { return M_PI; }   // Our good old friend, 3.14159...
+    static const value_type E()  { return M_E; }    // E. That's right, E.
+
+    // Power/logrithm functions
+    static value_type pow(arg_type base, arg_type power)   { return MATH_H::powf(base, power); }
+    static value_type log(arg_type base, arg_type s)       { return MATH_H::logf(s) / MATH_H::logf(base); }
+    static value_type exp(arg_type power)                  { return MATH_H::expf(power); }
+    static value_type ln(arg_type s)                       { return MATH_H::logf(s); }
+
+    // Trigonometric functions
+    static value_type sin(arg_type s)      { return MATH_H::sinf(s); }
+    static value_type cos(arg_type s)      { return MATH_H::cosf(s); }
+    static value_type tan(arg_type s)      { return MATH_H::tanf(s); }
+    static value_type cot(arg_type s)      { return value_type(1) / MATH_H::tanf(s); }
+    static value_type sec(arg_type s)      { return value_type(1) / MATH_H::cosf(s); }
+    static value_type csc(arg_type s)      { return value_type(1) / MATH_H::sinf(s); }
+    static value_type arcsin(arg_type s)   { return MATH_H::asinf(s); }
+    static value_type arccos(arg_type s)   { return MATH_H::acosf(s); }
+    static value_type arctan(arg_type s)   { return MATH_H::atanf(s); }
+    static value_type arctan(arg_type sin, arg_type cos) { return MATH_H::atan2f(sin, cos); }
+    static value_type arccot(arg_type s)   { return MATH_H::atanf(value_type(1) / s); }
+    static value_type arccot(arg_type csc, arg_type sec) { return MATH_H::atan2f(csc, sec); }
+    static value_type arcsec(arg_type s)   { return MATH_H::acosf(value_type(1) / s); }
+    static value_type arccsc(arg_type s)   { return MATH_H::asinf(value_type(1) /s); }
+
+    // Conversion functions
+    static value_type radiansToDegrees(arg_type s) { return s * 180.0 / PI(); }
+    static value_type degreesToRadians(arg_type s) { return s / 180.0 * PI(); }
+};
+
+
+// Specialization for IEEE double-precision floating point numbers
+template <>
+struct inca::math::scalar_transcendental_functions<double> {
+    // Make aliases for the associated types
+    typedef scalar_traits<double>       traits;
+    typedef traits::value_type          value_type;
+    typedef traits::arg_type            arg_type;
+
+    // Our favorite transcendental numbers
+    static const value_type PI() { return M_PI; }   // Our good old friend, 3.14159...
+    static const value_type E()  { return M_E; }    // E. That's right, E.
+
+    // Power/logrithm functions
+    static value_type pow(arg_type base, arg_type power)   { return MATH_H::powl(base, power); }
+    static value_type log(arg_type base, arg_type s)       { return MATH_H::logl(s) / MATH_H::logl(base); }
+    static value_type exp(arg_type power)                  { return MATH_H::expl(power); }
+    static value_type ln(arg_type s)                       { return MATH_H::log(s); }
+
+    // Trigonometric functions
+    static value_type sin(arg_type s)      { return MATH_H::sin(s); }
+    static value_type cos(arg_type s)      { return MATH_H::cos(s); }
+    static value_type tan(arg_type s)      { return MATH_H::tan(s); }
+    static value_type cot(arg_type s)      { return value_type(1) / MATH_H::tan(s); }
+    static value_type sec(arg_type s)      { return value_type(1) / MATH_H::cos(s); }
+    static value_type csc(arg_type s)      { return value_type(1) / MATH_H::sin(s); }
+    static value_type arcsin(arg_type s)   { return MATH_H::asin(s); }
+    static value_type arccos(arg_type s)   { return MATH_H::acos(s); }
+    static value_type arctan(arg_type s)   { return MATH_H::atan(s); }
+    static value_type arctan(arg_type sin, arg_type cos) { return MATH_H::atan2(sin, cos); }
+    static value_type arccot(arg_type s)   { return MATH_H::atan(value_type(1) / s); }
+    static value_type arccot(arg_type csc, arg_type sec) { return MATH_H::atan2(csc, sec); }
+    static value_type arcsec(arg_type s)   { return MATH_H::acos(value_type(1) / s); }
+    static value_type arccsc(arg_type s)   { return MATH_H::asin(value_type(1) /s); }
+
+    // Conversion functions
+    static value_type radiansToDegrees(arg_type s) { return s * 180.0 / PI(); }
+    static value_type degreesToRadians(arg_type s) { return s / 180.0 * PI(); }
+};
+
+
+// Specialization for super-huge floating point numbers
+template <>
+struct inca::math::scalar_transcendental_functions<long double> {
+    // Make aliases for the associated types
+    typedef scalar_traits<long double>  traits;
+    typedef traits::value_type          value_type;
+    typedef traits::arg_type            arg_type;
+
+    // Our favorite transcendental numbers
+    static value_type PI() { return M_PIl; }    // Our good old friend, 3.14159...
+    static value_type E()  { return M_El; }     // E. That's right, E.
+
+    // Power/logrithm functions
+    static value_type pow(arg_type base, arg_type power)   { return MATH_H::powl(base, power); }
+    static value_type log(arg_type base, arg_type s)       { return MATH_H::logl(s) / MATH_H::logl(base); }
+    static value_type exp(arg_type power)                  { return MATH_H::expl(power); }
+    static value_type ln(arg_type s)                       { return MATH_H::logl(s); }
+
+    // Trigonometric functions
+    static value_type sin(arg_type s)      { return MATH_H::sinl(s); }
+    static value_type cos(arg_type s)      { return MATH_H::cosl(s); }
+    static value_type tan(arg_type s)      { return MATH_H::tanl(s); }
+    static value_type cot(arg_type s)      { return value_type(1) / MATH_H::tanl(s); }
+    static value_type sec(arg_type s)      { return value_type(1) / MATH_H::cosl(s); }
+    static value_type csc(arg_type s)      { return value_type(1) / MATH_H::sinl(s); }
+    static value_type arcsin(arg_type s)   { return MATH_H::asinl(s); }
+    static value_type arccos(arg_type s)   { return MATH_H::acosl(s); }
+    static value_type arctan(arg_type s)   { return MATH_H::atanl(s); }
+    static value_type arctan(arg_type sin, arg_type cos) { return MATH_H::atan2l(sin, cos); }
+    static value_type arccot(arg_type s)   { return MATH_H::atanl(value_type(1) / s); }
+    static value_type arccot(arg_type csc, arg_type sec) { return MATH_H::atan2l(csc, sec); }
+    static value_type arcsec(arg_type s)   { return MATH_H::acosl(value_type(1) / s); }
+    static value_type arccsc(arg_type s)   { return MATH_H::asinl(value_type(1) /s); }
+
+    // Conversion functions
+    static value_type radiansToDegrees(arg_type s) { return s * 180.0 / PI(); }
+    static value_type degreesToRadians(arg_type s) { return s / 180.0 * PI(); }
+};
+
+
+// Clean up this travesty we've made of the preprocessor namespace
+#undef TRAITS
+#undef MATH_H
+#undef PASS_BY_VALUE
+#undef PASS_BY_REFERENCE
+#undef CONSTRAINT_INTEGER
+#undef CONSTRAINT_ARITHMETIC
+#undef CONSTRAINT_ALGEBRAIC
+#undef CONSTRAINT_TRANSCENDENTAL
+#undef SCALAR_FUNCTION_1_ARG
+#undef SCALAR_FUNCTION_2_ARG
+#undef SCALAR_INTEGER_FUNCTION_1_ARG
+#undef SCALAR_INTEGER_FUNCTION_2_ARG
+#undef SCALAR_ARITHMETIC_FUNCTION_1_ARG
+#undef SCALAR_ARITHMETIC_FUNCTION_2_ARG
+#undef SCALAR_ALGEBRAIC_FUNCTION_1_ARG
+#undef SCALAR_ALGEBRAIC_FUNCTION_2_ARG
+#undef SCALAR_TRANSCENDENTAL_FUNCTION_1_ARG
+#undef SCALAR_TRANSCENDENTAL_FUNCTION_2_ARG
+
+#endif
+

@@ -1,0 +1,110 @@
+/* -*- C++ -*-
+ *
+ * File:
+ *
+ * Author: Ryan L. Saunders
+ *
+ * Copyright 2004, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ */
+
+#ifndef INCA_RENDERING_IMMEDIATE_MODE_RENDERING_API
+#define INCA_RENDERING_IMMEDIATE_MODE_RENDERING_API
+
+// Import system configuration
+#include <inca/inca-common.h>
+
+// This is part of the Inca rendering subsystem
+namespace inca {
+    namespace rendering {
+        // Forward declarations
+        template <typename api> struct immediate_mode_rendering_api;
+    };
+};
+
+
+// Import math and imaging types
+#include <inca/math.hpp>
+#include <inca/imaging.hpp>
+
+#include <inca/world.hpp>
+
+// Import rendering types
+#include <inca/rendering/types.hpp>
+
+
+template <typename api>
+struct inca::rendering::immediate_mode_rendering_api {
+    // Framebuffer control functions
+    static void allocate_offscreen_framebuffer();
+    static void clear_framebuffer();
+    static void resize_framebuffer(size_t w, size_t h);
+
+    // Rendering state control functions
+    static void lock_z_buffer(bool locked);
+    static bool is_z_buffer_locked();
+    static void enable_z_buffer(bool enabled);
+    static bool is_z_buffer_enabled();
+    static void enable_alpha_blending(bool enabled);
+    static bool is_alpha_blending_enabled();
+    static void enable_lighting(bool enabled);
+    static bool is_lighting_enabled();
+
+    static void set_shading_mode(ShadingMode mode);
+    static ShadingMode shading_mode();
+
+    template <typename scalar_t, imaging::ColorSpace cs, bool hasAlpha>
+    static void set_background_color(
+        const imaging::Color<scalar_t, cs, hasAlpha> &c);
+
+    template <typename scalar_t, imaging::ColorSpace cs, bool hasAlpha>
+    static void set_drawing_color(
+        const imaging::Color<scalar_t, cs, hasAlpha> &c);
+
+    template <typename scalar_t, size_t dim>
+    static void set_normal(const math::Vector<scalar_t, dim> &n);
+
+    template <typename scalar_t, size_t dim>
+    static void set_texture_coordinates(const math::Point<scalar_t, dim> &t);
+
+    // Transform functions
+    static void select_projection_matrix();
+    static void select_transformation_matrix();
+    static void reset_selected_matrix();
+    static void push_matrix();
+    static void pop_matrix();
+
+    template <typename scalar_t, size_t dim>
+    static void apply_translation(const math::ScalarList<scalar_t, dim> &t);
+    template <typename scalar_t, size_t dim>
+    static void unapply_translation(const math::ScalarList<scalar_t, dim> &t);
+    template <typename scalar_t>
+    static void apply_rotation(const math::Quaternion<scalar_t> &q);
+    template <typename scalar_t>
+    static void unapply_rotation(const math::Quaternion<scalar_t> &q);
+    template <typename scalar_t, size_t dim>
+    static void apply_scaling(const math::ScalarList<scalar_t, dim> &s);
+    template <typename scalar_t, size_t dim>
+    static void unapply_scaling(const math::ScalarList<scalar_t, dim> &s);
+
+    template <typename scalar_t>
+    static void apply_orthographic_projection(
+            const math::Vector<scalar_t, 2> &extents,
+            const math::Vector<scalar_t, 2> &clip);
+
+    template <typename scalar_t>
+    static void apply_perspective_projection(
+            const math::Vector<scalar_t, 2> &angles,
+            const math::Vector<scalar_t, 2> &clip);
+
+    // Rendering functions
+    static void begin_render_immediate(PrimitiveType type);
+    static void end_render_immediate();
+
+    template <typename scalar_t, size_t dim>
+    static void render_vertex(const math::Point<scalar_t, dim> &p);
+};
+
+#endif
+

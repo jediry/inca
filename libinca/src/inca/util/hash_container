@@ -1,0 +1,128 @@
+/* -*- C++ -*-
+ *
+ * File: hash_container
+ * 
+ * Author: Ryan L. Saunders
+ *
+ * Copyright 2003, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ *      This file standardizes access to platform-specific implementation
+ *      of templated hashing containers, and defines some handy
+ *      additional hash/equality functor implementations for instantiating
+ *      these with additional common data types.
+ */
+
+#ifndef INCA_UTIL_HASH_CONTAINER
+#define INCA_UTIL_HASH_CONTAINER
+
+// Import system configuration
+#include <inca/inca-common.h>
+
+// Note: unlike most of the other items in the Inca utilities collection, this
+// file doesn't go into the Inca namespace because it simply adds template
+// specializations for hash functions to the appropriate namespaces.
+
+
+// Include the STL header files are, 
+#if __MS_WINDOZE__              // Microsoft systems have these headers, and have a
+#   include <hash_map>          // dual-purpose 'hash_compare' functor
+#   include <hash_set>
+#   define STL_EXT_NAMESPACE stext
+
+    // Implement hash stuff to work on Boost's shared_ptr
+    namespace std {
+        // Comparison function for shared_ptr
+        template <class T>
+        struct less< boost::shared_ptr<T> >
+            : public binary_function < boost::shared_ptr<T>, boost::shared_ptr<T>, bool> {
+        public:
+            bool operator()(boost::shared_ptr<T> p1, boost::shared_ptr<T> p2) const {
+                return comp(p1.get(), p2.get());
+            }
+        protected:
+            less<T *> comp;
+        };
+    };
+
+    // Stick some extra stuff into the extension namespace
+    namespace stdext {
+        // Hash function for shared_ptr
+        template <class T>
+        inline size_t hash_value(boost::shared_ptr<T> ptr) {
+            return hash_value(ptr.get());
+        }
+    };
+
+#elif __GNUC__                  // OK. We're using an SGI-style STL
+#   if HAVE_HASH_MAP            // Red-hat (and compatible) systems have these
+#       include <hash_map>
+#       include <hash_set>
+#       define STL_EXT_NAMESPACE std
+#   elif HAVE_EXT_HASH_MAP      // Mandrake systems have these
+#       include <ext/hash_map>
+#       include <ext/hash_set>
+#       define STL_EXT_NAMESPACE __gnu_cxx
+#   endif
+
+    // Implement some hash/equal_to functors that seem to be missing on SGI...
+    namespace std {
+        template <>     // Lexical equality for C-style strings
+        struct equal_to<const char *>
+                : public binary_function<const char *, const char *, bool> {
+            bool operator() (const char * s1, const char * s2) const {
+                return strcmp(s1, s2);
+            }
+        };
+        
+        template <>     // Lexical equality for C++-style strings
+        struct equal_to<string>
+                : public binary_function<string, string, bool> {
+            bool operator() (const string & s1, const string & s2) const {
+                return s1 == s2;
+            }
+        };
+    };
+
+    // Stick a few more things into the hash namespace
+    namespace STL_EXT_NAMESPACE {
+        template <>                 // Hash-code for C++-style strings
+        struct hash<std::string> {
+            size_t operator() (const std::string &s) const {
+                return hashString(s.c_str());
+            }
+
+        protected:
+            hash<const char *> hashString;
+        };
+        
+        template<class Key>         // Hash-code for pointer types
+        struct hash<Key *> {
+            size_t operator() (Key * ptr) const {
+                return hashInt(reinterpret_cast<unsigned int>(ptr));
+            }
+
+        protected:
+            hash<unsigned int> hashInt;
+        };
+
+        template<class Key>         // Hash-code for Boost shared_ptrs
+        struct hash< boost::shared_ptr<Key> > {
+            size_t operator() (boost::shared_ptr<Key> ptr) const {
+                return hashPtr(ptr.get());
+            }
+
+        protected:
+            hash<Key *> hashPtr;
+        };
+    };
+
+#else   // Uh-oh! We're not compiling for a supported system
+#   error "The current platform's hash_map implementation is not supported"
+#endif
+
+// Create a namespace alias for wherever the hash containers are
+namespace stl_ext = STL_EXT_NAMESPACE;
+#undef STL_EXT_NAMESPACE
+
+#endif  /* End multi-include protection */

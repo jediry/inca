@@ -1,0 +1,346 @@
+/* -*- C++ -*-
+ *
+ * File: ParticleSystem
+ * 
+ * Author: Ryan L. Saunders
+ *
+ * Copyright 2003, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ *      The ParticleSystem template class implements a Newtonian simulation
+ *      of composed of point-masses, force-fields, and other objects that
+ *      can be collided with.
+ *
+ *      Conceptually, the ParticleSystem acts as a quasi-realtime,
+ *      non-intrusive "controller" for a set of points, which might be the
+ *      vertices of a polygon mesh, the locations of scene lights, or even the
+ *      "look at" point for the camera. The relationship between the
+ *      ParticleSystem and these points is one-directional: the
+ *      ParticleSystem treats them as (nearly) stateless entities,
+ *      confining all of the simulation parameters (mass, velocity, etc.) to
+ *      the ParticleSystem itself. This is a long-winded way of saying that
+ *      I haven't hacked a bunch of particle-simulation stuff into my math
+ *      library (as any good generic programmer should know not to do).
+ */
+
+#ifndef INCA_DYNAMICS_PARTICLE_SYSTEM
+#define INCA_DYNAMICS_PARTICLE_SYSTEM
+
+// Import the particle-sim primitive types
+#include "Particle"
+#include "Operator"
+
+// Import Polygon definition
+#include <poly/Polygon>
+
+// This is part of the Inca dynamics library
+namespace Inca {
+    namespace Dynamics {
+        // Forward declaration
+        template <class Scalar, unsigned int dim> class ParticleSystem;
+    };
+};
+
+
+
+// XXX HACK!
+#define X_TOL 0.0000001
+#define V_TOL 0.1
+#define F_TOL 0.00001
+
+template <class Scalar, unsigned int dim>
+class Inca::Dynamics::ParticleSystem : protected Scalar {
+public:
+    // What dimensional space are we working in?
+    const static unsigned int dimension = dim;
+
+    // Template typedefs
+    typedef Particle<Scalar, dim>           Particle;
+    typedef typename Particle::scalar_t     scalar_t;
+    typedef typename Particle::scalar_arg_t scalar_arg_t;
+    typedef typename Particle::Point        Point;
+    typedef typename Particle::Vector       Vector;
+
+    typedef ParticleState<Scalar, dim>  ParticleState;
+    typedef Particle *                  ParticlePtr;
+    typedef Operator<Scalar, dim>       Operator;
+    typedef Operator *                  OperatorPtr;
+    typedef vector<OperatorPtr>         OperatorArray;
+    typedef list<ParticlePtr>           ParticleArray;
+
+    typedef Poly::Polygon<Scalar, dim>      Polygon;
+    typedef vector<Polygon>                 PolygonArray;
+
+    PolygonArray poly;
+protected:
+    ParticleArray particles;   // The particles in our system
+    OperatorArray operatorStack;
+    scalar_t startTime, endTime, currentTime;
+    ParticleState currentState;
+
+
+/*---------------------------------------------------------------------------*
+ | Constructors
+ *---------------------------------------------------------------------------*/
+public:
+    // Default Initializer
+    ParticleSystem(scalar_arg_t start, scalar_arg_t end)
+        : startTime(start), endTime(end), currentTime(start) { }
+
+    // Destructor
+    ~ParticleSystem() {
+        // Clean up the operators we own
+        typename OperatorArray::iterator i;
+        for (i = operatorStack.begin(); i != operatorStack.end(); i++)
+            delete *i;
+    }
+
+
+/*---------------------------------------------------------------------------*
+ |
+ *---------------------------------------------------------------------------*/
+public:
+    void addParticle(ParticlePtr p) { particles.push_back(p); }
+    void removeParticle(ParticlePtr p) { particles.remove(p); }
+    ParticleArray & getParticles() { return particles; }
+    
+    void pushOperator(OperatorPtr op) { operatorStack.push_back(op); }
+
+    scalar_t getCurrentTime() const { return currentTime; }
+
+    void addPolygon(const Polygon &p) { poly.push_back(p); }
+
+/*---------------------------------------------------------------------------*
+ | Simulation run-time functions
+ *---------------------------------------------------------------------------*/
+public:
+    // Make the ParticleState reflect what we know
+    void initializeState(ParticleState &s) {
+        s.time = currentTime;   // This should be "now"
+        s.particleCount = 0;    // Start knowing nothing
+        typename ParticleArray::iterator i;
+        
+        for (i = particles.begin(); i != particles.end(); /* */) {
+            ParticlePtr p(*i);
+            // Kill an aged particle
+            if (p->timeToLive > 0 && p->expirationDate <= currentTime)
+                p->alive = false;
+
+            // If this is a living particle, incorporate it into our state
+            if (p->alive) {
+                unsigned int index = s.particleCount;
+                p->index = index;
+                s.particle[index] = p;
+                s.position[index] = p->position;
+                s.velocity[index] = p->velocity;
+                s.force[index] = Vector(0.0);
+                s.acceleration[index] = Vector(0.0);
+                s.velocity[index] = p->velocity;
+                s.position[index] = p->position;
+                s.particleCount++;
+
+                i++;    // Advance to the next particle
+
+            } else {    // This particle has died. Remove it, and advance.
+                i = particles.erase(i);
+            }
+        }
+    }
+
+    void propagateState(const ParticleState &s) {
+        for (unsigned int i = 0; i < s.particleCount; i++) {
+            Particle *p = s.particle[i];
+            p->position = s.position[i];
+            p->velocity = s.velocity[i];
+            if (p->point != NULL)
+                *p->point = Point(s.position[i]);
+        }
+    }
+
+    ParticleState calculateState(ParticleState &current,
+                                 scalar_arg_t newTime) {
+        ParticleState next(current);
+        scalar_t dt = newTime - current.time;
+
+        // Apply force, acceleration, velocity, and position operators
+        typename OperatorArray::iterator oi;
+        for (oi = operatorStack.begin(); oi != operatorStack.end(); oi++)
+            (*oi)->apply(next, dt);
+
+        // Go find any collisions that occured
+        for (unsigned int i = 0; i < next.particleCount; i++)
+            for (unsigned int j = 0; j < poly.size(); j++) {
+                Polygon &polygon = poly[j];
+                Vector before = current.position[i] - polygon[0],
+                       after = next.position[i] - polygon[0];
+
+                // Rats. Must check more closely
+                if ((before * polygon.normal) * (after * polygon.normal) <= 0) {
+                    Vector diff = next.position[i] - current.position[i];
+                    scalar_t t = polygon.normal * (current.position[i] - polygon[0])
+                               / (polygon.normal * diff);
+                    Point intersect = current.position[i] + diff * t;
+
+                    // Yep. Really gotta bounce it.
+                    if (polygon.inside(intersect)) {
+                        Vector overshoot = next.position[i] - intersect;
+                        Vector poffset = -(1 + next.particle[i]->elasticity) * (overshoot * polygon.normal) * polygon.normal;
+                        next.position[i] += poffset;
+
+                        Vector voffset = -(1 + next.particle[i]->elasticity) * (next.velocity[i] * polygon.normal) * polygon.normal;
+                        next.velocity[i] += voffset;
+                    }
+                }
+            }
+
+        // Return the modified state
+        next.time = newTime;
+        return next;
+    }
+
+    void advanceSimulation(scalar_arg_t newTime) {
+        initializeState(currentState);
+        currentState = calculateState(currentState, newTime);
+
+        propagateState(currentState);
+
+        // Advance the timer
+        currentTime = newTime;
+    }
+};
+
+#if 0
+    // Advance the simulation by one timestep
+    void advanceSimulationOld() {
+        // Calculate forces on each particle
+        applyForces(currentTime);
+
+//        cerr << "advance" << endl;
+        for (unsigned int i = 0; i < particles.size(); i++) {
+            Particle &p = *particles[i];    // For each particle...
+            p.hit = false;
+
+            scalar_t unusedTime = timeStep;
+            while (unusedTime > 0) {
+//                cerr << "Unused: " << unusedTime << endl;
+                // Check for interaction with the environment
+                if (p.resting || p.hit) {
+                    // We're in contact, so we know the normal is valid
+                    scalar_t f_dot_n = p.forces * p.normal;
+                    scalar_t v_dot_n = p.velocity * p.normal;
+//                    cerr << "F: " << f_dot_n << ", V: " << v_dot_n << endl;
+
+                    // We're resting
+                    if (p.resting) {
+                        p.hit = false;
+                        if (f_dot_n >= F_TOL) {                 // Leave
+                            p.resting = false;
+                            cerr << "Unstick" << endl;
+                        } else                                  // Stay
+                            p.forces -= f_dot_n * p.normal;
+
+                    // We just hit
+                    } else if (abs(v_dot_n) < V_TOL && f_dot_n < F_TOL) {
+                        p.resting = true;
+                        cerr << "Stick" << endl;
+                        p.velocity -= v_dot_n * p.normal;
+                        p.forces -= f_dot_n * p.normal;
+                    } else {
+                        cerr << "Bounce" << endl;
+                        p.hit = false;
+                    }
+                }
+
+                scalar_t intersect = minIntersect(p);
+//                cerr << "intersect at " << intersect << endl;
+                if (intersect <= unusedTime) {          // Collision
+                    p.hit = true;
+
+                    // Advance to the collision point
+//                    cerr << "Before! " << magnitude(p.velocity) << ' ' << *p.position << endl;
+                    p.acceleration = p.forces / p.mass;
+                    *(p.position) += intersect * p.velocity;
+                    p.velocity += intersect * p.acceleration;
+                    p.normal = normalAt(*p.position);
+
+                    // Bounce!
+                    cerr << "Before! " << magnitude(p.velocity) << ' ' << *p.position << endl;
+                    p.velocity = rebound(p);
+                    *(p.position) += p.normal * X_TOL;
+                    cerr << "After! " << magnitude(p.velocity) << ' ' << *p.position << endl;
+
+                    unusedTime -= intersect;    // Advance partway
+                    continue;                   // And re-run
+                }
+
+                // No collision. Determine new acceleration, velocity, position
+                p.acceleration = p.forces / p.mass;
+                *(p.position) += p.velocity * unusedTime;
+                p.velocity += p.acceleration * unusedTime;
+                unusedTime = 0;                     // We're done.
+            }
+        }
+
+        // Advance the timer
+        currentTime += timeStep;
+    }
+};
+
+/*
+    // Ack! Ugly, nasty hacked things
+    void createBoundingBox(scalar_arg_t x, scalar_arg_t y, scalar_arg_t z) {
+        xDim = x;
+        yDim = y;
+        zDim = z;
+    }
+    scalar_t minIntersect(Particle &pt) {
+        Point &p = *pt.position;
+        Vector &v = pt.velocity;
+        scalar_t dist[] = { (xDim - p[0]) / v[0],
+                            (-xDim - p[0]) / v[0],
+                            (yDim - p[1]) / v[1],
+                            (-yDim - p[1]) / v[1],
+                            (zDim - p[2]) / v[2],
+                            (-zDim - p[2]) / v[2] };
+        if (pt.resting) {   // Remove the one that we're already touching
+            if (pt.normal[0] == -1)         dist[0] = POS_INF;
+            else if (pt.normal[0] == 1)     dist[1] = POS_INF;
+            else if (pt.normal[1] == -1)    dist[2] = POS_INF;
+            else if (pt.normal[1] == 1)     dist[3] = POS_INF;
+            else if (pt.normal[2] == -1)    dist[4] = POS_INF;
+            else if (pt.normal[2] == 1)     dist[5] = POS_INF;
+            else cerr << "Uh..." << endl;
+        }
+                
+        scalar_t minS = POS_INF;
+        for (int i = 0; i < 6; i++) {
+            if (dist[i] < minS && dist[i] >= 0)
+                minS = dist[i];
+        }
+        return minS;
+    }
+    Vector normalAt(Point &p) {
+        scalar_t dist[] = { xDim - p[0], p[0] + xDim,
+                            yDim - p[1], p[1] + yDim,
+                            zDim - p[2], p[2] + zDim };
+        int minI = 0;
+        for (int i = 1; i < 6; i++)
+            if (dist[i] < dist[minI])
+                minI = i;
+        switch (minI) {
+            case 0:  return Vector(-1, 0, 0);   // +X side
+            case 1:  return Vector(1, 0, 0);    // -X side
+            case 2:  return Vector(0, -1, 0);   // +Y side
+            case 3:  return Vector(0, 1, 0);    // -Y side
+            case 4:  return Vector(0, 0, -1);   // +Z side
+            case 5:  return Vector(0, 0, 1);    // -Z side
+        }
+    }
+    Vector rebound(Particle &p) {
+        return p.velocity - (1 + p.elasticity) * p.normal * (p.velocity * p.normal);
+    }
+*/
+
+#endif
+
+#endif

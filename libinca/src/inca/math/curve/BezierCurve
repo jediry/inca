@@ -1,0 +1,127 @@
+/* -*- C++ -*-
+ *
+ * File: BezierCurve
+ * 
+ * Author: Ryan L. Saunders
+ * 
+ * Copyright 2002, Ryan L. Saunders. All rights reserved.
+ * 
+ * Description:
+ *      The BezierCurve template is a concrete subclass of ControlPointCurve,
+ *      representing smooth, continuous polynomial curves defined by an array of
+ *      control points, each corresponding to Bernstein basis functions.
+ *
+ *      FIXME: this is horribly inefficient!
+ */
+
+#ifndef INCA_MATH_BEZIER_CURVE
+#define INCA_MATH_BEZIER_CURVE
+
+// Include superclass definition
+#include "ControlPointCurve"
+
+// Include Grid definition
+#include <util/StaticGrid>
+
+
+// This is part of the Inca geometry library
+namespace Inca {
+    namespace Geometry {
+        // Forward declaration
+        template <class Scalar, unsigned int dim> class BezierCurve;
+    };
+};
+
+
+template <class Scalar, unsigned int dim>
+class Inca::Geometry::BezierCurve : public ControlPointCurve<Scalar, dim> {
+private:
+    // Convenience typedefs
+    typedef BezierCurve<Scalar, dim>       ThisType;
+    typedef ControlPointCurve<Scalar, dim> Superclass;
+
+public:
+    // What dimensional space are we working in?
+    const static unsigned int dimension = dim;
+
+    // Template typedefs
+    typedef typename Superclass::scalar_t       scalar_t;
+    typedef typename Superclass::scalar_arg_t   scalar_arg_t;
+    typedef typename Superclass::Point          Point;
+    typedef typename Superclass::Vector         Vector;
+    typedef typename Superclass::Ray            Ray;
+    typedef typename Superclass::PointArray     PointArray;
+    typedef Container::StaticGrid<Point>        PointGrid;
+
+
+/*---------------------------------------------------------------------------*
+ | Constructors
+ *---------------------------------------------------------------------------*/
+public:
+    BezierCurve(unsigned int size) : Superclass(size) { }
+    BezierCurve(const PointArray &cp) : Superclass(cp) { }
+    BezierCurve(const Superclass &c) : Superclass(c) { }
+
+
+/*---------------------------------------------------------------------------*
+ | Realization of ParametricCurve abstract functions
+ *---------------------------------------------------------------------------*/
+public:
+    scalar_t getMinimumT() { return ZERO; }
+    scalar_t getMaximumT() { return ONE; }
+    Point evaluateCurve(scalar_t t) {
+        // Clamp t to parameter space
+        clampToParameterDomain(t);
+
+        //---- deCasteljou's algorithm -----
+        unsigned int dimension = _controlPoints.size();
+        PointGrid deCasteljouPoints(dimension, dimension);
+
+        // Initialize starting control points
+        for (unsigned int point = 0; point < dimension; point++)
+            deCasteljouPoints(0, point) = _controlPoints[point];
+
+        // Now do it.
+        for (unsigned int iter = 1; iter < dimension; iter++) {
+            for (unsigned int point = 0; point < dimension - iter; point++) {
+                deCasteljouPoints(iter, point)
+                    = deCasteljouPoints(iter - 1, point) * (ONE - t)
+                    + deCasteljouPoints(iter - 1, point + 1) * t;
+            }
+        }
+        // Last point is our man
+        return deCasteljouPoints(dimension - 1, 0);
+    }
+    
+    Vector evaluateTangent(scalar_t t) {
+        // Clamp t to parameter space
+        clampToParameterDomain(t);
+
+        //---- deCasteljou's algorithm -----
+        unsigned int dimension = _controlPoints.size();
+        PointGrid deCasteljouPoints(dimension + 1, dimension);
+
+        // Initialize starting control points
+        for (unsigned int point = 0; point < dimension; point++)
+            deCasteljouPoints(0, point) = _controlPoints[point];
+
+        // Do dimension - 1 deCasteljou steps
+        for (unsigned int iter = 1; iter < dimension - 1; iter++) {
+            for (int point = 0; point < dimension - iter; point++) {
+                deCasteljouPoints(iter, point)
+                    = deCasteljouPoints(iter - 1, point) * (ONE - t)
+                    + deCasteljouPoints(iter - 1, point + 1) * t;
+            }
+        }
+        // (Difference between our last two points) * degree is our tangent
+        Vector tangent = (deCasteljouPoints(dimension - 2, 1)
+                       - deCasteljouPoints(dimension - 2, 0)) * dimension;
+        return tangent;
+    }
+
+    Vector evaluateNormal(scalar_t t) {
+        cerr << "BezierCurve::evaluateNormal -- NOT IMPLEMENTED" << endl;
+    }
+};
+
+#endif

@@ -1,0 +1,595 @@
+/* -*- C++ -*-
+ *
+ * File: vector_operations
+ *
+ * Author: Ryan L. Saunders
+ *
+ * Copyright 2004, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ *      This file declares the various operations that work on vector-type
+ *      objects (including Vector, Point, Matrix, etc.). They are defined
+ *      here rather than in the files implementing the various vector templates
+ *      because some of the operations operate across types (e.g., a Matrix
+ *      multiplied by a Vector), so there isn't a natural home for them.
+ *      For the sake of consistency, all operations but those that MUST be
+ *      implemented within the template classes are here instead.
+ *
+ *      Because there is so much commonality between the implementations
+ *      of the operators and functions defined herein, the C preprocessor
+ *      can be used, in many cases, to create the function in a single line,
+ *      decreasing the size of this file by a factor of 1/2 or so.
+ *
+ * Doc me!! XXX
+ *      How the macros work (sob!)
+ */
+
+#ifndef INCA_MATH_VECTOR_OPERATIONS
+#define INCA_MATH_VECTOR_OPERATIONS
+
+// Import Boost preprocessor metaprogramming library
+#include <boost/preprocessor/punctuation/comma_if.hpp>
+
+// Import the definitions of the various vector-type template classes
+#include "vector_types"
+
+// Import the scalar ops (some of which will be reimplemented for vectors)
+#include "scalar_ops"
+
+
+// These preprocessor macros are only used locally within this file, and
+// help make all the template crap readable. They should all be #undef'd at
+// the end of this file.
+#define TEMPLATE(DIM)   template <typename scalar BOOST_PP_COMMA_IF(DIM) \
+                                  BOOST_PP_ENUM_PARAMS(DIM, size_t dim)>
+#define DIM         dim0    // Useful alias for 1D containers
+#define DIM1        dim0    // These two are useful for
+#define DIM2        dim1    // referring to Matrix dimensions
+
+#define SCALAR      scalar
+#define SCALAR_ARG  typename scalar_traits<scalar>::arg_type
+#define SCALAR_LIST(D1) ScalarList<scalar, D1>  // These macros are all
+#define POINT(D1)       Point<scalar, D1>       // convenient shorthand for
+#define VECTOR(D1)      Vector<scalar, D1>      // our templated vector
+#define QUATERNION      Quaternion<scalar>      // type thingies
+#define MATRIX(D1, D2)  Matrix<scalar, D1, D2>
+
+#define LIST(TYPE, N_DIMS) TYPE<scalar BOOST_PP_COMMA_IF(N_DIMS)        \
+                             BOOST_PP_ENUM_PARAMS(N_DIMS, dim)>
+
+#define LIST_OSTREAM_OP(RHS, DIM)                                       \
+    TEMPLATE(DIM)                                                       \
+    ostream & operator<<(ostream &o, const LIST(RHS, DIM) & rhs) {      \
+        return o << (std::string) rhs;                                  \
+    }
+
+#define LIST_ASSIGN_LIST(LHS, OP, RHS, DIM)                             \
+    TEMPLATE(DIM)                                                       \
+    LIST(LHS, DIM) & operator OP (LIST(LHS, DIM) & lhs,                 \
+                                  const LIST(RHS, DIM) & rhs) {         \
+        for (index_t i = 0; i < lhs.size; i++)                          \
+            lhs[i] OP rhs[i];                                           \
+        return lhs;                                                     \
+    }
+
+#define LIST_ASSIGN_SCALAR(LHS, OP, DIM)                                \
+    TEMPLATE(DIM)                                                       \
+    LIST(LHS, DIM) & operator OP (LIST(LHS, DIM) & lhs,                 \
+                                  SCALAR_ARG rhs) {                     \
+        for (index_t i = 0; i < lhs.size; i++)                          \
+            lhs[i] OP rhs;                                              \
+        return lhs;                                                     \
+    }
+
+#define UOP_LIST(RET, OP, RHS, DIM)                                     \
+    TEMPLATE(DIM)                                                       \
+    LIST(RET, DIM) operator OP (const LIST(RHS, DIM) & rhs) {           \
+        LIST(RET, DIM) result;                                          \
+        for (index_t i = 0; i < rhs.size; i++)                          \
+            result[i] = OP rhs[i];                                      \
+        return result;                                                  \
+    }
+
+#define LIST_BOP_LIST(RET, LHS, OP, RHS, DIM)                           \
+    TEMPLATE(DIM)                                                       \
+    LIST(RET, DIM) operator OP (const LIST(LHS, DIM) & lhs,             \
+                                const LIST(RHS, DIM) & rhs) {           \
+        LIST(RET, DIM) result;                                          \
+        for (index_t i = 0; i < lhs.size; i++)                          \
+            result[i] = lhs[i] OP rhs[i];                               \
+        return result;                                                  \
+    }
+
+#define LIST_BOP_SCALAR(RET, LHS, OP, DIM)                              \
+    TEMPLATE(DIM)                                                       \
+    LIST(RET, DIM) operator OP (const LIST(LHS, DIM) & lhs,             \
+                                SCALAR_ARG rhs) {                       \
+        LIST(RET, DIM) result;                                          \
+        for (index_t i = 0; i < lhs.size; i++)                          \
+            result[i] = lhs[i] OP rhs;                                  \
+        return result;                                                  \
+    }
+
+#define SCALAR_BOP_LIST(RET, OP, RHS, DIM)                              \
+    TEMPLATE(DIM)                                                       \
+    LIST(RET, DIM) operator OP (SCALAR_ARG lhs,                         \
+                                const LIST(RHS, DIM) & rhs) {           \
+        LIST(RET, DIM) result;                                          \
+        for (index_t i = 0; i < rhs.size; i++)                          \
+            result[i] = lhs OP rhs[i];                                  \
+        return result;                                                  \
+    }
+
+#define LIST_EQUALS_LIST(LHS, RHS, DIM)                                 \
+    TEMPLATE(DIM)                                                       \
+    bool operator == (const LIST(LHS, DIM) & lhs,                       \
+                      const LIST(RHS, DIM) & rhs) {                     \
+        for (index_t i = 0; i < lhs.size; i++)                          \
+            if (! effectivelyEqual(lhs[i], rhs[i]))                     \
+                return false;                                           \
+        return true;                                                    \
+    }
+
+#define LIST_NOT_EQUALS_LIST(LHS, RHS, DIM)                             \
+    TEMPLATE(DIM)                                                       \
+    bool operator != (const LIST(LHS, DIM) & lhs,                       \
+                      const LIST(RHS, DIM) & rhs) {                     \
+        return ! (lhs == rhs);                                          \
+    }
+
+
+// This is part of the Inca math library
+namespace inca {
+    namespace math {
+    /*-----------------------------------------------------------------------*
+     | iostream interface operators
+     *-----------------------------------------------------------------------*/
+        // std::ostream "<<" operators
+        LIST_OSTREAM_OP(Point, 1);                      // o << P
+        LIST_OSTREAM_OP(Vector, 1);                     // o << V
+        LIST_OSTREAM_OP(Matrix, 2);                     // o << M
+
+
+    /*-----------------------------------------------------------------------*
+     | Comparison operators
+     *-----------------------------------------------------------------------*/
+        LIST_EQUALS_LIST(Point, Point, 1);              // P == P ?
+        LIST_NOT_EQUALS_LIST(Point, Point, 1);          // P != P ?
+        LIST_EQUALS_LIST(Vector, Vector, 1);            // V == V ?
+        LIST_NOT_EQUALS_LIST(Vector, Vector, 1);        // V != V ?
+        LIST_EQUALS_LIST(Quaternion, Quaternion, 0);    // Q == Q ?
+        LIST_NOT_EQUALS_LIST(Quaternion, Quaternion, 0);// Q != Q ?
+        LIST_EQUALS_LIST(Matrix, Matrix, 2);            // M == M ?
+        LIST_NOT_EQUALS_LIST(Matrix, Matrix, 2);        // M != M ?
+
+
+    /*-----------------------------------------------------------------------*
+     | Extended assignment operators
+     *-----------------------------------------------------------------------*/
+        // Assignment operators for Point
+        LIST_ASSIGN_LIST(Point, +=, Point, 1);          // P += P
+        LIST_ASSIGN_LIST(Point, -=, Point, 1);          // P -= P
+        LIST_ASSIGN_LIST(Point, +=, Vector, 1);         // P += V
+        LIST_ASSIGN_LIST(Point, -=, Vector, 1);         // P -= V
+        LIST_ASSIGN_SCALAR(Point, *=, 1);               // P *= s
+        LIST_ASSIGN_SCALAR(Point, /=, 1);               // P /= s
+
+        // Assignment operators for Vector
+        LIST_ASSIGN_LIST(Vector, +=, Point, 1);         // V += P
+        LIST_ASSIGN_LIST(Vector, -=, Point, 1);         // V -= P
+        LIST_ASSIGN_LIST(Vector, +=, Vector, 1);        // V += V
+        LIST_ASSIGN_LIST(Vector, -=, Vector, 1);        // V -= V
+        LIST_ASSIGN_SCALAR(Vector, *=, 1);              // V *= s
+        LIST_ASSIGN_SCALAR(Vector, /=, 1);              // V /= s
+
+        // Assignment operators for Quaternion
+
+        // Assignment operators for Matrix
+        LIST_ASSIGN_LIST(Matrix, +=, Matrix, 2);        // M += M
+        LIST_ASSIGN_LIST(Matrix, -=, Matrix, 2);        // M -= M
+        LIST_ASSIGN_SCALAR(Matrix, *=, 2);              // M *= s
+        LIST_ASSIGN_SCALAR(Matrix, /=, 2);              // M /= s
+
+
+    /*-----------------------------------------------------------------------*
+     | Arithmetic operators
+     *-----------------------------------------------------------------------*/
+        // Unary operators for negating Points, Vector, Matrices
+        UOP_LIST(Point, -, Point, 1);                   // P = -P
+        UOP_LIST(Vector, -, Vector, 1);                 // V = -V
+        UOP_LIST(Matrix, -, Matrix, 2);                 // M = -M
+
+        // Binary operators for element-wise operations on Points, Vectors, Matrices
+        LIST_BOP_LIST(Point, Point, +, Point, 1);       // P = P + P
+        LIST_BOP_LIST(Vector, Point, -, Point, 1);      // V = P - P
+        LIST_BOP_LIST(Point, Point, *, Point, 1);       // P = P * P
+        LIST_BOP_LIST(Point, Point, /, Point, 1);       // P = P / P
+        LIST_BOP_LIST(Point, Point, +, Vector, 1);      // P = P + V
+        LIST_BOP_LIST(Point, Point, -, Vector, 1);      // P = P - V
+        LIST_BOP_LIST(Vector, Vector, +, Vector, 1);    // V = V + V
+        LIST_BOP_LIST(Vector, Vector, -, Vector, 1);    // V = V - V
+        LIST_BOP_LIST(Vector, Vector, *, Vector, 1);    // V = V * V
+        LIST_BOP_LIST(Vector, Vector, /, Vector, 1);    // V = V / V
+        LIST_BOP_LIST(Point, Vector, +, Point, 1);      // P = V + P
+        LIST_BOP_LIST(Point, Vector, -, Point, 1);      // P = V - P
+        LIST_BOP_LIST(Matrix, Matrix, +, Matrix, 2);    // M = M + M
+        LIST_BOP_LIST(Matrix, Matrix, -, Matrix, 2);    // M = M - M
+//        LIST_BOP_LIST(Matrix, Matrix, *, Matrix, 2);    // M = M * M
+//        LIST_BOP_LIST(Matrix, Matrix, /, Matrix, 2);    // M = M / M
+
+        // Binary operators for scaling Points, Vectors, Matrices
+        LIST_BOP_SCALAR(Point, Point, *, 1);            // P = P * s
+        LIST_BOP_SCALAR(Point, Point, /, 1);            // P = P / s
+        SCALAR_BOP_LIST(Point, *, Point, 1);            // P = s * P
+        SCALAR_BOP_LIST(Point, /, Point, 1);            // P = s / P
+        LIST_BOP_SCALAR(Vector, Vector, *, 1);          // V = V * s
+        LIST_BOP_SCALAR(Vector, Vector, /, 1);          // V = V / s
+        SCALAR_BOP_LIST(Vector, *, Vector, 1);          // V = s * V
+        SCALAR_BOP_LIST(Vector, /, Vector, 1);          // V = s / V
+        LIST_BOP_SCALAR(Matrix, Matrix, *, 2);          // M = M * s
+        LIST_BOP_SCALAR(Matrix, Matrix, /, 2);          // M = M / s
+        SCALAR_BOP_LIST(Matrix, *, Matrix, 2);          // M = s * M
+        SCALAR_BOP_LIST(Matrix, /, Matrix, 2);          // M = s / M
+
+
+    /*-----------------------------------------------------------------------*
+     | ScalarList operations -- these operate identically for all ScalarList
+     | subtypes
+     *-----------------------------------------------------------------------*/
+        /**
+         * Calculates the scalar sum of the items in \a lst.
+         * \param   lst a ScalarList or derived type
+         * \returns the value \code lst[0] + lst[1] + ... + lst[n-1] \endcode
+         */
+        TEMPLATE(1)
+        SCALAR sum(const SCALAR_LIST(DIM) & lst) {
+            SCALAR result = lst[0];
+            for (index_t i = 1; i < lst.size; i++)
+                result += lst[i];
+            return result;
+        }
+
+        /**
+         * Calculates the scalar product of the items in \a lst.
+         * \param   lst a ScalarList or derived type
+         * \returns the value \code lst[0] * lst[1] * ... * lst[n-1] \endcode
+         */
+        TEMPLATE(1)
+        SCALAR product(const SCALAR_LIST(DIM) & lst) {
+            SCALAR result = lst[0];
+            for (index_t i = 1; i < lst.size; i++)
+                result *= lst[i];
+            return result;
+        }
+
+        /**
+         * Finds the largest (i.e., most positive) value in \a lst.
+         * \param   lst a ScalarList or derived type
+         * \returns the value \code max(lst[0], lst[1], ... ,lst[n-1]) \endcode
+         */
+        TEMPLATE(1)
+        SCALAR max(const SCALAR_LIST(DIM) & lst) {
+            SCALAR result = lst[0];
+            for (index_t i = 1; i < lst.size; i++)
+                if (lst[i] > result)
+                    result = lst[i];
+            return result;
+        }
+
+        /**
+         * Finds the smallest (i.e., most negative) value in \a lst.
+         * \param   lst a ScalarList or derived type
+         * \returns the value \code min(lst[0], lst[1], ... ,lst[n-1]) \endcode
+         */
+        TEMPLATE(1)
+        SCALAR min(const SCALAR_LIST(DIM) & lst) {
+            SCALAR result = lst[0];
+            for (index_t i = 1; i < lst.size; i++)
+                if (lst[i] < result)
+                    result = lst[i];
+            return result;
+        }
+
+
+    /*-----------------------------------------------------------------------*
+     | Vector operations
+     *-----------------------------------------------------------------------*/
+        // Cartesian Distance Metric (L-2)
+        TEMPLATE(1)
+        SCALAR magnitude(const VECTOR(DIM) &v) {
+            SCALAR result = 0;
+            for (index_t i = 0; i < v.size; i++)
+                result += v[i] * v[i];
+            return sqrt(result);
+        }
+
+        // Interior angle between vectors
+        TEMPLATE(1)
+        SCALAR angle(const VECTOR(DIM) &v1, const VECTOR(DIM) &v2) {
+            SCALAR cosine = dot(v1, v2) / magnitude(v1) / magnitude(v2);
+            return arccos(cosine);
+        }
+
+        // Signed angle between vectors, with reference to an "up"
+        // (all vectors should be pre-normalized)
+        TEMPLATE(1)
+        SCALAR angle(const VECTOR(DIM) &v1,
+                     const VECTOR(DIM) &v2,
+                     const VECTOR(DIM) &up) {
+            SCALAR cosine = dot(v1, v2),
+                   sine   = dot((v1 % v2), up);
+            return arctan(sine, cosine);
+        }
+
+        // Dot product
+        TEMPLATE(1)
+        SCALAR dot(const VECTOR(DIM) &v1, const VECTOR(DIM) &v2) {
+            SCALAR result = 0;
+            for (index_t i = 0; i < v1.size; i++)
+                result += v1[i] * v2[i];
+            return result;
+        }
+
+        // Cross product
+        TEMPLATE(1)
+        VECTOR(DIM) operator%(const VECTOR(DIM) &v1, const VECTOR(DIM) &v2) {
+            VECTOR(DIM) result;
+            if (DIM >= 3) {     // Only defined for dim >= 3
+                for (index_t i = 0; i < DIM; i++)
+                    result[i] = v1[(i + 1) % DIM] * v2[(i + 2) % DIM]
+                              - v1[(i + 2) % DIM] * v2[(i + 1) % DIM];
+            }
+            return result;
+        }
+
+        // Normalized vector
+        TEMPLATE(1)
+        VECTOR(DIM) normalize(const VECTOR(DIM) &v) {
+            return v / magnitude(v);
+        }
+
+    // Vector normalization
+//    void normalize() {
+//        scalar_t length = magnitude(*this);
+//        if (length != 0)
+//            elements /= length;
+//    }
+
+        // Normal-vector reflection
+        TEMPLATE(1)
+        VECTOR(DIM) reflect(const VECTOR(DIM) &v, const VECTOR(DIM) &normal) {
+            VECTOR(DIM) n = normalize(normal);
+            return 2 * n * dot(v, n) - v;
+        }
+
+        // Project a vector into a plane (represented by its normal,
+        // which must be normalized)
+        TEMPLATE(1)
+        VECTOR(DIM) project(const VECTOR(DIM) &v, const VECTOR(DIM) &n) {
+            return v - n * dot(n, v);
+        }
+
+        // Vector between two points, but perpendicular to another
+        // (normalized) vector
+        TEMPLATE(1)
+        VECTOR(DIM) project(const POINT(DIM) &p1,
+                            const POINT(DIM) &p2,
+                            const VECTOR(DIM) &n) {
+            VECTOR(DIM) tween = p1 - p2;
+            return project(tween, n);
+        }
+
+
+    /*-----------------------------------------------------------------------*
+     | Quaternion operations
+     *-----------------------------------------------------------------------*/
+        // Cartesian Distance Metric (L-2)
+        TEMPLATE(0)
+        SCALAR magnitude(const QUATERNION &q) {
+            SCALAR result = 0;
+            for (index_t i = 0; i < 4; i++)
+                result += q[i] * q[i];
+            return sqrt(result);
+        }
+
+        // The rotation angle (in radians) around the natural axis
+        TEMPLATE(0)
+        SCALAR angle(const QUATERNION &q) {
+            return SCALAR(2.0) * arccos(q[0] / magnitude(q));
+        }
+
+        // The normalized natural axis of the quaternion
+        TEMPLATE(0)
+        VECTOR(3) axis(const QUATERNION &q) {
+            return normalize(VECTOR(3)(q[1], q[2], q[3]));
+        }
+
+        // Conjugate of a quaternion
+        TEMPLATE(0)
+        QUATERNION conjugate(const QUATERNION &q) {
+            return QUATERNION(q[0], -q[1], -q[2], -q[3]);
+        }
+
+        // Inverse of a quaternion
+        TEMPLATE(0)
+        QUATERNION inverse(const QUATERNION &q) {
+            // Find the square of the magnitude of 'q'
+            SCALAR ms = 0.0;
+            for (index_t i = 0; i < 4; i++)
+                ms += q[i] * q[i];
+
+            // Find the components of the inverse
+            return QUATERNION(q[0] / ms, -q[1] / ms,
+                             -q[2] / ms, -q[3] / ms);
+        }
+
+        // Normalized quaternion
+        TEMPLATE(0)
+        QUATERNION normalize(const QUATERNION &q) {
+            SCALAR length = magnitude(q);
+            if (length != 0)    return q / length;
+            else                return q;
+        }
+
+        // Quaternion multiplication
+        TEMPLATE(0)
+        QUATERNION operator%(const QUATERNION &q1, const QUATERNION &q2) {
+            SCALAR e0, e1, e2, e3;
+            e0 = q1[0]*q2[0] - q1[1]*q2[1] - q1[2]*q2[2] - q1[3]*q2[3];
+            e1 = q1[0]*q2[1] + q1[1]*q2[0] + q1[2]*q2[3] - q1[3]*q2[2];
+            e2 = q1[0]*q2[2] + q1[2]*q2[0] + q1[3]*q2[1] - q1[1]*q2[3];
+            e3 = q1[0]*q2[3] + q1[3]*q2[0] + q1[1]*q2[2] - q1[2]*q2[1];
+            return QUATERNION(e0, e1, e2, e3);
+        }
+
+
+//        // Interior angle between quaternions
+//        template <class Scalar>
+//        typename Scalar::type angle(const Quaternion<Scalar> &q1,
+//                                    const Quaternion<Scalar> &q2) {
+//            XXXXXXX
+//            typename Scalar::type cosine
+//                = q1 * q2 / magnitude(q1) / magnitude(q2);
+//            return Scalar::arccos(cosine);
+//        }
+
+//        // Signed angle between vectors, with reference to an "up"
+//        // (all vectors should be pre-normalized)
+//        template <class Scalar>
+//        typename Scalar::type angle(Quaternion<Scalar> q1,
+//                                    Quaternion<Scalar> q2,
+//                                    Quaternion<Scalar> up) {
+//            XXXXXXXX
+//            typename Scalar::type cosine = q1 * q2,
+//                                  sine = (q1 % q2) * up;
+//
+ //           return Scalar::arctan(sine, cosine);
+//        }
+
+
+    /*************************************************************************
+     * Ray operations
+     *************************************************************************/
+#if 0
+        // Normalized ray
+        TEMPLATE
+        LIST(Ray) normalize(const LIST(Ray) &r) {
+            const LIST(Point) &p = r.point();
+            const LIST(Vector) &v = r.vector();
+            return LIST(Ray)(p, v / magnitude(v));
+        }
+
+        // Normal-vector reflection
+        TEMPLATE
+        LIST(Ray) reflect(const LIST(Ray) &r,
+                              const LIST(Vector) &n) {
+            return LIST(Ray)(r.point(), reflect(r.vector(), n));
+        }
+
+    /*************************************************************************
+     * Matrix operations
+     *************************************************************************/
+        // Calculate a submatrix by eliminating a row and a column
+        template <typename scalar, size_t rows, size_t cols>
+        Matrix<scalar, rows - 1, cols - 1>
+        sub(const Matrix<scalar, rows, cols> &m, index_t er, index_t ec) {
+            Matrix<scalar, rows - 1, cols - 1> result;
+            for (index_t c = 0; c < ec; c++)
+                for (index_t r = 0; r < er; r++)
+                    result(r, c) = m(r, c);
+            for (index_t c = 0; c < ec; c++)
+                for (index_t r = er; r < rows - 1; r++)
+                    result(r, c) = m(r + 1, c);
+            for (index_t c = ec; c < cols - 1; c++)
+                for (index_t r = 0; r < er; r++)
+                    result(r, c) = m(r, c + 1);
+            for (index_t c = ec; c < cols - 1; c++)
+                for (index_t r = er; r < rows - 1; r++)
+                    result(r, c) = m(r + 1, c + 1);
+            return result;
+        }
+
+        // Calculate Matrix determinant (square matrices only)
+        template <class Scalar, size_t dim>
+        typename Scalar::type det(const Matrix<Scalar, dim, dim> &m) {
+            typename Scalar::type result = 0;
+            for (index_t i = 0; i < dim; i++)
+                if (i % 2 == 0)
+                    result += m(i, 0) * det(sub(m, i, 0));
+                else
+                    result -= m(i, 0) * det(sub(m, i, 0));
+            return result;
+        }
+
+        // Determinant of 1x1 Matrix is trivial
+        template <class Scalar>
+        typename Scalar::type det(const Matrix<Scalar, 1, 1> &m) {
+            return m(0, 0);
+        }
+
+        // Matrix inverse (square matrices only)
+        template <class Scalar, size_t dim>
+        Matrix<Scalar, dim, dim> inverse(const Matrix<Scalar, dim, dim> &m) {
+            typename Scalar::type detM = det(m);
+            Matrix<Scalar, dim, dim> inv;
+            bool negative;
+            for (index_t r = 0; r < dim; r++) {
+                negative = (r % 2 != 0);
+                for (index_t c = 0; c < dim; c++) {
+                    if (negative)
+                        inv(c, r) = -det(m.sub(r, c)) / detM;
+                    else
+                        inv(c, r) = det(m.sub(r, c)) / detM;
+                    negative = !negative;
+                }
+            }
+            return inv;
+        }
+
+        // Inverse of 1x1 Matrix is trivial
+        template <class Scalar>
+        Matrix<Scalar, 1, 1> inverse(const Matrix<Scalar, 1, 1> &m) {
+            return Matrix<Scalar, 1, 1>(1.0 / m(0, 0));
+        }
+
+        // Matrix transpose
+        template <class Scalar, size_t rows, size_t cols>
+        Matrix<Scalar, cols, rows>
+        transpose(const Matrix<Scalar, rows, cols> &m) {
+            Matrix<Scalar, cols, rows> result;
+            for (index_t r = 0; r < rows; r++)
+                for (index_t c = 0; c < cols; c++)
+                    result(c, r) = m(r, c);
+            return result;
+        }
+#endif
+    };
+};
+
+
+// Clean up the preprocessor's namespace
+#undef TEMPLATE
+#undef DIM
+#undef DIM1
+#undef DIM2
+
+#undef SCALAR
+#undef SCALAR_ARG
+#undef SCALAR_LIST
+#undef POINT
+#undef VECTOR
+#undef QUATERNION
+#undef MATRIX
+#undef LIST
+
+#undef LIST_OSTREAM_OP
+#undef LIST_ASSIGN_SCALAR
+#undef LIST_ASSIGN_LIST
+#undef UOP_LIST
+#undef LIST_BOP_LIST
+#undef LIST_BOP_SCALAR
+#undef SCALAR_BOP_LIST
+#undef LIST_EQUALS_LIST
+#undef LIST_NOT_EQUALS_LIST
+
+#endif

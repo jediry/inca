@@ -1,0 +1,169 @@
+/* -*- C++ -*-
+ *
+ * File: MeshSubdivideDooSabin
+ * 
+ * Author: Ryan L. Saunders
+ *
+ * Copyright 2002, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ *      The MeshSubdivideDooSabin template algorithm applies the Doo-Sabin
+ *      polygon mesh subdivision algorithm to 
+ */
+
+#ifndef INCA_MATH_MESH_SUBDIVIDE_DOO_SABIN
+#define INCA_MATH_MESH_SUBDIVIDE_DOO_SABIN
+
+#include <iostream>
+using namespace std;
+
+#include <geometry/solids/Solids.hpp>
+
+template <typename MeshType>
+class MeshSubdivideDooSabin {
+public:
+    // Template Typedefs
+    typedef MeshType Mesh;
+    typedef Mesh * MeshPtr;
+    
+    //XXX arbitrary value picked here
+    MeshSubdivideDooSabin() : cache(100) { }
+
+    // Subdivision Method
+    MeshPtr subdivide(MeshPtr mesh) {
+
+        // Create an empty solid
+        MeshPtr result = new Mesh();
+
+        cerr << "Doo-Sabin Subdivision\n";
+
+
+        // Each face results in a similar face
+        cerr << "  Dividing Faces:\n";
+        typename Mesh::FacePtrArray faces = mesh->getFaces();
+        int faceCount = faces.size();
+        for (int i = 0; i < faceCount; i++) {
+            // Our new vertices will be combinations of the old ones
+            typename Mesh::VertexPtrArray oldVertices = faces[i]->getVertices();
+            typename Mesh::VertexPtrArray newVertices(0);
+
+            // Generate the new vertices
+            int vertexCount = oldVertices.size();
+            double n = vertexCount;
+            for (int j = 0; j < vertexCount; j++) {
+                ostringstream id(ostringstream::out);
+                id << oldVertices[j]->getID() << "_" << faces[i]->id;
+                cerr << "new vertex id is " << id.str() << endl;
+                typename Mesh::Point p;
+                
+                // ...as a weighted sum of the existing ones
+                for (int k = 0; k < vertexCount; k++) {
+                    double weight;
+                    if (k == j)
+                        weight = (n + 5) / (4 * n);
+                    else
+                        weight = (3 + 2 * cos(2 * M_PI * (j - k) / n)) / (4 * n);
+                    cerr << "DS: Point (" << j << "," << k << ") Weight (" << weight << ")\n";
+                    p = p + oldVertices[k]->getLocation() * weight;
+                }
+                
+                // Create a new vertex in the new model
+                typename Mesh::VertexPtr v = result->createVertex(p);
+                
+                // Save it for future reference
+                cacheVertex(id.str(), v);
+                newVertices += v;
+            }
+            
+            // Now create a new face similar to the old one
+            result->createFace(newVertices);
+        }
+
+
+        // Each edge results in a four-sided face
+        cerr << "  Dividing Edges:\n";
+        typename Mesh::EdgePtrArray oldEdges = mesh->getEdges();
+        
+        int edgeCount = oldEdges.size();
+        for (int i = 0; i < edgeCount; i++) {
+            typename Mesh::VertexPtrArray newVertices;
+            typename Mesh::VertexPtr v;
+            
+            string startID = oldEdges[i]->startVertex->getID();
+            string endID = oldEdges[i]->endVertex->getID();
+            
+            ostringstream id1(ostringstream::out);
+            id1 << startID << "_" << oldEdges[i]->positiveFace->id;
+            v = getCachedVertex(id1.str());
+            cerr << "Got id(" << id1.str() << ") -> " << v->id << endl;
+            newVertices += v;
+            
+            ostringstream id2(ostringstream::out);
+            id2 << startID << "_" << oldEdges[i]->negativeFace->id;
+            v = getCachedVertex(id2.str());
+            cerr << "Got id(" << id2.str() << ") -> " << v->id << endl;
+            newVertices += v;
+            
+            ostringstream id3(ostringstream::out);
+            id3 << endID << "_" << oldEdges[i]->negativeFace->id;
+            v = getCachedVertex(id3.str());
+            cerr << "Got id(" << id3.str() << ") -> " << v->id << endl;
+            newVertices += v;
+
+            ostringstream id4(ostringstream::out);
+            id4 << endID << "_" << oldEdges[i]->positiveFace->id;
+            v = getCachedVertex(id4.str());
+            cerr << "Got id(" << id4.str() << ") -> " << v->id << endl;
+            newVertices += v;
+
+            // Now create a 4-sided face where the edge was
+            result->createFace(newVertices);
+        }
+
+        
+        // Each valence-n vertex results in an n-sided face
+        cerr << "  Dividing Vertices:\n";
+        typename Mesh::VertexPtrArray oldVertices = mesh->getVertices();
+
+        int vertexCount = oldVertices.size();
+        for (int i = 0; i < vertexCount; i++) {
+            typename Mesh::FacePtrArray faces = oldVertices[i]->getAdjacentFaces();
+            typename Mesh::VertexPtrArray newVertices;
+
+            // Enumerate all the new vertices clustered around the original
+            int faceCount = faces.size();
+            for (int j = 0; j < faceCount; j++) {
+                ostringstream id(ostringstream::out);
+                id << oldVertices[i]->getID() << "_" << faces[j]->id;
+                typename Mesh::VertexPtr *v = getCachedVertex(id.str());
+                newVertices += v;
+            }
+            
+            // Now create a n-sided face where the vertex was
+            result->createFace(newVertices);
+        }
+
+
+        return result;
+    }
+
+protected:
+    // XXX Temp hack for Dr. Keyser's class
+    typename Mesh::VertexPtrArray cache;
+    void cacheVertex(const string &id, typename Mesh::Vertex *v) {
+        v->setID(id);
+        cache += v;
+    }
+    typename Mesh::VertexPtr getCachedVertex(const string &ref) {
+        typename Mesh::VertexPtr v = NULL;
+        for (int i = 0; i < cache.size(); i++) {
+            if (cache[i]->getID() == ref) {
+                v = cache[i];
+                break;
+            }
+        }
+        return v;
+    }
+};
+
+#endif

@@ -1,0 +1,62 @@
+/* -*- C++ -*-
+ *
+ * File: PolynomialSurface
+ * 
+ * Author: Ryan L. Saunders
+ * 
+ * Copyright 2003, Ryan L. Saunders. All rights reserved.
+ * 
+ * Description:
+ *      The PolynomialSurface template is the an implicit surface defined by
+ *      a multivariate polynomial (e.g. p(x,y,z) = 0).
+ */
+
+#ifndef INCA_MATH_POLYNOMIAL_SURFACE
+#define INCA_MATH_POLYNOMIAL_SURFACE
+
+// Include the vector math primitives and polynomial definitions
+#include <math/Math.hpp>
+
+
+// This is part of the Inca geometry library
+namespace Inca::Geometry {
+    // Forward declaration
+    template <class Scalar, unsigned int dim> class PolynomialSurface;
+};
+
+
+template <class Scalar, unsigned int dim>
+class Inca::Geometry::PolynomialSurface : public ImplicitSurface<Scalar, dim>,
+                                          public TrivariatePolynomial<Scalar> {
+public:
+    // What dimensional space are we working in?
+    const static unsigned int dimension = dim;
+
+    // Template typedefs
+    typedef scalar_t                scalar_t;
+    typedef Point<scalar_t, dim>    Point;
+    typedef Vector<scalar_t, dim>   Vector;
+    typedef Ray<scalar_t, dim>      Ray;
+
+
+/*---------------------------------------------------------------------------*
+ | Constructors
+ *---------------------------------------------------------------------------*/
+public:
+
+
+/*---------------------------------------------------------------------------*
+ | Realization of Shape abstract functions
+ *---------------------------------------------------------------------------*/
+public:
+    scalar_t calculateDistance(const Ray &along) const {
+        logger << substitute(along) << "\n\n";
+        logger.debug();
+    }
+
+    Vector calculateNormal(const Ray &at) const {
+
+    }
+};
+
+#endif

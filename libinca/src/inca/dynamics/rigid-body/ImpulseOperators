@@ -1,0 +1,73 @@
+/* -*- C++ -*-
+ *
+ * File: ImpulseOperators
+ * 
+ * Author: Ryan L. Saunders
+ *
+ * Copyright 2003, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ */
+
+#ifndef INCA_DYNAMICS_RIGID_BODY_IMPULSE_OPERATORS
+#define INCA_DYNAMICS_RIGID_BODY_IMPULSE_OPERATORS
+
+// This is part of the Inca dynamics library
+namespace Inca {
+    namespace Dynamics {
+        // Forward declarations
+        template <class Scalar> class SimpleGravityForce;
+    };
+};
+
+
+// Import superclass definition
+#include "../DynamicSystem"
+
+// Import RigidBody definition
+#include "RigidBody"
+
+ 
+template <class Scalar>
+class Inca::Dynamics::SimpleGravityForce
+        : public SecondDerivativeOperator< RigidBody<Scalar> > {
+public:
+    // Template typedefs
+    typedef typename Object             Object;
+    typedef typename ObjectPtr          ObjectPtr;
+    typedef typename State              State;
+    typedef typename Calculation        Calculation;
+    typedef typename ObjectPtrList      ObjectPtrList;
+    typedef typename SystemState        SystemState;
+    typedef typename SystemCalculation  SystemCalculation;
+
+    typedef typename Point              Point;
+    typedef typename Vector             Vector;
+    typedef typename Quaternion         Quaternion;
+    typedef typename scalar_t           scalar_t;
+    typedef typename scalar_arg_t       scalar_arg_t;
+
+    // Constructor
+    SimpleGravityForce(const Vector &g)
+        : _gravity(g) { }
+
+    // Accessor functions
+    const Vector & gravity() const { return _gravity; }
+    void setGravity(const Vector &g) { _gravity = g; }
+
+protected:
+    Vector _gravity;    // The acceleration due to gravity
+
+public:
+    // Apply second-derivative modification to the system
+    void modifySecondDerivative(SystemState &delta,
+                                SystemCalculation &calc,
+                          const SystemState &prev,
+                          const ObjectPtrList &objects) {
+        for (index_t i = 0; i < objects.size(); i++) {
+            calc[i].F += gravity() / objects[i]->inverseM;
+        }
+    }
+};
+
+#endif

@@ -1,0 +1,110 @@
+/* -*- C++ -*-
+ *
+ * File: Color
+ *
+ * Author: Ryan L. Saunders
+ *
+ * Copyright 2003, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ */
+
+
+#ifndef INCA_IMAGING_COLOR_TYPES
+#define INCA_IMAGING_COLOR_TYPES
+
+// Import inca::math library
+#include <inca/math.hpp>
+
+// This is part of the Inca imaging library
+namespace inca {
+    namespace imaging {
+        // Enumeration of supported colorspaces
+        enum ColorSpace { Spectrum, XYZ, sRGB, SharpRGB, Grayscale };
+
+        // Conversion of ColorSpace to string
+        inline const char * getColorSpaceName(ColorSpace cs) {
+            switch (cs) {
+                case XYZ:       return "XYZ";
+                case sRGB:      return "sRGB";
+                case SharpRGB:  return "SharpRGB";
+                case Grayscale: return "GrayScale";
+                default:        return "UNKNOWN";
+            }
+        }
+
+        // ostream output of ColorSpace types
+        inline ostream & operator<<(ostream &o, ColorSpace cs) {
+            return o << getColorSpaceName(cs);
+        }
+
+        // Forward declarations
+        template <typename scalar, ColorSpace cs, bool hasAlpha> class Color;
+        template <ColorSpace cs, bool hasAlpha> struct colorspace_traits;
+    };
+};
+
+
+template <typename scalar, inca::imaging::ColorSpace cs, bool hasAlpha>
+class inca::imaging::Color : public inca::math::ScalarList<scalar,
+    colorspace_traits<cs, hasAlpha>::components> {
+public:
+    // Implementation traits typedefs
+    typedef inca::math::scalar_traits<scalar>   scalar_traits;
+    typedef colorspace_traits<cs, hasAlpha>     colorspace_traits;
+    typedef typename scalar_traits::value_type  scalar_t;
+    typedef typename scalar_traits::arg_type    scalar_arg_t;
+
+
+/*---------------------------------------------------------------------------*
+ | Constructors
+ *---------------------------------------------------------------------------*/
+public:
+    // Default (no-op) Initializer
+    explicit Color() { }
+
+    // scalar_arg_t Initializer
+    explicit Color(scalar_arg_t c0, scalar_arg_t c1,
+                   scalar_arg_t c2, scalar_arg_t c3 = 1.0f) {
+        elements[0] = c0;
+        elements[1] = c1;
+        elements[2] = c2;
+        elements[3] = c3;
+    }
+
+    // Array Initializer
+    explicit Color(const scalar_t e[4]) {
+        for (index_t i = 0; i < 4; i++)
+            elements[i] = e[i];
+    }
+
+
+/*---------------------------------------------------------------------------*
+ | Type-conversion functions
+ *---------------------------------------------------------------------------*/
+public:
+    // to-string Cast
+    operator string() const {
+        ostringstream str;
+        str << "Color[" << colorSpace << "]: (" << stringifyElements() << ')';
+        return str.str();
+    }
+};
+
+
+namespace inca {
+    namespace imaging {
+        // These'll do for now.
+        template <>
+        struct inca::imaging::colorspace_traits<sRGB, false> {
+            static const size_t components = 3;
+        };
+
+        template <>
+        struct inca::imaging::colorspace_traits<sRGB, true> {
+            static const size_t components = 4;
+        };
+    };
+};
+
+#endif

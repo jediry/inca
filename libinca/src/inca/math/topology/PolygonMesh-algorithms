@@ -1,0 +1,112 @@
+/* -*- C++ -*-
+ *
+ * File: PolygonMesh-algorithms
+ * 
+ * Author: Ryan L. Saunders
+ * 
+ * Copyright 2003, Ryan L. Saunders. All rights reserved.
+ * 
+ * Description:
+ */
+
+#ifndef INCA_POLY_POLYGON_MESH_ALGORITHMS
+#define INCA_POLY_POLYGON_MESH_ALGORITHMS
+
+// This is part of the Inca polygon modeling library
+namespace Inca {
+    namespace Poly {
+        // Calculate the centroid of a PolygonMesh
+        template <class Scalar, unsigned int dim>
+        Math::Point<Scalar, dim> centroid(const WEPolygonMesh<Scalar, dim> &mesh) {
+            typedef WEPolygonMesh<Scalar, dim>  PolygonMesh;
+            typedef PolygonMesh::VertexPtrList  VertexPtrList;
+
+            // Sum up all the vertices in the mesh
+            Math::Point<Scalar, dim> center(0.0);
+            VertexPtrList::const_iterator vi;
+            const VertexPtrList &vertices = mesh.vertices();
+            for (vi = vertices.begin(); vi != vertices.end(); vi++)
+                center += (*vi)->location();
+
+            // Return the average
+            return center / vertices.size();
+        }
+
+
+        // Calculate the spatial extent of a PolygonMesh
+        template <class Scalar, unsigned int dim>
+        Math::Vector<Scalar, dim> extent(const WEPolygonMesh<Scalar, dim> &mesh) {
+            typedef WEPolygonMesh<Scalar, dim>  PolygonMesh;
+            typedef PolygonMesh::VertexPtrList  VertexPtrList;
+            typedef PolygonMesh::Point          Point;
+
+            // Start with the first vertex
+            Point min, max;
+            min = max = mesh.location(0);
+
+            // Run through all the vertices in the mesh
+            VertexPtrList::const_iterator vi;
+            const VertexPtrList &vertices = mesh.vertices();
+            for (vi = vertices.begin(); vi != vertices.end(); vi++) {
+                const Point &p = (*vi)->location();
+                for (index_t i = 0; i < dim; i++) {
+                    if (p[i] > max[i])  max[i] = p[i];
+                    if (p[i] < min[i])  min[i] = p[i];
+                }
+            }
+
+            // Return the difference
+            return max - min;
+        }
+
+
+        // Translate each vertex in the mesh by a constant vector
+        template <class Scalar, unsigned int dim>
+        void translateVertices(WEPolygonMesh<Scalar, dim> &mesh,
+                      const typename WEPolygonMesh<Scalar, dim>::Vector &by) {
+            typedef WEPolygonMesh<Scalar, dim>  PolygonMesh;
+            typedef PolygonMesh::VertexPtrList  VertexPtrList;
+            
+            // Translate each vertex, one by one
+            VertexPtrList::const_iterator vi;
+            VertexPtrList &vertices = mesh.vertices();
+            for (vi = vertices.begin(); vi != vertices.end(); vi++) {
+                PolygonMesh::VertexPtr v = *vi;
+                v->setLocation(v->location() + by);
+            }
+        }
+
+        // Translate each vertex in the mesh by a constant vector
+        template <class Scalar>
+        void rotateVertices(WEPolygonMesh<Scalar, 3> &mesh,
+                            const Math::Quaternion<Scalar> &q) {
+            typedef WEPolygonMesh<Scalar, 3>  PolygonMesh;
+            typedef PolygonMesh::VertexPtrList  VertexPtrList;
+            
+            // Translate each vertex, one by one
+            VertexPtrList::const_iterator vi;
+            VertexPtrList &vertices = mesh.vertices();
+            for (vi = vertices.begin(); vi != vertices.end(); vi++) {
+                PolygonMesh::VertexPtr v = *vi;
+                v->setLocation(q.rotate(v->location()));
+            }
+        }
+
+        // Translate the model s.t. the centroid is at the origin.
+        // Returns the displacement vector
+        template <class Scalar, unsigned int dim>
+        Math::Vector<Scalar, dim> center(WEPolygonMesh<Scalar, dim> &mesh) {
+            typedef WEPolygonMesh<Scalar, dim>  PolygonMesh;
+            typedef PolygonMesh::Point          Point;
+            typedef PolygonMesh::Vector         Vector;
+
+            // Figure out how far we'll need to move, and do it
+            Vector diff = Point(0.0) - centroid(mesh);
+            translateVertices(mesh, diff);
+
+            return diff;
+        }
+    };
+};
+
+#endif

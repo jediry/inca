@@ -1,0 +1,58 @@
+/* -*- C++ -*-
+ *
+ * File: RandomUniform
+ * 
+ * Author: Ryan L. Saunders
+ *
+ * Copyright 2003, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ *      The RandomGaussian template class generates random scalar numbers
+ *      with an equal probability across a range.
+ */
+
+#ifndef INCA_MATH_GENERATOR_RANDOM_UNIFORM
+#define INCA_MATH_GENERATOR_RANDOM_UNIFORM
+
+// Import system configuration
+#include <inca/inca-common.h>
+
+// This is part of the Inca math library
+namespace inca {
+    namespace math {
+        // Forward declaration
+        template <class ScalarModel> class RandomUniform;
+    };
+};
+
+
+template <typename scalar>
+class inca::math::RandomUniform {
+private:
+    // Convenience typedefs
+    typedef RandomUniform<scalar>      ThisType;
+
+public:
+    // Import scalar typedefs
+    INCA_MATH_SCALAR_TYPEDEFS(scalar, IS_WITHIN_TEMPLATE, /* */, /* */);
+
+    // Constructors
+    RandomUniform()
+        : min(this), max(this) { }
+    RandomUniform(scalar_arg_t minVal, scalar_arg_t maxVal)
+        : min(this, minVal), max(this, maxVal) { }
+
+    // Distribution parameters
+    rw_property(scalar_t, min, 0.0);
+    rw_property(scalar_t, max, 1.0);
+
+    // Function-call operator (generator function)
+    scalar_t operator()() const {
+        scalar_t range = max - min;
+        scalar_t  result = rand() * range / RAND_MAX + min;
+        return result;
+    }
+};
+
+#endif
+

@@ -1,0 +1,305 @@
+/* -*- C++ -*-
+ *
+ * File:
+ * 
+ * Author: Ryan L. Saunders
+ *
+ * Copyright 2003, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ */
+
+#ifndef INCA_MATH_TRANSFORMATIONS
+#define INCA_MATH_TRANSFORMATIONS
+
+
+// Import Boost preprocessor metaprogramming library
+#include <boost/preprocessor/punctuation/comma_if.hpp>
+
+#define TEMPLATE(DIM)   template <typename scalar BOOST_PP_COMMA_IF(DIM) \
+                                  BOOST_PP_ENUM_PARAMS(DIM, size_t dim)>
+#define DIM     dim0
+#define DIM1    dim0
+#define DIM2    dim1
+
+#define SCALAR          scalar
+#define SCALAR_ARG      typename scalar_traits<scalar>::arg_type
+#define POINT(D1)       Point<scalar, D1>
+#define VECTOR(D1)      Vector<scalar, D1>
+#define QUATERNION      Quaternion<scalar>
+#define MATRIX(D1, D2)  Matrix<scalar, D1, D2>
+
+
+// This is part of the Inca math library
+namespace inca {
+    namespace math {
+
+        // Make this an identity matrix
+        TEMPLATE(1)
+        MATRIX(DIM, DIM) & loadIdentity(MATRIX(DIM, DIM) &m) {
+            for (index_t row = 0; row < DIM; row++)
+                for (index_t col = 0; col < DIM; col++)
+                    m(row, col) = (row == col) ? SCALAR(1) : SCALAR(0);
+            return m;
+        }
+
+        // Generate an identity matrix
+        TEMPLATE(1)
+        MATRIX(DIM, DIM) identityMatrix() {
+            MATRIX(DIM, DIM) m;
+            loadIdentity(m);
+            return m;
+        }
+
+        // Fill this matrix with a constant value
+        TEMPLATE(1)
+        MATRIX(DIM, DIM) & loadConstant(MATRIX(DIM, DIM) &m,
+                                                 SCALAR_ARG c) {
+            for (index_t i = 0; i < m.size(); i++)
+                m[i] = c;
+        }
+
+        // Generate a matrix filled with a constant value
+        TEMPLATE(1)
+        MATRIX(DIM, DIM) constantMatrix(SCALAR_ARG c) {
+            MATRIX(DIM, DIM) m;
+            loadConstant(m);
+            return m;
+        }
+
+
+    /*-----------------------------------------------------------------------*
+     | Translation matrices
+     *-----------------------------------------------------------------------*/
+        TEMPLATE(1)
+        MATRIX(DIM, DIM) & loadTranslation(MATRIX(DIM, DIM) &m,
+                                           const VECTOR(DIM - 1) &t) {
+            loadIdentity(m);    // Start with an identity matrix
+
+            // Fill in the right-most column from the Vector
+            for (index_t row = 0; row < DIM; row++)
+                m(row, DIM - 1) = t[row];
+            return m;
+        }
+
+        // Generate a translation matrix from a Vector
+        TEMPLATE(1)
+        MATRIX(DIM, DIM) translationMatrix(const VECTOR(DIM - 1) &t) {
+            MATRIX(DIM, DIM) m;
+            loadTranslation(m, t);
+            return m;
+        }
+
+
+    /*-----------------------------------------------------------------------*
+     | Rotation matrices
+     *-----------------------------------------------------------------------*/
+        // 2D rotation (in radians)
+        TEMPLATE(0)
+        MATRIX(3, 3) & loadRotation2D(MATRIX(3, 3) &m, SCALAR_ARG radians) {
+            loadIdentity(m);    // Start with an identity matrix
+
+            // Fill in the necessary elements
+            SCALAR cosine = cos(radians),
+                     sine   = sin(radians);
+            m(0, 0) = cosine;  m(0, 1) = -sine;
+            m(1, 0) = sine;    m(1, 1) = cosine;
+            return m;
+        }
+
+        // XXX this is not arbitrary DIMensional
+        TEMPLATE(0)
+        MATRIX(3, 3) rotation2DMatrix(SCALAR_ARG radians) {
+            MATRIX(3, 3) m;
+            loadRotation2D(m, radians);
+            return m;
+        }
+
+#if 0
+        // 3D rotation around first (X) axis (in radians)
+        template <typename scalar>
+        Matrix<scalar, 4, 4> rotation3DX(typename scalar::arg_type angle) {
+            Matrix<scalar, 4, 4> m;
+            typename scalar::type cos = scalar::cos(angle),
+                                  sin = scalar::sin(angle);
+            m(0, 0) = 1;    m(0, 1) = 0;    m(0, 2) = 0;    m(0, 3) = 0;
+            m(1, 0) = 0;    m(1, 1) = cos;  m(1, 2) = -sin; m(1, 3) = 0;
+            m(2, 0) = 0;    m(2, 1) = sin;  m(2, 2) = cos;  m(2, 3) = 0;
+            m(3, 0) = 0;    m(3, 1) = 0;    m(3, 2) = 0;    m(3, 3) = 1;
+
+            return m;
+        }
+
+        // 3D rotation around second (Y) axis (in radians)
+        template <typename scalar>
+        Matrix<scalar, 4, 4> rotation3DY(typename scalar::arg_type angle) {
+            Matrix<scalar, 4, 4> m;
+            typename scalar::type cos = scalar::cos(angle),
+                                  sin = scalar::sin(angle);
+            m(0, 0) = cos;  m(0, 1) = 0;    m(0, 2) = sin;  m(0, 3) = 0;
+            m(1, 0) = 0;    m(1, 1) = 1;    m(1, 2) = 0;    m(1, 3) = 0;
+            m(2, 0) = -sin; m(2, 1) = 0;    m(2, 2) = cos;  m(2, 3) = 0;
+            m(3, 0) = 0;    m(3, 1) = 0;    m(3, 2) = 0;    m(3, 3) = 1;
+
+            return m;
+        }
+
+        // 3D rotation around third (Z) axis (in radians)
+        template <typename scalar>
+        Matrix<scalar, 4, 4> rotation3DZ(typename scalar::arg_type angle) {
+            Matrix<scalar, 4, 4> m;
+            typename scalar::type cos = scalar::cos(angle),
+                                  sin = scalar::sin(angle);
+            m(0, 0) = cos;  m(0, 1) = -sin; m(0, 2) = 0;    m(0, 3) = 0;
+            m(1, 0) = sin;  m(1, 1) = cos;  m(1, 2) = 0;    m(1, 3) = 0;
+            m(2, 0) = 0;    m(2, 1) = 0;    m(2, 2) = 1;    m(2, 3) = 0;
+            m(3, 0) = 0;    m(3, 1) = 0;    m(3, 2) = 0;    m(3, 3) = 1;
+
+            return m;
+        }
+
+        // 3D rotation around arbitrary axis (in radians)
+        template <typename scalar>
+        Matrix<scalar, 4, 4> rotation3D(typename scalar::arg_type angle,
+                                         const Vector<scalar, 3> &v) {
+            Quaternion q(angle, v);
+            return Matrix<scalar, 4, 4>(q);
+        }
+
+        // 3D rotation around arbitrary axis (in radians)
+        template <typename scalar>
+        Matrix<scalar, 4, 4> rotation3D(typename scalar::arg_type angle,
+                                        typename scalar::arg_type nx,
+                                        typename scalar::arg_type ny,
+                                        typename scalar::arg_type nz) {
+            Quaternion q(angle, nx, ny, nz);
+            return Matrix<scalar, 4, 4>(q);
+        }
+#endif
+
+
+    /*-----------------------------------------------------------------------*
+     | Scaling matrices
+     *-----------------------------------------------------------------------*/
+        TEMPLATE(1)
+        MATRIX(DIM, DIM) & loadScaling(MATRIX(DIM, DIM) &m,
+                                       const VECTOR(DIM - 1) &s) {
+            loadConstant(m, SCALAR(0));   // Start with a zero matrix
+
+            // Fill in the matrix diagonal from the Vector
+            for (index_t i = 0; i < DIM; i++)
+                m(i, i) = t[i];
+            return m;
+        }
+
+        // Generate a translation matrix from a Vector
+        TEMPLATE(1)
+        MATRIX(DIM, DIM) scalingMatrix(const VECTOR(DIM - 1) &s) {
+            MATRIX(DIM, DIM) m;
+            loadScaling(m, s);
+            return m;
+        }
+
+
+    // Rotation that transforms the "standard" basis vectors into another
+    // orthonormal set of vectors. Since the choice of our "standard" basis
+    // vectors is arbitrary, the following scheme was chosen to correspond to
+    // OpenGL's choice (using a r.h. coordinate system):
+    //      standard vector         transforms to
+    //          -Z                      front
+    //          +Y                      up
+    //          +X                      right
+    // Note: for the sake of efficiency, this constructor assumes that front,
+    // up, and right already form an orthonormal basis. So if they're not all
+    // perpendicular to each other, or if they're not of unit length, I'm not
+    // responsible for the consequences!!
+        TEMPLATE(0)
+        QUATERNION & loadRotation3D(QUATERNION &q, const VECTOR(3) &front,
+                                                   const VECTOR(3) &up,
+                                                   const VECTOR(3) &right) {
+            // We'll need these constants repeatedly
+            const SCALAR zero(0), one(1), two(2);
+
+            VECTOR(3) d1 = front;  d1[2] -= -one;   // d1 is front - (-Z)
+            VECTOR(3) d2 = right;  d2[0] -= one;    // d2 is right - (+X)
+            VECTOR(3) k = d1 % d2;
+            SCALAR c = -k[1];                       // c is dot(k, (-Y))
+            bool frontUseful = true;
+
+            if (effectivelyZero(c)) {
+                // Oops...k was in the plane...pick another 
+                VECTOR(3) d3 = -up; d3[1] -= -one;  // d3 is -up - (-Y)
+                k = d1 % d3;
+                c = -k[0];                          // c is dot(k, (-X))
+
+                if (effectivelyZero(c)) {   // Aargh! Foiled again!
+                    frontUseful = false;            // Front won't help us here
+                    k = d2 % d3;
+                    c = -k[0];                      // c is dot(k, (-Z))
+                }
+            }
+
+            // Now let's get our quaternion
+            if (effectivelyZero(c)) {       // This was the identity rotation
+                // Give up in disgust. All this work for NOTHING!!!!!
+                q = QUATERNION(one, zero, zero, zero);
+
+            } else {                        // There's work to do
+                // Find the vector part of Q
+                VECTOR(3) j = k / (two * sqrt(c));
+
+                // Figure out the scalar part
+                if (frontUseful) {
+                    k = VECTOR(3)(zero, zero, -one) % j;
+                    c = -dot(front, k) / (two * dot(k, k));
+                } else {
+                    k = VECTOR(3)(one, zero, zero) % j;
+                    c = -dot(right, k) / (two * dot(k, k));
+                }
+                q = QUATERNION(c, j[0], j[1], j[2]);
+            }
+            return q;
+        }
+
+        TEMPLATE(0)
+        QUATERNION rotation3DQuaternion(const VECTOR(3) &front,
+                                        const VECTOR(3) &up,
+                                        const VECTOR(3) &right) {
+            QUATERNION q;
+            loadRotation3D(q, front, up, right);
+            return q;
+        }
+    };
+};
+
+#if 0
+    /**
+     * Rotation axis with angle to rotate around.
+     */
+    explicit Quaternion(Vector<scalarModel, 3> axis, scalar_arg_t angle) {
+        scalar_t a_2 = angle / 2,
+                 s_a_2 = sin(a_2),
+                 c_a_2 = cos(a_2);
+        axis.normalize();
+        elements[0] = c_a_2;
+        elements[1] = s_a_2 * axis[0];
+        elements[2] = s_a_2 * axis[1];
+        elements[3] = s_a_2 * axis[2];
+    }
+#endif
+
+// Clean up the preprocessor namespace on the way out
+#undef TEMPLATE
+#undef DIM
+#undef DIM1
+#undef DIM2
+
+#undef SCALAR
+#undef SCALAR_ARG
+#undef POINT
+#undef VECTOR
+#undef QUATERNION
+#undef MATRIX
+
+#endif
+

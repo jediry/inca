@@ -1,0 +1,86 @@
+/* -*- C++ -*-
+ *
+ * File: Plane
+ * 
+ * Author: Ryan L. Saunders
+ *
+ * Copyright 2002, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ */
+
+#ifndef INCA_MATH_PLANE
+#define INCA_MATH_PLANE
+
+// Include superclass definition
+#include "../Shape"
+
+
+// This is part of the Inca geometry library
+namespace Inca {
+    namespace Geometry {
+        // Forward declaration
+        template <class Scalar, unsigned int dim> class Plane;
+    };
+};
+
+
+template <class Scalar, unsigned int dim>
+class Inca::Geometry::Plane : public Shape<Scalar, dim> {
+private:
+    // Convenience typedefs
+    typedef Plane<Scalar, dim>                  ThisType;
+    typedef Shape<Scalar, dim>                  Superclass;
+
+public:
+    // What dimensional space are we working in?
+    const static unsigned int dimension = dim;
+
+    // Template typedefs
+    typedef typename Superclass::scalar_t       scalar_t;
+    typedef typename Superclass::scalar_arg_t   scalar_arg_t;
+    typedef typename Superclass::Point          Point;
+    typedef typename Superclass::Vector         Vector;
+    typedef typename Superclass::Ray            Ray;
+
+
+/*---------------------------------------------------------------------------*
+ | Constructors
+ *---------------------------------------------------------------------------*/
+public:
+    Plane() : normal(0, 1, 0) { }
+
+
+/*---------------------------------------------------------------------------*
+ | Accessor functions
+ *---------------------------------------------------------------------------*/
+public:
+    Vector & getNormal() { return normal; }
+    const Vector & getNormal() const { return normal; }
+
+    scalar_t calculateDistance(const Ray &along) const {
+        scalar_t n_dot_p = normal * (Vector)along.point(),
+               n_dot_v = normal * along.vector();
+        if (n_dot_v != 0) {
+            scalar_t result = -(n_dot_p / n_dot_v);
+            if (result > 0)
+                return result;
+            else    //...it's behind us
+                return POS_INF;
+        } else {    //...we're parallel
+            return POS_INF;
+        }
+    }
+
+    Vector calculateNormal(const Ray &at) const {
+//        if (at.vector() * normal > 0)
+            return normal;
+//        else
+//            return -normal;   // Make our plane two-sided
+    }
+
+protected:
+    Vector normal;
+};
+
+#endif

@@ -1,0 +1,541 @@
+/** -*- C++ -*-
+ *
+ * \file vector_types
+ *
+ * \author Ryan L. Saunders
+ *
+ * Copyright 2004, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ *      This file implements the basic vector-math types: Point, Vector,
+ *      Matrix.
+ *
+ *      Additionally, this file declares a macro for instantiating the
+ *      various vector-like templates with ease. For example, calling:
+ *          INCA_MATH_VECTOR_TYPEDEFS(double, 3, My, 3D)
+ *      creates a list of typedefs something like:
+ *          typedef inca::math::Vector<double, 3> MyVector3D;
+ *          typedef inca::math::Point<double, 3>  MyPoint3D;
+ *          .
+ *          .
+ *          .
+ *      This permits each group of templates to be concretized fairly
+ *      effortlessly. Note that either of the last two arguments to the
+ *      macros (the prefix and suffix) may be omitted.
+ *
+ * \note In the current implementation, only those operators that \e must be
+ *       defined as member functions are implemented here. The majority of
+ *       the vector/matrix operations are implemented as non-member operators
+ *       and functions in the file called vector_operations. This was a
+ *       significant change from prior version, in which the majority of
+ *       operations were implemented as member functions. This approach was
+ *       abandoned because it resulted in irregular placement of operators:
+ *       for example, the expression "Point * scalar_t" was a member function,
+ *       but the symmetric expression "scalar_t * Point" could not be.
+ *
+ * \todo Document how Boost PP macros are used and the reason for using CPP here.
+ */
+
+#ifndef INCA_MATH_VECTOR_TYPES
+#define INCA_MATH_VECTOR_TYPES
+
+// Import system configuration
+#include <inca/inca-common.h>
+
+
+/* *
+ * \def INCA_MATH_BOUNDS_CHECK
+ * Enable/disable run-time array bounds-checks.
+ * By setting this macro to non-zero, the inca::math vector types can be
+ * configured to perform bounds-checking whenever the [] operator is used.
+ * Legal values for this macro are:
+ *      - \b 0 : No bounds-checks are performed. This yields the best
+ *               performance, as the compiler can optimize [] access to the
+ *               speed of using a raw C-style array.
+ *      - \b 1 : Bounds-checking is performed and a warning is printed to
+ *               stderr.
+ *      - \b 2 : Bounds-checking is performed and an exception is thrown
+ *               if the bounds are exceeded.
+ */
+#ifndef INCA_MATH_BOUNDS_CHECK
+#   define INCA_MATH_BOUNDS_CHECK 0
+#endif
+
+// These control which template specializations are generated
+#define MIN_DIMENSION 2
+#define MAX_DIMENSION 9
+
+
+// This is part of the Inca math library
+namespace inca {
+    namespace math {
+        /*********************************************************************
+         * The ScalarList template class is the base class for the other
+         * array-like templates in the inca::math library. It defines the
+         * usual C-array access semantics, with optional bounds-checking,
+         * which must be enabled at compile-time. It cannot be instantiated
+         * directly.
+         *********************************************************************/
+        template <typename scalar, size_t sz> class ScalarList;
+
+        /*********************************************************************
+         * The Point template class describes an infinitesimal location in
+         * n-space. The usual vector mathematics operations are defined for it.
+         *********************************************************************/
+        template <typename scalar, size_t dim> class Point;
+
+        /*********************************************************************
+         * The Vector template class describes a pure direction in n-space.
+         * The usual vector mathematics operations are defined for it.
+         *********************************************************************/
+        template <typename scalar, size_t dim> class Vector;
+
+        /*********************************************************************
+         * The Ray template class represents both a location and a direction
+         * in n-space. It is made up of a Point and a Vector.
+         *********************************************************************/
+        template <typename scalar, size_t dim> class Ray;
+
+        /*********************************************************************
+         * The Matrix template class is a two-dimensional scalar grid, possibly
+         * representing a geometric transformation. The usual matrix operations
+         * are defined for it.
+         *********************************************************************/
+        template <typename scalar, size_t maj, size_t min> class Matrix;
+
+        /*********************************************************************
+         * The Quaternion template class represents a rotation in 3-space.
+         *********************************************************************/
+        template <typename scalar> class Quaternion;
+    };
+};
+
+
+// Import the Boost preprocessor metaprogramming library
+#include <boost/preprocessor/arithmetic/inc.hpp>
+#include <boost/preprocessor/arithmetic/mul.hpp>
+#include <boost/preprocessor/repetition/repeat_from_to.hpp>
+#include <boost/preprocessor/repetition/enum_params.hpp>
+
+// Import scalar_traits definition
+#include "scalar_types"
+
+
+// Implementation of our base class, which inherits the scalar implementation
+// in order to get easy access to mathematical functions.
+template <typename scalar, size_t sz>
+class inca::math::ScalarList {
+public:
+    // Scalar implementation typedefs
+    INCA_MATH_SCALAR_TYPEDEFS(scalar, IS_WITHIN_TEMPLATE, /* */, /* */);
+
+    // What dimensional space are we working in?
+    static const size_t size = sz;
+
+
+protected:
+    /** Protected default constructor (not directly instantiatable). */
+    ScalarList() { }
+
+
+public:
+    /**
+     * Array subscript accessor operator definition. This returns a reference
+     * to the requested item in the array.
+     */
+    scalar_t & operator[](index_t i) { return elements[i]; }
+
+    /**
+     * \overload operator[](index_t)
+     */
+    const scalar_t & operator[](index_t i) const { return elements[i]; }
+
+    /**
+     * Pointer to internal C-style array used to hold elements.
+     */
+    scalar_t * contents() { return elements; }
+
+    /**
+     * \overload contents()
+     */
+    const scalar_t * contents() const { return elements; }
+
+    /**
+     * Creates a string representation of elements in this list.
+     * This version
+     * \returns a string containing a comma-separated list of scalars
+     */
+    string stringifyElements() const {
+        return stringifyElements(0, size);
+    }
+
+    /**
+     * \overload stringifyElements()
+     * This version allows to specify the index range which should be
+     * stringified. If either \a start or \a (start + num * stride) are
+     * outside the range * [0, size - 1], they will be clamped to the nearest
+     * valid index.
+     *
+     * \param start     the index of the first element to stringify
+     * \param num       the number of elements to print
+     * \param stride    the stride length to take through the list with each
+     *                  element we print. If this is \c 1, all elements in
+     *                  the range will be printed; if \c 2, every other, etc.
+     * \returns a string containing a comma-separated list of scalars
+     */
+    string stringifyElements(index_t start,
+                             index_t num,
+                             size_t stride = 1) const {
+        index_t end = start + num * stride;
+        if (start < 0)          start = 0;
+        else if (start >= size) start = size - 1;
+        if (end < 0)            end = 0;
+        else if (end >= size)   end = size - 1;
+        ostringstream ss;
+        for (index_t i = start; i <= end; i += stride) {
+            ss << elements[i];
+            if (i + stride <= end)  ss << ", ";
+        }
+        return ss.str();
+    }
+
+protected:
+    /** The scalar elements that make up this list object. */
+    scalar_t elements[size];
+};
+
+
+// Implementation of Quaternion. As quaternions are, by their very nature,
+// 4D, there is no need to use the preprocessor to write the template.
+template <typename scalar>
+class inca::math::Quaternion : public ScalarList<scalar, 4> {
+public:
+    // Scalar implementation typedefs
+    INCA_MATH_SCALAR_TYPEDEFS(scalar, IS_WITHIN_TEMPLATE, /* */, /* */);
+
+    /** Default (no initialization) constructor. */
+    explicit Quaternion() { }
+
+    /** scalar_t array constructor. */
+    Quaternion(scalar_t e[size]) {
+        for (index_t i = 0; i < size; i++)
+            elements[i] = e[i];
+    }
+
+    /**
+     * scalar_t argument list constructor.
+     */
+    explicit Quaternion(scalar_arg_t s, scalar_arg_t vx,
+                        scalar_arg_t vy, scalar_arg_t vz) {
+        elements[0] = s;    elements[1] = vx;
+        elements[2] = vy;   elements[3] = vz;
+    }
+
+    /**
+     * scalar_t with Vector constructor.
+     */
+    explicit Quaternion(scalar_arg_t s, const Vector<scalar, 3> &v) {
+        elements[0] = s;
+        for (index_t i = 0; i < 3; i++)
+            elements[i + 1] = v[i];
+    }
+
+    /**
+     * Point constructor
+     */
+    explicit Quaternion(const Point<scalar, 3> &p) {
+        elements[0] = 0.0;
+        for (index_t i = 0; i < 3; i++)
+            elements[i + 1] = p[i];
+    }
+
+    /**
+     * Vector constructor
+     */
+    explicit Quaternion(const Vector<scalar, 3> &v) {
+        elements[0] = 0.0;
+        for (index_t i = 0; i < 3; i++)
+            elements[i + 1] = v[i];
+    }
+
+    /**
+     * Cast to string representation.
+     * \returns a string like "(1.4, 3.5)"
+     */
+    operator std::string() const {
+        return string("[") + elements[0] + " (" + stringifyElements() + ")]";
+    }
+};
+
+
+// This macro is used by the variable-arg-count constructors
+#define ASSIGN_ARG(Z, IDX, JUNK) elements[IDX] = e ## IDX;
+
+
+// This macro expands to create a partial template specialization of Point
+// with the dimension fixed. This trick is necessary to create ONLY the
+// appropriate scalar_t argument list constructors.
+#define INCA_MATH_POINT_TEMPLATE(Z, DIM, JUNK)                              \
+template <typename scalar>                                                  \
+class Point<scalar, DIM> : public ScalarList<scalar, DIM> {                 \
+public:                                                                     \
+    /* Scalar implementation typedefs */                                    \
+    INCA_MATH_SCALAR_TYPEDEFS(scalar, IS_WITHIN_TEMPLATE, /* */, /* */);    \
+                                                                            \
+    /** Default (no initialization) constructor. */                         \
+    explicit Point() { }                                                    \
+                                                                            \
+    /** Initialization from another list type */                            \
+    explicit Point(const ScalarList<scalar, DIM> &lst)                 \
+        : ScalarList<scalar, DIM>(lst) { }                             \
+                                                                            \
+    /** Constant initialization constructor. */                             \
+    explicit Point(scalar_arg_t e) {                                        \
+        for (index_t i = 0; i < size; i++)                                  \
+            elements[i] = e;                                                \
+    }                                                                       \
+                                                                            \
+    /** scalar_t array constructor. */                                      \
+    Point(scalar_t e[size]) {                                               \
+        for (index_t i = 0; i < size; i++)                                  \
+            elements[i] = e[i];                                             \
+    }                                                                       \
+                                                                            \
+    /**                                                                     \
+     * scalar_t argument list constructor. This constructor takes the       \
+     * same number of arguments as there are elements in the Vector.        \
+     */                                                                     \
+    explicit Point(BOOST_PP_ENUM_PARAMS(DIM, scalar_arg_t e)) {             \
+        BOOST_PP_REPEAT(DIM, ASSIGN_ARG, BOOST_PP_EMPTY);                   \
+    }                                                                       \
+                                                                            \
+    /**                                                                     \
+     * Cast to string representation.                                       \
+     * \returns a string like "(1.4, 3.5)"                                  \
+     */                                                                     \
+    operator std::string() const {                                          \
+        return string("(") + stringifyElements() + ")";                     \
+    }                                                                       \
+};
+
+
+// This macro expands to create a partial template specialization of Vector
+// with the dimension fixed. This trick is necessary to create ONLY the
+// appropriate scalar_t argument list constructors.
+#define INCA_MATH_VECTOR_TEMPLATE(Z, DIM, JUNK)                             \
+template <typename scalar>                                                  \
+class Vector<scalar, DIM> : public ScalarList<scalar, DIM> {                \
+public:                                                                     \
+    /* Scalar implementation typedefs */                                    \
+    INCA_MATH_SCALAR_TYPEDEFS(scalar, IS_WITHIN_TEMPLATE, /* */, /* */);    \
+                                                                            \
+    /** Default (no initialization) constructor. */                         \
+    explicit Vector() { }                                                   \
+                                                                            \
+    /** Initialization from another list type */                            \
+    explicit Vector(const ScalarList<scalar, DIM> &lst)                     \
+        : ScalarList<scalar, DIM>(lst) { }                                  \
+                                                                            \
+    /** Initialization from another list type */                            \
+    explicit Vector(const Quaternion<scalar> &q) {                          \
+        /* We should complain bitterly if the dimension != 3 */             \
+        elements[0] = q[1]; elements[1] = q[2]; elements[2] = q[3];         \
+    }                                                                       \
+                                                                            \
+    /** Constant initialization constructor. */                             \
+    explicit Vector(scalar_arg_t e) {                                       \
+        for (index_t i = 0; i < size; i++)                                  \
+            elements[i] = e;                                                \
+    }                                                                       \
+                                                                            \
+    /** scalar_t array constructor. */                                      \
+    Vector(scalar_t e[size]) {                                              \
+        for (index_t i = 0; i < size; i++)                                  \
+            elements[i] = e[i];                                             \
+    }                                                                       \
+                                                                            \
+    /**                                                                     \
+     * scalar_t argument list constructor. This constructor takes the       \
+     * same number of arguments as there are elements in the Vector.        \
+     */                                                                     \
+    explicit Vector(BOOST_PP_ENUM_PARAMS(DIM, scalar_arg_t e)) {            \
+        BOOST_PP_REPEAT(DIM, ASSIGN_ARG, BOOST_PP_EMPTY);                   \
+    }                                                                       \
+                                                                            \
+    /**                                                                     \
+     * Cast to string representation.                                       \
+     * \returns a string like "(1.4, 3.5)"                                  \
+     */                                                                     \
+    operator std::string() const {                                          \
+        return string("(") + stringifyElements() + ")";                     \
+    }                                                                       \
+};
+
+
+// This macro expands to create a partial template specialization of Ray
+// with the dimension fixed. This trick is necessary to create ONLY the
+// appropriate scalar_t argument list constructors.
+#define INCA_MATH_RAY_TEMPLATE(Z, DIM, JUNK)                                \
+template <typename scalar>                                                  \
+class Ray<scalar, DIM> {                                                    \
+public:                                                                     \
+    /* Scalar implementation typedefs */                                    \
+    INCA_MATH_SCALAR_TYPEDEFS(scalar, IS_WITHIN_TEMPLATE, /* */, /* */);    \
+                                                                            \
+    /** Default (no initialization) constructor. */                         \
+    explicit Ray() { }                                                      \
+                                                                            \
+    /** scalar_t array constructor. */                                      \
+    Ray(scalar_t e[BOOST_PP_MUL(DIM, 2)])                                   \
+       : _position(e), _direction(e + DIM) { }                              \
+                                                                            \
+    /**                                                                     \
+     * scalar_t argument list constructor. This constructor takes a number  \
+     * of arguments twice the dimension. The first set of arguments is      \
+     * interpreted as the position, and the second set as the direction.    \
+     */                                                                     \
+    explicit Ray(BOOST_PP_ENUM_PARAMS(BOOST_PP_MUL(DIM, 2), scalar_arg_t e))\
+        : _position(BOOST_PP_ENUM_PARAMS_FROM_TO(0, BOOST_PP_DEC(DIM), e)), \
+          _direction(BOOST_PP_ENUM_PARAMS_FROM_TO(DIM,                      \
+                               BOOST_PP_DEC(BOOST_PP_MUL(DIM, 2)), e)) { }  \
+                                                                            \
+    /**                                                                     \
+     * The positional part of this ray.                                     \
+     */                                                                     \
+    Point<scalar, DIM> & position() { return _position; }                   \
+                                                                            \
+    /**                                                                     \
+     * The directional part of this ray.                                    \
+     */                                                                     \
+    Vector<scalar, DIM> & direction() { return _direction; }                \
+                                                                            \
+    /**                                                                     \
+     * Cast to string representation.                                       \
+     * \returns a string like "(1.4, 3.5) ->(0.0, 3.0)"                     \
+     */                                                                     \
+    operator std::string() const {                                          \
+        return string(_position) + " ->" + _direction;                      \
+    }                                                                       \
+                                                                            \
+protected:                                                                  \
+    Point<scalar, DIM>  _position;                                          \
+    Vector<scalar, DIM> _direction;                                         \
+};
+
+
+// This macro expands to create a partial template specialization of Matrix
+// with the dimensions fixed. This trick is necessary to create ONLY the
+// appropriate scalar_t argument list constructors. Unlike the
+#define INCA_MATH_MATRIX_TEMPLATE_MINOR(Z, MIN, MAJ)                        \
+template <typename scalar>                                                  \
+class Matrix<scalar, MAJ, MIN> : public ScalarList<scalar, MAJ * MIN> {     \
+public:                                                                     \
+    /* Scalar implementation typedefs */                                    \
+    INCA_MATH_SCALAR_TYPEDEFS(scalar, IS_WITHIN_TEMPLATE, /* */, /* */);    \
+                                                                            \
+    /** What size matrix are we working with? */                            \
+    static const size_t major = MAJ;                                        \
+    static const size_t minor = MIN;                                        \
+                                                                            \
+    /** Default (no initialization) constructor. */                         \
+    explicit Matrix() { }                                                   \
+                                                                            \
+    /** Constant initialization constructor. */                             \
+    explicit Matrix(scalar_arg_t e) {                                       \
+        for (index_t i = 0; i < size; i++)                                  \
+            elements[i] = e;                                                \
+    }                                                                       \
+                                                                            \
+    /** scalar_t array constructor. */                                      \
+    Matrix(scalar_t e[size]) {                                              \
+        for (index_t i = 0; i < size; i++)                                  \
+            elements[i] = e[i];                                             \
+    }                                                                       \
+                                                                            \
+    /**                                                                     \
+     * scalar_t argument list constructor. This constructor takes the       \
+     * same number of arguments as there are elements in the Matrix.        \
+     */                                                                     \
+    explicit Matrix(BOOST_PP_ENUM_PARAMS(BOOST_PP_MUL(MAJ, MIN), scalar_arg_t e)) {\
+        BOOST_PP_REPEAT(MAJ * MIN, ASSIGN_ARG, BOOST_PP_EMPTY);             \
+    }                                                                       \
+                                                                            \
+    /**                                                                     \
+     * 2D matrix-subscript element accessor.                                \
+     * same number of arguments as there are elements in the Vector.        \
+     */                                                                     \
+    scalar_t & operator()(index_t maj, index_t min) {                       \
+        return elements[indexOf(maj, min)];                                 \
+    }                                                                       \
+                                                                            \
+    /**                                                                     \
+     * \overload operator()(index_t, index_t)                               \
+     */                                                                     \
+    const scalar_t & operator()(index_t maj, index_t min) const {           \
+        return elements[indexOf(maj, min)];                                 \
+    }                                                                       \
+                                                                            \
+    /**                                                                     \
+     * Calculate a 1D index into the underlying ScalarList from a pair of   \
+     * major-axis, minor-axis subscripts.                                   \
+     */                                                                     \
+    index_t indexOf(index_t maj, index_t min) const {                       \
+        return maj * minor + min;                                           \
+    }                                                                       \
+                                                                            \
+    /**                                                                     \
+     * Cast to string representation.                                       \
+     * \returns a string like "[1.4, 3.5]\n[0.0, 3.0]"                      \
+     */                                                                     \
+    operator std::string() const {                                          \
+        std::ostringstream ss;                                              \
+        for (index_t i = 0; i < MAJ; i++)                                   \
+            ss << '[' << stringifyElements(i, MIN, MAJ) << "]\n";           \
+        return ss.str();                                                    \
+    }                                                                       \
+};
+
+
+// See the documentation for the above macro. This one keeps the major dimension
+// fixed and iterates across the minor dimension of the Matrix.
+#define INCA_MATH_MATRIX_TEMPLATE_MAJOR(Z, MAJ, JUNK)                       \
+    BOOST_PP_REPEAT_FROM_TO(MIN_DIMENSION, BOOST_PP_INC(MAX_DIMENSION),     \
+                            INCA_MATH_MATRIX_TEMPLATE_MINOR, MAJ);
+
+
+// We have to do the actual specializations of the templates inside of a
+// namespace block, due to a bug in GCC
+namespace inca {
+    namespace math {
+        BOOST_PP_REPEAT_FROM_TO(MIN_DIMENSION, BOOST_PP_INC(MAX_DIMENSION),
+                                 INCA_MATH_POINT_TEMPLATE, BOOST_PP_EMPTY);
+        BOOST_PP_REPEAT_FROM_TO(MIN_DIMENSION, BOOST_PP_INC(MAX_DIMENSION),
+                                INCA_MATH_VECTOR_TEMPLATE, BOOST_PP_EMPTY);
+        BOOST_PP_REPEAT_FROM_TO(MIN_DIMENSION, BOOST_PP_INC(MAX_DIMENSION),
+                                INCA_MATH_RAY_TEMPLATE, BOOST_PP_EMPTY);
+        BOOST_PP_REPEAT_FROM_TO(MIN_DIMENSION, BOOST_PP_INC(MAX_DIMENSION),
+                                INCA_MATH_MATRIX_TEMPLATE_MAJOR, BOOST_PP_EMPTY);
+    };
+};
+
+
+// Macro to typedef vector thingies
+#define INCA_MATH_VECTOR_TYPEDEFS(SCALAR, DIM, PREF, SUFF)                   \
+    typedef inca::math::Point<SCALAR, DIM>       PREF ## Point      ## SUFF; \
+    typedef inca::math::Vector<SCALAR, DIM>      PREF ## Vector     ## SUFF; \
+    typedef inca::math::Ray<SCALAR, DIM>         PREF ## Ray        ## SUFF; \
+    typedef inca::math::Matrix<SCALAR, DIM, DIM> PREF ## Matrix     ## SUFF; \
+    typedef inca::math::Quaternion<SCALAR>       PREF ## Quaternion ## SUFF;
+
+
+// Last of all, clean up the preprocessor namespace on our way out
+#undef ASSIGN_ARG
+#undef MAX_DIMENSION
+#undef MIN_DIMENSION
+#undef INCA_MATH_POINT_TEMPLATE
+#undef INCA_MATH_VECTOR_TEMPLATE
+#undef INCA_MATH_RAY_TEMPLATE
+#undef INCA_MATH_MATRIX_TEMPLATE_MAJOR
+#undef INCA_MATH_MATRIX_TEMPLATE_MINOR
+
+#endif

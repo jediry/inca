@@ -1,0 +1,65 @@
+/* -*- C++ -*-
+ *
+ * File: BSplineSurface
+ * 
+ * Author: Ryan L. Saunders
+ * 
+ * Copyright 2002, Ryan L. Saunders. All rights reserved.
+ * 
+ * Description:
+ *      The BSplineSurface template is a concrete subclass of
+ *      ControlPointSurface, representing locally-controllable surfaces defined
+ *      by a grid of control points and a grid of "knots". These surfacs are
+ *      defined according to the B-Spline basis functions, and can be broken up
+ *      into a set of BezierCurves.
+ */
+
+#ifndef INCA_MATH_BSPLINE_SURFACE
+#define INCA_MATH_BSPLINE_SURFACE
+
+// Include superclass definition
+#include "ControlPointSurface"
+
+// Include related surface definition
+#include "BezierSurface"
+
+
+// This is part of the Inca geometry library
+namespace Inca {
+    namespace Geometry {
+        // Forward declaration
+        template <class Scalar, unsigned int dim> class BSplineSurface;
+    };
+};
+
+
+template <class Scalar, unsigned int dim>
+class Inca::Geometry::BSplineSurface : public ControlPointSurface<Scalar, dim> {
+private:
+    // Convenience typedefs
+    typedef BSplineSurface<Scalar, dim>         ThisType;
+    typedef ControlPointSurface<Scalar, dim>    Superclass;
+
+public:
+    // What dimensional space are we working in?
+    const static unsigned int dimension = dim;
+
+    // Template typedefs
+    typedef typename Superclass::scalar_t       scalar_t;
+    typedef typename Superclass::scalar_arg_t   scalar_arg_t;
+    typedef typename Superclass::Point          Point;
+    typedef typename Superclass::Vector         Vector;
+    typedef typename Superclass::Ray            Ray;
+
+
+/*---------------------------------------------------------------------------*
+ | Realization of ParametricSurface abstract functions
+ *---------------------------------------------------------------------------*/
+public:
+    Point evaluateSurface(scalar_arg_t s, scalar_arg_t t) {
+    }
+    Vector evaluateNormal(scalar_arg_t s, scalar_arg_t t) {
+    }
+};
+
+#endif

@@ -1,0 +1,191 @@
+/* -*- C++ -*-
+ *
+ * File: Particle
+ * 
+ * Author: Ryan L. Saunders
+ *
+ * Copyright 2003, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ *      A Particle is a 
+ */
+
+#ifndef INCA_DYNAMICS_PARTICLE
+#define INCA_DYNAMICS_PARTICLE
+
+
+// Import the Inca math libraries
+#include <math/Math.hpp>
+
+// This is part of the Inca dynamics library
+namespace Inca {
+    namespace Dynamics {
+        // Forward declaration
+        template <class Scalar, size_t dim> class Particle;
+    };
+};
+
+
+template <class _ScalarModel, size_t dim>
+class Inca::Dynamics::Particle {
+public:
+    // What dimensional space are we working in?
+    const static size_t dimension = dim;
+
+    // Mathematical type definitions
+    typedef _ScalarModel                    ScalarModel;
+    typedef typename ScalarModel::type      scalar_t;
+    typedef typename ScalarModel::arg_type  scalar_arg_t;
+    INCA_MATH_VECTOR_TYPEDEFS(ScalarModel, dim, /* */, /* */);
+
+    // Dynamics object definitions
+    typedef Particle<ScalarModel, dim>      Object;
+    typedef Object *                        ObjectPtr;
+
+    // Maximum number of bodies to allow in a system
+    static const size_t MAX_OBJECTS = 10000;
+
+    // Inner classes (required by DynamicSystem)
+    class State;
+    class Calculation;
+
+/*---------------------------------------------------------------------------*
+ | Constructors
+ *---------------------------------------------------------------------------*/
+public:
+    // Creates a dead particle (which may be given properties and "born" later)
+    Particle() : alive(false) { }
+
+
+    // Create a live particle, with the given properties. Most arguments have
+    // defaults (zero velocity, unit-mass, perfectly elastic, unit-drag).
+    Particle(Point &pos, Vector vel = Vector(0.0),
+             scalar_arg_t ed = 0.0, scalar_arg_t ttl = 0.0,
+             scalar_arg_t ms = 1.0, scalar_arg_t el = 1.0,
+             scalar_arg_t dg = 1.0)
+        : x(pos), v(vel),
+          expirationDate(ed), timeToLive(ttl), alive(true),
+          mass(ms), elasticity(el), drag(dg),
+          resting(false), hit(false) { }
+
+
+    // Make our state what we're told and push the pertinent values out to
+    // the real-world object we're mirroring
+    void propagateState(const State &state) {
+        // Copy over state variables
+        x = state.x;
+        v = state.v;
+    }
+
+    // Create a state with the same values we have right now
+    State retrieveState() const {
+        State state;
+
+        // Slurp these from the object we're mirroring
+        state.x = x;
+        state.v = v;
+        return state;
+    }
+
+//protected:
+    // Motion variables
+    Point x;
+    Vector v;
+    scalar_t mass, elasticity, drag;
+
+    // Collision/resting-contact variables
+    bool resting, hit;
+    Vector normal;
+
+    // Lifetime variables
+    bool alive;
+    scalar_t timeToLive, expirationDate;
+    
+    // Index in the current ParticleState (may change over time)
+    index_t index;
+
+
+/*---------------------------------------------------------------------------*
+ | The Calculation inner class contains the auxillary variables needed to
+ | calculate state changes, but which are not part of the persistent state of
+ | the particle. This includes things like the forces on the body.
+ *---------------------------------------------------------------------------*/
+    class Calculation {
+    public:
+        // Our parent type
+        typedef Particle::Object Object;
+
+        // Initialization function
+        void initialize(const State &state, const Object &object) {
+            F = Vector(0.0);
+        }
+
+        // Data fields
+        Vector F;           // The net force on the body
+    };
+
+
+/*---------------------------------------------------------------------------*
+ | The State inner class represents the parts of the dynamic state of a
+ | RigidBody that we keep track of over time: its position and rotation,
+ | and linear and angular momenta.
+ *---------------------------------------------------------------------------*/
+    class State {
+    public:
+        // Our parent type
+        typedef Particle::Object Object;
+
+        // Data fields
+        Point      x;       // Its position
+        Vector     v;       // Its velocity
+
+        // Function to calculate the 1st-derivative terms based on the
+        // previous State, a differential and a time-step
+        void evaluateFirstDerivativeDelta(Calculation &calc,
+                                    const State &prev,
+                                    const Object &object,
+                                          scalar_arg_t step) {
+            // There are no persistent 2nd-derivative terms, so we can just
+            // integrate the 2nd-derivative terms from the Calculation
+            v = calc.F * step / object.mass;
+        }
+
+        // Function to calculate the 0th-derivative terms based on the
+        // previous State, a differential and a time-step
+        void evaluateZerothDerivativeDelta(Calculation &calc,
+                                     const State &prev,
+                                     const Object &object,
+                                           scalar_arg_t step) {
+            // The previous state contains 1st-derivative terms that we
+            // must consider when calculating the 0th-derivative terms
+            v = prev.v + v;
+            x = Point(v * step);
+        }
+
+        State & operator+=(const State &s) {
+            x += s.x;
+            v += s.v;
+            return *this;
+        }
+
+        State & operator-=(const State &s) {
+            x -= s.x;
+            v -= s.v;
+            return *this;
+        }
+
+        State & operator*=(scalar_arg_t s) {
+            x *= s;
+            v *= s;
+            return *this;
+        }
+
+        State & operator/=(scalar_arg_t s) {
+            x /= s;
+            v /= s;
+            return *this;
+        }
+    };
+};
+
+#endif
