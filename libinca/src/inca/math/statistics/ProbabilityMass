@@ -71,11 +71,17 @@ public:
         for (it = el.begin(); it != el.end(); ++it)
             add(*it);
     }
-        
+
     // Element accessors
     SizeType size() const { return _elements.size(); }
           Scalar & element(IndexType i)       { return _elements[i]; }
     const Scalar & element(IndexType i) const { return _elements[i]; }
+
+    // Actual probability function (with REMAINDERs handled)
+    const Scalar & probability(IndexType i) const {
+        ensureValid();
+        return _probability[i];
+    }
 
     // Cumulative probability value
     const Scalar & mass(IndexType i) const {
@@ -105,7 +111,8 @@ protected:
     // Calculate the cumulative distribution from the element array
     void ensureValid() const {
         if (! _isValid) {
-            // Make the mass function the right size
+            // Make the probability functions the right size
+            _probability.resize(_elements.size());
             _mass.resize(_elements.size());
 
             // Figure out how much mass to give to each "remainder" elements:
@@ -123,16 +130,19 @@ protected:
                 portion = 0;
                 divisor = massUsed;
             } else {
-                portion = massUsed / remainderElementCount;
+                portion = (1 - massUsed) / remainderElementCount;
                 divisor = 1;
             }
 
-            // Calculate the PMF
+            // Calculate the REMAINDER-corrected probability function and the PMF
             Scalar sum = 0;
             for (IndexType i = 0; i < size(); ++i) {
-                if (_elements[i] != REMAINDER)  sum += _elements[i];
-                else                            sum += portion;
-                _mass[i] = _elements[i] / divisor;
+                if (_elements[i] != REMAINDER)
+                    _probability[i] = _elements[i] / divisor;
+                else
+                    _probability[i] = portion;
+                sum += _probability[i];
+                _mass[i] = sum;
             }
 
             // Results are valid, sir!
@@ -141,7 +151,7 @@ protected:
     }
 
             ScalarArray _elements;
-    mutable ScalarArray _mass;
+    mutable ScalarArray _probability, _mass;
     mutable bool _isValid;
 };
 

@@ -262,6 +262,11 @@ namespace inca {
                 return false;
         return true;
     }
+
+    template <typename Scalar1, typename Scalar2, inca::SizeType dim>
+    bool operator!=(const Array<Scalar1, dim> & a1, const Array<Scalar2, dim> & a2) {
+        return ! (a1 == a2);
+    }
 };
 
 

@@ -12,6 +12,7 @@
  *
  * FIXME: This needs some reworking. Like a better way to split between
  *        integral and float?
+ *        Also needs to handle Array subclasses
  */
 
 #ifndef INCA_MATH_GENERATOR_RANDOM_UNIFORM

@@ -36,8 +36,6 @@ namespace inca {
     class GeneticAlgorithmException;
     template <typename ChromosomeT,
               typename ScalarT>     class GeneticAlgorithm;
-    template <typename ChromosomeT,
-              typename ReturnT>     class GeneticOperator;
 }
 
 
@@ -53,31 +51,23 @@ namespace inca {
 
 
 /**
+ * The listener interface that objects wishing to be informed of the progress
+ * of the GA must implement.
+ */
+class terrainosaurus::GeneticAlgorithmListener { };
+
+
+/**
  * Thrown when an error condition occurs within the GA. The message() function
  * (or the std::exception::what() function) can be used to retrieve additional
  * information about the error.
  */
 class inca::GeneticAlgorithmException : public inca::StreamException {
+public:
     // Constructors
     explicit GeneticAlgorithmException() { }
     explicit GeneticAlgorithmException(const std::string & msg)
         : StreamException(msg) { }
-};
-
-
-/**
- * The base class for the various genetic operator functors used by a GA
- * (initialization, crossover, mutation, fitness).
- */
-template <typename OperandT, typename ReturnT = void>
-class GeneticOperator {
-public:
-    // Chromosome/gene and return type typedefs
-    typedef OperandT        Operand;
-    typedef ReturnT         Return;
-
-    // Function call operator
-    virtual Return operator()(Operand & c) = 0;
 };
 
 
@@ -91,49 +81,77 @@ public:
     typedef typename Chromosome::Gene   Gene;
     typedef ScalarT                     Scalar;
 
-    typedef GeneticOperator<Chromosome>             InitializationOperator;
-    typedef GeneticOperator<Chromosome>             CrossoverOperator;
-    typedef GeneticOperator<Gene>                   MutationOperator;
-    typedef GeneticOperator<Chromosome, Scalar>     FitnessOperator;
+    struct Operator {
+        typedef GeneticAlgorithm<ChromosomeT, ScalarT>  GAType;
+        typedef ChromosomeT                             Chromosome;
+        typedef typename Chromosome::Gene               Gene;
+        typedef ScalarT                                 Scalar;
+
+        // Constructor
+        explicit Operator() : _owner(NULL) { }
+
+        // Access to the parent GA
+        GAType & owner() { return *_owner; }
+        void setOwner(GAType & dad) { _owner = &dad; }
+
+    protected:
+        GAType * _owner;
+    };
+    struct InitializationOperator : public Operator {
+        virtual void operator()(Chromosome & c) = 0;
+    };
+    struct CrossoverOperator : public Operator {
+        virtual void operator()(Chromosome & c1, Chromosome & c2) = 0;
+    };
+    struct MutationOperator : public Operator {
+        virtual void operator()(Gene & g) = 0;
+    };
+    struct FitnessOperator : public Operator {
+        virtual Scalar operator()(Chromosome & c) = 0;
+    };
     typedef shared_ptr<InitializationOperator>      InitializationOperatorPtr;
     typedef shared_ptr<CrossoverOperator>           CrossoverOperatorPtr;
     typedef shared_ptr<MutationOperator>            MutationOperatorPtr;
     typedef shared_ptr<FitnessOperator>             FitnessOperatorPtr;
 
     typedef std::vector<Chromosome>                 ChromosomeArray;
+    typedef std::vector<Scalar>                     ScalarArray;
+    typedef std::vector<bool>                       BoolArray;
     typedef std::vector<InitializationOperatorPtr>  InitializationOperatorList;
     typedef std::vector<CrossoverOperatorPtr>       CrossoverOperatorList;
     typedef std::vector<MutationOperatorPtr>        MutationOperatorList;
     typedef std::vector<FitnessOperatorPtr>         FitnessOperatorList;
 
-    typedef math::RandomUniform<Scalar>             RandomScalar;
-    typedef std::vector<Scalar>                     ScalarArray;
-    typedef math::ProbabilityMass<Scalar>           PMF;
+    typedef math::RandomUniform<Scalar>                 RandomScalar;
+    typedef math::RandomUniform<IndexType>              RandomIndex;
+    typedef math::ProbabilityMass<Scalar>               PMF;
+    typedef std::vector<std::pair<IndexType, Scalar> >  FitnessMap;
 
     // Sentinel value indicating that an operator should share any
     // unclaimed probability (the default for added operators)
     static const Scalar REMAINDER = PMF::REMAINDER;
 
+    // Comparison functor for sorting a FitnessMap by fitness
+    struct FitnessMapGreaterThan {
+        bool operator()(const typename FitnessMap::value_type & f1,
+                        const typename FitnessMap::value_type & f2) const {
+            return f1.second > f2.second;
+        }
+    };
+
+
 
 /*---------------------------------------------------------------------------*
- | Constructors & operators
+ | Constructors
  *---------------------------------------------------------------------------*/
 public:
     // Default constructor
-    explicit GeneticAlgorithm() : randomFraction(0, 1) { }
+    explicit GeneticAlgorithm() : randomFraction(0, 1), randomIndex(0, 0) { }
 
-    // Constructor providing lists of init, cross, mutate & fitness operators
-    template <class OpList0, class OpList1, class OpList2, class OpList3>
-    explicit GeneticAlgorithm(const OpList0 & initOps,
-                              const OpList1 & crossOps,
-                              const OpList2 & mutateOps,
-                              const OpList3 & fitnessOps)
-            : randomFraction(0, 1) {
-        addInitializationOperators(initOps);
-        addCrossoverOperators(crossOps);
-        addMutationOperators(mutateOps);
-        addFitnessMeasures(fitnessOps);
-    }
+protected:
+    // The random number generator object used throughout
+    RandomScalar randomFraction;
+    RandomIndex  randomIndex;
 
 
 /*---------------------------------------------------------------------------*
@@ -151,9 +169,10 @@ public:
      * Sets the number of chromosomes in the population. If the population
      * size is increased, the new chromosomes start out "dead".
      */
-    void setPopulationSize(int s) {
+    void setPopulationSize(int n) {
         _population.resize(n);      // Make room for the new guys
         _alive.resize(n, false);    // Mark the new guys dead
+        randomIndex.max = n - 1;    // Reconfigure random index generator
     }
 
     /**
@@ -174,7 +193,7 @@ public:
      * Returns the index of the given chromosome within the population.
      */
     IndexType indexOf(const Chromosome & c) const {
-        OffsetType diff = &c - &chromosome(0);
+        DifferenceType diff = &c - &chromosome(0);
 //        if (diff >= populationSize() || diff < 0) {
 //            GeneticAlgorithmException e;
 //            e << "Cannot take the indexOf(c): this chromosome is not "
@@ -188,14 +207,20 @@ public:
      * Returns whether the given chromosome is currently marked as "alive".
      */
     bool alive(const Chromosome & c) const {
-        return _alive[indexOf(c)];
+        return alive(indexOf(c));
+    }
+    bool alive(IndexType idx) const {
+        return _alive[idx];
     }
 
     /**
      * Marks the given chromosome as "dead".
      */
     void kill(Chromosome & c) {
-        _alive[indexOf(c)] = false;
+        kill(indexOf(c));
+    }
+    void kill(IndexType idx) {
+        _alive[idx] = false;
     }
 
     /**
@@ -222,7 +247,8 @@ public:
      */
     template <class OpList>
     void addInitializationOperators(const OpList & ops) {
-        for (OpList::const_iterator it = ops.begin(); it != ops.end(); ++it)
+        typename OpList::const_iterator it;
+        for (it = ops.begin(); it != ops.end(); ++it)
             addInitializationOperator(*it);
     }
 
@@ -232,7 +258,8 @@ public:
      */
     template <class OpList>
     void addCrossoverOperators(const OpList & ops) {
-        for (OpList::const_iterator it = ops.begin(); it != ops.end(); ++it)
+        typename OpList::const_iterator it;
+        for (it = ops.begin(); it != ops.end(); ++it)
             addCrossoverOperator(*it);
     }
 
@@ -242,7 +269,8 @@ public:
      */
     template <class OpList>
     void addMutationOperators(const OpList & ops) {
-        for (OpList::const_iterator it = ops.begin(); it != ops.end(); ++it)
+        typename OpList::const_iterator it;
+        for (it = ops.begin(); it != ops.end(); ++it)
             addMutationOperator(*it);
     }
 
@@ -252,43 +280,85 @@ public:
      */
     template <class OpList>
     void addFitnessOperators(const OpList & ops) {
-        for (OpList::const_iterator it = ops.begin(); it != ops.end(); ++it)
+        typename OpList::const_iterator it;
+        for (it = ops.begin(); it != ops.end(); ++it)
             addFitnessOperator(*it);
     }
 
     /**
      */
+    void addInitializationOperator(InitializationOperator * op,
+                                   Scalar p = REMAINDER) {
+        InitializationOperatorPtr ptr(op);
+        addInitializationOperator(ptr, p);
+    }
     virtual void addInitializationOperator(InitializationOperatorPtr op,
                                            Scalar p = REMAINDER) {
+        op->setOwner(*this);
         _initializationOperators.push_back(op);
-        _initializationOperatorProbabilities.push_back(p);
+        _initializationOperatorPMF.add(p);
     }
 
     /**
      */
+    void addCrossoverOperator(CrossoverOperator * op,
+                              Scalar p = REMAINDER) {
+        CrossoverOperatorPtr ptr(op);
+        addCrossoverOperator(ptr, p);
+    }
     virtual void addCrossoverOperator(CrossoverOperatorPtr op,
                                       Scalar p = REMAINDER) {
+        op->setOwner(*this);
         _crossoverOperators.push_back(op);
-        _crossoverOperatorProbabilities.push_back(p);
+        _crossoverOperatorPMF.add(p);
     }
 
     /**
      */
+    void addMutationOperator(MutationOperator * op,
+                             Scalar p = REMAINDER) {
+        MutationOperatorPtr ptr(op);
+        addMutationOperator(ptr, p);
+    }
     virtual void addMutationOperator(MutationOperatorPtr op,
                                      Scalar p = REMAINDER) {
+        op->setOwner(*this);
         _mutationOperators.push_back(op);
-        _mutationOperatorProbabilities.push_back(p);
+        _mutationOperatorPMF.add(p);
     }
 
     /**
      * Adds a single operator to the set of fitness operators, with an optional
      * weighting.
      */
-    virtual void addFitnessOperator(FitnessOperatorPtr op,
-                                    scalar_t w = REMAINDER) {
-        _fitnessOperators.push_back(op);
-        _fitnessOperatorWeights.push_back(w);
+    void addFitnessOperator(FitnessOperator * op,
+                            Scalar w = REMAINDER) {
+        FitnessOperatorPtr ptr(op);
+        addFitnessOperator(ptr, w);
     }
+    virtual void addFitnessOperator(FitnessOperatorPtr op,
+                                    Scalar w = REMAINDER) {
+        op->setOwner(*this);
+        _fitnessOperators.push_back(op);
+        _fitnessOperatorWeights.add(w);
+    }
+
+    InitializationOperator & initializationOperator(IndexType idx) {
+        return *_initializationOperators[idx];
+    }
+    CrossoverOperator & crossoverOperator(IndexType idx) {
+        return *_crossoverOperators[idx];
+    }
+    MutationOperator & mutationOperator(IndexType idx) {
+        return *_mutationOperators[idx];
+    }
+    FitnessOperator & fitnessOperator(IndexType idx) {
+        return *_fitnessOperators[idx];
+    }
+    SizeType initializationOperatorCount() const { return _initializationOperators.size(); }
+    SizeType crossoverOperatorCount() const { return _crossoverOperators.size(); }
+    SizeType mutationOperatorCount() const { return _mutationOperators.size(); }
+    SizeType fitnessOperatorCount() const { return _fitnessOperators.size(); }
 
     /**
      * Calculates and/or returns the probability mass function corresponding
@@ -344,10 +414,6 @@ public:
         return _fitnessOperatorWeights;
     }
 
-    virtual InitializationOperator & initializationOperator(IndexType idx) {
-        return _initializationOperators[idx];
-    }
-
 protected:
     InitializationOperatorList  _initializationOperators;
     CrossoverOperatorList       _crossoverOperators;
@@ -360,36 +426,6 @@ protected:
 
 
 /*---------------------------------------------------------------------------*
- | Genetic algorithm parameters
- *---------------------------------------------------------------------------*/
-public:
-    int evolutionCycles() const    { return _evolutionCycles; }
-    void setEvolutionCycles(int c) { _evolutionCycles = c; }
-
-    scalar_t selectionRatio() const    { return _selectionRatio; }
-    void setSelectionRatio(scalar_t r) { _selectionRatio = r; }
-    scalar_t elitismRatio() const    { return _elitismRatio; }
-    void setElitismRatio(scalar_t r) { _elitismRatio = r; }
-    scalar_t crossoverProbability() const    { return _crossoverProbability; }
-    void setCrossoverProbability(scalar_t p) { _crossoverProbability = p; }
-    scalar_t mutationProbability() const    { return _mutationProbability; }
-    void setMutationProbability(scalar_t p) { _mutationProbability = p; }
-    scalar_t crossoverRatio() const    { return _crossoverRatio; }
-    void setCrossoverRatio(scalar_t r) { _crossoverRatio = r; }
-    scalar_t mutationRatio() const    { return _mutationRatio; }
-    void setMutationRatio(scalar_t r) { _mutationRatio = r; }
-
-protected:
-    int _evolutionCycles;   // How many iterations do we run
-    scalar_t _selectionRatio,       // % population to keep alive
-             _elitismRatio,         // % "best" of population to keep alive
-             _crossoverProbability, // Odds of cross-breeding a chromosome
-             _mutationProbability,  // Odds of mutating a chromosome
-             _crossoverRatio,       // % of chromosome to cross
-             _mutationRatio;        // % of chromosome to mutate
-
-
-/*---------------------------------------------------------------------------*
  | Genetic algorithm sub-parts
  *---------------------------------------------------------------------------*/
 public:
@@ -399,10 +435,6 @@ public:
      */
     virtual const Chromosome & run() {
         beginAlgorithm();
-
-        // First, construct a chromosome population of the requested size.
-        // Initially, all chromosomes will be "dead" (i.e., uninitialized).
-        resetPopulation();
 
         // Run the GA evolution loop until we decide we're done. By default,
         // the evolution process stops after a fixed number of cycles.
@@ -428,14 +460,27 @@ public:
             // Introduce new genetic material via mutations
             for (IndexType i = 0; i < populationSize(); ++i) {
                 Chromosome & c = chromosome(i);
-                if (alive(c) && shouldMutate(c))
-                    mutate(c);
+                if (alive(c) && shouldMutate(c)) {
+                    typename Chromosome::IndexArray idx;
+                    for (idx[0] = 0; idx[0] < c.size(0); ++idx[0])
+                        for (idx[1] = 0; idx[1] < c.size(1); ++idx[1]) {
+                            Gene & g = c(idx);
+                            if (shouldMutate(g))
+                                mutate(g);
+                        }
+                }
             }
 
             endCycle();
         }
 
         endAlgorithm();
+
+        // Return our most viable candidate
+        const FitnessMap & fitMap = sortedFitnessMap();
+        INCA_INFO("GA produced most fit  " << fitMap.front().second)
+        INCA_INFO("GA produced least fit " << fitMap.back().second)
+        return chromosome(fitMap.front().first);
     }
 
     /**
@@ -445,6 +490,7 @@ public:
      * This may be overridden in a subclass.
      */
     virtual void beginAlgorithm() {
+        INCA_DEBUG("Beginning algorithm")
         _currentCycle = 0;
         std::fill(_alive.begin(), _alive.end(), false);
     }
@@ -456,7 +502,9 @@ public:
      *
      * This may be overridden in a subclass.
      */
-    virtual void endAlgorithm() { }
+    virtual void endAlgorithm() {
+        INCA_DEBUG("Finishing algorithm")
+    }
 
     /**
      * Called at the beginning of every evolution cycle. This may be used to
@@ -465,7 +513,9 @@ public:
      *
      * This may be overridden in a subclass.
      */
-    virtual void beginCycle() { }
+    virtual void beginCycle() {
+        INCA_DEBUG("Beginning cycle " << currentCycle())
+    }
 
     /**
      * Called at the end of every evolution cycle. This may be used to perform
@@ -475,6 +525,7 @@ public:
      * This may be overridden in a subclass.
      */
     virtual void endCycle() {
+        INCA_DEBUG("Finishing cycle " << currentCycle())
         _currentCycle++;
     }
 
@@ -505,7 +556,7 @@ public:
      */
     virtual void replenishPopulation() {
         for (IndexType i = 0; i < populationSize(); ++i) {
-            Chromsome & c = chromosome(i);
+            Chromosome & c = chromosome(i);
             if (! alive(c))
                 birth(c);
         }
@@ -521,31 +572,31 @@ public:
      */
     virtual void prunePopulation() {
         // Calculate the fitness of every chromosome in the population
-        calculateFitness(population);
+        calculatePopulationFitness();
 
         // Figure out how many chromosomes we're talking about here
+        int numberToSelect = int(populationSize() * selectionRatio() + 0.5f);
         int numberOfElites = int(populationSize() * elitismRatio()  + 0.5f);
-        int numberToSelect = int(populationSize() * selectionRatio + 0.5f);
         if (numberToSelect < numberOfElites)
             numberToSelect = numberOfElites;
 
         // Sort the population in decreasing order by overall fitness
-        FitnessMap popFit = getFitnessMap(population);
+        FitnessMap popFit = sortedFitnessMap();
 
         // Select which to keep and kill
         if (numberToSelect < populationSize()) {
             // We have to decide which ones we're going to keep
             int numberSelected = 0;
-            std::vector<bool> selected(populationSize(), false);
+            BoolArray selected(populationSize(), false);
 
-            std::cerr << "Selecting " << numberOfElites << " elites and "
-                    << (numberToSelect - numberOfElites) << " non-elites "
-                        "from a population of size " << populationSize() << '\n';
+            INCA_DEBUG("Selecting " << numberOfElites << " elites and " <<
+                       (numberToSelect - numberOfElites) << " non-elites "
+                       "from a population of size " << populationSize())
 
             // First, we have to handle the 'elites' -- take the top n%
             for (int i = 0; i < numberOfElites; ++i) {
-                std::cerr << "\tElite:    \t" << popFit[i].first << "\tfitness("
-                        << popFit[i].second << ")\n";
+                INCA_DEBUG("\tElite:    \t" << popFit[i].first << "\tfitness("
+                           << popFit[i].second << ")")
                 IndexType index = popFit[i].first;
                 selected[index] = true;
                 numberSelected++;
@@ -553,7 +604,7 @@ public:
 
             // Now, we randomly choose the remaining amount to select from among
             // the non-elites.
-            PMF & pmf = getChromosomeFitnessPMF();
+            const PMF & pmf = chromosomeFitnessPMF();
             int attempts = 0;
             while (numberSelected < numberToSelect) {
                 // Select an individual from the old population to carry over
@@ -562,34 +613,33 @@ public:
                 IndexType index;
                 do {
                     // Generate a random value between 0 and 1, which is a
-                    // point in the cumulative probability distribution. We
+                    // point in the probability mass function. We
                     // will select the individual chromosome corresponding
                     // to that point. The result of this is that chromosomes
                     // with higher fitness have a greater chance of being
-                    // picked, since they occupy a larger proportion of the
-                    // cumulative probability distribution.
+                    // picked, since they occupy a larger proportion of the PMF.
                     index = pmf.indexFor(randomFraction());
                     attempts++;
                 } while (selected[index]);  // Keep trying 'til we get a new one
 
                 // Mark this one as 'kept'
-                std::cerr << "\tNon-elite:\t" << index << "\tfitness("
-                        << population[index].fitness() << ")\n";
+                INCA_DEBUG("\tNon-elite:\t" << index << "\tfitness("
+                           << pmf.element(index) << ")")
                 selected[index] = true;
                 numberSelected++;
             }
-            std::cerr << "Selecting non-elites took " << attempts << " attempts\n";
+            INCA_DEBUG("Selecting non-elites took " << attempts << " attempts");
 
             // OK. We know which ones to keep. Let's kill off the rest.
             for (int i = 0; i < populationSize(); ++i)
                 if (! selected[i]) {
-                    std::cerr << "'Reeducating' chromosome " << i << "\n";
+                    INCA_DEBUG("'Reeducating' chromosome " << i);
                     kill(i);
                 }
 
         } else {
-            std::cerr << "You asked me to select the entire population?? "
-                        "Well, ok...it's your program...\n";
+            INCA_DEBUG("You asked me to select the entire population?? "
+                       "Well, ok...it's your program...")
         }
     }
 
@@ -601,9 +651,14 @@ public:
      * This may be overridden in a subclass.
      */
     virtual void initialize(Chromosome & c) {
-        PMF & pmf = initializationOperatorPMF();
-        IndexType opIndex = pmf.indexFor(randomFraction());
-        initializationOperator(opIndex)(c);
+        if (initializationOperatorCount() > 0) {
+            const PMF & pmf = initializationOperatorPMF(c);
+            IndexType opIndex = pmf.indexFor(randomFraction());
+            initializationOperator(opIndex)(c);
+        } else {
+            INCA_WARNING(typeid(this).name() << "::mutate(...) called, "
+                         "but no initialization operators have been added")
+        }
     }
 
     /**
@@ -614,9 +669,14 @@ public:
      * This may be overridden in a subclass.
      */
     virtual void cross(Chromosome & c1, Chromosome & c2) {
-        PMF & pmf = crossoverOperatorPMF();
-        IndexType opIndex = pmf.indexFor(randomFraction());
-        crossoverOperator(opIndex)(c1, c2);
+        if (crossoverOperatorCount() > 0) {
+            const PMF & pmf = crossoverOperatorPMF(c1, c2);
+            IndexType opIndex = pmf.indexFor(randomFraction());
+            crossoverOperator(opIndex)(c1, c2);
+        } else {
+            INCA_WARNING(typeid(this).name() << "::cross(...) called, "
+                         "but no crossover operators have been added")
+        }
     }
 
     /**
@@ -627,21 +687,68 @@ public:
      * This may be overridden in a subclass.
      */
     virtual void mutate(Gene & g) {
-        PMF & pmf = mutationOperatorPMF();
-        IndexType opIndex = pmf.indexFor(randomFraction());
-        mutationOperator(opIndex)(g);
+        if (mutationOperatorCount() > 0) {
+            const PMF & pmf = mutationOperatorPMF(g);
+            IndexType opIndex = pmf.indexFor(randomFraction());
+            mutationOperator(opIndex)(g);
+        } else {
+            INCA_WARNING(typeid(this).name() << "::mutate(...) called, "
+                         "but no mutation operators have been added")
+        }
     }
+
+    /**
+     * Calculates the fitness for each chromosome in the population and builds
+     * a probability mass function based on this.
+     */
+    virtual void calculatePopulationFitness() {
+        _fitnessMap.reserve(populationSize());
+        _chromosomeFitnessPMF.clear();
+        _fitnessMap.clear();
+        for (IndexType i = 0; i < populationSize(); ++i) {
+            Scalar fitness = calculateFitness(chromosome(i));
+            _chromosomeFitnessPMF.add(fitness);
+            _fitnessMap.push_back(std::pair<IndexType, Scalar>(i, fitness));
+        }
+    }
+
+    virtual const FitnessMap & sortedFitnessMap() {
+        std::sort(_fitnessMap.begin(), _fitnessMap.end(),
+                  FitnessMapGreaterThan());
+        return _fitnessMap;
+    }
+
+    /**
+     * Calculates and/or returns the probability mass function built from the
+     * (normalized) fitnesses of each living chromosome in the population.
+     * Fitnesses are normalized such that they sum to 1.0.
+     */
+    virtual const PMF & chromosomeFitnessPMF() {
+        return _chromosomeFitnessPMF;
+    }
+
 
     /**
      * Calculates the fitness of a chromosome. The default implementation
      * calculates the fitness as the weighted average of each of the fitness
      * operators, using the weights returned by fitnessOperatorWeights().
      */
-    virtual scalar_t calculateFitness(Chromosome & c) {
-        ScalarVector components;
-        for (IndexType i = 0; i < fitnessOperatorCount(); ++i)
-            components[i] = fitnessOperator(i)(c);
-        return inca::math::dot(components, fitnessOperatorWeights());
+    virtual Scalar calculateFitness(Chromosome & c) {
+        Scalar fitness = 0;
+        INCA_DEBUG("Fitness for chromosome " << indexOf(c))
+        if (fitnessOperatorCount() > 0) {
+            const PMF & weights = fitnessOperatorWeights(c);
+            for (IndexType i = 0; i < fitnessOperatorCount(); ++i)
+                // Only have to do it if it has a non-zero weight
+                if (weights.element(i) != 0) {
+                    fitness += weights.probability(i) * fitnessOperator(i)(c);
+                    INCA_DEBUG("Doing op " << i << " for a cum.fit. of " << fitness)
+                }
+        } else {
+            INCA_WARNING(typeid(this).name() << "::calculateFitness(...) called, "
+                         "but no fitness operators have been added")
+        }
+        return fitness;
     }
 
     /**
@@ -652,13 +759,54 @@ public:
      * crossoverProbability() percent of the living population involved in
      * crossover operations.
      */
-    virtual void shouldCross(Chromosome & c) {
+    virtual bool shouldCross(Chromosome & c) {
         return (randomFraction() <= crossoverProbability() / 2);
     }
 
-    virtual void shouldMutate(Chromosome & c) {
+    virtual bool shouldMutate(Chromosome & c) {
         return (randomFraction() <= mutationProbability());
     }
+
+    virtual bool shouldMutate(Gene & g) {
+        return (randomFraction() <= mutationRatio());
+    }
+
+    virtual Chromosome & selectMate(Chromosome & c) {
+        IndexType index = indexOf(c);
+        IndexType mateIndex;
+        do {
+            mateIndex = randomIndex();
+        } while(mateIndex != index);
+        return chromosome(mateIndex);
+    }
+
+    int evolutionCycles() const    { return _evolutionCycles; }
+    void setEvolutionCycles(int c) { _evolutionCycles = c; }
+
+    Scalar selectionRatio() const    { return _selectionRatio; }
+    void setSelectionRatio(Scalar r) { _selectionRatio = r; }
+    Scalar elitismRatio() const    { return _elitismRatio; }
+    void setElitismRatio(Scalar r) { _elitismRatio = r; }
+    Scalar crossoverProbability() const    { return _crossoverProbability; }
+    void setCrossoverProbability(Scalar p) { _crossoverProbability = p; }
+    Scalar mutationProbability() const    { return _mutationProbability; }
+    void setMutationProbability(Scalar p) { _mutationProbability = p; }
+    Scalar crossoverRatio() const    { return _crossoverRatio; }
+    void setCrossoverRatio(Scalar r) { _crossoverRatio = r; }
+    Scalar mutationRatio() const    { return _mutationRatio; }
+    void setMutationRatio(Scalar r) { _mutationRatio = r; }
+
+protected:
+    int _evolutionCycles,   // How many iterations do we run?
+        _currentCycle;      // Which one are we on right now?
+    Scalar  _selectionRatio,        // % population to keep alive
+            _elitismRatio,          // % "best" of population to keep alive
+            _crossoverProbability,  // Odds of cross-breeding a chromosome
+            _mutationProbability,   // Odds of mutating a chromosome
+            _crossoverRatio,        // % of chromosome to cross
+            _mutationRatio;         // % of chromosome to mutate
+    PMF _chromosomeFitnessPMF;
+    FitnessMap _fitnessMap;
 };
 
 #endif

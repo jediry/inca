@@ -714,8 +714,15 @@ public:
     /**
      * Starts the timer running. This function is equivalent to
      * \c setRunning(true).
+     *
+     * If \c reset is \c true (not the default) then it calls \c reset()
+     * before starting.
      */
-    void start() { setRunning(true); }
+    void start(bool reset = false) {
+        if (reset)
+            this->reset();
+        setRunning(true);
+    }
 
     /**
      * Stops (pauses) the timer. This function is equivalent to
