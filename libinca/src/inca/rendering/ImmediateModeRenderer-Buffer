@@ -27,7 +27,7 @@ public:
     typedef _element_t element_t;
 
     // Default constructor
-    Buffer() : renderer(*NULL) { }
+//    Buffer() : renderer(*NULL) { }
 
     // Constructor linking to the parent renderer
     Buffer(RENDERER &r, id_t id);

@@ -25,6 +25,36 @@
 #ifndef INCA_RENDERING_IMMEDIATE_MODE_RENDERER_COMPONENT
 #define INCA_RENDERING_IMMEDIATE_MODE_RENDERER_COMPONENT
 
+    typedef boost::array<CacheEntry<bool>,  APITraits::numBoolProperties>
+        BoolPropertyCache;
+    typedef boost::array<CacheEntry<int>,   APITraits::numIntProperties>
+        IntPropertyCache;
+    typedef boost::array<CacheEntry<float>, APITraits::numFloatProperties>
+        FloatPropertyCache;
+    typedef boost::array<CacheEntry<double>,APITraits::numDoubleProperties>
+        DoublePropertyCache;
+    typedef boost::array<CacheEntry<Color>, APITraits::numColorProperties>
+        ColorPropertyCache;
+
+    // Property caching mechanism
+    template <typename T>
+    class CacheEntry {
+    public:
+        // Constructor
+        CacheEntry(const T & val = T(), bool isValid = false)
+            : value(val), valid(isValid) { }
+
+        T value;    // The cached value
+        bool valid; // Is this cache entry current with the hardware?
+    };
+
+    
+        // Property caches
+    mutable BoolPropertyCache   boolPropertyCache;
+    mutable IntPropertyCache    intPropertyCache;
+    mutable FloatPropertyCache  floatPropertyCache;
+    mutable DoublePropertyCache doublePropertyCache;
+    mutable ColorPropertyCache  colorPropertyCache;
 
 RENDERER_TEMPLATE
 class RENDERER::Component {

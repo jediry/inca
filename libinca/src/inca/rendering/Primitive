@@ -110,7 +110,7 @@ public:
     typedef _tex_coord_t tex_coord_t;
 
     // Constructor & Destructor
-    TexCoordArray(size_t n) : _size(n), _tex_coords(new tex_coord_t[n]) { }
+    TexCoordArray(size_t n) : _size(n), _texCoords(new tex_coord_t[n]) { }
     ~TexCoordArray() { delete [] _texCoords; }
 
     // Access to the contained array
@@ -195,22 +195,22 @@ template <> class inca::rendering::ColorArray<inca::rendering::Omitted>     { pu
 template <> class inca::rendering::EdgeFlagArray<inca::rendering::Omitted>  { public: EdgeFlagArray(size_t) { } };
 
 
-template <typename vertex_t, typename normal_t, typename tex_coord_t,
-          typename color_t, typename edge_flag_t>
-class inca::rendering::Primitive : public VertexArray<vertex_t>,
-                                   public NormalArray<normal_t>,
-                                   public TexCoordArray<tex_coord_t>,
-                                   public ColorArray<color_t>,
-                                   public EdgeFlagArray<edge_flag_t>
+template <typename _vertex_t, typename _normal_t, typename _tex_coord_t,
+          typename _color_t, typename _edge_flag_t>
+class inca::rendering::Primitive : public VertexArray<_vertex_t>,
+                                   public NormalArray<_normal_t>,
+                                   public TexCoordArray<_tex_coord_t>,
+                                   public ColorArray<_color_t>,
+                                   public EdgeFlagArray<_edge_flag_t>
 {
 public:
     // Constructor
     Primitive(PrimitiveType p, size_t vtxCount)
-        : VertexArray<vertex_t>     (vtxCount),
-          NormalArray<normal_t>     (vtxCount),
-          TexCoordArray<tex_coord_t>(vtxCount),
-          ColorArray<color_t>       (vtxCount),
-          EdgeFlagArray<edge_flag_t>(vtxCount),
+        : VertexArray<_vertex_t>     (vtxCount),
+          NormalArray<_normal_t>     (vtxCount),
+          TexCoordArray<_tex_coord_t>(vtxCount),
+          ColorArray<_color_t>       (vtxCount),
+          EdgeFlagArray<_edge_flag_t>(vtxCount),
           _primitiveType(p) { }
 
     // Access to the primitive type for this object
@@ -218,7 +218,7 @@ public:
     void setPrimitiveType(PrimitiveType p) { _primitiveType = p; }
 
     // The number of vertices in this primitive
-    size_t size() const { return VertexArray<vertex_t>::size(); }
+    size_t size() const { return VertexArray<_vertex_t>::size(); }
 
 protected:
     PrimitiveType _primitiveType;   // What sort of primitive is this?

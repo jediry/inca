@@ -20,7 +20,8 @@
 
 
 // Import the raster block definition
-#include <inca/raster/Block>
+#include <inca/math/solid/Block>
+
 
 RENDERER_TEMPLATE
 class RENDERER::Viewport : public RENDERER::Component {
@@ -28,7 +29,7 @@ class RENDERER::Viewport : public RENDERER::Component {
  | Type definitions
  *---------------------------------------------------------------------------*/
 public:
-    typedef raster::Block<int, 2>   Rectangle;
+    typedef inca::math::Block<int, 2>     Rectangle;
 
 
 /*---------------------------------------------------------------------------*

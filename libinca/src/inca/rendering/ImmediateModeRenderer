@@ -44,8 +44,9 @@ namespace inca {
 };
 
 
-// Import superclass definition
+// Import superclass definitions
 #include "Renderer.hpp"
+#include <boost/utility.hpp>
 
 // Import rendering type definitions
 #include "types.hpp"
@@ -53,6 +54,7 @@ namespace inca {
 
 // Import types from other Inca libraries
 #include <inca/math.hpp>
+#include <inca/world.hpp>
 
 
 // Import container definitions
@@ -70,7 +72,8 @@ namespace inca {
 #define RENDERER inca::rendering::ImmediateModeRenderer<APITraits>
 
 
-RENDERER_TEMPLATE class RENDERER {
+RENDERER_TEMPLATE
+class inca::rendering::ImmediateModeRenderer : boost::noncopyable {
 /*---------------------------------------------------------------------------*
  | Type definitions
  *---------------------------------------------------------------------------*/
@@ -88,6 +91,8 @@ public:
 
     // Texture coordinate type definitions
     typedef typename APITraits::tex_coord_t tex_coord_t;
+    typedef typename APITraits::TexCoord    TexCoord;
+    typedef typename APITraits::Normal      Normal;
     
     // Timer type definitions
     typedef typename APITraits::timer_t timer_t;
@@ -100,44 +105,37 @@ public:
     typedef world::Transform Transform;
 
 
+// The following subcomponents are implemented in separate files, for the sake
+// of keeping this code readable, and are included at the end of this file.
 protected:
-    // Inner class that serves as the base class for the other components
-    class Component;
-
+    class Component;        // Base class for subcomponents
 
 public:
-    // The following substructures are implemented in separate files,
-    // for the sake of keeping this code readable, and are included
-    // at the end of this file
+    class Rasterizer;       // The rasterizing engine state
+    class Viewport;         // The active screen-drawing region
+    class MatrixStack;      // A hardware matrix stack
+    class TextureUnit;      // A hardware texture unit
+    class LightingUnit;     // A hardware lighting unit
+    template <typename element_t> class Buffer;     // A framebuffer part
+        typedef Buffer<Color>       ColorBuffer;
+        typedef Buffer<geometry_t>  ScalarBuffer;
+        typedef Buffer<Color>       AccumulationBuffer;
+        typedef Buffer<unsigned>    StencilBuffer;
+    class Statistics;       // Performance statistics
 
-    // Inner class keeping track of the performance of the renderer
-    class Statistics;
+    // We're all buddy-buddy with our sub-objects
+    friend class Component;
+    friend class Rasterizer;
+    friend class Viewport;
+    friend class MatrixStack;
+    friend class TextureUnit;
+    friend class LightingUnit;
+    friend class ColorBuffer;
+    friend class ScalarBuffer;
+    friend class AccumulationBuffer;
+    friend class StencilBuffer;
+    friend class Statistics;
 
-    // Inner class representing a screenspace viewport
-    class Viewport;
-
-    // Inner classes representing graphics hardware resources
-    class MatrixStack;  // A hardware matrix stack
-    class TextureUnit;  // A hardware texture unit
-    class LightingUnit; // A hardware lighting unit
-
-    // Inner classes representing hardware raster buffers
-    template <typename element_t> class Buffer;
-    typedef Buffer<Color>       ColorBuffer;
-    typedef Buffer<geometry_t>  ScalarBuffer;
-    typedef Buffer<Color>       AccumulationBuffer;
-
-    // Property caching mechanism
-    template <typename T>
-    class CacheEntry {
-    public:
-        // Constructor
-        CacheEntry(const T & val = T(), bool isValid = false)
-            : value(val), valid(isValid) { }
-
-        T value;    // The cached value
-        bool valid; // Is this cache entry current with the hardware?
-    };
 
     // Container type definitions
     typedef std::vector<MatrixStack>    MatrixStackList;
@@ -146,27 +144,6 @@ public:
     typedef std::vector<ColorBuffer>    ColorBufferList;
     typedef std::vector<ScalarBuffer>   ScalarBufferList;
     typedef std::vector<Statistics>     StatisticsList;
-    typedef boost::array<CacheEntry<bool>,  APITraits::numBoolProperties>
-        BoolPropertyCache;
-    typedef boost::array<CacheEntry<int>,   APITraits::numIntProperties>
-        IntPropertyCache;
-    typedef boost::array<CacheEntry<float>, APITraits::numFloatProperties>
-        FloatPropertyCache;
-    typedef boost::array<CacheEntry<double>,APITraits::numDoubleProperties>
-        DoublePropertyCache;
-    typedef boost::array<CacheEntry<Color>, APITraits::numColorProperties>
-        ColorPropertyCache;
-
-    // We're all buddy-buddy with our sub-objects
-    friend Component;
-    friend Statistics;
-    friend Viewport;
-    friend MatrixStack;
-    friend TextureUnit;
-    friend LightingUnit;
-    friend ColorBuffer;
-    friend ScalarBuffer;
-    friend AccumulationBuffer;
 
 
 /*---------------------------------------------------------------------------*
@@ -181,6 +158,9 @@ public:
  | Renderer sub-objects
  *---------------------------------------------------------------------------*/
 public:
+    // Access to the rasterizer state
+    Rasterizer & rasterizer();
+
     // Access to the drawable screen viewport
     Viewport & viewport();
 
@@ -195,6 +175,7 @@ public:
     ColorBuffer & stencilBuffer();
     ScalarBuffer & depthBuffer();
     AccumulationBuffer & accumulationBuffer();
+    StencilBuffer & stencilBuffer();
 
     // Performance & statistics
     Statistics & frameStatistics();
@@ -202,20 +183,14 @@ public:
 
 protected:
     // Renderer sub-objects
-    MatrixStackList     _matrixStacks;
+    Rasterizer          _rasterizer;
     Viewport            _viewport;
+    MatrixStackList     _matrixStacks;
     TextureUnitList     _textureUnits;
     LightingUnitList    _lightingUnits;
     ColorBufferList     _colorBuffers;
     ScalarBufferList    _scalarBuffers;
     StatisticsList      _statistics;
-
-    // Property caches
-    mutable BoolPropertyCache   boolPropertyCache;
-    mutable IntPropertyCache    intPropertyCache;
-    mutable FloatPropertyCache  floatPropertyCache;
-    mutable DoublePropertyCache doublePropertyCache;
-    mutable ColorPropertyCache  colorPropertyCache;
 
 
 /*---------------------------------------------------------------------------*
@@ -254,197 +229,25 @@ public:
 
 
 /*---------------------------------------------------------------------------*
- | Rendering-state control functions
- *---------------------------------------------------------------------------*/
-public:
-    // Background color
-    Color backgroundColor() const;
-    void setBackgroundColor(const Color &c);
-
-    // Fragment depth-test
-    bool isDepthBufferingEnabled() const;
-    void enableDepthBuffering(bool enabled);
-
-    float pointDiameter() const;
-    void setPointDiameter(float size);
-
-    float lineWidth() const;
-    void setLineWidth(float width);
-
-    bool isPointSmoothingEnabled() const;
-    void enablePointSmoothing(bool enabled);
-
-    bool isLineSmoothingEnabled() const;
-    void enableLineSmoothing(bool enabled);
-
-    bool isBlendingEnabled() const;
-    void enableBlending(bool enabled);
-
-    bool isLightingEnabled() const;
-    void enabledLighting(bool enabled);
-
-    void setShadingMode(ShadingMode mode);
-
-
-/*---------------------------------------------------------------------------*
- | Primitive rendering functions
- *---------------------------------------------------------------------------*/
-public:
-    // Start/end rendering a geometric primitive
-    void beginPrimitive(PrimitiveType type);
-    void endPrimitive();
-
-    // Create a vertex at a point
-    template <typename scalar, size_t dim>
-    void vertexAt(const math::Point<scalar, dim> &p);
-
-    // Create a vertex using the data in the currently enabled arrays
-    void vertexAt(index_t index);
-
-    // Current drawing color
-    template <typename scalar, class colorspace>
-    void setColor(const math::Color<scalar, colorspace> &c);
-
-    // Current vertex normal
-    template <typename scalar, size_t dim>
-    void setNormal(const math::Vector<scalar, dim> &n);
-
-    // Current texture coordinates
-    template <typename scalar, size_t dim>
-    void setTexCoords(const math::Point<scalar, dim> &t);
-
-    // Current edge-of-primitive flag
-    void setEdgeFlag(bool isEdge);
-
-
-    // Vertex array data
-    template <typename vertex_t>
-    void setVertexArray(const VertexArray<vertex_t> &va);
-    template <typename vertex_t>
-    void setVertexArray(vertex_t const *va, size_t stride = 0);
-
-    // Normal array data
-    template <typename normal_t>
-    void setNormalArray(const NormalArray<normal_t> &na);
-    template <typename normal_t>
-    void setNormalArray(normal_t const *na, size_t stride = 0);
-
-    // Texture coordinate array data
-    template <typename tex_coord_t>
-    void setTexCoordArray(const TexCoordArray<tex_coord_t> &tca);
-    template <typename tex_coord_t>
-    void setTexCoordArray(tex_coord_t const *tca, size_t stride = 0);
-
-    // Color array data
-    template <typename color_t>
-    void setColorArray(const ColorArray<color_t> &ca);
-    template <typename color_t>
-    void setColorArray(color_t const *ca, size_t stride = 0);
-
-    // Edge flag array data
-    template <typename edge_flag_t>
-    void setEdgeFlagArray(const EdgeFlagArray<edge_flag_t> &efa);
-    void setEdgeFlagArray(bool const *efa, size_t stride = 0);
-
-    // Render a pre-built, batch primitive
-    template <typename vertex_t, typename normal_t, typename tex_coord_t,
-              typename color_t, typename edge_flag_t>
-    void renderPrimitive(const Primitive<vertex_t, normal_t, tex_coord_t,
-                                         color_t, edge_flag_t> &p) {
-        // Set up the vertex arrays
-        setVertexArray(p);
-        setNormalArray(p);
-        setTexCoordArray(p);
-        setColorArray(p);
-        setEdgeFlagArray(p);
-
-        // Render the primitive
-        // FIXME: Implement
-    }
-
-
-/*---------------------------------------------------------------------------*
  | Selection functions
  *---------------------------------------------------------------------------*/
 public:
     void setSelectionID(id_t id) const;
     void pushSelectionID(id_t id) const;
     void popSelectionID() const;
-    void getSelectedIDs(world::SelectionSet &s) const;
-
-#if 0
-    // Start/end the rendering of a frame
-    void beginFrame() {
-        frameStatistics.reset();
-        frameStatistics.beginFrame();
-        cumulativeStatistics.beginFrame();
-    }
-    void endFrame() {
-        frameStatistics.endFrame();
-        cumulativeStatistics.endFrame();
-    }
-
-    void beginRenderPass(RenderPass pass) {
-        // Begin timing this render pass
-        frameStatistics.beginRenderPass(pass);
-        cumulativeStatistics.beginRenderPass(pass);
-
-        switch (pass) {
-        case Opacity:
-            api::set_fill_mode(Filled);         // Draw filled polyons
-            api::enable_alpha_blending(false);  // No transparency
-            api::lock_z_buffer(false);          // Normal Z-buffer use
-            api::enable_culling(true);          // Cull back-faces
-            break;
-        case Wireframe:
-            api::set_fill_mode(Outlined);       // Draw wireframe
-            api::enable_alpha_blending(false);  // No transparency
-            api::lock_z_buffer(false);          // Normal Z-buffer use
-            api::enable_culling(false);         // Don't cull faces
-            break;
-        case Transparency:
-            api::set_fill_mode(Filled);         // Draw filled polygons
-            api::enable_alpha_blending(true);   // Enable transparency
-            api::lock_z_buffer(true);           // Don't update Z-buffer
-            api::enable_culling(false);         // Don't cull faces
-            break;
-        case Selection:
-            api::enable_selection_mode(true);   // Enter selection mode
-            api::clear_selection_id_stack();    // Start from scratch
-            break;
-        default:
-            logger << "IMR::initializeRenderPass(" << pass << "): not supported";
-            logger.warning();
-        }
-        // Keep track of our state
-        _currentRenderPass = pass;
-    }
-
-    void endRenderPass() {
-        switch (_currentRenderPass) {
-        case Selection:
-            api::enable_selection_mode(false);  // Finish out the selection
-            break;
-        }
-        frameStatistics.endRenderPass(_currentRenderPass);
-        cumulativeStatistics.endRenderPass(_currentRenderPass);
-    }
-
-
-protected:
-    RenderPass    _currentRenderPass;
-    PrimitiveType _currentPrimitiveType;
-#endif
+//    void getSelectedIDs(world::SelectionSet &s) const;
 };
 
 
 // Import implementation of renderer sub-objects
-#include "ImmediateModeRenderer-Statistics"
+#include "ImmediateModeRenderer-Rasterizer"
 #include "ImmediateModeRenderer-Viewport"
 #include "ImmediateModeRenderer-MatrixStack"
 #include "ImmediateModeRenderer-LightingUnit"
 #include "ImmediateModeRenderer-TextureUnit"
 #include "ImmediateModeRenderer-Buffer"
+#include "ImmediateModeRenderer-Statistics"
+
 
 // Clean up the preprocessor namespace
 #undef RENDERER_TEMPLATE
