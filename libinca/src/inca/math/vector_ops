@@ -16,19 +16,30 @@
  *      implemented within the template classes are here instead.
  *
  *      Because there is so much commonality between the implementations
- *      of the operators and functions defined herein, the C preprocessor
- *      can be used, in many cases, to create the function in a single line,
- *      decreasing the size of this file by a factor of 1/2 or so.
+ *      of the operators and functions defined herein, and to enhance
+ *      readability of this file, extensive use of the C preprocessor has been
+ *      made. This has allowed many functions to be implemented in a single
+ *      line, significantly cutting down on the size of this file.
+ *
+ *          S               scalar
+ *          S_ARG           scalar function argument
+ *          P(0)            Point of dimension D
+ *          V(0)            Vector of dimension D
+ *          Q               Quaternion
+ *          M(0,1,0)    Matrix of dimensions D1 x D2, with storage order O
  *
  * Doc me!! XXX
  *      How the macros work (sob!)
  */
 
-#ifndef INCA_MATH_VECTOR_OPERATIONS
-#define INCA_MATH_VECTOR_OPERATIONS
+#ifndef INCA_MATH_V_OPERATIONS
+#define INCA_MATH_V_OPERATIONS
 
 // Import Boost preprocessor metaprogramming library
 #include <boost/preprocessor/punctuation/comma_if.hpp>
+
+// Import Inca's template metaprogramming utilities
+#include <inca/util/metaprogramming>
 
 // Import the definitions of the various vector-type template classes
 #include "vector_types"
@@ -40,101 +51,91 @@
 // These preprocessor macros are only used locally within this file, and
 // help make all the template crap readable. They should all be #undef'd at
 // the end of this file.
-#define TEMPLATE(DIM)   template <typename scalar BOOST_PP_COMMA_IF(DIM) \
-                                  BOOST_PP_ENUM_PARAMS(DIM, size_t dim)>
-#define DIM         dim0    // Useful alias for 1D containers
-#define DIM1        dim0    // These two are useful for
-#define DIM2        dim1    // referring to Matrix dimensions
+#define TEMPLATE(DIMS, MTXS)                                                \
+    template <typename scalar                                               \
+              BOOST_PP_COMMA_IF(DIMS) BOOST_PP_ENUM_PARAMS(DIMS, size_t dim)\
+              BOOST_PP_COMMA_IF(MTXS) BOOST_PP_ENUM_PARAMS(MTXS, bool order)>
 
-#define SCALAR      scalar
-#define SCALAR_ARG  typename scalar_traits<scalar>::arg_type
-#define SCALAR_LIST(D1) ScalarList<scalar, D1>  // These macros are all
-#define POINT(D1)       Point<scalar, D1>       // convenient shorthand for
-#define VECTOR(D1)      Vector<scalar, D1>      // our templated vector
-#define QUATERNION      Quaternion<scalar>      // type thingies
-#define MATRIX(D1, D2)  Matrix<scalar, D1, D2>
+#define D       dim0    // Useful alias for 1D containers
+#define D1      dim0    // These are useful for
+#define D2      dim1    // referring to Matrix dimensions
+#define D3      dim2
+#define O1      order0  // These are useful for referring to Matrix
+#define O2      order1  // storage orders (row-major, col-major)
 
-#define LIST(TYPE, N_DIMS) TYPE<scalar BOOST_PP_COMMA_IF(N_DIMS)        \
-                             BOOST_PP_ENUM_PARAMS(N_DIMS, dim)>
 
-#define LIST_OSTREAM_OP(RHS, DIM)                                       \
-    TEMPLATE(DIM)                                                       \
-    ostream & operator<<(ostream &o, const LIST(RHS, DIM) & rhs) {      \
-        return o << (std::string) rhs;                                  \
+#define S           scalar
+#define S_ARG       typename scalar_traits<scalar>::arg_type
+#define L(D)        ScalarList<scalar, dim ## D>// These macros are all
+#define P(D)        Point<scalar,  dim ## D>    // convenient shorthand for
+#define V(D)        Vector<scalar, dim ## D>    // our templated list-type
+#define Q           Quaternion<scalar>          // thingies
+#define M(D1,D2,O)  Matrix<scalar, dim ## D1, dim ## D2, order ## O>
+
+#define POINT(D)    Point<scalar, D>
+
+#define OSTREAM_OP_L(RHS)                                                   \
+    ostream & operator<<(ostream &o, const RHS & rhs) {                     \
+        return o << string(rhs);                                            \
     }
 
-#define LIST_ASSIGN_LIST(LHS, OP, RHS, DIM)                             \
-    TEMPLATE(DIM)                                                       \
-    LIST(LHS, DIM) & operator OP (LIST(LHS, DIM) & lhs,                 \
-                                  const LIST(RHS, DIM) & rhs) {         \
-        for (index_t i = 0; i < lhs.size; i++)                          \
-            lhs[i] OP rhs[i];                                           \
-        return lhs;                                                     \
+#define L_ASSIGN_L(LHS, OP, RHS)                                            \
+    LHS & operator OP (LHS & lhs, const RHS & rhs) {                        \
+        for (index_t i = 0; i < lhs.size; i++)                              \
+            lhs[i] OP rhs[i];                                               \
+        return lhs;                                                         \
     }
 
-#define LIST_ASSIGN_SCALAR(LHS, OP, DIM)                                \
-    TEMPLATE(DIM)                                                       \
-    LIST(LHS, DIM) & operator OP (LIST(LHS, DIM) & lhs,                 \
-                                  SCALAR_ARG rhs) {                     \
-        for (index_t i = 0; i < lhs.size; i++)                          \
-            lhs[i] OP rhs;                                              \
-        return lhs;                                                     \
+#define L_ASSIGN_S(LHS, OP, RHS_DUMMY)                                      \
+    LHS & operator OP (LHS & lhs, S_ARG rhs) {                              \
+        for (index_t i = 0; i < lhs.size; i++)                              \
+            lhs[i] OP rhs;                                                  \
+        return lhs;                                                         \
     }
 
-#define UOP_LIST(RET, OP, RHS, DIM)                                     \
-    TEMPLATE(DIM)                                                       \
-    LIST(RET, DIM) operator OP (const LIST(RHS, DIM) & rhs) {           \
-        LIST(RET, DIM) result;                                          \
-        for (index_t i = 0; i < rhs.size; i++)                          \
-            result[i] = OP rhs[i];                                      \
-        return result;                                                  \
+#define OP_L(RET, OP, RHS)                                                  \
+    RET operator OP (const RHS & rhs) {                                     \
+        RET result;                                                         \
+        for (index_t i = 0; i < rhs.size; i++)                              \
+            result[i] = OP rhs[i];                                          \
+        return result;                                                      \
     }
 
-#define LIST_BOP_LIST(RET, LHS, OP, RHS, DIM)                           \
-    TEMPLATE(DIM)                                                       \
-    LIST(RET, DIM) operator OP (const LIST(LHS, DIM) & lhs,             \
-                                const LIST(RHS, DIM) & rhs) {           \
-        LIST(RET, DIM) result;                                          \
-        for (index_t i = 0; i < lhs.size; i++)                          \
-            result[i] = lhs[i] OP rhs[i];                               \
-        return result;                                                  \
+#define L_OP_L(RET, LHS, OP, RHS)                                           \
+    RET operator OP (const LHS & lhs, const RHS & rhs) {                    \
+        RET result;                                                         \
+        for (index_t i = 0; i < lhs.size; i++)                              \
+            result[i] = lhs[i] OP rhs[i];                                   \
+        return result;                                                      \
     }
 
-#define LIST_BOP_SCALAR(RET, LHS, OP, DIM)                              \
-    TEMPLATE(DIM)                                                       \
-    LIST(RET, DIM) operator OP (const LIST(LHS, DIM) & lhs,             \
-                                SCALAR_ARG rhs) {                       \
-        LIST(RET, DIM) result;                                          \
-        for (index_t i = 0; i < lhs.size; i++)                          \
-            result[i] = lhs[i] OP rhs;                                  \
-        return result;                                                  \
+#define L_OP_S(RET, LHS, OP, RHS_DUMMY)                                     \
+    RET operator OP (const LHS & lhs, S_ARG rhs) {                          \
+        RET result;                                                         \
+        for (index_t i = 0; i < lhs.size; i++)                              \
+            result[i] = lhs[i] OP rhs;                                      \
+        return result;                                                      \
     }
 
-#define SCALAR_BOP_LIST(RET, OP, RHS, DIM)                              \
-    TEMPLATE(DIM)                                                       \
-    LIST(RET, DIM) operator OP (SCALAR_ARG lhs,                         \
-                                const LIST(RHS, DIM) & rhs) {           \
-        LIST(RET, DIM) result;                                          \
-        for (index_t i = 0; i < rhs.size; i++)                          \
-            result[i] = lhs OP rhs[i];                                  \
-        return result;                                                  \
+#define S_OP_L(RET, LHS_DUMMY, OP, RHS)                                     \
+    RET operator OP (S_ARG lhs, const RHS & rhs) {                          \
+        RET result;                                                         \
+        for (index_t i = 0; i < rhs.size; i++)                              \
+            result[i] = lhs OP rhs[i];                                      \
+        return result;                                                      \
     }
 
-#define LIST_EQUALS_LIST(LHS, RHS, DIM)                                 \
-    TEMPLATE(DIM)                                                       \
-    bool operator == (const LIST(LHS, DIM) & lhs,                       \
-                      const LIST(RHS, DIM) & rhs) {                     \
-        for (index_t i = 0; i < lhs.size; i++)                          \
-            if (! effectivelyEqual(lhs[i], rhs[i]))                     \
-                return false;                                           \
-        return true;                                                    \
+#define L_EQ_L(LHS, RHS)                                                    \
+    bool operator == (const LHS & lhs, const RHS & rhs) {                   \
+        for (index_t i = 0; i < lhs.size; i++)                              \
+            if (! effectivelyEqual(lhs[i], rhs[i]))                         \
+                return false;                                               \
+        return true;                                                        \
     }
 
-#define LIST_NOT_EQUALS_LIST(LHS, RHS, DIM)                             \
-    TEMPLATE(DIM)                                                       \
-    bool operator != (const LIST(LHS, DIM) & lhs,                       \
-                      const LIST(RHS, DIM) & rhs) {                     \
-        return ! (lhs == rhs);                                          \
+#define L_NE_L(LHS, RHS)                                                    \
+    bool operator != (const LHS & lhs, const RHS & rhs) {                   \
+        return ! (lhs == rhs);                                              \
     }
 
 
@@ -145,91 +146,100 @@ namespace inca {
      | iostream interface operators
      *-----------------------------------------------------------------------*/
         // std::ostream "<<" operators
-        LIST_OSTREAM_OP(Point, 1);                      // o << P
-        LIST_OSTREAM_OP(Vector, 1);                     // o << V
-        LIST_OSTREAM_OP(Matrix, 2);                     // o << M
+        TEMPLATE(1, 0) OSTREAM_OP_L( P(0) );        // o << P
+        TEMPLATE(1, 0) OSTREAM_OP_L( V(0) );        // o << V
+        TEMPLATE(0, 0) OSTREAM_OP_L( Q );           // o << Q
+        TEMPLATE(2, 1) OSTREAM_OP_L( M(0,1,0) );    // o << M
 
 
     /*-----------------------------------------------------------------------*
      | Comparison operators
      *-----------------------------------------------------------------------*/
-        LIST_EQUALS_LIST(Point, Point, 1);              // P == P ?
-        LIST_NOT_EQUALS_LIST(Point, Point, 1);          // P != P ?
-        LIST_EQUALS_LIST(Vector, Vector, 1);            // V == V ?
-        LIST_NOT_EQUALS_LIST(Vector, Vector, 1);        // V != V ?
-        LIST_EQUALS_LIST(Quaternion, Quaternion, 0);    // Q == Q ?
-        LIST_NOT_EQUALS_LIST(Quaternion, Quaternion, 0);// Q != Q ?
-        LIST_EQUALS_LIST(Matrix, Matrix, 2);            // M == M ?
-        LIST_NOT_EQUALS_LIST(Matrix, Matrix, 2);        // M != M ?
+        TEMPLATE(1, 0) L_EQ_L( P(0), P(0) );                    // P == P ?
+        TEMPLATE(1, 0) L_NE_L( P(0), P(0) );                    // P != P ?
+        TEMPLATE(1, 0) L_EQ_L( V(0), V(0) );                    // V == V ?
+        TEMPLATE(1, 0) L_NE_L( V(0), V(0) );                    // V != V ?
+        TEMPLATE(0, 0) L_EQ_L( Q, Q );                          // Q == Q ?
+        TEMPLATE(0, 0) L_NE_L( Q, Q );                          // Q != Q ?
+        TEMPLATE(2, 1) L_EQ_L( M(0,1,0), M(0,1,0) );            // M == M ?
+        TEMPLATE(2, 1) L_NE_L( M(0,1,0), M(0,1,0) );            // M != M ?
 
 
     /*-----------------------------------------------------------------------*
      | Extended assignment operators
      *-----------------------------------------------------------------------*/
         // Assignment operators for Point
-        LIST_ASSIGN_LIST(Point, +=, Point, 1);          // P += P
-        LIST_ASSIGN_LIST(Point, -=, Point, 1);          // P -= P
-        LIST_ASSIGN_LIST(Point, +=, Vector, 1);         // P += V
-        LIST_ASSIGN_LIST(Point, -=, Vector, 1);         // P -= V
-        LIST_ASSIGN_SCALAR(Point, *=, 1);               // P *= s
-        LIST_ASSIGN_SCALAR(Point, /=, 1);               // P /= s
+        TEMPLATE(1,0) L_ASSIGN_L( P(0), +=, P(0) );             // P += P
+        TEMPLATE(1,0) L_ASSIGN_L( P(0), -=, P(0) );             // P -= P
+        TEMPLATE(1,0) L_ASSIGN_L( P(0), +=, V(0) );             // P += V
+        TEMPLATE(1,0) L_ASSIGN_L( P(0), -=, V(0) );             // P -= V
+        TEMPLATE(1,0) L_ASSIGN_S( P(0), *=, S    );             // P *= S
+        TEMPLATE(1,0) L_ASSIGN_S( P(0), /=, S    );             // P /= S
 
-        // Assignment operators for Vector
-        LIST_ASSIGN_LIST(Vector, +=, Point, 1);         // V += P
-        LIST_ASSIGN_LIST(Vector, -=, Point, 1);         // V -= P
-        LIST_ASSIGN_LIST(Vector, +=, Vector, 1);        // V += V
-        LIST_ASSIGN_LIST(Vector, -=, Vector, 1);        // V -= V
-        LIST_ASSIGN_SCALAR(Vector, *=, 1);              // V *= s
-        LIST_ASSIGN_SCALAR(Vector, /=, 1);              // V /= s
+        // Assignment operators for V(0)
+        TEMPLATE(1,0) L_ASSIGN_L( V(0), +=, P(0) );             // V += P
+        TEMPLATE(1,0) L_ASSIGN_L( V(0), -=, P(0) );             // V -= P
+        TEMPLATE(1,0) L_ASSIGN_L( V(0), +=, V(0) );             // V += V
+        TEMPLATE(1,0) L_ASSIGN_L( V(0), -=, V(0) );             // V -= V
+        TEMPLATE(1,0) L_ASSIGN_S( V(0), *=, S    );             // V *= S
+        TEMPLATE(1,0) L_ASSIGN_S( V(0), /=, S    );             // V /= S
 
         // Assignment operators for Quaternion
 
-        // Assignment operators for Matrix
-        LIST_ASSIGN_LIST(Matrix, +=, Matrix, 2);        // M += M
-        LIST_ASSIGN_LIST(Matrix, -=, Matrix, 2);        // M -= M
-        LIST_ASSIGN_SCALAR(Matrix, *=, 2);              // M *= s
-        LIST_ASSIGN_SCALAR(Matrix, /=, 2);              // M /= s
+        // Assignment operators for M(0,1,0)
+        TEMPLATE(2,1) L_ASSIGN_L( M(0,1,0), +=, M(0,1,0) );     // M += M
+        TEMPLATE(2,1) L_ASSIGN_L( M(0,1,0), -=, M(0,1,0) );     // M -= M
+        TEMPLATE(2,1) L_ASSIGN_S( M(0,1,0), *=, S        );     // M *= S
+        TEMPLATE(2,1) L_ASSIGN_S( M(0,1,0), /=, S        );     // M /= S
 
 
     /*-----------------------------------------------------------------------*
      | Arithmetic operators
      *-----------------------------------------------------------------------*/
-        // Unary operators for negating Points, Vector, Matrices
-        UOP_LIST(Point, -, Point, 1);                   // P = -P
-        UOP_LIST(Vector, -, Vector, 1);                 // V = -V
-        UOP_LIST(Matrix, -, Matrix, 2);                 // M = -M
+        // Unary operators for element-wise negation of list types
+        TEMPLATE(1,0) OP_L( P(0),     -, P(0) );                // P = -P
+        TEMPLATE(1,0) OP_L( V(0),     -, V(0) );                // V = -V
+        TEMPLATE(0,0) OP_L( Q,        -, Q );                   // Q = -Q
+        TEMPLATE(2,1) OP_L( M(0,1,0), -, M(0,1,0) );            // M = -M
 
-        // Binary operators for element-wise operations on Points, Vectors, Matrices
-        LIST_BOP_LIST(Point, Point, +, Point, 1);       // P = P + P
-        LIST_BOP_LIST(Vector, Point, -, Point, 1);      // V = P - P
-        LIST_BOP_LIST(Point, Point, *, Point, 1);       // P = P * P
-        LIST_BOP_LIST(Point, Point, /, Point, 1);       // P = P / P
-        LIST_BOP_LIST(Point, Point, +, Vector, 1);      // P = P + V
-        LIST_BOP_LIST(Point, Point, -, Vector, 1);      // P = P - V
-        LIST_BOP_LIST(Vector, Vector, +, Vector, 1);    // V = V + V
-        LIST_BOP_LIST(Vector, Vector, -, Vector, 1);    // V = V - V
-        LIST_BOP_LIST(Vector, Vector, *, Vector, 1);    // V = V * V
-        LIST_BOP_LIST(Vector, Vector, /, Vector, 1);    // V = V / V
-        LIST_BOP_LIST(Point, Vector, +, Point, 1);      // P = V + P
-        LIST_BOP_LIST(Point, Vector, -, Point, 1);      // P = V - P
-        LIST_BOP_LIST(Matrix, Matrix, +, Matrix, 2);    // M = M + M
-        LIST_BOP_LIST(Matrix, Matrix, -, Matrix, 2);    // M = M - M
-//        LIST_BOP_LIST(Matrix, Matrix, *, Matrix, 2);    // M = M * M
-//        LIST_BOP_LIST(Matrix, Matrix, /, Matrix, 2);    // M = M / M
+        // Binary operators for element-wise operations between list types
+        TEMPLATE(1,0) L_OP_L( P(0), P(0), +, P(0) );            // P = P + P
+        TEMPLATE(1,0) L_OP_L( V(0), P(0), -, P(0) );            // V = P - P
+        TEMPLATE(1,0) L_OP_L( P(0), P(0), *, P(0) );            // P = P * P
+        TEMPLATE(1,0) L_OP_L( P(0), P(0), /, P(0) );            // P = P / P
+        TEMPLATE(1,0) L_OP_L( P(0), P(0), +, V(0) );            // P = P + V
+        TEMPLATE(1,0) L_OP_L( P(0), P(0), -, V(0) );            // P = P - V
+        TEMPLATE(1,0) L_OP_L( V(0), V(0), +, V(0) );            // V = V + V
+        TEMPLATE(1,0) L_OP_L( V(0), V(0), -, V(0) );            // V = V - V
+        TEMPLATE(1,0) L_OP_L( V(0), V(0), *, V(0) );            // V = V * V
+        TEMPLATE(1,0) L_OP_L( V(0), V(0), /, V(0) );            // V = V / V
+        TEMPLATE(1,0) L_OP_L( P(0), V(0), +, P(0) );            // P = V + P
+        TEMPLATE(1,0) L_OP_L( P(0), V(0), -, P(0) );            // P = V - P
+        TEMPLATE(0,0) L_OP_L( Q, Q, +, Q );                     // Q = Q + Q
+        TEMPLATE(0,0) L_OP_L( Q, Q, -, Q );                     // Q = Q - Q
 
-        // Binary operators for scaling Points, Vectors, Matrices
-        LIST_BOP_SCALAR(Point, Point, *, 1);            // P = P * s
-        LIST_BOP_SCALAR(Point, Point, /, 1);            // P = P / s
-        SCALAR_BOP_LIST(Point, *, Point, 1);            // P = s * P
-        SCALAR_BOP_LIST(Point, /, Point, 1);            // P = s / P
-        LIST_BOP_SCALAR(Vector, Vector, *, 1);          // V = V * s
-        LIST_BOP_SCALAR(Vector, Vector, /, 1);          // V = V / s
-        SCALAR_BOP_LIST(Vector, *, Vector, 1);          // V = s * V
-        SCALAR_BOP_LIST(Vector, /, Vector, 1);          // V = s / V
-        LIST_BOP_SCALAR(Matrix, Matrix, *, 2);          // M = M * s
-        LIST_BOP_SCALAR(Matrix, Matrix, /, 2);          // M = M / s
-        SCALAR_BOP_LIST(Matrix, *, Matrix, 2);          // M = s * M
-        SCALAR_BOP_LIST(Matrix, /, Matrix, 2);          // M = s / M
+        TEMPLATE(2,1) L_OP_L( M(1,2,0), M(0,1,0), +, M(0,1,0) );// M = M + M
+        TEMPLATE(2,1) L_OP_L( M(0,1,0), M(0,1,0), -, M(0,1,0) );// M = M - M
+//       TEMPLATE(2,1) L_OP_L( M(0,1,0), M(0,1,0), *, M(0,1,0) );    // M = M * M
+//       TEMPLATE(2,1) L_OP_L( M(0,1,0), M(0,1,0), /, M(0,1,0) );    // M = M / M
+
+        // Binary operators for scaling list types
+        TEMPLATE(1,0) L_OP_S( P(0),     P(0),     *, S        );// P = P * S
+        TEMPLATE(1,0) L_OP_S( P(0),     P(0),     /, S        );// P = P / S
+        TEMPLATE(1,0) S_OP_L( P(0),     S,        *, P(0)     );// P = S * P
+        TEMPLATE(1,0) S_OP_L( P(0),     S,        /, P(0)     );// P = S / P
+        TEMPLATE(1,0) L_OP_S( V(0),     V(0),     *, S        );// V = V * S
+        TEMPLATE(1,0) L_OP_S( V(0),     V(0),     /, S        );// V = V / S
+        TEMPLATE(1,0) S_OP_L( V(0),     S,        *, V(0)     );// V = S * V
+        TEMPLATE(1,0) S_OP_L( V(0),     S,        /, V(0)     );// V = S / V
+        TEMPLATE(0,0) L_OP_S( Q,        Q,        *, S        );// Q = Q * S
+        TEMPLATE(0,0) L_OP_S( Q,        Q,        /, S        );// Q = Q / S
+        TEMPLATE(0,0) S_OP_L( Q,        S,        *, Q        );// Q = S * Q
+        TEMPLATE(0,0) S_OP_L( Q,        S,        /, Q        );// Q = S / Q
+        TEMPLATE(2,1) L_OP_S( M(0,1,0), M(0,1,0), *, S        );// M = M * S
+        TEMPLATE(2,1) L_OP_S( M(0,1,0), M(0,1,0), /, S        );// M = M / S
+        TEMPLATE(2,1) S_OP_L( M(0,1,0), S,        *, M(0,1,0) );// M = S * M
+        TEMPLATE(2,1) S_OP_L( M(0,1,0), S,        /, M(0,1,0) );// M = S / M
 
 
     /*-----------------------------------------------------------------------*
@@ -241,9 +251,9 @@ namespace inca {
          * \param   lst a ScalarList or derived type
          * \returns the value \code lst[0] + lst[1] + ... + lst[n-1] \endcode
          */
-        TEMPLATE(1)
-        SCALAR sum(const SCALAR_LIST(DIM) & lst) {
-            SCALAR result = lst[0];
+        TEMPLATE(1,0)
+        S sum(const L(0) & lst) {
+            S result = lst[0];
             for (index_t i = 1; i < lst.size; i++)
                 result += lst[i];
             return result;
@@ -254,25 +264,11 @@ namespace inca {
          * \param   lst a ScalarList or derived type
          * \returns the value \code lst[0] * lst[1] * ... * lst[n-1] \endcode
          */
-        TEMPLATE(1)
-        SCALAR product(const SCALAR_LIST(DIM) & lst) {
-            SCALAR result = lst[0];
+        TEMPLATE(1,0)
+        S product(const L(0) & lst) {
+            S result = lst[0];
             for (index_t i = 1; i < lst.size; i++)
                 result *= lst[i];
-            return result;
-        }
-
-        /**
-         * Finds the largest (i.e., most positive) value in \a lst.
-         * \param   lst a ScalarList or derived type
-         * \returns the value \code max(lst[0], lst[1], ... ,lst[n-1]) \endcode
-         */
-        TEMPLATE(1)
-        SCALAR max(const SCALAR_LIST(DIM) & lst) {
-            SCALAR result = lst[0];
-            for (index_t i = 1; i < lst.size; i++)
-                if (lst[i] > result)
-                    result = lst[i];
             return result;
         }
 
@@ -281,70 +277,94 @@ namespace inca {
          * \param   lst a ScalarList or derived type
          * \returns the value \code min(lst[0], lst[1], ... ,lst[n-1]) \endcode
          */
-        TEMPLATE(1)
-        SCALAR min(const SCALAR_LIST(DIM) & lst) {
-            SCALAR result = lst[0];
+        TEMPLATE(1,0)
+        S min(const L(0) & lst) {
+            S result = lst[0];
             for (index_t i = 1; i < lst.size; i++)
                 if (lst[i] < result)
                     result = lst[i];
             return result;
         }
 
+        /**
+         * Finds the largest (i.e., most positive) value in \a lst.
+         * \param   lst a ScalarList or derived type
+         * \returns the value \code max(lst[0], lst[1], ... ,lst[n-1]) \endcode
+         */
+        TEMPLATE(1,0)
+        S max(const L(0) & lst) {
+            S result = lst[0];
+            for (index_t i = 1; i < lst.size; i++)
+                if (lst[i] > result)
+                    result = lst[i];
+            return result;
+        }
+
+//        LIST_ELEMENTWISE_FUNCTION_1_ARG(abs);
+//        LIST_ELEMENTWISE_FUNCTION_1_ARG(floor);
+//        LIST_ELEMENTWISE_FUNCTION_1_ARG(ceiling);
+//        LIST_ELEMENTWISE_FUNCTION_1_ARG(round);
+
+        //LIST_ELEMENTWISE_FUNCTION(square);
+//        LIST_ELEMENTWISE_FUNCTION_1_ARG(sqrt);
+
+//        LIST_ELEMENTWISE_FUNCTION_2_ARG(pow);
+
 
     /*-----------------------------------------------------------------------*
      | Vector operations
      *-----------------------------------------------------------------------*/
         // Cartesian Distance Metric (L-2)
-        TEMPLATE(1)
-        SCALAR magnitude(const VECTOR(DIM) &v) {
-            SCALAR result = 0;
+        TEMPLATE(1,0)
+        S magnitude(const V(0) &v) {
+            S result = 0;
             for (index_t i = 0; i < v.size; i++)
                 result += v[i] * v[i];
             return sqrt(result);
         }
 
         // Interior angle between vectors
-        TEMPLATE(1)
-        SCALAR angle(const VECTOR(DIM) &v1, const VECTOR(DIM) &v2) {
-            SCALAR cosine = dot(v1, v2) / magnitude(v1) / magnitude(v2);
+        TEMPLATE(1,0)
+        S angle(const V(0) &v1, const V(0) &v2) {
+            S cosine = dot(v1, v2) / magnitude(v1) / magnitude(v2);
             return arccos(cosine);
         }
 
         // Signed angle between vectors, with reference to an "up"
         // (all vectors should be pre-normalized)
-        TEMPLATE(1)
-        SCALAR angle(const VECTOR(DIM) &v1,
-                     const VECTOR(DIM) &v2,
-                     const VECTOR(DIM) &up) {
-            SCALAR cosine = dot(v1, v2),
+        TEMPLATE(1,0)
+        S angle(const V(0) &v1,
+                     const V(0) &v2,
+                     const V(0) &up) {
+            S cosine = dot(v1, v2),
                    sine   = dot((v1 % v2), up);
             return arctan(sine, cosine);
         }
 
         // Dot product
-        TEMPLATE(1)
-        SCALAR dot(const VECTOR(DIM) &v1, const VECTOR(DIM) &v2) {
-            SCALAR result = 0;
+        TEMPLATE(1,0)
+        S dot(const V(0) &v1, const V(0) &v2) {
+            S result = 0;
             for (index_t i = 0; i < v1.size; i++)
                 result += v1[i] * v2[i];
             return result;
         }
 
         // Cross product
-        TEMPLATE(1)
-        VECTOR(DIM) operator%(const VECTOR(DIM) &v1, const VECTOR(DIM) &v2) {
-            VECTOR(DIM) result;
-            if (DIM >= 3) {     // Only defined for dim >= 3
-                for (index_t i = 0; i < DIM; i++)
-                    result[i] = v1[(i + 1) % DIM] * v2[(i + 2) % DIM]
-                              - v1[(i + 2) % DIM] * v2[(i + 1) % DIM];
+        TEMPLATE(1,0)
+        V(0) operator%(const V(0) &v1, const V(0) &v2) {
+            V(0) result;
+            if (D >= 3) {     // Only defined for dim >= 3
+                for (index_t i = 0; i < D; i++)
+                    result[i] = v1[(i + 1) % D] * v2[(i + 2) % D]
+                              - v1[(i + 2) % D] * v2[(i + 1) % D];
             }
             return result;
         }
 
         // Normalized vector
-        TEMPLATE(1)
-        VECTOR(DIM) normalize(const VECTOR(DIM) &v) {
+        TEMPLATE(1,0)
+        V(0) normalize(const V(0) &v) {
             return v / magnitude(v);
         }
 
@@ -356,26 +376,26 @@ namespace inca {
 //    }
 
         // Normal-vector reflection
-        TEMPLATE(1)
-        VECTOR(DIM) reflect(const VECTOR(DIM) &v, const VECTOR(DIM) &normal) {
-            VECTOR(DIM) n = normalize(normal);
+        TEMPLATE(1,0)
+        V(0) reflect(const V(0) &v, const V(0) &normal) {
+            V(0) n = normalize(normal);
             return 2 * n * dot(v, n) - v;
         }
 
         // Project a vector into a plane (represented by its normal,
         // which must be normalized)
-        TEMPLATE(1)
-        VECTOR(DIM) project(const VECTOR(DIM) &v, const VECTOR(DIM) &n) {
+        TEMPLATE(1,0)
+        V(0) project(const V(0) &v, const V(0) &n) {
             return v - n * dot(n, v);
         }
 
         // Vector between two points, but perpendicular to another
         // (normalized) vector
-        TEMPLATE(1)
-        VECTOR(DIM) project(const POINT(DIM) &p1,
-                            const POINT(DIM) &p2,
-                            const VECTOR(DIM) &n) {
-            VECTOR(DIM) tween = p1 - p2;
+        TEMPLATE(1,0)
+        V(0) project(const P(0) &p1,
+                            const P(0) &p2,
+                            const V(0) &n) {
+            V(0) tween = p1 - p2;
             return project(tween, n);
         }
 
@@ -384,62 +404,62 @@ namespace inca {
      | Quaternion operations
      *-----------------------------------------------------------------------*/
         // Cartesian Distance Metric (L-2)
-        TEMPLATE(0)
-        SCALAR magnitude(const QUATERNION &q) {
-            SCALAR result = 0;
+        TEMPLATE(0,0)
+        S magnitude(const Q &q) {
+            S result = 0;
             for (index_t i = 0; i < 4; i++)
                 result += q[i] * q[i];
             return sqrt(result);
         }
 
         // The rotation angle (in radians) around the natural axis
-        TEMPLATE(0)
-        SCALAR angle(const QUATERNION &q) {
-            return SCALAR(2.0) * arccos(q[0] / magnitude(q));
+        TEMPLATE(0,0)
+        S angle(const Q &q) {
+            return S(2.0) * arccos(q[0] / magnitude(q));
         }
 
         // The normalized natural axis of the quaternion
-        TEMPLATE(0)
-        VECTOR(3) axis(const QUATERNION &q) {
-            return normalize(VECTOR(3)(q[1], q[2], q[3]));
+        TEMPLATE(0,0)
+        V(XXX) axis(const Q &q) {
+            return normalize(V(XXX)(q[1], q[2], q[3]));
         }
 
         // Conjugate of a quaternion
-        TEMPLATE(0)
-        QUATERNION conjugate(const QUATERNION &q) {
-            return QUATERNION(q[0], -q[1], -q[2], -q[3]);
+        TEMPLATE(0,0)
+        Q conjugate(const Q &q) {
+            return Q(q[0], -q[1], -q[2], -q[3]);
         }
 
         // Inverse of a quaternion
-        TEMPLATE(0)
-        QUATERNION inverse(const QUATERNION &q) {
+        TEMPLATE(0,0)
+        Q inverse(const Q &q) {
             // Find the square of the magnitude of 'q'
-            SCALAR ms = 0.0;
+            S ms = 0.0;
             for (index_t i = 0; i < 4; i++)
                 ms += q[i] * q[i];
 
             // Find the components of the inverse
-            return QUATERNION(q[0] / ms, -q[1] / ms,
+            return Q(q[0] / ms, -q[1] / ms,
                              -q[2] / ms, -q[3] / ms);
         }
 
         // Normalized quaternion
-        TEMPLATE(0)
-        QUATERNION normalize(const QUATERNION &q) {
-            SCALAR length = magnitude(q);
+        TEMPLATE(0,0)
+        Q normalize(const Q &q) {
+            S length = magnitude(q);
             if (length != 0)    return q / length;
             else                return q;
         }
 
         // Quaternion multiplication
-        TEMPLATE(0)
-        QUATERNION operator%(const QUATERNION &q1, const QUATERNION &q2) {
-            SCALAR e0, e1, e2, e3;
+        TEMPLATE(0,0)
+        Q operator%(const Q &q1, const Q &q2) {
+            S e0, e1, e2, e3;
             e0 = q1[0]*q2[0] - q1[1]*q2[1] - q1[2]*q2[2] - q1[3]*q2[3];
             e1 = q1[0]*q2[1] + q1[1]*q2[0] + q1[2]*q2[3] - q1[3]*q2[2];
             e2 = q1[0]*q2[2] + q1[2]*q2[0] + q1[3]*q2[1] - q1[1]*q2[3];
             e3 = q1[0]*q2[3] + q1[3]*q2[0] + q1[1]*q2[2] - q1[2]*q2[1];
-            return QUATERNION(e0, e1, e2, e3);
+            return Q(e0, e1, e2, e3);
         }
 
 
@@ -563,33 +583,84 @@ namespace inca {
             return result;
         }
 #endif
+        // Matrix Multiplication
+        //      This function implements a general matrix multiplication.
+        //      Let the dimensions of this matrix be MxN, where M and N are the
+        //      row and column dimensions, respectively. The other operand is an
+        //      NxP matrix. The resulting matrix is MxP.
+        //
+        //      If the two matrices have different storage orders, the resulting
+        //      matrix will have the storage order of the LHS matrix.
+        TEMPLATE(3,1)
+        M(0,2,0) operator%(const M(0,1,0) &m1, const M(1,2,0) &m2) {
+            M(0,2,0) result;
+            for (index_t d1 = 0; d1 < D1; d1++)
+                for (index_t d3 = 0; d3 < D3; d3++) {
+                    result.rowCol(d1, d3) = 0;
+                    for (index_t d2 = 0; d2 < D2; d2++)
+                        result.rowCol(d1, d3) += m1.rowCol(d1, d2)
+                                               * m2.rowCol(d2, d3);
+                }
+            return result;
+        }
+
+        // Right multiplication of a Matrix by a point (column vector with
+        // implicit homogeneous coordinate w == 1)
+        TEMPLATE(2, 1)
+        POINT( M(0,1,0)::cols-1 )
+        operator%(const M(0,1,0) &m, const POINT( M(0,1,0)::cols-1 ) &p) {
+            POINT( M(0,1,0)::cols-1 ) result;
+
+            // Calculate the normal multiplication of matrix by column vector
+            for (index_t r = 0; r < m.rows - 1; r++) {
+                result[r] = m.rowCol(r, m.cols - 1);
+                for (index_t c = 0; c < m.cols - 1; c++)
+                    result[r] += m.rowCol(r, c) * p[c];
+            }
+
+            // Figure out the value of 'w', the homogeneous coordinate (which
+            // is implicitly '1' in the input point).
+            S w = m.rowCol(m.rows - 1, m.cols - 1); // * S(1)
+            for (index_t c = 0; c < m.cols - 1; c++)
+                w += m.rowCol(m.rows - 1, c) * p[c];
+
+            // Divide through by 'w' to make the output point's homogeneous
+            // coordinate '1' (so we don't have to explicitly represent it).
+            if (w != S(1))
+                for (index_t r = 0; r < m.rows - 1; r++)
+                    result[r] /= w;
+            return result;
+        }
     };
 };
 
 
 // Clean up the preprocessor's namespace
 #undef TEMPLATE
-#undef DIM
-#undef DIM1
-#undef DIM2
+#undef D
+#undef D1
+#undef D2
+#undef O1
+#undef O2
 
-#undef SCALAR
-#undef SCALAR_ARG
-#undef SCALAR_LIST
+#undef S
+#undef S_ARG
+#undef P
+#undef V
+#undef Q
+#undef M
+#undef L
+
 #undef POINT
-#undef VECTOR
-#undef QUATERNION
-#undef MATRIX
-#undef LIST
 
-#undef LIST_OSTREAM_OP
-#undef LIST_ASSIGN_SCALAR
-#undef LIST_ASSIGN_LIST
-#undef UOP_LIST
-#undef LIST_BOP_LIST
-#undef LIST_BOP_SCALAR
-#undef SCALAR_BOP_LIST
-#undef LIST_EQUALS_LIST
-#undef LIST_NOT_EQUALS_LIST
+#undef OSTREAM_OP_L
+#undef L_ASSIGN_S
+#undef L_ASSIGN_L
+#undef OP_L
+#undef L_OP_L
+#undef L_OP_S
+#undef S_OP_L
+#undef L_EQ_L
+#undef L_NE_L
 
 #endif

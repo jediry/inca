@@ -101,7 +101,8 @@ namespace inca {
          * representing a geometric transformation. The usual matrix operations
          * are defined for it.
          *********************************************************************/
-        template <typename scalar, size_t maj, size_t min> class Matrix;
+        template <typename scalar, size_t maj, size_t min, bool rowMaj = true>
+        class Matrix;
 
         /*********************************************************************
          * The Quaternion template class represents a rotation in 3-space.
@@ -188,13 +189,13 @@ public:
                              size_t stride = 1) const {
         index_t end = start + num * stride;
         if (start < 0)          start = 0;
-        else if (start >= size) start = size - 1;
+        else if (start >= size) start = size;
         if (end < 0)            end = 0;
-        else if (end >= size)   end = size - 1;
+        else if (end >= size)   end = size;
         ostringstream ss;
-        for (index_t i = start; i <= end; i += stride) {
+        for (index_t i = start; i < end; i += stride) {
             ss << elements[i];
-            if (i + stride <= end)  ss << ", ";
+            if (i + stride < end)  ss << ", ";
         }
         return ss.str();
     }
@@ -262,7 +263,7 @@ public:
      * Cast to string representation.
      * \returns a string like "(1.4, 3.5)"
      */
-    operator std::string() const {
+    operator string() const {
         return string("[") + elements[0] + " (" + stringifyElements() + ")]";
     }
 };
@@ -423,6 +424,110 @@ protected:                                                                  \
 };
 
 
+template <typename scalar, size_t _major, size_t _minor, bool _rowMajor>
+class inca::math::Matrix : public ScalarList<scalar, _major * _minor> {
+public:
+    /* Scalar implementation typedefs */
+    INCA_MATH_SCALAR_TYPEDEFS(scalar, IS_WITHIN_TEMPLATE, /* */, /* */);
+
+    /** What size matrix are we working with? */
+    static const size_t major = _major;
+    static const size_t minor = _minor;
+    static const bool rowMajor =   _rowMajor;
+    static const bool colMajor = ! _rowMajor;
+    static const size_t rows = rowMajor ? major : minor;
+    static const size_t cols = colMajor ? major : minor;
+
+    /** Default (no initialization) constructor. */
+    explicit Matrix() { }
+
+    /** Constant initialization constructor. */
+    explicit Matrix(scalar_arg_t e) {
+        for (index_t i = 0; i < size; i++)
+            elements[i] = e;
+    }
+
+    /** scalar_t array constructor. */
+    Matrix(scalar_t e[size]) {
+        for (index_t i = 0; i < size; i++)
+            elements[i] = e[i];
+    }
+
+    /** scalar_t double array constructor. */
+    Matrix(scalar_t e[major][minor]) {
+        for (index_t i = 0; i < major; i++)
+            for (index_t j = 0; j < minor; j++)
+                elements[indexOf(i, j)] = e[i][j];
+    }
+
+    /**
+     * 2D matrix-subscript element accessor.
+     */
+    scalar_t & operator()(index_t maj, index_t min) {
+        return elements[indexOf(maj, min)];
+    }
+
+    /**
+     * \overload operator()(index_t, index_t)
+     */
+    const scalar_t & operator()(index_t maj, index_t min) const {
+        return elements[indexOf(maj, min)];
+    }
+
+    /**
+     * 2D, storage-order-independent element accessor.
+     */
+    scalar_t & rowCol(index_t r, index_t c) {
+        return elements[rowMajor ? r * cols + c : c * rows + r];
+    }
+
+    /**
+     * \overload rowCol(index_t, index_t)
+     */
+    const scalar_t & rowCol(index_t r, index_t c) const {
+        return elements[rowMajor ? r * cols + c : c * rows + r];
+    }
+
+
+    /**
+     * 2D, storage-order-independent element accessor.
+     */
+    scalar_t & colRow(index_t c, index_t r) {
+        return rowCol(r, c);
+    }
+
+    /**
+     * \overload colRow(index_t, index_t)
+     */
+    const scalar_t & colRow(index_t r, index_t c) const {
+        return rowCol(r, c);
+    }
+
+    /**
+     * Calculate a 1D index into the underlying ScalarList from a pair of
+     * major-axis, minor-axis subscripts.
+     */
+    index_t indexOf(index_t maj, index_t min) const {
+        return maj * minor + min;
+    }
+
+    /**
+     * Cast to string representation.
+     * \returns a string like "[1.4, 3.5]\n[0.0, 3.0]"
+     */
+    operator string() const {
+        ostringstream ss;
+        for (index_t row = 0; row < rows; row++)
+            // Stringify a single row in the matrix. This has to be done
+            // differently, depending on the storage scheme
+            if (colMajor)
+                ss << '[' << stringifyElements(row, cols, rows) << "]\n";
+            else
+                ss << '[' << stringifyElements(row * cols, cols, 1) << "]\n";
+        return ss.str();
+    }
+};
+
 // This macro expands to create a partial template specialization of Matrix
 // with the dimensions fixed. This trick is necessary to create ONLY the
 // appropriate scalar_t argument list constructors. Unlike the
@@ -513,8 +618,8 @@ namespace inca {
                                 INCA_MATH_VECTOR_TEMPLATE, BOOST_PP_EMPTY);
         BOOST_PP_REPEAT_FROM_TO(MIN_DIMENSION, BOOST_PP_INC(MAX_DIMENSION),
                                 INCA_MATH_RAY_TEMPLATE, BOOST_PP_EMPTY);
-        BOOST_PP_REPEAT_FROM_TO(MIN_DIMENSION, BOOST_PP_INC(MAX_DIMENSION),
-                                INCA_MATH_MATRIX_TEMPLATE_MAJOR, BOOST_PP_EMPTY);
+//        BOOST_PP_REPEAT_FROM_TO(MIN_DIMENSION, BOOST_PP_INC(MAX_DIMENSION),
+//                                INCA_MATH_MATRIX_TEMPLATE_MAJOR, BOOST_PP_EMPTY);
     };
 };
 

@@ -50,15 +50,15 @@ namespace inca {
 // These macros represent allow us to choose which overload of each function
 // gets called, based on whether the scalar_traits for this type of scalar
 // says the scalar should be passed by value or by reference. Whee!
-#define PASS_BY_VALUE     typename constraint< TRAITS::pass_by_value >::satisfy = 0
-#define PASS_BY_REFERENCE typename constraint< ! TRAITS::pass_by_value >::satisfy = 0
+#define PASS_BY_VALUE     typename constraint< TRAITS::pass_by_value >::satisfied = 0
+#define PASS_BY_REFERENCE typename constraint< ! TRAITS::pass_by_value >::satisfied = 0
 
 // These macros allow us to constrain whether a function will even be
 // considered as a possible overload for a particular scalar type.
-#define CONSTRAINT_INTEGER          typename constraint< TRAITS::supports_integer_ops >::satisfy = 0
-#define CONSTRAINT_ARITHMETIC       typename constraint< TRAITS::supports_arithmetic_ops >::satisfy = 0
-#define CONSTRAINT_ALGEBRAIC        typename constraint< TRAITS::supports_algebraic_ops >::satisfy = 0
-#define CONSTRAINT_TRANSCENDENTAL   typename constraint< TRAITS::supports_transcendental_ops >::satisfy = 0
+#define CONSTRAINT_INTEGER          typename constraint< TRAITS::supports_integer_ops >::satisfied = 0
+#define CONSTRAINT_ARITHMETIC       typename constraint< TRAITS::supports_arithmetic_ops >::satisfied = 0
+#define CONSTRAINT_ALGEBRAIC        typename constraint< TRAITS::supports_algebraic_ops >::satisfied = 0
+#define CONSTRAINT_TRANSCENDENTAL   typename constraint< TRAITS::supports_transcendental_ops >::satisfied = 0
 
 // These macros let us define the scalar pass-thru functions in only one
 // line apiece. They all have nearly identical structure, having two separate
@@ -127,6 +127,11 @@ namespace inca {
     /*-----------------------------------------------------------------------*
      | Arithmetic functions
      *-----------------------------------------------------------------------*/
+        // Boolean comparison functions
+        SCALAR_ARITHMETIC_FUNCTION_1_ARG(scalar, isNan);            // isNaN(x)
+        SCALAR_ARITHMETIC_FUNCTION_1_ARG(scalar, effectivelyZero);  // x ~= 0
+        SCALAR_ARITHMETIC_FUNCTION_2_ARG(scalar, effectivelyEqual); // x ~= y
+
         // $0.99 calculator stuff
         SCALAR_ARITHMETIC_FUNCTION_1_ARG(scalar, negate);       // -x
         SCALAR_ARITHMETIC_FUNCTION_2_ARG(scalar, sum);          // x + y
@@ -138,11 +143,6 @@ namespace inca {
         // Selection functions
         SCALAR_ARITHMETIC_FUNCTION_2_ARG(scalar, min);          // min(x, y)
         SCALAR_ARITHMETIC_FUNCTION_2_ARG(scalar, max);          // max(x, y)
-
-        // Boolean comparison functions
-        SCALAR_ARITHMETIC_FUNCTION_1_ARG(scalar, isNan);            // isNaN(x)
-        SCALAR_ARITHMETIC_FUNCTION_1_ARG(scalar, effectivelyZero);  // x ~= 0
-        SCALAR_ARITHMETIC_FUNCTION_2_ARG(scalar, effectivelyEqual); // x ~= y
 
         // Non numbers
         template <typename scalar>
@@ -232,14 +232,21 @@ struct inca::math::scalar_arithmetic_api {
     // Comparison functions (trivial for integers)
     static bool isNaN(arg_type s) { return false; }
     static bool effectivelyZero(arg_type s) {
-        return (abs(s) <= traits::absolute_tolerance());
+        if (traits::is_integral)
+            return (s == 0);
+        else
+            return (abs(s) <= traits::absolute_tolerance());
     }
     static bool effectivelyEqual(arg_type s1, arg_type s2) {
-        value_type diff = abs(s1 - s2);
-        if (diff <= traits::absolute_tolerance())// Absolutely close together?
-            return true;
-        else                                     // Relatively close together?
-            return diff <= traits::relative_tolerance() * max(abs(s1), abs(s2));
+        if (traits::is_integral)
+            return (s1 == s2);
+        else {
+            value_type diff = abs(s1 - s2);
+            if (diff <= traits::absolute_tolerance())// Absolutely close together?
+                return true;
+            else                                     // Relatively close together?
+                return diff <= traits::relative_tolerance() * max(abs(s1), abs(s2));
+        }
     }
 
     // Determine the absolute value of a scalar

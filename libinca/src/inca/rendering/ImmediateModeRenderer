@@ -109,7 +109,6 @@ public:
     void initialize() {
         _frameStats.reset();
         _totalStats.reset();
-        api::enable_z_buffer(true);
     }
 
 
@@ -155,11 +154,14 @@ public:
             logger.warning();
         }
     }
+
+    void enableDepthBuffering(bool enabled) { api::enable_z_buffer(false); }
     
     void setPointSize(float size)  { api::set_point_size(size); }
     void setLineWidth(float width) { api::set_line_width(width); }
     void enablePointSmoothing(bool enabled) { api::enable_point_smoothing(enabled); }
     void enableLineSmoothing(bool enabled)  { api::enable_line_smoothing(enabled); }
+    void enableAlphaBlending(bool enabled) { api::enable_alpha_blending(enabled); }
 
     void enableLight(world::LightPtr lite);
     void disableLight(world::LightPtr lite);

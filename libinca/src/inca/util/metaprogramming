@@ -1,7 +1,36 @@
+/* -*- C++ -*-
+ *
+ * File: vector_operations
+ *
+ * Author: Ryan L. Saunders
+ *
+ * Copyright 2004, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ */
+
+#ifndef INCA_UTIL_METAPROGRAMMING
+#define INCA_UTIL_METAPROGRAMMING
 
 namespace inca {
-    template <bool, typename type = int>
-    struct constraint { typedef type satisfy; };
-    
-    template <> struct constraint<false> { /* No typedef, causes subst. failure */};
-}
+    // Compile-time constraint for refining function overloads
+    // Use as an invisible default argument in a function signature, e.g.:
+    //      template <typename T>
+    //      void f(T t, constraint< boost::is_integral<T> >::satisfied = 0);
+    template <bool cond, typename type = int> struct constraint {
+        typedef type satisfied;
+    };
+    template <> struct constraint<false> {
+        /* No typedef, causes substitution failure */
+    };
+
+    // Compile-time choice of two arguments based on boolean condition
+    template <bool cond, size_t vt, size_t vf> struct ifelse_size_t {
+        static const size_t value = vt;
+    };
+    template <size_t vt, size_t vf> struct ifelse_size_t<false, vt, vf> {
+        static const size_t value = vf;
+    };
+};
+
+#endif

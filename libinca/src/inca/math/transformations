@@ -55,7 +55,7 @@ namespace inca {
         TEMPLATE(1)
         MATRIX(DIM, DIM) & loadConstant(MATRIX(DIM, DIM) &m,
                                                  SCALAR_ARG c) {
-            for (index_t i = 0; i < m.size(); i++)
+            for (index_t i = 0; i < m.size; i++)
                 m[i] = c;
         }
 
@@ -77,8 +77,9 @@ namespace inca {
             loadIdentity(m);    // Start with an identity matrix
 
             // Fill in the right-most column from the Vector
-            for (index_t row = 0; row < DIM; row++)
-                m(row, DIM - 1) = t[row];
+            for (index_t row = 0; row < DIM - 1; row++)
+                m.rowCol(row, DIM - 1) = t[row];
+            m.rowCol(DIM-1, DIM-1) = SCALAR(1);
             return m;
         }
 
@@ -102,8 +103,8 @@ namespace inca {
             // Fill in the necessary elements
             SCALAR cosine = cos(radians),
                      sine   = sin(radians);
-            m(0, 0) = cosine;  m(0, 1) = -sine;
-            m(1, 0) = sine;    m(1, 1) = cosine;
+            m.rowCol(0, 0) = cosine;  m.rowCol(0, 1) = -sine;
+            m.rowCol(1, 0) = sine;    m.rowCol(1, 1) = cosine;
             return m;
         }
 
@@ -187,8 +188,9 @@ namespace inca {
             loadConstant(m, SCALAR(0));   // Start with a zero matrix
 
             // Fill in the matrix diagonal from the Vector
-            for (index_t i = 0; i < DIM; i++)
-                m(i, i) = t[i];
+            for (index_t i = 0; i < DIM - 1; i++)
+                m(i, i) = s[i];
+            m(DIM-1, DIM-1) = SCALAR(1);
             return m;
         }
 

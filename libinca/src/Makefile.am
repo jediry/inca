@@ -28,6 +28,7 @@ libinca_a_SOURCES = $(src_inca_util) $(src_inca_math) $(src_inca_imaging)   \
 		    $(src_inca_world) $(src_inca_rendering)		    \
                     $(src_inca_ui)					    \
 		    $(src_inca_dynamics)				    \
+		    $(src_inca_integration_hardware_math)		    \
 		    $(src_inca_integration_glut)			    \
 		    $(src_inca_integration_opengl)			    \
 		    $(src_inca_integration_posix)			    \

@@ -112,6 +112,7 @@ bool OPEN_GL_API is_z_buffer_enabled() {
 
 template <>
 void OPEN_GL_API enable_alpha_blending(bool enabled) {
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     enabled ? glEnable(GL_BLEND) : glDisable(GL_BLEND);
 }
 template <>

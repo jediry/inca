@@ -202,8 +202,8 @@ namespace inca {
         template <> struct scalar_simple_specialization<SCALAR> {           \
             typedef ::std::numeric_limits<SCALAR> nl;                       \
             static string name() { return #SCALAR; }                        \
-            static SCALAR absolute_tolerance() { return SCALAR(TOLERANCE); }\
-            static SCALAR relative_tolerance() { return SCALAR(TOLERANCE); }\
+            static SCALAR absolute_tolerance() { return (SCALAR)(TOLERANCE); }\
+            static SCALAR relative_tolerance() { return (SCALAR)(TOLERANCE); }\
             static const bool pass_by_value = true;                         \
             static const bool is_builtin = true;                            \
             static const bool is_integral = nl::is_integer;                 \
