@@ -28,9 +28,12 @@ namespace inca {
 // Import scalar math implementation
 #include "../scalar.hpp"
 
+// Import random number generator base class
+#include "RandomGeneratorBase.hpp"
+
 
 template <typename scalar>
-class inca::math::RandomUniform {
+class inca::math::RandomUniform : public RandomGeneratorBase {
 private:
     // Convenience typedefs
     typedef RandomUniform<scalar>      ThisType;
@@ -54,7 +57,7 @@ public:
     // Function-call operator (generator function)
     scalar_t operator()() const {
         scalar_t range = max - min;
-        scalar_t result = rand() * range / RAND_MAX + min;
+        scalar_t result = this->randomInteger() * range / this->maximumInteger() + min;
         return result;
     }
 };

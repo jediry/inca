@@ -651,6 +651,9 @@ public:
      * \return  true if the timer is now running as a result of this call
      */
     bool toggleRunning() {
+        if (running())
+            update();               // Catch up to "now"
+
         _running = ! _running;  // Switch states
 
         if (_running) {         // ...then we were just started
@@ -658,7 +661,6 @@ public:
             if (generateEvents)     // Do we tell anyone about this?
                 fireStarted(time());
         } else {                // ...then we were just stopped
-            update();               // Catch up to "now"
             if (generateEvents)     // Do we tell anyone about this?
                 fireStopped(time());
         }

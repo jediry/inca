@@ -32,9 +32,12 @@ namespace inca {
 // Import scalar math implementation
 #include "../scalar.hpp"
 
+// Import random number generator base class
+#include "RandomGeneratorBase.hpp"
+
 
 template <typename scalar>
-class inca::math::RandomGaussian {
+class inca::math::RandomGaussian : RandomGeneratorBase {
 private:
     // Convenience typedefs
     typedef RandomGaussian<scalar>      ThisType;
@@ -50,8 +53,8 @@ public:
         : mean(*this, _mean), stddev(*this, _stddev) { }
 
     // Distribution parameters
-    rw_property(scalar_t, mean, 1.0);
-    rw_property(scalar_t, stddev, 1.0);
+    rw_property(scalar_t, mean, scalar_t(1));
+    rw_property(scalar_t, stddev, scalar_t(1));
 
     // Function-call operator (generator function)
     scalar_t operator()() const {
@@ -65,13 +68,13 @@ public:
             1.28167E+00, 1.43933E+00, 1.64500E+00, 1.96000E+00,
             3.87000E+00
         };
-      
+
         // Compute a uniform random number in [0.0, 0.5], and a +/- sign
-        scalar_t u = rand() / (scalar_t)RAND_MAX;
+        scalar_t u = this->randomInteger() / scalar_t(this->maximumInteger());
         bool negative;
-        if (u >= 0.5) {
+        if (u >= scalar_t(0.5)) {
             negative = false;
-            u = u - 0.5;
+            u = u - scalar_t(0.5);
         } else
             negative = true;
 
@@ -92,4 +95,3 @@ public:
 };
 
 #endif
-

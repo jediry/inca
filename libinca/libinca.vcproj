@@ -259,6 +259,9 @@
 					RelativePath=".\src\inca\math\generator\RandomGaussian">
 				</File>
 				<File
+					RelativePath=".\src\inca\math\generator\RandomGeneratorBase.hpp">
+				</File>
+				<File
 					RelativePath=".\src\inca\math\generator\RandomUniform">
 				</File>
 			</Filter>
