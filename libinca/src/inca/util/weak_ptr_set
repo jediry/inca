@@ -87,12 +87,12 @@ public:
         // We don't add NULL pointers
         if (! ptr)
             // This probably isn't standard-conforming...
-            return pair<iterator, bool>(end(), false);
+            return std::pair<iterator, bool>(end(), false);
 
         // Hand off to the underlying container
-        pair<cnt_iterator, bool> result
+        std::pair<cnt_iterator, bool> result
             = container_type::insert(weak_pointer(ptr));
-        return pair<iterator, bool>(iterator(result.first), result.second);
+        return std::pair<iterator, bool>(iterator(result.first), result.second);
     }
 
     template <class InputIterator>
@@ -122,10 +122,10 @@ public:
     }
 
     std::pair<iterator, iterator> equal_range(shared_pointer ptr) {
-        pair<cnt_iterator, cnt_iterator> result;
+        std::pair<cnt_iterator, cnt_iterator> result;
         result = container_type::equal_range(weak_pointer(ptr));
-        return pair<iterator, iterator>(iterator(result.first),
-                                        iterator(result.second));
+        return std::pair<iterator, iterator>(iterator(result.first),
+                                             iterator(result.second));
     }
 };
 

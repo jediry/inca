@@ -40,7 +40,7 @@ bool std::char_traits<uchar>::lt(const uchar &c1, const uchar &c2) {
     return c1 < c2;
 }
 
-int std::char_traits<uchar>::compare(const uchar *s1, const uchar *s2, size_t n) {
+int std::char_traits<uchar>::compare(const uchar *s1, const uchar *s2, std::size_t n) {
     for (int i = 0; i < n; i++) {
         if (s1[i] < s2[i])
             return -1;
@@ -50,32 +50,32 @@ int std::char_traits<uchar>::compare(const uchar *s1, const uchar *s2, size_t n)
     return 0;
 }
     
-size_t std::char_traits<uchar>::length(const uchar *s) {
-    size_t size;
+std::size_t std::char_traits<uchar>::length(const uchar *s) {
+    std::size_t size;
     for (size = 0; s[size] != 0; size++) /* */;
     return size;
 }
 
-const uchar * std::char_traits<uchar>::find(const uchar *s, size_t n, const uchar &c) {
-    size_t size;
+const uchar * std::char_traits<uchar>::find(const uchar *s, std::size_t n, const uchar &c) {
+    std::size_t size;
     for (size = 0; s[size] != c && size < n; size++) /* */;
     return (uchar*)(s + size);
 }
 
-uchar * std::char_traits<uchar>::move(uchar *dst, const uchar *src, size_t n) {
-    for (size_t i = 0; i < n; i++)
+uchar * std::char_traits<uchar>::move(uchar *dst, const uchar *src, std::size_t n) {
+    for (std::size_t i = 0; i < n; i++)
         dst[i] = src[i];
     return dst;
 }
 
-uchar * std::char_traits<uchar>::copy(uchar *dst, const uchar *src, size_t n) {
-    for (size_t i = 0; i < n; i++)
+uchar * std::char_traits<uchar>::copy(uchar *dst, const uchar *src, std::size_t n) {
+    for (std::size_t i = 0; i < n; i++)
         dst[i] = src[i];
     return dst;
 }
 
-uchar * std::char_traits<uchar>::assign(uchar *dst, size_t n, uchar c) {
-    for (size_t i = 0; i < n; i++)
+uchar * std::char_traits<uchar>::assign(uchar *dst, std::size_t n, uchar c) {
+    for (std::size_t i = 0; i < n; i++)
         dst[i] = c;
     return dst;
 }
@@ -154,7 +154,7 @@ ustring::ustring(double d) {
 }
 
 // Copy/assignment from ASCII string
-ustring::ustring(const string &s) {
+ustring::ustring(const std::string &s) {
     ascii = s;
  
     // Synchronize the cached state of the object
