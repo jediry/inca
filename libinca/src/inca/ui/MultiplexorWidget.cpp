@@ -1,6 +1,6 @@
 /*
  * File: MultiplexorWidget.cpp
- * 
+ *
  * Author: Ryan L. Saunders
  *
  * Copyright 2004, Ryan L. Saunders. All rights reserved.
@@ -72,6 +72,23 @@ IndexType MultiplexorWidget::indexAfter(IndexType from) const {
         ++i;    // Otherwise, keep looking
     }
     return NOT_FOUND;   // Crap.
+}
+
+
+/*---------------------------------------------------------------------------*
+ | Current selection query functions
+ *---------------------------------------------------------------------------*/
+WidgetPtr MultiplexorWidget::selectedWidget() {
+    return widgets[selectedWidgetIndex()];
+}
+WidgetConstPtr MultiplexorWidget::selectedWidget() const {
+    return widgets[selectedWidgetIndex()];
+}
+IndexType MultiplexorWidget::selectedWidgetIndex() const {
+    return selectedIndex;
+}
+const std::string & MultiplexorWidget::selectedWidgetName() const {
+    return selectedWidget()->name();
 }
 
 

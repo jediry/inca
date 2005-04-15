@@ -97,7 +97,7 @@ protected:
 public:
     // Default Constructor
     GLUTWindow(const std::string & title = DEFAULT_TITLE);
-    
+
     // Widget-containing Constructor
     GLUTWindow(WidgetPtr w, const std::string & title = DEFAULT_TITLE);
 
@@ -143,6 +143,9 @@ protected:
 
     // Whether we've called initializeView on the Widget yet
     bool widgetInitialized;
+
+    // Have we called the widget's construct() function yet?
+    bool constructed;
 
 
 /*---------------------------------------------------------------------------*

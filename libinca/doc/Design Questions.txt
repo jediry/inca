@@ -6,3 +6,22 @@ I) Rendering subsystem:
   ~) Should hardware capabilities be represented by enumeration constants?
      Or ought there be specific get* functions for each?
      Or both?
+  ~) How should rendering modes be controlled?
+        * tag classes? (e.g., Wireframe, Solid, Selection)
+            classes could contain sets of state variables
+                Wireframe = no lights, line antialiasing
+            could have an open set of modes, including semantic modes
+                "Selected", "Pointed To"
+                "Ghosting", "Wireframe", "Solid"
+                "Bounding box"
+                Modes for implicit surfaces:
+                    "sampled points"/splats
+                    "isoparameters"
+        * how to do fog, lighting, etc.
+  ~) Make renderer throw exceptions for unsupported features
+
+II) Raster system
+    Make gradient operator more general-purpose (different kinds of derivatives)
+        e.g., fwd-diff, symm-diff, LxLxx Lxy yada yada
+    More general marching-cubes/isosurface mechanism
+        better optimized

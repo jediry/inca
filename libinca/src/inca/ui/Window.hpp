@@ -70,9 +70,9 @@ public:
 
     // Custom setter for property "widget"
     void ptr_property_set(Widget, widget) {
-//        releaseWidgetPart(_widget); // Tell the old guy we're leaving him...
+        releaseWidgetPart(_widget); // Tell the old guy we're leaving him...
         _widget = value;            // ...get the new guy...
-//        acquireWidgetPart(_widget); // ...and tell him that he's ours
+        acquireWidgetPart(_widget); // ...and tell him that he's ours
 
         // Tell the child Widget about its context
         if (_widget) {
@@ -114,66 +114,71 @@ public:
     }
 
 
-/*---------------------------------------------------------------------------*
- | Window interface functions (must be implemented for specific GUI toolkit)
- *---------------------------------------------------------------------------*/
-public:
     // Window ID
-    virtual IDType getID() const = 0;
-
-    // Window title
-    virtual std::string getTitle() const = 0;
-    virtual void setTitle(const std::string & title) = 0;
-
-    // Window visibility state
-    virtual bool isVisible() const = 0;
-    virtual void setVisible(bool visible) = 0;
-
-    // Window iconification state
-    virtual bool isIconified() const = 0;
-    virtual void setIconified(bool iconified) = 0;
-
-    // Window full-screen state
-    virtual bool isFullScreen() const = 0;
-    virtual void setFullScreen(bool fs) = 0;
-
-    // Restore an iconified or full-screened window to its previous state
-    virtual void restore() = 0;
-
-    // Window position
-    virtual Pixel getPosition() const = 0;
-    virtual void setPosition(Pixel p) = 0;
-    void setPosition(IndexType x, IndexType y) { setPosition(Pixel(x, y)); }
-    virtual void centerOnScreen() {
-        Dimension scr = getScreenSize();
-        Dimension sz = getSize();
-        setPosition(Pixel((scr[0] - sz[0]) / 2, (scr[1] - sz[1]) / 2));
-    }
-
-    // Current size
-    virtual Dimension getSize() const = 0;
-    virtual void setSize(Dimension d) = 0;
-    void setSize(SizeType w, SizeType h) { setSize(Dimension(w, h)); }
-
-    // Minimum allowable size
-    virtual Dimension getMinimumSize() const = 0;
-    virtual void setMinimumSize(Dimension d) = 0;
-    void setMinimumSize(SizeType w, SizeType h) { setMinimumSize(Dimension(w, h)); }
-
-    // Maximum allowable size
-    virtual Dimension getMaximumSize() const = 0;
-    virtual void setMaximumSize(Dimension d) = 0;
-    void setMaximumSize(SizeType w, SizeType h) { setMaximumSize(Dimension(w, h)); }
-
-    // Force aspect ratio (0.0 to allow unrestricted A/R)
-    virtual float getAspectRatio() const = 0;
-    virtual void setAspectRatio(float ratio) = 0;
+    IDType getID() const;
 
     // Query screen size
-    virtual Dimension getScreenSize() const = 0;
+    Dimension getScreenSize() const;
 
     // Request redisplay of the entire Window
-    virtual void requestRedisplay() const = 0;
+    void requestRedisplay() const;
+
+/*---------------------------------------------------------------------------*
+ | Window state control
+ *---------------------------------------------------------------------------*/
+public:
+    // Window title
+    std::string title() const;
+    void setTitle(const std::string & title);
+
+    // Window visibility state
+    bool visible() const;
+    void setVisible(bool vs);
+
+    // Window iconification state
+    bool iconified() const;
+    void setIconified(bool icf);
+
+    // Window maximization state
+    bool maximized() const;
+    void setMaximized(bool max);
+
+    // Window full-screen state
+    bool fullScreen() const;
+    void setFullScreen(bool fs);
+
+    // Restore an iconified or full-screened window to its previous state
+    void restore();
+
+
+/*---------------------------------------------------------------------------*
+ | Window size & position
+ *---------------------------------------------------------------------------*/
+public:
+    // Window position
+    Pixel position() const;
+    void setPosition(Pixel p);
+    void setPosition(IndexType x, IndexType y);
+    void centerOnScreen();
+
+    // Current size
+    Dimension size() const;
+    void setSize(Dimension d);
+    void setSize(SizeType w, SizeType h);
+
+    // Minimum allowable size
+    Dimension minimumSize() const;
+    void setMinimumSize(Dimension d);
+    void setMinimumSize(SizeType w, SizeType h);
+
+    // Maximum allowable size
+    Dimension maximumSize() const;
+    void setMaximumSize(Dimension d);
+    void setMaximumSize(SizeType w, SizeType h);
+
+    // Force aspect ratio (0.0 to allow unrestricted A/R)
+    float aspectRatio() const;
+    void setAspectRatio(float ratio);
 };
 
 

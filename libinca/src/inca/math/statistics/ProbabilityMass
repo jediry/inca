@@ -71,6 +71,10 @@ public:
         for (it = el.begin(); it != el.end(); ++it)
             add(*it);
     }
+    void erase(IndexType i) {
+        _elements.erase(_elements.begin() + i);
+        _isValid = false;
+    }
 
     // Element accessors
     SizeType size() const { return _elements.size(); }
@@ -154,5 +158,19 @@ protected:
     mutable ScalarArray _probability, _mass;
     mutable bool _isValid;
 };
+
+namespace inca {
+    namespace math {
+        template <typename Scalar>
+        std::ostream & operator<<(std::ostream & os, const ProbabilityMass<Scalar> & pmf) {
+            for (int i = 0; i < pmf.size(); ++i) {
+                os << pmf.mass(i);
+                if (i < pmf.size() - 1)
+                    os << ", ";
+            }
+            return os;
+        }
+    }
+}
 
 #endif

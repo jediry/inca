@@ -419,10 +419,10 @@ protected:
     CrossoverOperatorList       _crossoverOperators;
     MutationOperatorList        _mutationOperators;
     FitnessOperatorList         _fitnessOperators;
-    PMF _initializationOperatorPMF,
-        _crossoverOperatorPMF,
-        _mutationOperatorPMF,
-        _fitnessOperatorWeights;
+    mutable PMF _initializationOperatorPMF,
+                _crossoverOperatorPMF,
+                _mutationOperatorPMF,
+                _fitnessOperatorWeights;
 
 
 /*---------------------------------------------------------------------------*
@@ -604,7 +604,7 @@ public:
 
             // Now, we randomly choose the remaining amount to select from among
             // the non-elites.
-            const PMF & pmf = chromosomeFitnessPMF();
+            PMF pmf = chromosomeFitnessPMF();
             int attempts = 0;
             while (numberSelected < numberToSelect) {
                 // Select an individual from the old population to carry over

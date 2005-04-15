@@ -115,7 +115,8 @@ GLUTWindow::GLUTWindow(const std::string & title)
           position(DEFAULT_POSITION), size(DEFAULT_SIZE),
           minSize(DEFAULT_MINIMUM_SIZE), maxSize(DEFAULT_MAXIMUM_SIZE),
           aspectRatio(DEFAULT_ASPECT_RATIO),
-          fullScreen(DEFAULT_IS_FULL_SCREEN), widgetInitialized(false) {
+          fullScreen(DEFAULT_IS_FULL_SCREEN),
+          widgetInitialized(false), constructed(false) {
 
     // Get a new window, with this title
     windowID = glutCreateWindow(title.c_str());
@@ -130,7 +131,8 @@ GLUTWindow::GLUTWindow(WidgetPtr w, const std::string & title)
           position(DEFAULT_POSITION), size(DEFAULT_SIZE),
           minSize(DEFAULT_MINIMUM_SIZE), maxSize(DEFAULT_MAXIMUM_SIZE),
           aspectRatio(DEFAULT_ASPECT_RATIO),
-          fullScreen(DEFAULT_IS_FULL_SCREEN), widgetInitialized(false) {
+          fullScreen(DEFAULT_IS_FULL_SCREEN),
+          widgetInitialized(false), constructed(false) {
 
     // Get a new window, with this title
     windowID = glutCreateWindow(title.c_str());
@@ -154,6 +156,13 @@ GLUTWindow::~GLUTWindow() {
  *---------------------------------------------------------------------------*/
 // GLUT window callbacks
 void GLUTWindow::reshape(int w, int h) {
+    INCA_DEBUG("Reshape")
+    if (! constructed) {                // Make sure any window setup code runs
+        INCA_DEBUG("Constructing")
+        this->construct();
+        constructed = true;
+    }
+
     size[0] = w; size[1] = h;           // Update our window dimensions
     if (widget) {
         if (! widgetInitialized) {      // We only call initializeView() once
@@ -224,12 +233,12 @@ void GLUTWindow::special(int key, int x, int y) {
 // GLUT display callbacks
 void GLUTWindow::overlayDisplay() { /* Do nothing right now */ }
 void GLUTWindow::display() {
+    INCA_DEBUG("Display")
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    INCA_DEBUG("Widget is now " << _widget.get() << ": " << _widget.use_count())
-    if (_widget) {
+    if (widget) {
         renderer().beginFrame();
 
-            _widget->renderView();
+            widget->renderView();
 
         renderer().endFrame();
         glutSwapBuffers();
@@ -499,4 +508,8 @@ GLUTWindow::Dimension GLUTWindow::getScreenSize() const {
     return d;
 }
 
-void GLUTWindow::requestRedisplay() const { glutPostRedisplay(); }
+void GLUTWindow::requestRedisplay() const {
+    INCA_DEBUG("REquest!")
+    glutPostRedisplay();
+    INCA_DEBUG("Done")
+}

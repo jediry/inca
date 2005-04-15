@@ -141,8 +141,8 @@ public:
                 // Figure out how big a histogram bucket is
                 bucketSize = (max() - min()) / histogram().size();
             } else {
-                max() = 0;
-                min() = 0;
+                max() = ElementType(0);
+                min() = ElementType(0);
             }
             meanValid = true;
         } else if (! varianceValid) {

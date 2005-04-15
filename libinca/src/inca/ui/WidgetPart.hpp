@@ -118,6 +118,14 @@ protected:
     // Non-public constructor with component name
     explicit WidgetPartContainer(const std::string & nm) { name = nm; }
 
+    // This is called before the WidgetPartContainer is first displayed, but
+    // after all constructors have been run. Since there may be chicken-and-egg
+    // type problems with using shared_ptrs to the WPC inside the constructor,
+    // the simplest way around this is to defer construction of objects
+    // requiring a shared_ptr to 'this' until this function.
+    // FIXME: this is not called for all WPCs...currently just GLUTWindow...
+    virtual void construct() { }
+
     // WidgetPart event-firing functions for notifying WidgetParts when and how
     // we are using them.
     void acquireWidgetPart(WidgetPartPtr wp)  { if (wp) wp->acquired(self()); }

@@ -58,7 +58,8 @@ namespace inca {
             INCA_RASTER_OPERATOR_GET_ELEMENT_HEADER(indices) {
                 ElementType result;
                 IndexArray idx(indices);
-
+#define FWD_DIFF 0
+#define SYMM_DIFF 1
 #if FWD_DIFF
                 typename R0::ElementType center = operand0(idx);   // cell at idx
                 for (IndexType d = 0; d < dimensionality; ++d) {

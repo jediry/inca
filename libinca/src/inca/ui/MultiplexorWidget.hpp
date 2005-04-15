@@ -1,6 +1,6 @@
 /*
  * File: MultiplexorWidget.hpp
- * 
+ *
  * Author: Ryan L. Saunders
  *
  * Copyright 2004, Ryan L. Saunders. All rights reserved.
@@ -73,6 +73,12 @@ public:
     IndexType indexAfter(IndexType from)  const; // Next widget after 'from'
 
     static const IndexType NOT_FOUND = -1;// The "I couldn't find it" index
+
+    // Current selection query functions
+    WidgetPtr      selectedWidget();
+    WidgetConstPtr selectedWidget() const;
+    IndexType           selectedWidgetIndex() const;
+    const std::string & selectedWidgetName() const;
 
     // Add/remove functions
     void addWidget(WidgetPtr w);        // Stick a new Widget into the list

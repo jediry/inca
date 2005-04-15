@@ -47,12 +47,12 @@ class inca::ui::CompositeWidget : public Widget,
 public:
     // Default constructor with an optional component name
     explicit CompositeWidget(const std::string & nm = "")
-        : Widget(nm) { }
+        { name = nm; }
 
     // Constructor with explicit initialization of View/Control
     explicit CompositeWidget(ViewPtr v, ControlPtr c,
                              const std::string & nm = "")
-        : PassThruView(v), PassThruControl(c), Widget(nm) { }
+        : PassThruView(v), PassThruControl(c) { name = nm; }
 
     // XXX HACK!
     void setRenderer(RendererPtr r) {

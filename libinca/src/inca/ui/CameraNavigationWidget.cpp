@@ -237,7 +237,7 @@ void CameraNavigationWidget::moveLaterally(int clicks) {
 }
 
 void CameraNavigationWidget::panCamera(int dx, int dy) {
-    INCA_DEBUG("Pan " << dx << ", " << dy << " clicks")
+//    INCA_DEBUG("Pan " << dx << ", " << dy << " clicks")
 
     typedef Renderer::Point3D Point3D;      // Shortcuts
     typedef Renderer::geometry_t scalar_t;
@@ -262,10 +262,10 @@ void CameraNavigationWidget::panCamera(int dx, int dy) {
 
     //        po = renderer().localToWorld(Point3D(0.0, 0.0, -1.0));
     //        INCA_DEBUG("Projecting adjacent pixels found distances X(" << distance(po,px) << ") and Y(" << distance(po,py) << ")")
-            INCA_DEBUG("po " << po)
-            INCA_DEBUG("px " << px)
-            INCA_DEBUG("py " << py)
-            INCA_DEBUG("Pan by " << (-dx * distance(po,px)) << ", " << (-dy * distance(po,py)))
+//            INCA_DEBUG("po " << po)
+//            INCA_DEBUG("px " << px)
+//            INCA_DEBUG("py " << py)
+//            INCA_DEBUG("Pan by " << (-dx * distance(po,px)) << ", " << (-dy * distance(po,py)))
 
             hPan = -dx * distance(po, px);
             vPan = -dy * distance(po, py);
@@ -285,7 +285,7 @@ void CameraNavigationWidget::panCamera(int dx, int dy) {
 }
 
 void CameraNavigationWidget::dollyCamera(int dz) {
-    INCA_DEBUG("Dolly " << dz << " clicks")
+//    INCA_DEBUG("Dolly " << dz << " clicks")
     if (camera && enableDolly) {
         camera->transform->dolly(dz * dollyScale());
         requestRedisplay();
@@ -293,7 +293,7 @@ void CameraNavigationWidget::dollyCamera(int dz) {
 }
 
 void CameraNavigationWidget::lookCamera(int ay, int ap) {
-    INCA_DEBUG("Look " << ay << ", " << ap << " clicks")
+//    INCA_DEBUG("Look " << ay << ", " << ap << " clicks")
     if (camera && enableLook) {
         camera->transform->pitch(-ap * lookScale());
         // XXX HACK
@@ -304,7 +304,7 @@ void CameraNavigationWidget::lookCamera(int ay, int ap) {
 }
 
 void CameraNavigationWidget::rollCamera(int ar) {
-    INCA_DEBUG("Roll " << ar << " clicks")
+//    INCA_DEBUG("Roll " << ar << " clicks")
     if (camera && enableRoll) {
         camera->transform->roll(ar * rollScale());
         requestRedisplay();
@@ -312,7 +312,7 @@ void CameraNavigationWidget::rollCamera(int ar) {
 }
 
 void CameraNavigationWidget::pitchCamera(int ap) {
-    INCA_DEBUG("Pitch " << ap << " clicks")
+//    INCA_DEBUG("Pitch " << ap << " clicks")
     if (camera && enablePitch) {
         camera->transform->pitch(ap * pitchScale());
         requestRedisplay();
@@ -320,7 +320,7 @@ void CameraNavigationWidget::pitchCamera(int ap) {
 }
 
 void CameraNavigationWidget::yawCamera(int ay) {
-    INCA_DEBUG("Yaw " << ay << " clicks")
+//    INCA_DEBUG("Yaw " << ay << " clicks")
     if (camera && enableYaw) {
         camera->transform->yaw(ay * yawScale());
         requestRedisplay();
@@ -328,7 +328,7 @@ void CameraNavigationWidget::yawCamera(int ay) {
 }
 
 void CameraNavigationWidget::zoomCamera(int clicks) {
-    INCA_DEBUG("Zoom " << clicks << " clicks")
+//    INCA_DEBUG("Zoom " << clicks << " clicks")
     if (camera && enableZoom) {
         if (clicks > 0)
             for (int i = 0; i < clicks; i++)
