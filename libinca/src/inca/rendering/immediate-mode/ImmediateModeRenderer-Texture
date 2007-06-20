@@ -1,0 +1,34 @@
+/** -*- C++ -*-
+ *
+ * File: ImmediateModeRenderer-Texture
+ *
+ * Author: Ryan L. Saunders
+ *
+ * Copyright 2004, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ *      This file defines the Texture inner class belonging to
+ *      ImmediateModeRenderer. A Texture directly represents a
+ *      hardware-accelerated texture.
+ *
+ *      This file is not meant to be used directly, but is included by
+ *      the main ImmediateModeRenderer header file.
+ */
+
+#ifndef INCA_RENDERING_IMMEDIATE_MODE_RENDERER_TEXTURE
+#define INCA_RENDERING_IMMEDIATE_MODE_RENDERER_TEXTURE
+
+
+RENDERER_TEMPLATE
+class RENDERER::Texture {
+public:
+    // Constructor
+    Texture(IDType id = 0) : _id(id) { }
+
+    IDType id() const { return _id; }
+
+protected:
+    IDType _id;             // API-specific handle/pointer
+};
+
+#endif

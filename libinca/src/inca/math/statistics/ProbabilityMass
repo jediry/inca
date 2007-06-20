@@ -15,7 +15,7 @@
 // Import system configuration
 #include <inca/inca-common.h>
 
-
+// This is part of the Inca math library
 namespace inca {
     namespace math {
         // Forward declarations
@@ -78,7 +78,10 @@ public:
 
     // Element accessors
     SizeType size() const { return _elements.size(); }
-          Scalar & element(IndexType i)       { return _elements[i]; }
+    Scalar & element(IndexType i) {
+        _isValid = false;
+        return _elements[i];
+    }
     const Scalar & element(IndexType i) const { return _elements[i]; }
 
     // Actual probability function (with REMAINDERs handled)
@@ -130,14 +133,20 @@ protected:
                 else                            ++remainderElementCount;
 
             Scalar portion, divisor;
-            if (massUsed > 1) {
+            if (massUsed > 1 || remainderElementCount == 0) {
+                // ...then any REMAINDERs get nothin', and we have to
+                // scale the others to fit [0,1], if that can be done
                 portion = 0;
-                divisor = massUsed;
+                divisor = massUsed > 0
+                            ? massUsed      // Normalize to [0,1]
+                            : Scalar(1);    // Aw, crap! All-zero PMF!
             } else {
+                // ...we leave 'set' elements as-is, and divide up remaining
+                // mass amongst the REMAINDER elements
                 portion = (1 - massUsed) / remainderElementCount;
                 divisor = 1;
             }
-
+            
             // Calculate the REMAINDER-corrected probability function and the PMF
             Scalar sum = 0;
             for (IndexType i = 0; i < size(); ++i) {

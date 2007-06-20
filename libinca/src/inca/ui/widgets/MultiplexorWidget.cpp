@@ -13,6 +13,9 @@
  *      directly to a specific widget.
  */
 
+// TODO: deleting a widget can result in an invalid selection
+// TODO: this depends on too much knowledge of PassThruWidget
+
 // Import class definition
 #include "MultiplexorWidget.hpp"
 using namespace inca::ui;

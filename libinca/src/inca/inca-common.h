@@ -88,6 +88,7 @@ namespace inca {
 #define INCA_INFO(STREAM_EXPR)    std::cerr << "INFO:    " << STREAM_EXPR << std::endl;
 #define INCA_WARNING(STREAM_EXPR) std::cerr << "WARNING: " << STREAM_EXPR << std::endl;
 #define INCA_ERROR(STREAM_EXPR)   std::cerr << "ERROR:   " << STREAM_EXPR << std::endl;
+#define INCA_FATAL(STREAM_EXPR)   std::cerr << "FATAL:   " << STREAM_EXPR << std::endl;
 //#define INCA_INFO(STREAM_EXPR)
 //#define INCA_WARNING(STREAM_EXPR)
 //#define INCA_ERROR(STREAM_EXPR)

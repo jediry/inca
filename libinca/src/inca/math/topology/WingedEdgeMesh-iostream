@@ -21,107 +21,160 @@ namespace inca {
     namespace math {
 
 // These are broken in Visual Studio
+#if 0
         MESH_TEMPLATE
-        std::ostream & operator<<(std::ostream &os,
-                                  const typename MESH::Vertex &v) {
+        std::ostream & operator<<(std::ostream & os,
+                                  const typename MESH::Vertex & v) {
             return os << "Vertex(" << v->id() << "): "
                       << v->edgeCount() << " edges";
         }
 
-#if 0
         MESH_TEMPLATE
-        std::ostream & operator<<(std::ostream &os,
-                                  const typename MESH::Face &f) {
+        std::ostream & operator<<(std::ostream & os,
+                                  const typename MESH::Face & f) {
             return os << "Face(" << f->id() << ')';
         }
 
         MESH_TEMPLATE
-        std::ostream & operator<<(std::ostream &os,
-                                  const typename MESH::Edge &e) {
+        std::ostream & operator<<(std::ostream & os,
+                                  const typename MESH::Edge & e) {
             return os << "Edge(" << e->id() << ')';
         }
 
         MESH_TEMPLATE
-        std::ostream & operator<<(std::ostream &os,
-                                  const typename MESH::FaceVertex &fv) {
+        std::ostream & operator<<(std::ostream & os,
+                                  const typename MESH::FaceVertex & fv) {
             return os << "FaceVertex(" << fv->id() << ')';
         }
 
         MESH_TEMPLATE
-        std::ostream & operator<<(std::ostream &os,
-                                  const typename MESH::EdgeVertex &ev) {
+        std::ostream & operator<<(std::ostream & os,
+                                  const typename MESH::EdgeVertex & ev) {
             return os << "EdgeVertex(" << ev->id() << ")";
         }
 #endif
 
         MESH_TEMPLATE
-        std::ostream & writeV(std::ostream &os, const typename MESH::Vertex &v) {
-            return os << "Vertex(" << v->id() << "): "
-                      << v->edgeCount() << " edges";
+        std::string writeV(const MESH &, const typename MESH::Vertex & v) {
+            std::ostringstream ss;
+            ss << "V(" << v.id() << ") [ FV(";
+            if (v.faceVertex() == NULL)     ss << ' ';
+            else                            ss << v.faceVertex()->id(); 
+            ss << ") ]";
+            return ss.str();
         }
 
         MESH_TEMPLATE
-        std::ostream & writeF(std::ostream &os, const typename MESH::Face &f) {
-            return os << "Face(" << f->id() << ')';
+        std::string writeF(const MESH &, const typename MESH::Face & f) {
+            std::ostringstream ss;
+            ss << "F(" << f.id() << ") [ E(";
+            if (f.edge() == NULL)           ss << ' ';
+            else                            ss << f.edge()->id();
+            ss << ") ]";
+            return ss.str();
         }
 
         MESH_TEMPLATE
-        std::ostream & writeE(std::ostream &os, const typename MESH::Edge &e) {
-            return os << "Edge(" << e->id() << ')';
+        std::string writeE(const MESH & m, const typename MESH::Edge & e) {
+            std::ostringstream ss;
+            ss << "E(" << e.id() << ") [ " << writeEV(m, *e.startEdgeVertex())
+               << " ]--(";
+            if (e.positiveFace() == NULL)   ss << ' ';
+            else                            ss << e.positiveFace()->id();
+            ss << '/';
+            if (e.negativeFace() == NULL)   ss << ' ';
+            else                            ss << e.negativeFace()->id();
+            ss << ")--[ " << writeEV(m, *e.endEdgeVertex()) << " ]";
+            return ss.str();
         }
 
         MESH_TEMPLATE
-        std::ostream & writeFV(std::ostream &os, const typename MESH::FaceVertex &fv) {
-            return os << "FaceVertex(" << fv->id() << ')';
+        std::string writeFV(const MESH &, const typename MESH::FaceVertex & fv) {
+            std::ostringstream ss;
+            ss << "FV(" << fv.id() << ") [ F(";
+            if (fv.face() == NULL)          ss << ' ';
+            else                            ss << fv.face()->id();
+            ss << ")  V(";
+            if (fv.vertex() == NULL)        ss << ' ';
+            else                            ss << fv.vertex()->id();
+            ss << ") ]";
+            return ss.str();
         }
 
         MESH_TEMPLATE
-        std::ostream & writeEV(std::ostream &os, const typename MESH::EdgeVertex &ev) {
-            return os << "EdgeVertex(" << ev->id() << ')';
+        std::string writeEV(const MESH &, const typename MESH::EdgeVertex & ev) {
+            std::ostringstream ss;
+            ss << "V(";
+            if (ev.vertex() == NULL)        ss << ' ';
+            else                            ss << ev.vertex()->id();
+            ss << ")  FV: \\(";
+            if (ev.faceVertexCCW() == NULL) ss << ' ';
+            else                            ss << ev.faceVertexCCW()->id();
+            ss << ")|(";
+            if (ev.faceVertexCW() == NULL)  ss << ' ';
+            else                            ss << ev.faceVertexCW()->id();
+            ss << ")/  E: (";
+            if (ev.edgeVertexCCW()->edge() == NULL)  ss << ' ';
+            else                                    ss << ev.edgeVertexCCW()->edge()->id();
+            ss << ")\\|/(";
+            if (ev.edgeVertexCW()->edge() == NULL)  ss << ' ';
+            else                            ss << ev.edgeVertexCW()->edge()->id();
+            ss << ")";
+            return ss.str();
         }
 
         MESH_TEMPLATE
         std::ostream & operator<<(std::ostream &os, const MESH &m) {
-            os << "Vertices:" << endl;
+            os << "Mesh dump:\n"
+                  "  " << m.vertexCount() << " vertices:\n";
             typename MESH::VertexPtrList::const_iterator vi;
             for (vi = m.vertices().begin(); vi != m.vertices().end(); ++vi) {
                 typename MESH::VertexConstPtr v = *vi;
-                os << "Vertex(" << v->id() << "): "
-                   << v->edgeCount() << " edge(s)";
+                os << "    " << writeV(m, *v) << std::endl;
             }
-            os << endl;
+            os << std::endl;
 
-            os << "Faces:" << endl;
+            os << "  " << m.faceCount() << " faces:\n";
             typename MESH::FacePtrList::const_iterator fi;
             for (fi = m.faces().begin(); fi != m.faces().end(); ++fi) {
                 typename MESH::FaceConstPtr f = *fi;
-                os << "Face(" << f->id() << ')';
+                os << "    " << writeF(m, *f) << std::endl;
             }
-            os << endl;
+            os << std::endl;
 
-            os << "Edges:" << endl;
+            os << "  " << m.vertexCount() << " edges:\n";
             typename MESH::EdgePtrList::const_iterator ei;
             for (ei = m.edges().begin(); ei != m.edges().end(); ++ei) {
                 typename MESH::EdgeConstPtr e = *ei;
-                os << "Edge(" << e->id() << ')';
+                os << "    " << writeE(m, *e) << std::endl;
             }
-            os << endl;
+            os << std::endl;
 
-            os << "FaceVertices:" << endl;
+            os << "  " << m.faceVertexCount() << " face-vertices:\n";
             typename MESH::FaceVertexPtrList::const_iterator fvi;
             for (fvi = m.faceVertices().begin(); fvi != m.faceVertices().end(); ++fvi) {
                 typename MESH::FaceVertexConstPtr fv = *fvi;
-                os << "FaceVertex(" << fv->id() << ')';
+                os << "    " << writeFV(m, *fv) << std::endl;
             }
-            os << endl;
-            os << endl;
+            os << std::endl;
+#if 0
+            os << "  " << (m.edgeCount() * 2) << " edge-vertices:\n";
+            typename MESH::EdgePtrList::const_iterator evi;
+            for (evi = m.edges().begin(); evi != m.edges().end(); ++evi) {
+                typename MESH::EdgeConstPtr ev = *evi;
+                os << "    " << writeEV(m, *(ev->startEdgeVertex())) << std::endl;
+                os << "    " << writeEV(m, *(ev->endEdgeVertex())) << std::endl;
+            }
+#endif
+            os << std::endl;
+            os << std::endl;
 
             return os;
         }
 
         MESH_TEMPLATE
         void MESH::dump() {
-            cerr << *this << endl;
+            std::cerr << *this << endl;
         }
     };
 };

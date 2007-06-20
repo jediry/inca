@@ -41,7 +41,8 @@
 #define INCA_MATH_TOPOLOGY_WINGED_EDGE_MESH_EDGE
 
 
-MESH_TEMPLATE class inca::math::MESH::Edge : public EData, public MeshElement {
+MESH_TEMPLATE class inca::math::MESH::Edge
+    : public EData, public MeshElement {
 /*---------------------------------------------------------------------------*
  | Friend declarations
  *---------------------------------------------------------------------------*/
@@ -300,7 +301,7 @@ public:
     }
 
 protected:
-    FacePtr setThisFace(FaceVertexConstPtr fromFV, FacePtr f) {
+    void setThisFace(FaceVertexConstPtr fromFV, FacePtr f) {
         if (fromFV == NULL)                         return;
         else if (fromFV == positiveFaceVertexCCW()) setPositiveFace(f);
         else if (fromFV == positiveFaceVertexCW())  setPositiveFace(f);
@@ -308,7 +309,7 @@ protected:
         else if (fromFV == negativeFaceVertexCW())  setNegativeFace(f);
         else                                        return;
     }
-    FacePtr setOtherFace(FaceVertexConstPtr fromFV, FacePtr f) {
+    void setOtherFace(FaceVertexConstPtr fromFV, FacePtr f) {
         if (fromFV == NULL)                         return;
         else if (fromFV == positiveFaceVertexCCW()) setNegativeFace(f);
         else if (fromFV == positiveFaceVertexCW())  setNegativeFace(f);

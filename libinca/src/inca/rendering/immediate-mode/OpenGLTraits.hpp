@@ -65,13 +65,15 @@ public:
     // Properties and functions for the IMR::Rasterizer object
     enum Property {
         // Renderer properties
-        CurrentMatrixStack,
+        CurrentMatrixStack, CurrentTexturingUnit,
 
-        // Rasterizer toggle properties
+        // Rasterizer properties
         DepthBuffering, AlphaBlending, FaceCulling, Lighting,
-        PointSmoothing, LineSmoothing, PolygonSmoothing,
+        PointSmoothing, LineSmoothing, PolygonSmoothing, Fog,
         BackgroundColor, PolygonOffset, PointDiameter, LineWidth,
         ShadingModel, CurrentColor, CurrentNormal, CurrentTexCoord, CurrentEdgeFlag,
+        FogModel, FogStartDepth, FogEndDepth, FogDensity, FogColor,
+        CulledFace, TextureType,
         VertexArrayPointer,   VertexArrayStride,
         NormalArrayPointer,   NormalArrayStride,
         TexCoordArrayPointer, TexCoordArrayStride,
@@ -91,6 +93,9 @@ public:
         LightingUnitAmbientColor,
         LightingUnitDiffuseColor,
         LightingUnitSpecularColor,
+
+        // Texturing unit properties
+        TexturingUnitEnabled,
     };
     static const Property FirstRendererProperty = CurrentMatrixStack;
     static const Property LastRendererProperty  = CurrentMatrixStack;
@@ -102,6 +107,8 @@ public:
     static const Property LastViewportProperty  = ViewportBounds;
     static const Property FirstLightingUnitProperty = LightingUnitEnabled;
     static const Property LastLightingUnitProperty  = LightingUnitSpecularColor;
+    static const Property FirstTexturingUnitProperty = TexturingUnitEnabled;
+    static const Property LastTexturingUnitProperty  = TexturingUnitEnabled;
 
     // Hardware property get/set functions
     template <Property p> static void getImplementationLimit(SizeType & sz);
@@ -122,6 +129,13 @@ public:
     template <Property p> static void setHardwareState(const TexCoord & value);
     template <Property p> static void getHardwareState(::inca::rendering::ShadingModel & model);
     template <Property p> static void setHardwareState(::inca::rendering::ShadingModel model);
+    template <Property p> static void getHardwareState(::inca::rendering::FogModel & model);
+    template <Property p> static void setHardwareState(::inca::rendering::FogModel model);
+
+    template <Property p> static void getHardwareState(::inca::rendering::PolygonFace & face);
+    template <Property p> static void setHardwareState(::inca::rendering::PolygonFace face);
+    template <Property p> static void getHardwareState(::inca::rendering::TextureType & type);
+    template <Property p> static void setHardwareState(::inca::rendering::TextureType type);
 
     template <Property p> static void getHardwareState(IDType id, bool & enabled);
     template <Property p> static void setHardwareState(IDType id, bool enabled);
@@ -185,6 +199,14 @@ public:
 
     template <typename V>
     static void translateMatrix(IDType id, const V & v);
+
+
+    // Functions used for IMR::Texture manipulation
+    template <typename scalar, typename colorspace, SizeType dim>
+    static IDType createTexture(const math::Color<scalar, colorspace> * texels,
+                                const inca::Array<SizeType, dim> & sizes);
+    static void deleteTexture(IDType textureID);
+    static void bindTexture(IDType textureID);
 };
 
 #endif

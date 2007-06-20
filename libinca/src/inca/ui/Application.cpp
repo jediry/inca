@@ -9,7 +9,14 @@
  */
 
 // Import class definition
-#include <inca/ui/Application.hpp>
+#include "Application.hpp"
+
+// Import exception definitions
+#include <inca/util/IllegalStateException.hpp>
+
+// Import toolkit-specialized peer definitions
+#include <inca/integration/glut/GLUT-peers.hpp>
+
 using namespace inca;
 using namespace inca::ui;
 
@@ -36,70 +43,81 @@ void Application::destroy() {
 
 
 /*---------------------------------------------------------------------------*
- | Constructors & destructor
+ | Constructors, destructor & main function
  *---------------------------------------------------------------------------*/
-Application::Application() : timer(this) {
+Application::Application() : HeavyweightComponent<ApplicationPeer>("Application") {
     if (! instanceExists()) {
         _instance = this;   // Claim singleton-ness
     } else {
-        INCA_ERROR("Application(): There is already an existing "
-                   "application instance.")
-        // XXX should this die a painful death?
+        IllegalStateException e;
+        e << __FUNCTION__ "(): An application instance already exists";
+        throw e;
     }
 }
 
-Application::~Application() {
-    // Drop our shared references to the windows (shared_ptr will clean up)
-    windows.clear();
+Application::~Application() { }
 
-    // Drop our shared references to the components
-    components.clear();
+
+// Application main function
+int Application::main(int & argc, char **& argv) {
+    // First, initialize the UI toolkit
+    setPeer(new GLUTApplicationPeer(this));
+    peer()->initialize(argc, argv);
+
+    // Next, we get our own application-specific command-line arguments
+    // and do any necessary initialization
+    setup(argc, argv);
+
+    // Now, assemble the user interface
+    construct();
+    
+    // Finally, run the application loop
+    return peer()->run();
 }
 
 
-void Application::initialize(int &argc, char **argv) {
-        // First, let the toolkit initialize itself
-        // (and extract/process any relevent  command-line arguments)
-        initializeToolkit(argc, argv);
-
-        // Next, we get our own application-specific command-line arguments
-        // and do any necessary initialization
-        setup(argc, argv);
-
-        // Now, assemble the user interface
-        constructInterface();
+// Application exit function
+void Application::exit(int code, const std::string & msg) {
+    if (code != 0)      INCA_FATAL(msg)
+    else                INCA_INFO(msg)
+    peer()->exit(code);
 }
 
 
 /*---------------------------------------------------------------------------*
- | Toolkit-integration functions
+ | Input device state functions
  *---------------------------------------------------------------------------*/
-// Cause the application to terminate
-void Application::exit(int status, const std::string & msg) {
-    std::cerr << msg << endl;   // Print out the message...
-    ::exit(status);             // ...and bail out of the program
-};
-
-
-/*---------------------------------------------------------------------------*
- | GUI object management functions
- *---------------------------------------------------------------------------*/
-void Application::registerComponent(UIComponentPtr c) {
-    components.push_back(c);
+// NumLock key state
+bool Application::numLockActive() const {
+    return peer()->lockKeyState(NumLockKey);
+}
+void Application::setNumLockActive(bool a) {
+    peer()->setLockKeyState(NumLockKey, a);
+}
+void Application::toggleNumLock() {
+    peer()->setLockKeyState(NumLockKey, ! numLockActive());
 }
 
-void Application::registerWindow(WindowPtr w) {
-    IDType id = w->getID();
-    windows.resize(std::max(id + 1, windows.size()));   // Make room
-    windows[id] = w;                                    // Claim my ID
+// ScrollLock key state
+bool Application::scrollLockActive() const {
+    return peer()->lockKeyState(ScrollLockKey);
+}
+void Application::setScrollLockActive(bool a) {
+    peer()->setLockKeyState(ScrollLockKey, a);
+}
+void Application::toggleScrollLock() {
+    peer()->setLockKeyState(ScrollLockKey, ! scrollLockActive());
 }
 
-WindowPtr Application::getWindowForID(IDType id) {
-    return windows[id];
+// CapsLock key state
+bool Application::capsLockActive() const {
+    return peer()->lockKeyState(CapsLockKey);
 }
-
-void Application::destroyWindow(IDType id) {
-    windows[id] = WindowPtr();  // Forget about it
+void Application::setCapsLockActive(bool a) {
+    peer()->setLockKeyState(CapsLockKey, a);
+}
+void Application::toggleCapsLock() {
+    peer()->setLockKeyState(CapsLockKey, ! capsLockActive());
 }
 
 
@@ -107,7 +125,7 @@ void Application::destroyWindow(IDType id) {
  | Utility functions
  *---------------------------------------------------------------------------*/
 // Pull off the first command-line argument and remove it from the list
-std::string Application::shift(int & argc, char ** & argv) {
+std::string Application::shift(int & argc, char **& argv) {
     std::string result;
     if (argc > 1) {
         result = argv[1];   // Save the first argument into a string
@@ -116,4 +134,31 @@ std::string Application::shift(int & argc, char ** & argv) {
         argc--;             // Decrement the count
     }
     return result;
+}
+
+
+/*---------------------------------------------------------------------------*
+ | Window management functions
+ *---------------------------------------------------------------------------*/
+// Add a Window to the Application
+WindowPtr Application::add(Window * w) {
+    WindowPtr wp(w);    // Wrap it in a WindowPtr and call the other version
+    return add(wp);
+}
+WindowPtr Application::add(WindowPtr w) {
+    w->setPeer(new GLUTWindowPeer(w.get()));    // Give it an appropriate peer
+//    w->setParent(self<Component>());
+    w->construct();                             // Run 2nd phase init
+    _windows.push_back(w);                      // Include it in the list
+    return w;                                   // Pass it back
+}
+
+// Remove a Window from the Application
+void Application::remove(WindowPtr w) {
+    WindowList::iterator it;
+    for (it = _windows.begin(); it != _windows.end(); ++it)
+        if (w == *it) {
+            _windows.erase(it);
+            break;
+        }
 }

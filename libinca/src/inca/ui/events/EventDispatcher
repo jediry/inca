@@ -1,0 +1,96 @@
+/** -*- C++ -*-
+ *
+ * \file    EventDispatcher
+ * 
+ * \author  Ryan L. Saunders
+ *
+ * Copyright 2005, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ *      The EventDispatcher template class encapsulates the details of adding
+ *      and removing event listeners, and of dispatching events to them.
+ */
+
+#pragma once
+#ifndef INCA_UI_EVENT_DISPATCHER
+#define INCA_UI_EVENT_DISPATCHER
+
+// Import system configuration
+#include <inca/inca-common.h>
+
+
+// This is part of the Inca interface layer
+namespace inca {
+    namespace ui {
+        // Forward declarations
+        template <typename EventT, typename ListenerT> class EventDispatcher;
+    };
+};
+
+
+template <typename EventT, typename ListenerT>
+class inca::ui::EventDispatcher {
+/*---------------------------------------------------------------------------*
+ | Type definitions
+ *---------------------------------------------------------------------------*/
+public:
+    // Event and listener typedefs
+    typedef EventT      Event;
+    typedef ListenerT   Listener;
+    
+    // Pointer-to-listener and list thereof
+    typedef shared_ptr<Listener>        ListenerPtr;
+    typedef std::vector<ListenerPtr>    ListenerList;
+    
+    // Pointer-to-function type for the event handler functions
+    typedef void (ListenerT::*Callback)(const EventT &);
+    
+
+/*---------------------------------------------------------------------------*
+ | Listener management functions
+ *---------------------------------------------------------------------------*/
+public:
+    // Add a listener to this list
+    void add(ListenerPtr lp) {
+        typename ListenerList::const_iterator it;
+        if (! lp)
+            INCA_WARNING(__FUNCTION__ "(...): Refusing to add NULL listener")
+        else if ((it = std::find(_listeners.begin(),
+                                 _listeners.end(), lp)) != _listeners.end())
+            INCA_WARNING(__FUNCTION__ "(...): Refusing to add duplicate listener "
+                         "-- would-be listener # " << _listeners.size() <<
+                         " is a duplicate of # " << (it - _listeners.begin()))
+        else
+            _listeners.push_back(lp);
+    }
+
+    // Remove a listener from the list
+    void remove(ListenerPtr lp) {
+        typename ListenerList::iterator it;
+        if (! lp)
+            INCA_WARNING(__FUNCTION__ "(...): Refusing to remove NULL listener")
+        else if ((it = std::find(_listeners.begin(),
+                                 _listeners.end(), lp)) == _listeners.end())
+            INCA_WARNING(__FUNCTION__ "(): Unable to delete listener -- "
+                         "it is not in the current list of listeners")
+        else
+            _listeners.erase(it);
+    }
+    
+    // Retrieve the set of listeners
+    const ListenerList & listeners() const {
+        return _listeners;
+    }
+    
+    // Fire an event to each listening object
+    void fireEvent(const Event & e, Callback func) const {
+        typename ListenerList::const_iterator it;
+        for (it = _listeners.begin(); it != _listeners.end(); ++it)
+            ((**it).*func)(e);
+    }
+
+protected:
+    ListenerList _listeners;    // The list of things to notify
+};
+
+#endif

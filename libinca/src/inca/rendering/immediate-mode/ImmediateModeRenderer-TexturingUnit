@@ -13,6 +13,8 @@
  *
  *      This file is not meant to be used directly, but is included by
  *      the main ImmediateModeRenderer header file.
+ *
+ * TODO: Don't assume a texture belongs to the same rendering context
  */
 
 #ifndef INCA_RENDERING_IMMEDIATE_MODE_RENDERER_TEXTURING_UNIT
@@ -24,6 +26,21 @@ class RENDERER::TexturingUnit : public RENDERER::Component {
 public:
     // Constructor
     TexturingUnit(RENDERER & r, IDType id) : Component(r, id) { }
+
+    bool enabled() const {
+        API::template getHardwareState<API::TexturingUnitEnabled>(this->id(), _enabled);
+        return _enabled;
+    }
+    void setEnabled(bool enabled) {
+        API::template setHardwareState<API::TexturingUnitEnabled>(this->id(), enabled);
+    }
+
+    void bind(Texture t) {
+        API::bindTexture(t.id());
+    }
+
+protected:
+    mutable bool _enabled;
 };
 
 #endif

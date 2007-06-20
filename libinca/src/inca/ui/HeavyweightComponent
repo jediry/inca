@@ -1,0 +1,332 @@
+/** -*- C++ -*-
+ *
+ * \file    HeavyweightComponent
+ *
+ * \author  Ryan L. Saunders
+ *
+ * Copyright 2004, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ *      The HeavyweightComponent template class is a base class for UI
+ *      components that are wrappers for native UI toolkit objects. It handles
+ *      the lifecycle of the native Peer object, using the 'pImpl' design
+ *      pattern.
+ *
+ *      The normal way to use HeavyweightComponent is to inherit it as a
+ *      protected base class, passing the derived class as the 'T'
+ *      template parameter. The 'T' class must have an inner class
+ *      (or typedef) called 'Peer', which is the base class for all
+ *      toolkit-specific peer classes for that component. By inheriting this
+ *      class as 'protected', a component can restrict access to its Peer to
+ *      a limited set of other classes, by declaring them as 'friends'.
+ *
+ *      The ComponentPeer template class is intended to simplify the creation of
+ *      peer classes, and wraps a pointer to the Inca UI object corresponding
+ *      to the peer. It holds this object via a bare C pointer, implying that
+ *      the Peer must not be allowed to outlive its corresponding UI object,
+ *      or a dangling pointer will result (the HeavyweightComponent
+ *      deletes the Peer when it dies, for this reason). 
+ */
+
+#ifndef INCA_UI_HEAVYWEIGHT_COMPONENT
+#define INCA_UI_HEAVYWEIGHT_COMPONENT
+
+// Import system configuration
+#include <inca/inca-common.h>
+
+// This is part of the Inca interface layer
+namespace inca {
+    namespace ui {
+        // Forward declarations
+        template <typename P> class HeavyweightComponent;
+        template <typename C> class ComponentPeer;
+    }
+}
+
+// Import superclass definition
+#include "Component.hpp"
+
+
+template <class P>
+class inca::ui::HeavyweightComponent : public inca::ui::Component {
+/*---------------------------------------------------------------------------*
+ | Type declarations
+ *---------------------------------------------------------------------------*/
+public:
+    typedef P Peer;
+
+    // The Peer needs access to the Component's event-firing functions
+    template <class C> friend class ComponentPeer;
+
+
+/*---------------------------------------------------------------------------*
+ | Constructors & destructor
+ *---------------------------------------------------------------------------*/
+protected:
+    // Constructor
+    explicit HeavyweightComponent(const std::string & nm)
+        : Component(nm), _peer(NULL) { }
+    
+    // Destructor
+    virtual ~HeavyweightComponent() { deletePeer(); }
+
+
+/*---------------------------------------------------------------------------*
+ | Peer lifecycle management
+ *---------------------------------------------------------------------------*/
+public:
+    // Peer class accessors
+    Peer       * peer()       { return _peer; }
+    Peer const * peer() const { return _peer; }
+    void deletePeer() {
+        if (_peer)
+            delete _peer;
+    }
+    void setPeer(Peer * p) {
+        deletePeer();
+        _peer = p;
+        
+        // XXX Should this be here?
+//        construct();
+    }
+
+protected:
+    Peer * _peer;   // Peer pImpl object
+
+
+/*---------------------------------------------------------------------------*
+ | Abstract interface functions for Component position & size (pass-thru)
+ *---------------------------------------------------------------------------*/
+public:
+    // Window position
+    Pixel position() const {
+        if (! peer()) {
+            INCA_WARNING(__FUNCTION__ "() called with no Peer")
+            return Pixel(0);
+        }
+        return peer()->position();
+    }
+    void setPosition(Pixel p) {
+        if (! peer()) {
+            INCA_WARNING(__FUNCTION__ "(p) called with no Peer")
+            return;
+        }
+        peer()->setPosition(p);
+        fireComponentMoved();
+    }
+    void setPosition(IndexType x, IndexType y)  {
+        if (! peer()) {
+            INCA_WARNING(__FUNCTION__ "(x,y) called with no Peer")
+            return;
+        }
+        peer()->setPosition(Pixel(x, y));
+        fireComponentMoved();
+    }
+
+    // Current size
+    Dimension size() const {
+        if (! peer()) {
+            INCA_WARNING(__FUNCTION__ "() called with no Peer")
+            return Dimension(0);
+        }
+        return peer()->size();
+    }
+    void setSize(Dimension d) {
+        if (! peer()) {
+            INCA_WARNING(__FUNCTION__ "(d) called with no Peer")
+            return;
+        }
+        peer()->setSize(d);
+        fireComponentResized();
+    }
+    void setSize(SizeType w, SizeType h) {
+        if (! peer()) {
+            INCA_WARNING(__FUNCTION__ "(w,h) called with no Peer")
+            return;
+        }
+        peer()->setSize(Dimension(w, h));
+        fireComponentResized();
+    }
+
+    // Minimum allowable size
+    Dimension minimumSize() const {
+        if (! peer()) {
+            INCA_WARNING(__FUNCTION__ "() called with no Peer")
+            return Dimension(0);
+        }
+        return peer()->minimumSize();
+    }
+    void setMinimumSize(Dimension d) {
+        if (! peer()) {
+            INCA_WARNING(__FUNCTION__ "(d) called with no Peer")
+            return;
+        }
+        peer()->setMinimumSize(d);
+    }
+    void setMinimumSize(SizeType w, SizeType h) {
+        if (! peer()) {
+            INCA_WARNING(__FUNCTION__ "(w,h) called with no Peer")
+            return;
+        }
+        peer()->setMinimumSize(Dimension(w, h));
+    }
+
+    // Maximum allowable size
+    Dimension maximumSize() const {
+        if (! peer()) {
+            INCA_WARNING(__FUNCTION__ "() called with no Peer")
+            return Dimension(0);
+        }
+        return peer()->maximumSize();
+    }
+    void setMaximumSize(Dimension d) {
+        if (! peer()) {
+            INCA_WARNING(__FUNCTION__ "(d) called with no Peer")
+            return;
+        }
+        peer()->setMaximumSize(d);
+    }
+    void setMaximumSize(SizeType w, SizeType h) {
+        if (! peer()) {
+            INCA_WARNING(__FUNCTION__ "(w,h) called with no Peer")
+            return;
+        }
+        peer()->setMaximumSize(Dimension(w, h));
+    }
+    
+    bool visible() const {
+        if (! peer()) {
+            INCA_WARNING(__FUNCTION__ "() called with no Peer")
+            return false;
+        }
+        return peer()->visible();
+    }
+    void setVisible(bool v) {
+        if (! peer()) {
+            INCA_WARNING(__FUNCTION__ "(v) called with no Peer")
+            return;
+        }
+        if (v != peer()->visible()) {
+            peer()->setVisible(v);
+            if (v)  fireComponentRevealed();
+            else    fireComponentHidden();
+        }
+    }
+};
+
+
+template <typename C>
+class inca::ui::ComponentPeer {
+/*---------------------------------------------------------------------------*
+ | Type declarations
+ *---------------------------------------------------------------------------*/
+public:
+    typedef C                   ComponentType;
+    typedef ComponentPeer<C>    Base;
+    
+    // Imported types
+    typedef Component::Pixel        Pixel;
+    typedef Component::Dimension    Dimension;
+
+    
+/*---------------------------------------------------------------------------*
+ | Constructors & destructor
+ *---------------------------------------------------------------------------*/
+protected:
+    // Protected constructor
+    explicit ComponentPeer(ComponentType * c)
+        : _component(c) { }
+        
+    // Destructor
+    virtual ~ComponentPeer() { }
+
+
+/*---------------------------------------------------------------------------*
+ | Component graph accessors
+ *---------------------------------------------------------------------------*/
+public:
+    // Accessors for the Inca Component owning this Peer
+    ComponentType       * component()       { return _component; }
+    ComponentType const * component() const { return _component; }
+       
+protected:
+    ComponentType * _component;
+
+
+/*---------------------------------------------------------------------------*
+ | Component size, position, & visibility abstract interface functions
+ *---------------------------------------------------------------------------*/
+public:
+    // Current position
+    virtual Pixel position() const = 0;
+    virtual void setPosition(Pixel p) = 0;
+
+    // Current size
+    virtual Dimension size() const = 0;
+    virtual void setSize(Dimension d) = 0;
+
+    // Minimum allowable size
+    virtual Dimension minimumSize() const = 0;
+    virtual void setMinimumSize(Dimension d) = 0;
+
+    // Maximum allowable size
+    virtual Dimension maximumSize() const = 0;
+    virtual void setMaximumSize(Dimension d) = 0;
+    
+    // Visibility
+    virtual bool visible() const = 0;
+    virtual void setVisible(bool v) = 0;
+
+
+/*---------------------------------------------------------------------------*
+ | Pass-thru to the Component's event-firing functions
+ *---------------------------------------------------------------------------*/
+public:
+    // These make the following function signatures shorter
+    typedef InputEvent::ControlFlags ControlFlags;
+    typedef KeyEvent::Character      Character;
+
+    // ComponentEvent-firing functions
+    void fireComponentMoved()    const { component()->fireComponentMoved(); }
+    void fireComponentResized()  const { component()->fireComponentResized(); }
+    void fireComponentHidden()   const { component()->fireComponentHidden(); }
+    void fireComponentRevealed() const { component()->fireComponentRevealed(); }
+
+    // KeyEvent-firing functions
+    void fireKeyPressed(ControlFlags flags, Pixel p, KeyCode k, Character ch) const {
+        component()->fireKeyPressed(flags, p, k, ch);
+    }
+    void fireKeyReleased(ControlFlags flags, Pixel p, KeyCode k, Character ch) const {
+        component()->fireKeyReleased(flags, p, k, ch);
+    }
+    void fireKeyTyped(ControlFlags flags, Pixel p, KeyCode k, Character ch) const {
+        component()->fireKeyTyped(flags, p, k, ch);
+    }
+
+    // PointerEvent-firing functions    
+    void firePointerDragged(ControlFlags flags, Pixel p) const {
+        component()->firePointerDragged(flags, p);
+    }
+    void firePointerTracked(ControlFlags flags, Pixel p) const {
+        component()->firePointerTracked(flags, p);
+    }
+    void firePointerEntered(ControlFlags flags, Pixel p) const {
+        component()->firePointerEntered(flags, p);
+    }
+    void firePointerExited(ControlFlags flags, Pixel p) const {
+        component()->firePointerExited(flags, p);
+    }
+    
+    // ButtonEvent-firing functions
+    void fireButtonPressed(ControlFlags flags, Pixel p, ButtonCode b) const {
+        component()->fireButtonPressed(flags, p, b);
+    }
+    void fireButtonReleased(ControlFlags flags, Pixel p, ButtonCode b) const {
+        component()->fireButtonReleased(flags, p, b);
+    }
+    void fireButtonClicked(ControlFlags flags, Pixel p, ButtonCode b) const {
+        component()->fireButtonClicked(flags, p, b);
+    }
+};        
+
+#endif

@@ -81,7 +81,7 @@ public:
         : _array(new MultiArrayType(so)) { }
 
     // Copy constructor -- just copy shared_ptr
-    MultiArrayRaster(const ThisType &r)
+    MultiArrayRaster(const ThisType & r)
         : _array(r._array) { }
 
     // Implicit Raster conversion constructor
@@ -145,7 +145,7 @@ public:
     ConstPointer elements() const { return array().elements(); }
 
 //    MultiArrayType & array() { return *_array; }
-//    Pointer elements() { return array().elements(); }
+    Pointer elements() { return _array->elements(); }
 
 
 /*---------------------------------------------------------------------------*

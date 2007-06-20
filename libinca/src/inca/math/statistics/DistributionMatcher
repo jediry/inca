@@ -1,0 +1,222 @@
+/** -*- C++ -*-
+ *
+ * \File DistributionMatcher
+ *
+ * \Author Ryan L. Saunders
+ *
+ * Copyright 2005, Ryan L. Saunders. All rights reserved.
+ *
+ * Description:
+ *      The DistributionMatcher template class first takes one or more
+ *      Statistics objects representing reference distributions, and then
+ *      can evaluate subsequent distributions for how well they conform to
+ *      the reference distributions.
+ *
+ * Implementation:
+ *      
+ *
+ * TODO: This could be extended to implement Chi^2, KS, and maybe some other
+ * tests. It would be interesting to see how they compare.
+ */
+
+#ifndef INCA_MATH_STATISTICS_DISTRIBUTION_MATCHER
+#define INCA_MATH_STATISTICS_DISTRIBUTION_MATCHER
+
+// Import system configuration
+#include <inca/inca-common.h>
+
+// This is part of the Inca math library
+namespace inca {
+    namespace math {
+        // Forward declarations
+        template <typename T> class DistributionMatcher;
+    }
+}
+
+// Import the Statistics definition
+#include "Statistics"
+
+// Import container classes
+#include <inca/util/Array>
+#include <vector>
+
+// Import STL algorithms
+#include <algorithm>
+
+
+template <typename T>
+class inca::math::DistributionMatcher {
+/*---------------------------------------------------------------------------*
+ | Type declarations
+ *---------------------------------------------------------------------------*/
+public:
+    // Basic types
+    typedef T                           Scalar;
+    typedef Statistics<T>               Statistics;
+
+    // Container types
+    static const int                            componentCount = 4;
+    typedef Array<T, componentCount>            ScalarArray;
+    typedef std::vector<T>                      ScalarList;
+    typedef Array<ScalarList, componentCount>   DistributionCache;
+
+
+/*---------------------------------------------------------------------------*
+ | Constructors
+ *---------------------------------------------------------------------------*/
+public:
+    explicit DistributionMatcher() { reset(); }
+
+
+/*---------------------------------------------------------------------------*
+ | Matching parameters & weights
+ *---------------------------------------------------------------------------*/
+public:
+    const ScalarArray curveMeans()     const { return _curveMeans; }
+    const ScalarArray curveVariances() const { return _curveVariances; }
+    const ScalarArray agreements()     const { return _agreements; }
+    const ScalarArray weights()        const { return _weights; }
+
+    Scalar curveMean(IndexType i)     const { return _curveMeans[i]; }
+    Scalar curveVariance(IndexType i) const { return _curveVariances[i]; }
+
+    Scalar agreement()            const { return _agreement; }
+    Scalar agreement(IndexType i) const { return _agreements[i]; }
+    Scalar weight(IndexType i)    const { return _weights[i]; }
+
+protected:
+    // Gaussian mapping curve parameters
+    ScalarArray _curveMeans;
+    ScalarArray _curveVariances;
+
+    // Weighting parameters
+    Scalar      _agreement;
+    ScalarArray _agreements;
+    ScalarArray _weights;
+
+
+/*---------------------------------------------------------------------------*
+ | Distribution analysis & matching functions
+ *---------------------------------------------------------------------------*/
+public:
+    void reset() {
+        for (IndexType c = 0; c < IndexType(componentCount); ++c)
+            _cache[c].clear();
+        _sampleSizes.clear();
+        _totalSize = 0;
+    }
+
+    // Functions to examine the reference distributions
+    void examine(const Statistics & s) {
+        // Accumulate reference statistics
+        _cache[0].push_back(s.mean());
+        _cache[1].push_back(s.stddev());
+        _cache[2].push_back(s.skewness());
+        _cache[3].push_back(s.kurtosis());
+        
+        _sampleSizes.push_back(s.sampleSize());
+        _totalSize += s.sampleSize();
+    }
+    
+    // Analyze the reference distributions we've seen and derive weights, etc.
+    template <class ScalarList0, class ScalarList1>
+    void analyze(const Scalar minMatch,
+                 const ScalarList0 & defaultVar,
+                 const ScalarList1 & libVar) {
+        // Figure out how many samples we have
+        SizeType sampleCount = _sampleSizes.size();
+
+        // For every statistical component (mean, skewness, etc.)
+        for (IndexType c = 0; c < IndexType(componentCount); ++c) {
+            // Calculate the sample-size-weighted average of this stat
+            _curveMeans[c] = 0;
+            for (IndexType i = 0; i < IndexType(sampleCount); ++i)
+                _curveMeans[c] += _cache[c][i] * _sampleSizes[i];
+            _curveMeans[c] /= _totalSize;
+        }
+        
+        // Calculate the curve variance that will keep all reference
+        // examples above 'minMatch'
+        if (sampleCount <= 1) {
+            // This is a special case: all variances would be zero if
+            // calculated the normal way, so just use the supplied
+            // default
+            std::copy(defaultVar.begin(),
+                      defaultVar.begin() + componentCount,
+                      _curveVariances.begin());
+        } else {
+            // OK. We have at least two examples, so it's (probably)
+            // safe to calculate this the usual way.
+            for (IndexType c = 0; c < IndexType(componentCount); ++c) {
+                Scalar maxDiff = 0;
+                for (IndexType i = 0; i < IndexType(sampleCount); ++i) {
+                    Scalar diff = std::abs(_cache[c][i] - _curveMeans[c]);
+                    if (diff > maxDiff)
+                        maxDiff = diff;
+                }
+                _curveVariances[c] = (maxDiff * maxDiff)
+                                   / (-2 * std::log(minMatch));
+            }
+        }
+        
+        // Calculate how much "agreement" exists between the reference samples
+        // w/r to each component
+        Scalar sumAgreement = Scalar(0);
+        typename ScalarList1::const_iterator it = libVar.begin();
+        for (IndexType c = 0; c < IndexType(componentCount); ++c, ++it) {
+            _agreements[c] = std::max(Scalar(0), Scalar(1) - _curveVariances[c] / *it);
+            sumAgreement += _agreements[c];
+        }
+        _agreement = sumAgreement / componentCount;
+
+        // Normalize the agreements into weights
+        if (sumAgreement > 0)
+            for (IndexType i = 0; i < componentCount; ++i)
+                _weights[i] = _agreements[i] / sumAgreement;
+        else
+            // If all of our variances were so bad as to have no agreement,
+            // default all weights to be equal
+            for (IndexType i = 0; i < componentCount; ++i)
+                _weights[i] = Scalar(1) / componentCount;
+    }
+    
+    Scalar match(const Statistics & s) const {
+        Scalar result = 0;
+        result += weight(0) * _gauss_project(s.mean(),     0);
+        result += weight(1) * _gauss_project(s.stddev(),   1);
+        result += weight(2) * _gauss_project(s.skewness(), 2);
+        result += weight(3) * _gauss_project(s.kurtosis(), 3);
+        if(inca::math::isNaN(result))
+            INCA_DEBUG("nan!");
+        
+        return result;
+    }
+    
+protected:
+    // HACK: this probably needs a separate home
+    Scalar _gauss_project(const Scalar & x, IndexType i) const {
+        Scalar diff = x - curveMean(i);
+        return std::exp(diff * diff / (-2 * curveVariance(i)));
+    }
+    
+    // Temporary variable storage
+    DistributionCache _cache;
+    std::vector<int>  _sampleSizes;
+    int               _totalSize;
+};
+
+
+namespace inca {
+    namespace math {
+        template <typename T>
+        std::ostream & operator<<(std::ostream & os, const DistributionMatcher<T> & dm) {
+            os << "a m(" << dm.agreement(0) << ") d(" << dm.agreement(1) << ") "
+               <<   "s(" << dm.agreement(2) << ") k(" << dm.agreement(3) << ")\n"
+               << "v m(" << dm.curveVariance(0) << ") d(" << dm.curveVariance(1) << ") "
+               <<   "s(" << dm.curveVariance(2) << ") k(" << dm.curveVariance(3) << ")";
+            return os;
+        }
+    }
+}
+
+#endif

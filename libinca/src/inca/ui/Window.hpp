@@ -6,9 +6,6 @@
  * Copyright 2004, Ryan L. Saunders. All rights reserved.
  *
  * Description:
- *
- * FIXME: you CANNOT add widgets inside the subclass constructor, since no
- * shared_ptr has been constructed yet, and the self() function is not valid.
  */
 
 #ifndef INCA_UI_WINDOW
@@ -21,107 +18,62 @@
 // This is part of the Inca interface layer
 namespace inca {
     namespace ui {
-// These have been moved to WidgetPart.hpp, in order to resolve a circular
-// dependency issue. Too bad.
+        // Forward declarations
+        class Window;
+        class WindowPeer;
 
-//        // Forward declarations
-//        class Window;
-//
-//        // Pointer typedefs
-//        typedef shared_ptr<Window>       WindowPtr;
-//        typedef shared_ptr<Window const> WindowConstPtr;
+        // Pointer typedefs
+        typedef shared_ptr<Window>       WindowPtr;
+        typedef shared_ptr<Window const> WindowConstPtr;
     };
 };
 
-// Import superclass definition
-#include "WidgetPart.hpp"
+// Import superclass definitions
+#include "HeavyweightComponent"
 
-// Import Widget definition
-#include "Widget.hpp"
+// Import 3D renderable surface definition
+#include "RenderableSurface.hpp"
 
 
-/**
- * The Window class specifies the functions that a toolkit-specific
- * window must implement.
- */
-class inca::ui::Window : virtual public WidgetPartContainer {
-private:
-    // Set up this object to contain properties
-    PROPERTY_OWNING_OBJECT(Window);
-
-    // self() function to get a shared_ptr to myself of the appropriate type
-    SHARED_PTR_TO_SELF(Window);
+class inca::ui::Window
+    : public inca::ui::HeavyweightComponent<inca::ui::WindowPeer> {
+/*---------------------------------------------------------------------------*
+ | Native UI toolkit peer
+ *---------------------------------------------------------------------------*/
+public:
+    // The Application is allowed to set my Peer
+    friend class Application;
+    friend class WindowPeer;
 
 
 /*---------------------------------------------------------------------------*
- | Constructor and properties
+ | Constructors & destructor
  *---------------------------------------------------------------------------*/
 public:
-    // Default constructor with optional component name
-    explicit Window(const std::string & nm = "")
-        : widget(this) { name = nm; }
+    // Default constructor with optional name
+    explicit Window(const std::string & nm = std::string());
 
-    // Constructor specifying the Widget to display
-    explicit Window(WidgetPtr w, const std::string & nm = "")
-        : widget(this, w) { name = nm; }
+    // Destructor
+    virtual ~Window();
+    
+    // Second-phase initialization
+    virtual void construct();
 
-    // This is the widget that we're displaying
-    rw_ptr_property_custom_set(Widget, widget, NULL);
 
-    // Custom setter for property "widget"
-    void ptr_property_set(Widget, widget) {
-        releaseWidgetPart(_widget); // Tell the old guy we're leaving him...
-        _widget = value;            // ...get the new guy...
-        acquireWidgetPart(_widget); // ...and tell him that he's ours
-
-        // Tell the child Widget about its context
-        if (_widget) {
-            _widget->setRenderer(this->_renderer);
-        }
-    }
-
-    Renderer & renderer() {
-        if (_renderer)
-            return *_renderer;
-        else
-            return * static_cast<Renderer*>(NULL);
-    }
-    const Renderer & renderer() const {
-        if (_renderer)
-            return *_renderer;
-        else
-            return * static_cast<Renderer*>(NULL);
-    }
+/*---------------------------------------------------------------------------*
+ | XXX
+ *---------------------------------------------------------------------------*/
+public:
+    RenderableSurfacePtr      surface();
+    RenderableSurfaceConstPtr surface() const;
+    void setSurface(RenderableSurface * s);
+    void setSurface(RenderableSurfacePtr s);
+//    RenderableSurfacePtr add(RenderableSurface * s);
+//    RenderableSurfacePtr add(RenderableSurfacePtr s);
 
 protected:
-    // HACK
-    RendererPtr _renderer;
-
-
-/*---------------------------------------------------------------------------*
- | WidgetPartContainer functions
- *---------------------------------------------------------------------------*/
-public:
-    // Pass redisplay requests up to my parent
-    void redisplay(WidgetPartConstPtr w) const { requestRedisplay(); }
-
-    // My sub-widget has same dimensions as me
-    Dimension getSize(WidgetPartConstPtr w) const { return getSize(); }
-
-    // Return self as the containing Window
-    WindowPtr getContainingWindow() const {
-        return const_cast<Window *>(this)->self();
-    }
-
-
-    // Window ID
-    IDType getID() const;
-
-    // Query screen size
-    Dimension getScreenSize() const;
-
-    // Request redisplay of the entire Window
-    void requestRedisplay() const;
+    RenderableSurfacePtr _surface;
+    
 
 /*---------------------------------------------------------------------------*
  | Window state control
@@ -133,61 +85,92 @@ public:
 
     // Window visibility state
     bool visible() const;
-    void setVisible(bool vs);
+    void setVisible(bool v);
+    void toggleVisible();
 
     // Window iconification state
     bool iconified() const;
-    void setIconified(bool icf);
+    void setIconified(bool i);
+    void toggleIconified();
 
     // Window maximization state
     bool maximized() const;
-    void setMaximized(bool max);
+    void setMaximized(bool m);
+    void toggleMaximized();
 
     // Window full-screen state
     bool fullScreen() const;
-    void setFullScreen(bool fs);
+    void setFullScreen(bool f);
+    void toggleFullScreen();
+
+    // Window resizable state
+    bool resizable() const;
+    void setResizable(bool r);
+    void toggleResizable();
 
     // Restore an iconified or full-screened window to its previous state
     void restore();
 
 
 /*---------------------------------------------------------------------------*
- | Window size & position
+ | Window position & size
  *---------------------------------------------------------------------------*/
 public:
     // Window position
-    Pixel position() const;
-    void setPosition(Pixel p);
-    void setPosition(IndexType x, IndexType y);
     void centerOnScreen();
+    
+    
+/*---------------------------------------------------------------------------*
+ | Event-firing functions
+ *---------------------------------------------------------------------------*/
+protected:
+    // The peer is allowed to call these event-firing functions
+    friend class WindowPeer;
 
-    // Current size
-    Dimension size() const;
-    void setSize(Dimension d);
-    void setSize(SizeType w, SizeType h);
-
-    // Minimum allowable size
-    Dimension minimumSize() const;
-    void setMinimumSize(Dimension d);
-    void setMinimumSize(SizeType w, SizeType h);
-
-    // Maximum allowable size
-    Dimension maximumSize() const;
-    void setMaximumSize(Dimension d);
-    void setMaximumSize(SizeType w, SizeType h);
-
-    // Force aspect ratio (0.0 to allow unrestricted A/R)
-    float aspectRatio() const;
-    void setAspectRatio(float ratio);
+    void fireWindowOpened() const;
+    void fireWindowClosed() const;
 };
 
 
-/**
- * The WINDOW(TOOLKIT) macro expands to produce the fully-qualified class
- * name of the Window subclass implemented using the requested toolkit.
- */
-#include <boost/preprocessor/cat.hpp>
-#define WINDOW(TOOLKIT) inca::ui:: BOOST_PP_CAT(TOOLKIT, Window)
+// Peer interface class definition
+class inca::ui::WindowPeer
+    : public inca::ui::ComponentPeer<inca::ui::Window> {
+/*---------------------------------------------------------------------------*
+ | Constructors & destructor
+ *---------------------------------------------------------------------------*/
+public:
+    // Constructor
+    explicit WindowPeer(Window * w) : Base(w) { }
+    
 
+/*---------------------------------------------------------------------------*
+ | WindowPeer interface functions
+ *---------------------------------------------------------------------------*/
+public:
+    // Window lifecycle management
+    virtual void create() = 0;
+    virtual void destroy() = 0;
+    virtual bool valid() const = 0;
+
+    // Window state accessors
+    virtual std::string title() const = 0;
+    virtual void setTitle(const std::string & title) = 0;
+    virtual bool iconified() const = 0;
+    virtual void setIconified(bool i) = 0;
+    virtual bool maximized() const = 0;
+    virtual void setMaximized(bool m) = 0;
+    virtual bool fullScreen() const = 0;
+    virtual void setFullScreen(bool f) = 0;
+    virtual bool resizable() const = 0;
+    virtual void setResizable(bool r) = 0;
+
+    
+/*---------------------------------------------------------------------------*
+ | Pass-thru to the Window's event-firing functions
+ *---------------------------------------------------------------------------*/
+protected:
+    void fireWindowOpened() const;
+    void fireWindowClosed() const;
+};
 
 #endif

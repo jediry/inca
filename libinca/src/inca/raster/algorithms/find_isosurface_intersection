@@ -116,7 +116,7 @@ namespace inca {
             std::pair<int, int> edgeCrossingCount(0, 0);
 
             // Start with no intersections
-            fill(edgeCrossings, ScalarPairArray(unset));
+            inca::fill(edgeCrossings, ScalarPairArray(unset));
 
             IndexArray ddd, udd, dud, ddu; // Up-Down-Down, etc.
 
@@ -283,8 +283,8 @@ namespace inca {
             int faceIntersectionCount = 0;
 
             // Start with no intersection
-            fill(faceIntersections, BoolArray(false));
-            fill(cellIntersections, 0);
+            inca::fill(faceIntersections, BoolArray(false));
+            inca::fill(cellIntersections, 0);
 
             // Please, God...not again...<whimper>
             for (ddd[0] = ddu[0] = dud[0] = z0.base(0), udd[0] = ddd[0] + 1;
@@ -522,7 +522,7 @@ namespace inca {
 
             cerr << "There were " << curveCount << " curves" << endl;
             // Send the data back to...wherever
-            tracker.done();
+            tracker.finish();
             return tracker;
         }
 

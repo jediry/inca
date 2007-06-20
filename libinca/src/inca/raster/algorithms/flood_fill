@@ -46,18 +46,18 @@ namespace inca {
             typedef typename R0::ConstReference ConstReference;
 
             // Constructor
-            EqualsValue(const R0 & r, ConstReference v)
-                : raster(&r), value(v) { }
+            explicit EqualsValue(const R0 & r, ConstReference v)
+                    : _ref(&r), _value(v) { }
 
             // Test function
             template <typename IndexList>
             bool operator()(const IndexList & indices) {
-                return (*raster)(indices) == value;
+                return (*_ref)(indices) == _value;
             }
 
         protected:
-            R0 const * raster;
-            ElementType value;
+            R0 const * _ref;
+            ElementType _value;
         };
 
 
@@ -75,9 +75,9 @@ namespace inca {
         std::pair<typename R0::Region, typename R0::Region::SizeType>
         flood_fill(R0 & r, const IndexList & startFrom,
                    BoundsTest shouldFill, Generator fillWith) {
-            typedef typename R0::IndexArray IndexArray;
-            typedef typename R0::Region     Region;
-            typedef typename R0::SizeType   SizeType;
+            typedef typename R0::IndexArray     IndexArray;
+            typedef typename R0::Region         Region;
+            typedef typename R0::SizeType       SizeType;
             typedef std::pair<Region, SizeType> ResultType;
 
             // Make sure the seed point is valid
@@ -89,9 +89,14 @@ namespace inca {
                 throw e;
             }
             if (! shouldFill(seed)) {
-                std::cerr << "Idiot! Not even your starting point should be filled!\n";
+                INCA_WARNING("Idiot! Not even your starting point should be filled!")
                 return ResultType(Region(), 0);     // An empty region
             }
+
+            // We have to keep track of which cells we've already filled, since
+            // otherwise we might get caught in an infinite loop
+            MultiArrayRaster<bool, R0::dimensionality> filled(r.bounds());
+            fill(filled, false);
 
             // We need to keep track of the minimum and maximum filled cell
             // indices, and the number of filled cells, so that we can calculate
@@ -111,8 +116,10 @@ namespace inca {
 
             // Fill 'er up!
             idx = filledMin;
-            for (idx[0] = filledMin[0]; idx[0] <= filledMax[0]; ++idx[0])
-                r(idx) = fillWith(idx);
+            for (idx[0] = filledMin[0]; idx[0] <= filledMax[0]; ++idx[0]) {
+                r(idx)      = fillWith(idx);
+                filled(idx) = true;
+            }
             numFilled += filledMax[0] - filledMin[0] + 1;
 
 
@@ -173,7 +180,7 @@ namespace inca {
 
                 // Case 1 (and possibly also Case 3)
                 childMin[0] = childMax[0] = parentMin[0];
-                if (shouldFill(childMin)) {
+                if (! filled(childMin) && shouldFill(childMin)) {
                     // Search for the left endpoint of this segment
                     while (childMin[0] >= r.base(0) && shouldFill(childMin))
                         --childMin[0];
@@ -185,8 +192,10 @@ namespace inca {
                     --childMax[0];
 
                     // Fill 'er up!
-                    for (idx[0] = childMin[0]; idx[0] <= childMax[0]; ++idx[0])
-                        r(idx) = fillWith(idx);
+                    for (idx[0] = childMin[0]; idx[0] <= childMax[0]; ++idx[0]) {
+                        r(idx)      = fillWith(idx);
+                        filled(idx) = true;
+                    }
                     numFilled += childMax[0] - childMin[0] + 1;
 
                     // See if we need to update our minimum and maximum
@@ -215,7 +224,8 @@ namespace inca {
                 while (childMax[0] < parentMax[0]) {
                     // Skip non-fillable cells, looking for a fillable cell that
                     // still touches the parent segment
-                    while (childMax[0] <= parentMax[0] && ! shouldFill(childMax))
+                    while (childMax[0] <= parentMax[0] && (filled(childMax) ||
+                                                         ! shouldFill(childMax)))
                         ++childMax[0];
 
                     // If we haven't overshot the parent's max, we've found a segment
@@ -229,8 +239,10 @@ namespace inca {
                         --childMax[0];
 
                         // Fill 'er up!
-                        for (idx[0] = childMin[0]; idx[0] <= childMax[0]; ++idx[0])
-                            r(idx) = fillWith(idx);
+                        for (idx[0] = childMin[0]; idx[0] <= childMax[0]; ++idx[0]) {
+                            r(idx)      = fillWith(idx);
+                            filled(idx) = true;
+                        }
                         numFilled += childMax[0] - childMin[0] + 1;
 
                         // See if we need to update our minimum and maximum

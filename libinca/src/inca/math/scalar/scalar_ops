@@ -107,7 +107,7 @@ namespace inca {
      | Arithmetic functions
      *-----------------------------------------------------------------------*/
         // Boolean comparison functions
-        SCALAR_FUNCTION_1_ARG(arithmetic, bool, isNan);            // isNaN(x)
+        SCALAR_FUNCTION_1_ARG(arithmetic, bool, isNaN);            // isNaN(x)
         SCALAR_FUNCTION_1_ARG(arithmetic, bool, effectivelyZero);  // x ~= 0
         SCALAR_FUNCTION_2_ARG(arithmetic, bool, effectivelyEqual); // x ~= y
         SCALAR_FUNCTION_2_ARG(arithmetic, bool, effectivelyLessThan); // x ~< y
@@ -213,7 +213,12 @@ struct inca::math::scalar_arithmetic_api {
     static value_type max(arg_type s1, arg_type s2) { return (s1 > s2 ? s1 : s2); }
 
     // Comparison functions (trivial for integers)
-    static bool isNaN(arg_type s) { return false; }
+    static bool isNaN(arg_type s) {
+        if (traits::is_integral)
+            return false;
+        else
+            return std::isnan(s);
+    }
     static bool effectivelyZero(arg_type s) {
         if (traits::is_integral)
             return (s == 0);

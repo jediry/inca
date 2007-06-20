@@ -7,7 +7,73 @@
  * Copyright 2004, Ryan L. Saunders. All rights reserved.
  *
  * Description:
+ *      The Statistics template class analyzes a sample from a population and
+ *      estimates some statistical properties of the population based on that
+ *      sample:
+ *          sampleSize()         the number of elements in the sample
+ *          histogram()     a histogram of the elements
+ *          centralMoments()    the central
+ 
+ All of this comes from www.mathworld.com.
+    Central moments & k-statistics are as defined on mathworld
+    Other measurements are defined as:
+        mean:   arithmetic mean
+        variance:   unbiased estimator of population variance == k(2)
+        stddev:     unbiased estimator of pop. std. dev. == s/b(N)
+                        with b(N) being evaluated using Romanovsky's expansion
+                        b(N) ~= 1 - 3/4N - 7/32N^2 - 139/51849N^3
+        skewness:   unbiased (?) estimator of pop. skewness == k(3) / k(2)^1.5
+        kurtosis:   unbiased estimator of pop. kurtosis excess == k(4) / k(2)^2
+ TODO: finish doc'ing this
+ *
+ * Usage:
+ *      How a Statistics object is used depends on whether it is instantiated
+ *      in its caching or non-caching form (controlled via the second template
+ *      parameter, which defaults to non-caching). For the non-caching version,
+ *      the sample data must be presented to the Statistics object twice: once
+ *      to calculate the mean (and other direct measurements) and a second time
+ *      to calculate values that are derived from the mean (e.g. the variance).
+ *      A typical use of the non-caching version might look like this:
+ *
+ *          inca::math::Statistics<float> stat;
+ *          std::vector<float> values;
+ *          .
+ *          .
+ *          .
+ *          for (int pass = 1; pass <= 2; ++pass) {
+ *              for (int i = 0; i < values.size(); ++i)
+ *                  stat(values[i]);
+ *              stat.finish();
+ *          }
+ *
+ *      The caching version stores internally the values as it receives them,
+ *      so it can calculate the variance (et al.) without the user having to
+ *      present the values to it twice. So, using the internal caching version,
+ *      the above example should be modified to remove the outer 'for' loop.
+ *
+ *      So why offer both alternatives? The reason for this is that the caching
+ *      and non-caching versions are useful in different contexts. If the
+ *      sample data is already conveniently in-memory somewhere else (e.g., in
+ *      an STL container or a raster), then it is much more efficient simply to
+ *      traverse these structures twice, rather than making a copy of the data,
+ *      especially if the sample size is large. On the other hand, if the sample
+ *      data is being created on-the-fly (perhaps from a text stream), it may be
+ *      more convenient just to let the Statistics object cache the data. And if
+ *      the sample size is small, the overhead of copying the data is negligible
+ *      and the caching version can be used to simplify the code.
+ *
+ * Implementation:
+ *      The caching functionality described above is implemented via two
+ *      distinct partial specializations of the Statistics template: the
+ *      non-caching version implements all of the statistical functionalty,
+ *      requiring two sequential passes over the sample data. The caching
+ *      version inherits from the non-caching version, essentially pulling the
+ *      two-pass logic into the object (thus relieving the user of having to
+ *      code these two passes separately).
  */
+
+// TODO: implement bounds checks on moments and such
+
 
 #ifndef INCA_MATH_STATISTICS
 #define INCA_MATH_STATISTICS
@@ -15,12 +81,12 @@
 // Import system configuration
 #include <inca/inca-common.h>
 
-
+// This is part of the Inca math library
 namespace inca {
     namespace math {
         // Forward declarations
-        template <typename Derived, typename T> class StatisticsBase;
         template <typename T, bool cacheValues = false> class Statistics;
+        template <typename T> class Statistics<T, false>;
         template <typename T> class Statistics<T, true>;
     }
 }
@@ -30,231 +96,404 @@ namespace inca {
 #include <vector>
 
 
-// This class implements the common functionality between the variants of
-// the Statistics class. It expects the derived class to implement the
-// 'processElement(ElementType)' function.
-template <typename Derived, typename T>
-class inca::math::StatisticsBase : public inca::Array<T, 6> {
-public:
-    // Type definitions
-    typedef T                               ElementType;
-    typedef inca::Array<ElementType, 6>     ElementArray;
-    typedef inca::Array<int, 20>            Histogram;
-
-    // Constructor
-    explicit StatisticsBase()
-            : ElementArray(ElementType(0)), _count(0), _histogram(0) {
-        min() = ElementType(1e38);
-        max() = ElementType(-1e38);
-    }
-
-    // Add in a new value
-    void operator()(const ElementType & e) {
-        static_cast<Derived *>(this)->processElement(e);
-    }
-
-    // Access to statistics
-    ElementType & sum()       { return (*this)[0]; }
-    ElementType & min()       { return (*this)[1]; }
-    ElementType & max()       { return (*this)[2]; }
-    ElementType & range()     { return (*this)[3]; }
-    ElementType & mean()      { return (*this)[4]; }
-    ElementType & variance()  { return (*this)[5]; }
-    Histogram   & histogram() { return _histogram; }
-    int         & count()     { return _count; }
-    const ElementType & sum()       const { return (*this)[0]; }
-    const ElementType & min()       const { return (*this)[1]; }
-    const ElementType & max()       const { return (*this)[2]; }
-    const ElementType & range()     const { return (*this)[3]; }
-    const ElementType & mean()      const { return (*this)[4]; }
-    const ElementType & variance()  const { return (*this)[5]; }
-    const Histogram   & histogram() const { return _histogram; }
-    const int         & count()     const { return _count; }
-
-protected:
-    Histogram _histogram;
-    int _count;
-};
-
-
-// This 'general' implementation does no internal caching of the values
-// it receives. As a result, it is small and light, but in order to calculate
+// This partial specialization implements the non-caching version of the
+// Statistics object. It is small and light, but in order to calculate
 // the variance of the sample, it must see all of the values a second
 // time. This is most useful when the sample size is large and/or the
-// distribution is already stored elsewhere.
-template <typename T, bool cacheValues>
-class inca::math::Statistics
-    : public inca::math::StatisticsBase< Statistics<T, cacheValues>, T> {
+// distribution is already stored elsewhere in a convenient form.
+template <typename T>
+class inca::math::Statistics<T, false> {
+/*---------------------------------------------------------------------------*
+ | Type definitions
+ *---------------------------------------------------------------------------*/
 public:
     // Type definitions
-    typedef T                                               ElementType;
-    typedef StatisticsBase< Statistics<T, cacheValues>, T > Base;
+    typedef T ElementType;
 
-    // Import functions from base class
-    using Base::sum;
-    using Base::min;
-    using Base::max;
-    using Base::range;
-    using Base::mean;
-    using Base::variance;
-    using Base::histogram;
-    using Base::count;
+    // Array sizes (if you add 
+    static const int HistogramBucketCount = 40;
+    static const int CentralMomentCount   = 5;
+    static const int KStatisticCount      = 5;
+    static const int MiscellaneousCount   = 10;
 
+    // Statistics array definitions
+    typedef inca::Array<int,         HistogramBucketCount>  Histogram;
+    typedef inca::Array<ElementType, CentralMomentCount>    CentralMoments;
+    typedef inca::Array<ElementType, KStatisticCount>       KStatistics;
+    typedef inca::Array<ElementType, MiscellaneousCount>    Miscellaneous;
+
+
+/*---------------------------------------------------------------------------*
+ | Constructors
+ *---------------------------------------------------------------------------*/
+public:
     // Constructor
-    explicit Statistics()
-        : varSum(0), recount(0), meanValid(false), varianceValid(false) { }
+    explicit Statistics() { reset(); }
 
 
-    // If we've not yet calculated the mean, add this element into our running
-    // sum of elements. If we have, then accumulate it towards calculating
-    // the variance and histogram.
-    void processElement(const ElementType & e) {
-        if (! meanValid) {
-            sum() += e;
-            if (e < min())  min() = e;
-            if (e > max())  max() = e;
-            ++count();
-        } else {
-            ElementType diff = mean() - e;
-            varSum += diff * diff;
-            int bucket = e == max()
-                ? histogram().size() - 1
-                : static_cast<int>((e - min()) / bucketSize);
-            if (bucket >= 0 && bucket < histogram().size())
-                ++histogram()[bucket];
-            else
-                INCA_WARNING("Statistics: Sample " << e << " falls into out-of-"
-                             "bounds bucket " << bucket << " of histogram ["
-                             << min() << ',' << max() << ']');
-            ++recount;
-        }
-    }
+/*---------------------------------------------------------------------------*
+ | Statistics accessors
+ *---------------------------------------------------------------------------*/
+public:
+    // This macro creates a const/non-const pair of accessors for an array.
+    //      ARRAY_TYPE      the type of the array, which must contain a type
+    //                      called 'SizeType'
+    //      ARRAY_NAME      the name of the array: this is be used as the
+    //                      function name for the accessors, and with '_'
+    //                      prefixed as the name of the internal array variable
+    //      SIZE_ACCESSOR   the name of the accessor function to get the array
+    //                      size
+    #define ARRAY_ACCESSORS(ARRAY_TYPE, ARRAY_NAME, SIZE_ACCESSOR)          \
+        const ARRAY_TYPE & ARRAY_NAME() const { return _ ## ARRAY_NAME; }   \
+              ARRAY_TYPE & ARRAY_NAME()       { return _ ## ARRAY_NAME; }   \
+        typename ARRAY_TYPE::SizeType                                       \
+            SIZE_ACCESSOR  () const { return _ ## ARRAY_NAME.size(); }
 
-    // Finish the mean or variance calculation
-    void done() {
-        if (! meanValid) {
-            if (count() > 0) {
-                // Calculate the mean and the range
-                mean() = sum() / count();
-                range() = max() - min();
+    // This macro creates a const/non-const pair of accessors for a named
+    // property within an array.
+    //      ARRAY_TYPE      the type of the containing array, which must contain
+    //                      a type called 'ElementType'
+    //      ACCESSOR        the accessor name and argument list, such as 'sum()'
+    //      EXPR            the expression to evaluate to retrieve this property
+    #define NAMED_ACCESSORS(ARRAY_TYPE, ACCESSOR, EXPR)                     \
+        typename ARRAY_TYPE::ElementType const &                            \
+            ACCESSOR const { return EXPR; }                                 \
+        typename ARRAY_TYPE::ElementType &                                  \
+            ACCESSOR { return EXPR; }
 
-                // Figure out how big a histogram bucket is
-                bucketSize = (max() - min()) / histogram().size();
-            } else {
-                max() = ElementType(0);
-                min() = ElementType(0);
-            }
-            meanValid = true;
-        } else if (! varianceValid) {
-            variance() = varSum / count();
-            varianceValid = true;
-            if (count() != recount)
-                INCA_WARNING("Statistics: Variance pass had different number "
-                             "of samples: " << count() << " != " << recount);
-        }
-    }
+    // Sample size
+    int   sampleSize() const { return _sampleSize; }
+    int & sampleSize()       { return _sampleSize; }
+    int   sampleRecount() const { return _sampleRecount; }
+    int & sampleRecount()       { return _sampleRecount; }
 
-    // XXX This is a bit hacked
-    void setValid(bool valid) {
-        meanValid = varianceValid = valid;
-    }
+    // Sample mean and sample central moments
+    ARRAY_ACCESSORS(CentralMoments, centralMoments, centralMomentCount)
+    NAMED_ACCESSORS(CentralMoments, centralMoment(IndexType i), _centralMoments[i])
+
+    // Sample k-statistics
+    ARRAY_ACCESSORS(KStatistics, kStatistics, kStatisticCount)
+    NAMED_ACCESSORS(KStatistics, k(IndexType i), _kStatistics[i])
+
+    // Miscellaneous statistics
+    ARRAY_ACCESSORS(Miscellaneous, miscellaneous, miscellaneousCount)
+    NAMED_ACCESSORS(Miscellaneous, sum(),      _miscellaneous[0])
+    NAMED_ACCESSORS(Miscellaneous, min(),      _miscellaneous[1])
+    NAMED_ACCESSORS(Miscellaneous, max(),      _miscellaneous[2])
+    NAMED_ACCESSORS(Miscellaneous, range(),    _miscellaneous[3])
+    NAMED_ACCESSORS(Miscellaneous, mean(),     _miscellaneous[4])
+    NAMED_ACCESSORS(Miscellaneous, variance(), _miscellaneous[5])
+    NAMED_ACCESSORS(Miscellaneous, stddev(),   _miscellaneous[6])
+    NAMED_ACCESSORS(Miscellaneous, skewness(), _miscellaneous[7])
+    NAMED_ACCESSORS(Miscellaneous, kurtosis(), _miscellaneous[8])
+
+    // Sample data histogram
+    ARRAY_ACCESSORS(Histogram, histogram, histogramBucketCount)
+    NAMED_ACCESSORS(Histogram, histogramBucket(IndexType i), _histogram[i])
+
+    NAMED_ACCESSORS(Miscellaneous, histogramBucketSize(), _miscellaneous[9])
+    NAMED_ACCESSORS(Miscellaneous,
+                    histogramBucketStart(IndexType i),
+                    min() + i * histogramBucketSize())
+    NAMED_ACCESSORS(Miscellaneous,
+                    histogramBucketCenter(IndexType i),
+                    min() + (i + 0.5f) * histogramBucketSize())
+    NAMED_ACCESSORS(Miscellaneous,
+                    histogramBucketEnd(IndexType i),
+                    min() + (i + 1) * histogramBucketSize())
+
+    // Clean up the preprocessor namespace
+    #undef ARRAY_ACCESSORS
+    #undef NAMED_ACCESSORS
 
 protected:
-    ElementType varSum, bucketSize;
-    int recount;
-    bool meanValid, varianceValid;
-};
+    int _sampleSize, _sampleRecount;
+    Histogram       _histogram;
+    CentralMoments  _centralMoments;
+    KStatistics     _kStatistics;
+    Miscellaneous   _miscellaneous;
 
 
-// This 'specialized' implementation caches the values it receives so
-// that it can calculate the higher order moments (e.g., variance) without
-// needing all the values to be passed to it a second time. It does this at
-// the cost of dynamically allocating memory to hold all the elements, and
-// frees that memory once its 'done()' function is called. This is most useful
-// when the sample size is small and/or the values are being calculated
-// on-the-fly and are not stored elsewhere.
-//
-// A typical use of this class might look like:
-//      Statistics<int, true> s;        // Create an empty object
-//      while (...)
-//          s(someValue);               // Pass it each sample element
-//      s.done();                       // Compute mean, variance, etc.
-template <typename T>
-class inca::math::Statistics<T, true>
-    : public inca::math::StatisticsBase<Statistics<T, true>, T> {
+/*---------------------------------------------------------------------------*
+ | Statistics calculation functions
+ *---------------------------------------------------------------------------*/
 public:
-    // Type definitions
-    typedef T                                               ElementType;
-    typedef StatisticsBase< Statistics<T, true>, T>         Base;
-
-    // Import functions from base class
-    using Base::sum;
-    using Base::min;
-    using Base::max;
-    using Base::range;
-    using Base::mean;
-    using Base::variance;
-    using Base::histogram;
-    using Base::count;
-
-
-    // Constructor taking a guess as to the final size of the sample.
-    // If this guess is accurate, then no additional memory will need
-    // to be allocated after construction time.
-    explicit Statistics(int sizeGuess = 10) {
-        // Get ready to handle that many elements
-        valueCache.reserve(sizeGuess);
+    // Process a new value
+    void operator()(const ElementType & e) {
+        if (! _firstPassDone)       _processFirstPass(e);
+        else if (! _secondPassDone) _processSecondPass(e);
+        else
+            INCA_WARNING("Statistics<" << typeid(ElementType).name() << ">: "
+                         "Ignoring element received while in 'done' state; "
+                         "call 'reset()' first if you want to re-use this object")
+    }
+    
+    // Finalize the current pass over the data and prepare for the next
+    void finish() {
+        if (! _firstPassDone)       _finishFirstPass();
+        else if (! _secondPassDone) _finishSecondPass();
+        else
+            INCA_WARNING("Statistics<" << typeid(ElementType).name() << ">: "
+                         "Ignoring call to 'done()' -- already in the 'done' state")
     }
 
-    // Handle an element and stick it into the vector
-    void processElement(const ElementType & e) {
+    // Restore this object to the initial, empty state
+    void reset() {
+        sampleSize() = sampleRecount() = 0;
+        std::fill(_histogram.begin(),      _histogram.end(),      0);
+        std::fill(_centralMoments.begin(), _centralMoments.end(), ElementType(0));
+        std::fill(_kStatistics.begin(),    _kStatistics.end(),    ElementType(0));
+        std::fill(_miscellaneous.begin(),  _miscellaneous.end(),  ElementType(0));
+        min() = std::numeric_limits<ElementType>::max();
+        max() = std::numeric_limits<ElementType>::min();
+        
+        _firstPassDone = _secondPassDone = false;
+    }
+    
+    void validate() {
+        _firstPassDone = _secondPassDone = true;
+    }
+    
+    bool firstPassDone()  const { return _firstPassDone;  }
+    bool secondPassDone() const { return _secondPassDone; }
+
+protected:
+    // Process an element during the first pass. In this pass, we calculate the
+    // sum of the elements, the number of elements in the sample, and the
+    // minimum and maximum elements.
+    void _processFirstPass(const ElementType & e) {
+        ++sampleSize();
+        
+        // Add this to the running sum and see if it's the min/max
         sum() += e;
         if (e < min())  min() = e;
         if (e > max())  max() = e;
-        valueCache.push_back(e);
-        ++count();
     }
 
-    // Calculate statistics of the distribution, then dump the cache
-    void done() {
-        if (count() > 0) {
-            // Calculate the mean and the range
-            mean() = sum() / count();
+    // Complete the first pass. At this point, we calculate the sample mean
+    // and range, and determine how big each bucket of our histogram is.
+    void _finishFirstPass() {
+        // Calculate the mean and the range
+        if (sampleSize() > 0) {
+            mean() = sum() / sampleSize();
             range() = max() - min();
-
-            // Calculate the variance & the histogram
-            ElementType varSum(0);
-            ElementType bucketSize = (max() - min()) / histogram().size();
-            for (int i = 0; i < count(); ++i) {
-                ElementType diff = mean() - valueCache[i];
-                varSum += diff * diff;
-                int bucket = valueCache[i] == max()
-                    ? histogram().size() - 1
-                    : static_cast<int>((valueCache[i] - min()) / bucketSize);
-                if (bucket >= 0 && bucket < histogram().size())
-                    ++histogram()[bucket];
-                else
-                    INCA_WARNING("Statistics: Sample " << valueCache[i]
-                                 << " falls into out-of-bounds bucket "
-                                 << bucket << " of histogram ["
-                                 << min() << ',' << max() << ']');
-            }
-            variance() = varSum / count();
-
-            // Clean up the cache, since we don't need it anymore
-            valueCache = std::vector<ElementType>(0);
-
-        } else {        // Crud. No elements. We need to zero out the min/max.
-            max() = 0;
-            min() = 0;
+        } else {
+            max() = ElementType(0);
+            min() = ElementType(0);
         }
-    }
 
-    // This is a bit hacked
-    void setValid(bool valid) { }
+        // Figure out how big a histogram bucket is
+        histogramBucketSize() = (max() - min()) / histogramBucketCount();
+
+        _firstPassDone = true;
+    }
+    
+    // Process an element during the second pass. In this pass, we calculate the
+    // sums for finding the central moments, and we also build up the histogram.
+    void _processSecondPass(const ElementType & e) {
+        ++sampleRecount();
+
+        // Add this element into the running sums for central moment calculation
+        ElementType diff = mean() - e;
+        ElementType power = diff;
+        for (int i = 2; i < centralMomentCount(); ++i) {
+            power *= diff;
+            centralMoment(i) += power;
+        }
+        
+        // Stick it in the right place in its histogram
+        int bucket = (e == max())
+            ? histogramBucketCount() - 1
+            : static_cast<int>((e - min()) / histogramBucketSize());
+        if (bucket >= 0 && bucket < histogram().size())
+            ++histogramBucket(bucket);
+        else
+            INCA_ERROR("Statistics: Sample " << e << " falls into out-of-bounds"
+                       " bucket " << bucket << " of histogram ["
+                            << min() << ',' << max() << ']');
+    }
+    
+    // Complete the second pass. At this point, we calculate the sample central
+    // moments, the sample k-statistics, and the skewness and kurtosis excess
+    // of the sample distribution.
+    void _finishSecondPass() {
+        // Make sure we saw the same number of elements each time!
+        if (sampleSize() != sampleRecount())
+            INCA_WARNING("Statistics: Second pass had different number of samples:"
+                         << sampleSize() << " != " << sampleRecount());
+
+        // We're going to be using this a lot...
+        ElementType n = ElementType(sampleSize());
+
+        // Finish the central moment calculations
+        if (n > 0)
+            for (int i = 2; i < centralMomentCount(); ++i)
+                centralMoment(i) /= n;
+
+        // Calculate the k-statistics
+        k(1) = mean();
+        if (n > 3) {
+            k(2) = n / (n - 1) * centralMoment(2);
+            k(3) = (n * n) / (n - 1) / (n - 2) * centralMoment(3);
+            k(4) = n*n * ((n+1) * centralMoment(4)
+                          - 3 * (n-1) * centralMoment(2) * centralMoment(2))
+                 / ((n-1) * (n-2) * (n-3));
+        }
+
+        // Calculate other derivative measurements
+        if (k(2) != 0) {
+            variance() = k(2);
+            skewness() = k(3) / std::pow(k(2), ElementType(1.5));
+            kurtosis() = k(4) / (k(2) * k(2));
+        }
+        stddev() = std::sqrt(centralMoment(2)) / (1 - 3.0f / (4.0f * n)
+                                                    - 7.0f / (32.0f * n*n)
+                                                    - 139.0f / (51849.0f * n*n*n));
+
+        _secondPassDone = true;
+    }
 
 protected:
-    std::vector<ElementType> valueCache;
+    bool _firstPassDone, _secondPassDone;
 };
+
+
+// This partial specialization implements the caching version of the
+// Statistics object. It uses more memory, but does not require two passes
+// over the sample data. This is most useful when the sample size is small
+// and/or the sample data is being calculated on-the-fly.
+template <typename T>
+class inca::math::Statistics<T, true>
+    : public inca::math::Statistics<T, false> {
+public:
+    // Type definitions
+    typedef Statistics<T, false>    Superclass;
+    typedef std::vector<T>          ValueCache;
+
+    using Superclass::ElementType;
+
+
+/*---------------------------------------------------------------------------*
+ | Constructors
+ *---------------------------------------------------------------------------*/
+public:
+    // Constructor taking a guess as to the final size of the sample.
+    // If this guess is accurate, then no additional memory will need
+    // to be allocated after construction time.
+    explicit Statistics(typename ValueCache::size_type sizeGuess = 10) {
+        // Get ready to handle that many elements
+        _valueCache.reserve(sizeGuess);
+    }
+
+
+/*---------------------------------------------------------------------------*
+ | Statistics calculation functions
+ *---------------------------------------------------------------------------*/
+public:
+    // Process a new value
+    void operator()(const ElementType & e) {
+        if (! _firstPassDone) {
+            _processFirstPass(e);
+            _valueCache.push_back(e);
+        } else
+            INCA_WARNING("Statistics<" << typeid(ElementType).name() << ">: "
+                         "Ignoring element received while in 'done' state; "
+                         "call 'reset()' first if you want to re-use this object")
+    }
+    
+    // Finish processing the data and free the cache memory
+    void finish() {
+        // Complete the first pass
+        _finishFirstPass();
+
+        // Run the second pass over the cached elements        
+        typename ValueCache::const_iterator it;
+        for (it = _valueCache.begin(); it != _valueCache.end(); ++it)
+            _processSecondPass(*it);
+        _finishSecondPass();
+        
+        // Clear out the cache
+        _valueCache.clear();
+    }
+
+    // Restore this object to the initial, empty state
+    void reset() {
+        _valueCache.clear();
+        Superclass::reset();
+    }
+
+protected:
+    ValueCache _valueCache;
+};
+
+
+// IOStream writer operator
+namespace inca {
+    namespace math {
+        template <typename T, bool C>
+        std::ostream &
+        operator<<(std::ostream & os, const Statistics<T,C> & s) {
+            // Write out a header describing the object type
+            os << "Statistics<" << typeid(T).name() << ", "
+               << (C ? "caching" : "non-caching") << ">: ";
+
+            // Make sure the stat object has finished processing
+            if (! s.firstPassDone()) {
+                os << "in first pass (seen " << s.sampleSize() << " elements)\n";
+                return os;
+            } else if (! s.secondPassDone()) {
+                os << "in second pass (re-seen " << s.sampleRecount() << "/"
+                   << s.sampleSize() << " elements)\n";
+                return os;
+            } else {
+                os << "done processing (" << s.sampleSize() << " elements)\n";
+            }
+            
+            // Write out the various statistics
+            os << "  Range:    [" << s.min() << ", " << s.max() << "] (" << s.range() << ")\n"
+               << "  Sum:      " << s.sum() << '\n';
+            for (int i = 2; i < s.centralMomentCount(); ++i)
+               os << "  C.M. " << i << ": " << s.centralMoment(i) << '\n';
+            for (int i = 1; i < s.kStatisticCount(); ++i)
+               os << "  k " << i << ": " << s.k(i) << '\n';
+            
+            // Write out population statistic estimators
+            os << '\n'
+               << "  Mean:     " << s.mean()  << '\n'
+               << "  Variance: " << s.variance() << '\n'
+               << "  StdDev:   " << s.stddev() << '\n'
+               << "  Skewness: " << s.skewness() << '\n'
+               << "  Kurtosis: " << s.kurtosis() << '\n';
+
+            // Write out the histogram
+            int precision   = 2;
+            int fieldWidth  = precision + 8;
+            int streamWidth = 80;
+            int leading     = 10;
+            int buckets     = s.histogramBucketCount();
+            int bucketsPerLine = (streamWidth - leading) / fieldWidth;
+            int lineCount      = buckets / bucketsPerLine
+                               + (buckets % bucketsPerLine != 0);
+            os << '\n'
+               << "  Histogram (" << s.histogramBucketCount() << " buckets "
+                  "each " << s.histogramBucketSize() << " in size)\n";
+//               << std::setprecision(precision);      
+            for (int line = 0; line < lineCount; ++line) {
+                os << "    C: ";
+                int start = line * bucketsPerLine;
+                int end   = start + bucketsPerLine;
+                for (int bucket = start; bucket < end; ++bucket)
+                    os << std::setw(fieldWidth) << s.histogramBucketCenter(bucket);
+                os << '\n'
+                   << "    #   ";
+                for (int bucket = start; bucket < end; ++bucket)
+                    os << std::setw(fieldWidth) << s.histogramBucket(bucket);
+                os << "\n\n";
+            }
+            
+            return os;
+        }
+    }
+}
 
 #endif

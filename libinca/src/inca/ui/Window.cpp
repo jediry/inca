@@ -7,47 +7,70 @@
  * Copyright 2005, Ryan L. Saunders. All rights reserved.
  *
  * Description:
- *
- * FIXME: you CANNOT add widgets inside the subclass constructor, since no
- * shared_ptr has been constructed yet, and the self() function is not valid.
  */
 
 // Import class definition
 #include "Window.hpp"
+
+// Import Application definition
+#include "Application.hpp"
+
+// TODO Need better way to get peers
+#include <inca/integration/glut/GLUT-peers.hpp>
 
 using namespace inca;
 using namespace inca::ui;
 
 
 /*---------------------------------------------------------------------------*
- | Constructors & peer interface
+ | Constructors & destructor
  *---------------------------------------------------------------------------*/
-
 // Constructor
-Window::Window(const std::string & title) {
-    XXX
-}
+Window::Window(const std::string & nm)
+    : HeavyweightComponent<WindowPeer>(nm) { }
 
 // Destructor
-Window::~Window() {
-    if (_peer)
-        delete _peer;
-}
+Window::~Window() { }
 
-// Function to set the peer pImpl
-Window::Peer & Window::peer() {
-    return *_peer;
-}
-const Window::Peer & Window::peer() const {
-    return *_peer;
-}
-void Window::setPeer(Window::Peer * p) {
-    _peer = p;
+// Second-phase initialization
+void Window::construct() {
+    // Register to receive our own events
+//    addComponentListener(self<ComponentListener>());
+//    addWindowListener(self<WindowListener>());
+
+    // Create the native object
+    peer()->create();
+    peer()->setTitle(this->name());
 }
 
 
 /*---------------------------------------------------------------------------*
- | Window state functions
+ | XXX
+ *---------------------------------------------------------------------------*/
+RenderableSurfacePtr Window::surface() {
+    if (! _surface)
+        setSurface(new RenderableSurface("Main Surface"));
+    return _surface;
+}
+RenderableSurfaceConstPtr Window::surface() const {
+    if (! _surface)
+        const_cast<Window *>(this)->setSurface(new RenderableSurface("Main Surface"));
+    return _surface;
+}
+void Window::setSurface(RenderableSurface * s) {
+    RenderableSurfacePtr sp(s);
+    setSurface(sp);
+}
+void Window::setSurface(RenderableSurfacePtr s) {
+    _surface = s;
+    _surface->setPeer(new GLUTRenderableSurfacePeer(s.get()));
+    _surface->setParent(self<Component>());
+    _surface->construct();
+}
+
+
+/*---------------------------------------------------------------------------*
+ | Window state control
  *---------------------------------------------------------------------------*/
 // Window title
 std::string Window::title() const {
@@ -64,6 +87,9 @@ bool Window::visible() const {
 void Window::setVisible(bool vs) {
     peer()->setVisible(vs);
 }
+void Window::toggleVisible() {
+    setVisible(! visible());
+}
 
 // Window iconification state
 bool Window::iconified() const {
@@ -71,6 +97,9 @@ bool Window::iconified() const {
 }
 void Window::setIconified(bool icf) {
     peer()->setIconified(icf);
+}
+void Window::toggleIconified() {
+    setIconified(! iconified());
 }
 
 // Window maximization state
@@ -80,6 +109,9 @@ bool Window::maximized() const {
 void Window::setMaximized(bool max) {
     peer()->setMaximized(max);
 }
+void Window::toggleMaximized() {
+    setMaximized(! maximized());
+}
 
 // Window full-screen state
 bool Window::fullScreen() const {
@@ -87,6 +119,20 @@ bool Window::fullScreen() const {
 }
 void Window::setFullScreen(bool fs) {
     peer()->setFullScreen(fs);
+}
+void Window::toggleFullScreen() {
+    setFullScreen(! fullScreen());
+}
+
+// Window resizable state
+bool Window::resizable() const {
+    return peer()->resizable();
+}
+void Window::setResizable(bool fs) {
+    peer()->setResizable(fs);
+}
+void Window::toggleResizable() {
+    setResizable(! resizable());
 }
 
 // Restore a maximized, iconified or full-screened window to its previous state
@@ -103,70 +149,20 @@ void Window::restore() {
 /*---------------------------------------------------------------------------*
  | Window size & position
  *---------------------------------------------------------------------------*/
-// Window position
-Pixel Window::position() const {
-    return peer()->position();
-}
-void Window::setPosition(Pixel px) {
-    peer()->setPosition(px);
-}
-void Window::setPosition(IndexType x, IndexType y) {
-    peer()->setPosition(Pixel(x, y));
-}
 void Window::centerOnScreen() {
-    Dimension scr = getScreenSize();
+//    Dimension scr = getScreenSize();
+    Dimension scr(1024, 768);
     Dimension sz = size();
     setPosition(Pixel((scr[0] - sz[0]) / 2, (scr[1] - sz[1]) / 2));
 }
 
-// Current size
-Dimension Window::size() const {
-    return peer()->size();
-}
-void Window::setSize(Dimension d) {
-    peer()->setSize(d);
-}
-void Window::setSize(SizeType w, SizeType h) {
-    peer()->setSize(Dimension(w, h));
-}
 
-// Minimum allowable size
-Dimension Window::minimumSize() const {
-    return peer()->minimumSize();
-}
-void Window::setMinimumSize(Dimension d) {
-    peer()->setMinimumSize(d);
-}
-void Window::setMinimumSize(SizeType w, SizeType h) {
-    peer()->setMinimumSize(Dimension(w, h));
-}
+/*---------------------------------------------------------------------------*
+ | Event-firing functions
+ *---------------------------------------------------------------------------*/
+void Window::fireWindowOpened() const {
 
-// Maximum allowable size
-Dimension Window::maximumSize() const {
-    return peer()->maximumSize();
 }
-void Window::setMaximumSize(Dimension d) {
-    peer()->setMaximumSize(d);
-}
-void Window::setMaximumSize(SizeType w, SizeType h) {
-    peer()->setMaximumSize(Dimension(w, h));
-}
+void Window::fireWindowClosed() const {
 
-// Force aspect ratio (0.0 to allow unrestricted A/R)
-float Window::getAspectRatio() const {
-    Dimension sz = size();
-    return sz[0] / float(sz[1]);
-}
-void Window::setAspectRatio(float ratio) {
-    // XXX
-}
-
-
-
-// Query screen size
-Dimension Window::getScreenSize() const {
-}
-
-// Request redisplay of the entire Window
-void Window::requestRedisplay() const {
 }

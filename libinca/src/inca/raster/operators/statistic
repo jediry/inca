@@ -152,7 +152,7 @@ namespace inca {
                 if (! evaluated) {
                     for (int i = 1; i < sums.size(); ++i)
                         if (count() == 0)   _means[i] = T(0);
-                        else                _means[i] = std::pow(sums[i] / count(), 1.0f / i);
+                        else                _means[i] = T(std::pow(sums[i] / count(), 1.0f / i));
                     evaluated = true;
                 }
             }

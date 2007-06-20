@@ -38,6 +38,16 @@ namespace GL {
     #include <GL/gl.h>
     #include <GL/glu.h>
 
+    // Managed (/clr) code from Visual C++ throws a System.TypeLoadException
+    // due to the class definitions not being on glu.h. We fix this by putting
+    // in dummy class definitions, to force it to generate metadata.
+    // I don't understand why this doesn't generate conflicts.
+    #if __MS_WINDOZE__
+        class GLUnurbs { };
+        class GLUquadric { };
+        class GLUtesselator { };
+    #endif
+
     // If requested, import GLUT and GLUI
     #ifdef GL_HPP_IMPORT_GLUT
     #   include <GL/glut.h>
@@ -245,7 +255,7 @@ namespace GL {
     // glLight* overloads
     inline void glLight(GLenum light, GLenum param, GLint value)   { glLighti(light, param, value); }
     inline void glLight(GLenum light, GLenum param, GLfloat value) { glLightf(light, param, value); }
-    inline void glLight(GLenum light, GLenum param, GLint const * values)    { glLightiv(light, param, values); }
+    inline void glLight(GLenum light, GLenum param, GLint const * values)   { glLightiv(light, param, values); }
     inline void glLight(GLenum light, GLenum param, GLfloat const * values) { glLightfv(light, param, values); }
     #ifdef GL_HPP_IMPORT_INCA
         template <typename Scalar, inca::SizeType dim>
@@ -254,6 +264,16 @@ namespace GL {
         inline void glLight(GLenum light, GLenum param, const IM::Vector<Scalar, dim> & v) { glLight(light, param, v.begin()); }
         template <typename Scalar>
         inline void glLight(GLenum light, GLenum param, const IM::Color<Scalar, IM::sRGB<true> > & c) { glLight(light, param, c.begin()); }
+    #endif
+
+    // glFog* overloads
+    inline void glFog(GLenum param, GLint value)   { glFogi(param, value); }
+    inline void glFog(GLenum param, GLfloat value) { glFogf(param, value); }
+    inline void glFog(GLenum param, GLint const * values)   { glFogiv(param, values); }
+    inline void glFog(GLenum param, GLfloat const * values) { glFogfv(param, values); }
+    #ifdef GL_HPP_IMPORT_INCA
+        template <typename Scalar>
+        inline void glFog(GLenum param, const IM::Color<Scalar, IM::sRGB<true> > & c) { glFog(param, c.begin()); }
     #endif
 };
 

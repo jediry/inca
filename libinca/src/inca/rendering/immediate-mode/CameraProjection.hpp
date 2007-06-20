@@ -46,11 +46,11 @@ public:
     void operator()(Renderer & renderer, const world::PerspectiveCamera & camera) const {
         typedef typename Renderer::geometry_t geometry_t;
         typename Renderer::Matrix m(0);
-        geometry_t f = inca::math::cot(camera.vertViewAngle() * geometry_t(0.5));
-        geometry_t zNear = camera.nearClip(),
-                   zFar  = camera.farClip(),
+        geometry_t f = inca::math::cot(geometry_t(camera.vertViewAngle) * geometry_t(0.5));
+        geometry_t zNear = geometry_t(camera.nearClip),
+                   zFar  = geometry_t(camera.farClip),
                    zDiff = zNear - zFar;
-        m(0,0) = f / camera.aspectRatio();
+        m(0,0) = f / geometry_t(camera.aspectRatio);
         m(1,1) = f;
         m(2,2) = (zFar + zNear) / zDiff;
         m(2,3) = (2 * zFar * zNear) / zDiff;
@@ -63,12 +63,14 @@ public:
     void operator()(Renderer & renderer, const world::OrthographicCamera & camera) const {
         typedef typename Renderer::geometry_t geometry_t;
         typename Renderer::Matrix m(0);
-        geometry_t xDiff = camera.viewWidth(),
-                   yDiff = camera.viewHeight(),
-                   zDiff = camera.farClip() - camera.nearClip();
-        m(0,0) = xDiff;     m(0,3) = xDiff;
-        m(1,1) = yDiff;     m(1,3) = yDiff;
-        m(2,2) = zDiff;     m(2,3) = zDiff;
+        geometry_t xDiff = geometry_t(camera.viewWidth),
+                   yDiff = geometry_t(camera.viewHeight),
+                   zFar  = geometry_t(camera.farClip),
+                   zNear = geometry_t(camera.nearClip),
+                   zDiff = zFar - zNear;
+        m(0,0) = 2/xDiff;
+        m(1,1) = 2/yDiff;
+        m(2,2) = -2/zDiff;      m(2,3) = (zFar + zNear) / -zDiff;
         m(3,3) = geometry_t(1);
         renderer.projectionMatrix().load(m);
     }

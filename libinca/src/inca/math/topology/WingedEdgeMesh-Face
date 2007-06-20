@@ -22,7 +22,8 @@
 #define INCA_MATH_TOPOLOGY_WINGED_EDGE_MESH_FACE
 
 
-MESH_TEMPLATE class inca::math::MESH::Face : public FData, public MeshElement {
+MESH_TEMPLATE class inca::math::MESH::Face
+    : public FData, public MeshElement {
 /*---------------------------------------------------------------------------*
  | Friend declarations
  *---------------------------------------------------------------------------*/

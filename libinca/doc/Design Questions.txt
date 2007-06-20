@@ -25,3 +25,39 @@ II) Raster system
         e.g., fwd-diff, symm-diff, LxLxx Lxy yada yada
     More general marching-cubes/isosurface mechanism
         better optimized
+
+III) Logging system
+    Support multiple/nested logging configs. Perhaps a log4j clone for C++ has already happened...
+		Possible syntax:
+			INCA_LOGGING_SCOPE( inca );
+			namespace math {
+				INCA_LOGGING_SCOPE( math );
+				class Blah {
+					INCA_LOGGING_SCOPE( Blah );
+					
+					Blah() {
+						INCA_DEBUG( "Hi!" );
+				};
+			};
+			INCA_LOG_LEVEL( "inca/math*", DEBUG );
+			INCA_LOG_FORMAT( "inca/math*", "[%P] %L: %M" );
+			Result: "[inca/math/Blah] DEBUG: Hi!"
+
+	Support multiple output targets:
+		Windows event log
+		UNIX syslog
+		Win32 debug console
+		stderr/stdout
+		file(s)
+		Dialog
+	Asserts can be mirrored/redirected to a logger
+	Support logging of all exceptions, including callstack
+	Can be completely compiled out
+	Trivial impl for modular usage (i.e., w/o the logging fw?)
+
+IV) Building
+    Consider carefully which classes can be opaque interfaces, and which can be pImpl'd, to reduce
+        build dependencies
+    Do concept checks in templates
+    Make *-fwd.h[pp] files (just type fwds and ptr decls), to reduce build dependencies
+    Think through modular distro mechanism...use math w/o needing logging, etc. Minimal deps.

@@ -59,6 +59,8 @@ namespace inca {
 #include <vector>
 #include <inca/util/FlagSet>
 
+// Import raster definitions
+#include <inca/raster/MultiArrayRaster>
 
 // Make some REALLY long names shorter
 #define RENDERER_TEMPLATE template <class API, template <inca::IDType, inca::IDType> class CachePolicy>
@@ -124,6 +126,7 @@ public:
         typedef Buffer<Color>       AccumulationBuffer;
         typedef Buffer<unsigned>    StencilBuffer;
     class Statistics;       // Performance statistics
+    class Texture;          // A hardware-accelerated texture object
 
     // We're all buddy-buddy with our sub-objects
     friend class Component;
@@ -263,6 +266,16 @@ public:
           Statistics & cumulativeStatistics()       { return statistics(1); }
     const Statistics & cumulativeStatistics() const { return statistics(1); }
 
+    // Creation of hardware textures
+    // TODO: handle non-memory rasters, different storage orders, colorspaces
+    // TODO: figure out how to handle multiple TU's, since creating a texture
+    // requires binding in OpenGL
+    template <typename scalar, typename colorspace, inca::SizeType dim>
+    Texture createTexture(const ::inca::raster::MultiArrayRaster< ::inca::math::Color<scalar, colorspace>, dim>& image) {
+        IDType id = API::createTexture(image.elements(), image.sizes());
+        return Texture(id);
+    }
+
 protected:
     // Renderer sub-objects
     Rasterizer          _rasterizer;
@@ -383,6 +396,7 @@ public:
 #include "ImmediateModeRenderer-TexturingUnit"
 #include "ImmediateModeRenderer-Buffer"
 #include "ImmediateModeRenderer-Statistics"
+#include "ImmediateModeRenderer-Texture"
 
 
 // Clean up the preprocessor namespace

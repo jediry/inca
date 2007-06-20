@@ -132,6 +132,24 @@ namespace inca {
         }
 
 
+        // Enumeration of the different ways to calculate fog
+        enum FogModel {
+            Linear             = 0,     // fog = (end - z) / (end - start)
+            Exponential        = 1,     // fog = e^-(density * z)
+            ExponentialSquared = 2,     // fog = e^-(density * z)^2
+        };
+        const unsigned int ALL_FOG_MODELS = ExponentialSquared + 1;
+        inline ostream & operator<<(ostream &o, FogModel model) {
+            switch (model) {
+                case Linear:                return o << "Linear";
+                case Exponential:           return o << "Exponential";
+                case ExponentialSquared:    return o << "Exponential Squared";
+                default:                    return o << "UNKNOWN FogModel "
+                                                     << int(model);
+            }
+        }
+
+
         // Enumeration of different ways to fill polygons
         enum FillMode {
             Filled      = 0,
@@ -144,6 +162,22 @@ namespace inca {
                 case Outlined:  return o << "Outlined";
                 default:            return o << "UNKNOWN FillMode "
                                              << int(mode);
+            }
+        }
+
+
+        // Enumeration of different ways to classify polygon faces
+        enum PolygonFace {
+            Front   = 0,
+            Back    = 1,
+        };
+        const unsigned ALL_POLYGON_FACES = Back + 1;
+        inline ostream & operator<<(ostream &o, PolygonFace face) {
+            switch (face) {
+                case Front: return o << "Front";
+                case Back:  return o << "Back";
+                default:    return o << "UNKNOWN PolygonFace "
+                                             << int(face);
             }
         }
     };

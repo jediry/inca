@@ -141,30 +141,12 @@ namespace inca {
 
     // What do we do when we hit one end or the other?
     INCA_ENUM( BoundaryResponse,
-             ( Stop, ( Bounce, ( Loop, BOOST_PP_NIL ) ) ) );
+                ( Stop,
+                ( Bounce,
+                ( Loop,
+                  INCA_EOL ))));
 };
 
-namespace std {
-    // IOStream writer operator for the BoundaryResponse enumeration
-//     inline ostream & operator<<(ostream &o, inca::BoundaryResponse r) {
-//         switch (r) {
-//             case inca::Stop:   return o << "Stop";
-//             case inca::Bounce: return o << "Bounce";
-//             case inca::Loop:   return o << "Loop";
-//             default:           return o << "Invalid BoundaryReponse(" << int(r) << ')';
-//         }
-//     }
-
-    // IOStream writer operator for the BoundaryResponse enumeration
-    /*inline std::ostream & operator<<(std::ostream &o, inca::BoundaryResponse r) {
-        switch (r) {
-            case inca::Stop:   return o << "Stop";
-            case inca::Bounce: return o << "Bounce";
-            case inca::Loop:   return o << "Loop";
-            default:           return o << "Invalid BoundaryReponse(" << int(r) << ')';
-        }
-    }*/
-};
 
 // Import numeric limits for primitive types
 #include <limits>

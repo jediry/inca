@@ -13,6 +13,8 @@
  *
  *      The gaussian generator algorithm was adapted from an example coded
  *      by Dr. Donald H. House, Texas A&M University.
+ *
+ * TODO: recode to allow the granularity of the lookup table to be specified
  */
 
 #ifndef INCA_MATH_GENERATOR_RANDOM_GAUSSIAN
@@ -61,7 +63,18 @@ public:
     // Generator function taking explicit mean and deviation paramaters
     scalar_t operator()(scalar_t mu, scalar_t sigma) const {
         // Inverse gaussian function lookup table
-        static const Array<scalar_t, 21> inverseGauss;
+            int numTable = 21;
+            double values[] = {
+                0.00000E+00, 6.27500E-02, 1.25641E-01, 1.89000E-01,
+                2.53333E-01, 3.18684E-01, 3.85405E-01, 4.53889E-01,
+                5.24412E-01, 5.97647E-01, 6.74375E-01, 7.55333E-01,
+                8.41482E-01, 9.34615E-01, 1.03652E+00, 1.15048E+00,
+                1.28167E+00, 1.43933E+00, 1.64500E+00, 1.96000E+00,
+                3.87000E+00
+            };
+// Damn you, Visual Studio
+#if 0
+        static Array<scalar_t, 21> inverseGauss;
         static bool initialized = false;
         if (! initialized) {
             initialized = true;
@@ -74,27 +87,34 @@ public:
                 3.87000E+00
             };
             std::copy(inverseGauss.begin(), inverseGauss.end(), values);
+            INCA_DEBUG("IG[0] = " << inverseGauss[0]);
+            INCA_DEBUG("IG[1] = " << inverseGauss[1]);
+            INCA_DEBUG("IG[2] = " << inverseGauss[2]);
         }
-
+#endif
         // Compute a uniform random number in [0.0, 0.5], and a +/- sign
         scalar_t u = rand() / (scalar_t)RAND_MAX;
         bool negative;
-        if (u >= 0.5) {
+        if (u >= scalar_t(0.5)) {
             negative = false;
-            u = u - 0.5;
+            u = u - scalar_t(0.5);
         } else
             negative = true;
 
         // Lookup/interpolate the gaussian value from the table
-        scalar_t lookup = u * 2 * (inverseGauss.size() - 1);
+        scalar_t lookup = u * 2 * (numTable - 1);
+//        scalar_t lookup = u * 2 * (inverseGauss.size() - 1);
         scalar_t delta;
         IndexType index = (IndexType)lookup;
-        if (index == inverseGauss.size() - 1)
-            delta = inverseGauss[inverseGauss.size() - 1];
+        if (index == numTable - 1)
+            delta = scalar_t(values[numTable - 1]);
+//            delta = inverseGauss[inverseGauss.size() - 1];
         else {
             scalar_t diff = lookup - index;
-            delta = inverseGauss[index]
-                  + (inverseGauss[index + 1] - inverseGauss[index]) * diff;
+            delta = scalar_t(values[index]
+                  + (values[index + 1] - values[index]) * diff);
+//            delta = inverseGauss[index]
+//                  + (inverseGauss[index + 1] - inverseGauss[index]) * diff;
         }
         scalar_t result = mu + sigma * (negative? -delta : delta);
         return result;

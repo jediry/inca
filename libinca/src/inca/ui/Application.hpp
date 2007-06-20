@@ -25,6 +25,7 @@ namespace inca {
     namespace ui {
         // Forward declarations
         class Application;
+        class ApplicationPeer;
 
         // Pointer typedefs (not using shared_ptr, because Application
         // is a singleton and manages its own existence)
@@ -33,14 +34,12 @@ namespace inca {
     };
 };
 
-// Import Timer definition
-#include <inca/util/Timer>
+// Import superclass definition
+#include "HeavyweightComponent"
 
 // Import other UI class definitions
 #include "Window.hpp"
 
-// Import container definitions
-#include <vector>
 
 /**
  * The Application abstract class represents a generic application, and
@@ -49,20 +48,15 @@ namespace inca {
  * Subclasses must implement the constructInterface() function, and may also
  * wish to implement the setup(argc, argv) function.
  */
-class inca::ui::Application {
-private:
-    // Set this class up to have properties
-    PROPERTY_OWNING_OBJECT(Application);
-
+class inca::ui::Application
+    : public inca::ui::HeavyweightComponent<inca::ui::ApplicationPeer> {
+/*---------------------------------------------------------------------------*
+ | Native UI toolkit peer
+ *---------------------------------------------------------------------------*/
 public:
-    // XXX HACK! HACK! WHEEZE!
-    // Typedef for the timer we'll use to drive animation
-    typedef Timer<double, true> Timer;  // double resolution, generate events
+    friend class ApplicationPeer;
 
-    // The application's main timer
-    rw_property(Timer, timer, Timer());
-
-
+    
 /*---------------------------------------------------------------------------*
  | There can be only one. Application behaves (almost) as a singleton object.
  *---------------------------------------------------------------------------*/
@@ -77,58 +71,52 @@ protected:
 
 
 /*---------------------------------------------------------------------------*
- | Constructors & destructor
+ | Constructors, destructor & main function
  *---------------------------------------------------------------------------*/
 public:
     // Constructor
     Application();
 
     // Destructor
-    ~Application();
+    virtual ~Application();
 
-    // Framework initialization function (called by main() after constructor)
-    void initialize(int & argc, char ** argv);
-
-
-/*---------------------------------------------------------------------------*
- | Application setup functions: an Application subclass may override either
- | or both of these to specialize its startup behavior.
- *---------------------------------------------------------------------------*/
-public:
-    // Do any command-line processing and app-specific initialization
-    virtual void setup(int &argc, char **argv) { }
-
-    // Construct any necessary user-interface thingies
-    virtual void constructInterface() { }
-
-
-/*---------------------------------------------------------------------------*
- | Toolkit-integration functions
- *---------------------------------------------------------------------------*/
-public:
-    // Initialize the UI-toolkit and process toolkit-specific arguments
-    virtual void initializeToolkit(int & argc, char ** argv) = 0;
-
-    // Launch the application's event-handling mechanism (may not return)
-    virtual int run() = 0;
+    // Application main function (should be called by main() after constructor)
+    virtual int main(int & argc, char **& argv);
 
     // Cause the application to terminate
     virtual void exit(int status, const std::string & msg);
 
 
 /*---------------------------------------------------------------------------*
- | Window management functions
+ | Application setup functions: normally, an Application subclass will override
+ | either or both of these to specialize its startup behavior.
  *---------------------------------------------------------------------------*/
 public:
-    void registerComponent(UIComponentPtr c);
+    // Do any command-line processing and app-specific initialization
+    virtual void setup(int &argc, char **& argv) { }
 
-    virtual void registerWindow(WindowPtr w);
-    WindowPtr getWindowForID(IDType id);
-    virtual void destroyWindow(IDType id);
+    // Construct any necessary user-interface thingies
+    virtual void construct() { }
 
-protected:
-    std::vector<UIComponentPtr> components;
-    std::vector<WindowPtr> windows;
+
+/*---------------------------------------------------------------------------*
+ | Input device state functions
+ *---------------------------------------------------------------------------*/
+public:
+    // NumLock key state
+    bool numLockActive() const;
+    void setNumLockActive(bool a);
+    void toggleNumLock();
+
+    // ScrollLock key state
+    bool scrollLockActive() const;
+    void setScrollLockActive(bool a);
+    void toggleScrollLock();
+
+    // CapsLock key state
+    bool capsLockActive() const;
+    void setCapsLockActive(bool a);
+    void toggleCapsLock();
 
 
 /*---------------------------------------------------------------------------*
@@ -136,16 +124,65 @@ protected:
  *---------------------------------------------------------------------------*/
 public:
     // Pull off the first command-line argument and remove it from the list
-    static std::string shift(int & argc, char ** & argv);
+    static std::string shift(int & argc, char **& argv);
+
+
+/*---------------------------------------------------------------------------*
+ | Window management functions
+ *---------------------------------------------------------------------------*/
+public:
+    // List of Windows in the application
+    typedef std::vector<WindowPtr> WindowList;
+
+    // Add/remove a Window to/from the Application
+    WindowPtr add(Window * w);
+    WindowPtr add(WindowPtr w);
+    void remove(WindowPtr w);
+
+protected:
+    WindowList _windows;
 };
 
 
-/**
- * The APPLICATION(TOOLKIT) macro expands to produce the fully-qualified class
- * name of the Application subclass implemented using the requested toolkit.
- */
-#include <boost/preprocessor/cat.hpp>
-#define APPLICATION(TOOLKIT) inca::ui:: BOOST_PP_CAT(TOOLKIT, Application)
+class inca::ui::ApplicationPeer
+    : public inca::ui::ComponentPeer<inca::ui::Application> {
+/*---------------------------------------------------------------------------*
+ | Constructors & destructor
+ *---------------------------------------------------------------------------*/
+public:
+    // Constructor
+    explicit ApplicationPeer(Application * a) : Base(a) { }
+
+    
+/*---------------------------------------------------------------------------*
+ | ComponentPeer interface functions (no-ops)
+ *---------------------------------------------------------------------------*/
+public:
+    Pixel position() const { return Pixel(0); }
+    void setPosition(Pixel) { }
+    Dimension size() const { return Dimension(0); }
+    void setSize(Dimension) { }
+    Dimension minimumSize() const { return Dimension(0); }
+    void setMinimumSize(Dimension) { }
+    Dimension maximumSize() const { return Dimension(0); }
+    void setMaximumSize(Dimension) { }
+    bool visible() const { return false; }
+    void setVisible(bool v) { }
+
+
+/*---------------------------------------------------------------------------*
+ | ApplicationPeer interface functions
+ *---------------------------------------------------------------------------*/
+public:
+    // Application lifecycle functions
+    virtual void initialize(int & argc, char **& argv) = 0;
+    virtual int run() = 0;
+    virtual void exit(int code) = 0; 
+    
+    // Stateful key functions
+    virtual bool lockKeyState(LockKey k) const = 0;
+    virtual void setLockKeyState(LockKey k, bool a) = 0;
+};
 
 
 /**
@@ -158,8 +195,7 @@ public:
 #define APPLICATION_MAIN(APP_CLASS)                                         \
 int main(int argc, char **argv) {                                           \
     APP_CLASS app;              /* Create an instance of the app */         \
-    app.initialize(argc, argv); /* Initialize it                 */         \
-    return app.run();           /* Start it running              */         \
+    return app.main(argc, argv);/* Run it                        */         \
 }
 
 #endif

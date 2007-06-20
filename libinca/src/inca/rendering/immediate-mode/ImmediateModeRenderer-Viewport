@@ -49,6 +49,12 @@ public:
     void setBounds(const Region & b) {
         WRITE_THRU_CACHE(API::ViewportBounds, Region, _bounds, b);
     }
+    void setSizes(Dimension d) {
+        // HACK -- this could be more efficient
+        Region b = bounds();
+        b.setSizes(d);
+        setBounds(b);
+    }
 
 protected:
     mutable Region _bounds;

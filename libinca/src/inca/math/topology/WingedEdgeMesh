@@ -307,7 +307,13 @@ public:
         // Make sure they are part of the same face...
         if (fv1->face() != fv2->face()) {
             InvalidTopologyException e;
-            e << "Ack new edges can't span multiple faces!!\n";
+            e << "Ack new edges can't span multiple faces!!\n"
+                 "FV(" << fv1->id() << "): ";
+            if (fv1->face() == NULL)    e << ' ';
+            else                        e << fv1->face()->id();
+            e << "  !=  FV(" << fv2->id() << "): ";
+            if (fv2->face() != NULL)    e << ' ';
+            else                        e << fv2->face()->id();
             throw e;
         }
 
@@ -412,9 +418,11 @@ public:
             return NULL;
         }
 
-        // Create a face on this FaceVertex
+        // Create a face on this FaceVertex and link it in
         FacePtr f = acquireFace();
         f->setData(fd);
+        linkLoopToFace(f, fv);
+        f->setEdge(fv->edgeCW());
 
         return f;
     }
@@ -485,6 +493,7 @@ protected:
             do {
                 e->setThisFace(fv, f);  // Link the Edge to the Face
                 fv = e->otherFaceVertexAcrossFace(fv);  // Get next FV
+                e = fv->edgeCW();                       // And next E
                 fv->setFace(f);         // Link the FaceVertex to the Face
             } while (fv != start);  // Stop when we get back home
         }

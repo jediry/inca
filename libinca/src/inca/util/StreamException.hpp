@@ -28,30 +28,30 @@ namespace inca {
     public:
         // Constructors
         explicit StreamException() { }
-        StreamException(const StreamException &e) : ss(e.message()) { }
-        explicit StreamException(const std::string &msg) : ss(msg) { }
+        StreamException(const StreamException & e) : _ss(e.message()) { }
+        explicit StreamException(const std::string & msg) : _ss(msg) { }
 
         // Destructor
         virtual ~StreamException() throw() { }
 
         // Accessors
-        std::string message() const { return ss.str(); }
+        virtual std::string message() const { return _ss.str(); }
         const char * what() const throw() { return message().c_str(); }
 
         // << operator implementations
         template <typename T>
         StreamException & operator<<(const T & t) {
-            ss << t;
+            _ss << t;
             return *this;
         }
 
     protected:
-        std::ostringstream ss;
+        std::ostringstream _ss;
     };
 
     // ostream writer for this exception type
-    inline std::ostream & operator<<(std::ostream &os,
-                                     const StreamException &e) {
+    inline std::ostream & operator<<(std::ostream & os,
+                                     const StreamException & e) {
         return os << e.message();
     }
 };

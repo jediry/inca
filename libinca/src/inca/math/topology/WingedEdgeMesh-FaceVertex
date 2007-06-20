@@ -23,7 +23,8 @@
 #define INCA_MATH_TOPOLOGY_WINGED_EDGE_MESH_FACE_VERTEX
 
 
-MESH_TEMPLATE class inca::math::MESH::FaceVertex : public FVData, public MeshElement {
+MESH_TEMPLATE class inca::math::MESH::FaceVertex
+    : public FVData, public MeshElement {
 /*---------------------------------------------------------------------------*
  | Friend declarations
  *---------------------------------------------------------------------------*/

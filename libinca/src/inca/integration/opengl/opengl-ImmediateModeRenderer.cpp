@@ -39,10 +39,11 @@ inline GLenum translate(PrimitiveType type) {
         case TriangleFan:   return GL_TRIANGLE_FAN;
         case Quads:         return GL_QUADS;
         case QuadStrip:     return GL_QUAD_STRIP;
-//        case Polygon:       return GL_POLYGON;
+        case rendering::Polygon:      // Conflicts w/ Win GDI 'Polygon'
+                            return GL_POLYGON;
         default:
-            std::cerr << "translate(" << type << ") => GLenum: "
-                         "unrecognized PrimitiveType" << std::endl;
+            INCA_WARNING("translate(" << type << ") => GLenum: "
+                         "unrecognized PrimitiveType")
             return GL_INVALID_ENUM;
     }
 }
@@ -144,6 +145,7 @@ typedef inca::math::Color<GLdouble, inca::math::sRGB<false> >   Color3d;
 typedef inca::math::Color<GLdouble, inca::math::sRGB<true> >    Color4d;
 
 typedef API::Color     RGB;
+typedef API::Color     RGBA;
 typedef API::Normal    Normal;
 typedef API::TexCoord  TexCoord;
 
@@ -158,6 +160,27 @@ void API::getHardwareState<API::CurrentMatrixStack>(IDType & id) {
     GLint glID;
     GL_GET_INTEGER_VALUE(GL_MATRIX_MODE, glID);
     id = glID;
+}
+template <>
+void API::setHardwareState<API::CurrentMatrixStack>(IDType id) {
+//    if (id == GL_PROJECTION) std::cerr << "Proj is current\n";
+//    if (id == GL_MODELVIEW) std::cerr << "ModV is current\n";
+    GL::glMatrixMode(id);
+}
+
+// The currently selected texturing unit
+template <>
+void API::getHardwareState<API::CurrentTexturingUnit>(IDType & id) {
+#ifdef GL_MAX_TEXTURE_UNITS_ARB
+    // Query for the currently active texturing unit
+    GLint glID;
+    GL_GET_INTEGER_VALUE(GL_ACTIVE_TEXTURE_ARB, glID);
+    id = glID - GL_TEXTURE0_ARB;
+#else
+    // Multitexturing is not available, so texture unit zero is the active
+    // one...by virtue of being the ONLY one
+    id = 0;
+#endif
 }
 template <>
 void API::setHardwareState<API::CurrentMatrixStack>(IDType id) {
@@ -292,6 +315,16 @@ void API::setHardwareState<API::PolygonSmoothing>(bool enabled) {
     GL_ENABLE(GL_POLYGON_SMOOTH, enabled);
 }
 
+// Fog
+template <>
+void API::getHardwareState<API::Fog>(bool & enabled) {
+    GL_GET_BOOLEAN_VALUE(GL_FOG, enabled);
+}
+template <>
+void API::setHardwareState<API::Fog>(bool enabled) {
+    GL_ENABLE(GL_FOG, enabled);
+}
+
 
 /*---------------------------------------------------------------------------*
  | IMR::Rasterizer -- Rasterization parameter functions
@@ -352,7 +385,7 @@ void API::setHardwareState<API::ShadingModel>(::inca::rendering::ShadingModel mo
     switch (model) {
         case SmoothShade: glShadeModel(GL_SMOOTH); break;
         case FlatShade:   glShadeModel(GL_FLAT);   break;
-        default:          glShadeModel(GL_SMOOTH); break;
+        default:   /* TODO: throw */               break;
     }
 }
 
@@ -394,6 +427,147 @@ void API::getHardwareState<API::CurrentEdgeFlag>(bool & edge) {
 template <>
 void API::setHardwareState<API::CurrentEdgeFlag>(bool edge) {
     GL::glEdgeFlag(edge);
+}
+
+// Fog model
+template <>
+void API::getHardwareState<API::FogModel>(::inca::rendering::FogModel & model) {
+    GLint result;
+    GL_GET_INTEGER_VALUE(GL_FOG_MODE, result);
+    switch (result) {
+        case GL_LINEAR: model = Linear;             break;
+        case GL_EXP:    model = Exponential;        break;
+        case GL_EXP2:   model = ExponentialSquared; break;
+        default:        model = Linear;             break;
+        // TODO: assert/throw for unhandled cases
+    }
+}
+template <>
+void API::setHardwareState<API::FogModel>(::inca::rendering::FogModel model) {
+    switch (model) {
+        case Linear:                glFog(GL_FOG_MODE, GL_LINEAR); break;
+        case Exponential:           glFog(GL_FOG_MODE, GL_EXP);    break;
+        case ExponentialSquared:    glFog(GL_FOG_MODE, GL_EXP2);   break;
+        default:   /* TODO: throw */                               break;
+    }
+}
+
+// Fog start depth
+template <>
+void API::getHardwareState<API::FogStartDepth>(GLfloat & depth) {
+    GL_GET_FLOAT_VALUE(GL_FOG_START, depth);
+}
+template <>
+void API::setHardwareState<API::FogStartDepth>(GLfloat depth) {
+    glFog(GL_FOG_START, depth);
+}
+
+// Fog end depth
+template <>
+void API::getHardwareState<API::FogEndDepth>(GLfloat & depth) {
+    GL_GET_FLOAT_VALUE(GL_FOG_END, depth);
+}
+template <>
+void API::setHardwareState<API::FogEndDepth>(GLfloat depth) {
+    glFog(GL_FOG_END, depth);
+}
+
+// Fog density
+template <>
+void API::getHardwareState<API::FogDensity>(GLfloat & density) {
+    GL_GET_FLOAT_VALUE(GL_FOG_DENSITY, density);
+}
+template <>
+void API::setHardwareState<API::FogDensity>(GLfloat density) {
+    glFog(GL_FOG_DENSITY, density);
+}
+
+// Fog color
+template <>
+void API::getHardwareState<API::FogColor>(RGBA & color) {
+    GL_GET_ARRAY_VALUE(GL_FOG_COLOR, color);
+}
+template <>
+void API::setHardwareState<API::FogColor>(const RGBA & color) {
+    glFog(GL_FOG_COLOR, color);
+}
+
+// Culled face
+template <>
+void API::getHardwareState<API::CulledFace>(::inca::rendering::PolygonFace & face) {
+    GLint result;
+    GL_GET_INTEGER_VALUE(GL_CULL_FACE_MODE, result);
+    switch (result) {
+        case GL_FRONT:  face = Front;   break;
+        case GL_BACK:   face = Back;    break;
+        default:        face = Back;    break;
+        // TODO: assert/throw for unhandled cases
+    }
+}
+template <>
+void API::setHardwareState<API::CulledFace>(::inca::rendering::PolygonFace face) {
+    switch (face) {
+        case Front: glCullFace(GL_FRONT);   break;
+        case Back:  glCullFace(GL_BACK);    break;
+        default:    /* throw */             break;
+    }
+}
+
+// Texture type
+template <>
+void API::getHardwareState<API::TextureType>(::inca::rendering::TextureType & type) {
+    bool enabled;
+
+    // OpenGL chooses the highest enabled dimensionality, so we should too
+    type = NoTexture;
+    GL_GET_BOOLEAN_VALUE(GL_TEXTURE_1D, enabled);
+    if (enabled)
+        type = Texture1D;
+    GL_GET_BOOLEAN_VALUE(GL_TEXTURE_2D, enabled);
+    if (enabled)
+        type = Texture2D;
+#ifdef GL_TEXTURE_3D
+    GL_GET_BOOLEAN_VALUE(GL_TEXTURE_3D, enabled);
+    if (enabled)
+        type = Texture3D;
+#endif
+}
+template <>
+void API::setHardwareState<API::TextureType>(::inca::rendering::TextureType type) {
+    switch (type) {
+        case NoTexture:
+            glDisable(GL_TEXTURE_1D);
+            glDisable(GL_TEXTURE_2D);
+#ifdef GL_TEXTURE_3D
+            glDisable(GL_TEXTURE_3D);
+#endif
+            break;
+
+        case Texture1D:
+            glEnable(GL_TEXTURE_1D);
+            glDisable(GL_TEXTURE_2D);
+#ifdef GL_TEXTURE_3D
+            glDisable(GL_TEXTURE_3D);
+#endif
+            break;
+
+        case Texture2D:
+            glDisable(GL_TEXTURE_1D);
+            glEnable(GL_TEXTURE_2D);
+#ifdef GL_TEXTURE_3D
+            glDisable(GL_TEXTURE_3D);
+#endif
+            break;
+
+        case Texture3D:
+            glDisable(GL_TEXTURE_1D);
+            glDisable(GL_TEXTURE_2D);
+#ifdef GL_TEXTURE_3D
+            glEnable(GL_TEXTURE_3D);
+#endif
+            break;
+        default:    /* throw */             break;
+    }
 }
 
 
@@ -546,7 +720,12 @@ NOTHING_ARRAY_SETTER(EdgeFlag, GL_EDGE_FLAG_ARRAY)
 
 // Start/end rendering a geometric primitive
 void API::beginPrimitive(PrimitiveType type) { GL::glBegin(translate(type)); }
-void API::endPrimitive() { GL::glEnd(); }
+void API::endPrimitive() {
+    GL::glEnd();
+    GLenum error = GL::glGetError();
+    if (error != GL_NO_ERROR)
+        INCA_ERROR("OpenGL: " << gluErrorString(error))
+}
 
 // Render a vertex from the current vertex array
 void API::renderVertexIndex(IndexType i) { GL::glArrayElement(i); }
@@ -747,7 +926,7 @@ void API::setHardwareState<API::ViewportBounds>(const Region & r) {
 /*---------------------------------------------------------------------------*
  | IMR::LightingUnit -- Light functions
  *---------------------------------------------------------------------------*/
-// Light enabled
+// Lighting unit enabled
 template <>
 void API::getHardwareState<API::LightingUnitEnabled>(IDType id, bool & enabled) {
     GL_GET_BOOLEAN_VALUE(id, enabled);
@@ -776,6 +955,59 @@ void API::setHardwareState<API::LightingUnitDiffuseColor>(IDType id, const Color
 template <>
 void API::setHardwareState<API::LightingUnitSpecularColor>(IDType id, const Color & c) {
     GL::glLight(id, GL_SPECULAR, c.elements());
+}
+
+
+/*---------------------------------------------------------------------------*
+ | IMR::TexturingUnit -- Texturing functions
+ *---------------------------------------------------------------------------*/
+// Texturing unit enabled
+template <>
+void API::getHardwareState<API::TexturingUnitEnabled>(IDType id, bool & enabled) {
+#ifdef GL_MAX_TEXTURE_UNITS_ARB
+    GL_GET_BOOLEAN_VALUE(id, enabled);
+#else
+    enabled = true;
+#endif
+}
+template <>
+void API::setHardwareState<API::TexturingUnitEnabled>(IDType id, bool enabled) {
+#ifdef GL_MAX_TEXTURE_UNITS_ARB
+    GL_ENABLE(id, enabled);
+#endif
+}
+
+// Texture creation
+template <>
+IDType API::createTexture<float, sRGB<true>, 2>(const ::inca::math::Color<float, sRGB<true> > * texels,
+                                                const Array<SizeType, 2> & sizes) {
+    // Allocate a texture object "name"
+    GLuint textureName;
+    GL::glGenTextures(1, &textureName);
+
+    // Bind the texture and initialize it from the pixel data in 'pixels'
+    GL::glBindTexture(GL_TEXTURE_2D, textureName);
+    GL::glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    GL::glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    GL::glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    GL::glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    GL::glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+    GL::glTexImage2D(GL_TEXTURE_2D, 0 /* mipmap level */, GL_RGBA,
+                     sizes[0], sizes[1], 0 /* border */, GL_RGBA, GL_FLOAT, texels);
+
+    // Return the texture object "name" as its ID
+    return textureName;
+}
+
+void API::deleteTexture(IDType textureID) {
+    // Delete the texture object with the specified name
+    GLuint textureName = textureID;
+    GL::glDeleteTextures(1, &textureName);
+}
+
+void API::bindTexture(IDType textureID) {
+    // TODO: TO's need to know their dimensionality?
+    GL::glBindTexture(GL_TEXTURE_2D, textureID);
 }
 
     }

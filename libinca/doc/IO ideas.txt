@@ -1,0 +1,8 @@
+File class
+	bool file.changed() const;
+	bool file.accessed() const;	?? would calling this cause the file to be "accessed"?
+	void file.setReferencePoint();	// Start watching for change/access from NOW
+	void file.watch();		// Generate events when file status changes
+
+XMLParser class
+	simple ops, like setValidating(), setDoXincludes, set/add/remove XMLCatalog/resolver

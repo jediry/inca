@@ -53,6 +53,7 @@ namespace inca {
         class Solid { };
         class Wireframe { };
         class Vertices { };
+        class Normals { };
     };
 };
 
@@ -153,89 +154,6 @@ public:
         return (size(0) << 1) * (y >> 1) + (x << 1) + (y & 0x0001);
     }
 
-    // Rendering functions
-    template <class Renderer, class Mode>
-    void operator()(Renderer & renderer, const Mode & mode) const {
-        typename Renderer::Rasterizer & rasterizer = renderer.rasterizer();
-
-        rasterizer.setPrimitiveArray(*this);
-
-        if (typeid(Mode) == typeid(Solid)) {
-            // Render the grid as a huge triangle strip, two rows at a time
-            int vertexCount = size(0) << 1;         // sizeX * 2 vertices per strip
-            int pairedRows = (size(1) >> 1) << 1;   // Strip off any odd-numbered last row
-            for (IndexType y = 0; y < size(1) - 1; y += 2) {
-                // The first row is stored left-to-right in contiguous memory
-                IndexType startVertex = y * size(0);
-                rasterizer.renderPrimitive(TriangleStrip, startVertex, vertexCount);
-
-                // The second row is made by jumping between vertices from two other
-                // strips, but should only be done if we have data there
-                if (y < size(1) - 2) {
-                    IndexType bottomVertex = startVertex + 1;
-                    IndexType topVertex    = startVertex + vertexCount;
-                    rasterizer.beginPrimitive(TriangleStrip);
-                    for (IndexType x = 0; x < size(0); ++x) {
-                        rasterizer.vertexIndex(bottomVertex);
-                        rasterizer.vertexIndex(topVertex);
-                        bottomVertex += 2;
-                        topVertex += 2;
-                    }
-                    rasterizer.endPrimitive();
-                }
-
-            }
-        } else if (typeid(Mode) == typeid(Wireframe)) {
-            IndexArray idx;
-            bool increasing = true;
-
-            rasterizer.beginPrimitive(LineStrip);
-            for (idx[1] = 0; idx[1] < size(1); ++idx[1]) {
-                if (increasing) {
-                    for (idx[0] = 0; idx[0] < size(0); ++idx[0])
-                        rasterizer.vertexIndex(indexOf(idx));
-                } else {
-                    for (idx[0] = size(0) - 1; idx[0] >= 0; --idx[0])
-                        rasterizer.vertexIndex(indexOf(idx));
-                }
-                increasing = ! increasing;
-            }
-            rasterizer.endPrimitive();
-
-            rasterizer.beginPrimitive(LineStrip);
-            for (idx[0] = 0; idx[0] < size(0); ++idx[0]) {
-                if (increasing) {
-                    for (idx[1] = 0; idx[1] < size(1); ++idx[1])
-                        rasterizer.vertexIndex(indexOf(idx));
-                } else {
-                    for (idx[1] = size(1) - 1; idx[1] >= 0; --idx[1])
-                        rasterizer.vertexIndex(indexOf(idx));
-                }
-                increasing = ! increasing;
-            }
-            rasterizer.endPrimitive();
-
-        } else if (typeid(Mode) == typeid(Vertices)) {
-            if (! this->isOverallocated())
-                // We can do the whole thing in one fell swoop
-                rasterizer.renderPrimitive(Points, 0, this->size());
-            else {
-                // We have to do it in two parts
-
-                // First, all but the last row
-                rasterizer.renderPrimitive(Points, 0, this->size() - this->size(0));
-
-                // Now do the last row separately
-                rasterizer.beginPrimitive(Points);
-                IndexArray idx;
-                idx[1] = size(1) - 1;
-                for (idx[0] = 0; idx[0] < size(0); ++idx[0])
-                    rasterizer.vertexIndex(indexOf(idx));
-                rasterizer.endPrimitive();
-            }
-        }
-    }
-
 protected:
     SizeArray _sizes;           // Our logical X and Y dimensions
     SizeType  _effectiveSize;   // How big we tell the rest of the world we are
@@ -321,6 +239,101 @@ public:
     SUB_ARRAY(EdgeFlag, edgeFlags, edgeFlag, setEdgeFlag)
 
     #undef SUB_ARRAY
+
+
+    // Rendering functions
+    template <class Renderer, class Mode>
+    void operator()(Renderer & renderer, const Mode & mode) const {
+        typename Renderer::Rasterizer & rasterizer = renderer.rasterizer();
+
+        rasterizer.setPrimitiveArray(*this);
+
+        if (typeid(Mode) == typeid(Solid)) {
+            // Render the grid as a huge triangle strip, two rows at a time
+            int vertexCount = size(0) << 1;         // sizeX * 2 vertices per strip
+            int pairedRows = (size(1) >> 1) << 1;   // Strip off any odd-numbered last row
+            for (IndexType y = 0; y < size(1) - 1; y += 2) {
+                // The first row is stored left-to-right in contiguous memory
+                IndexType startVertex = y * size(0);
+                rasterizer.renderPrimitive(TriangleStrip, startVertex, vertexCount);
+
+                // The second row is made by jumping between vertices from two other
+                // strips, but should only be done if we have data there
+                if (y < size(1) - 2) {
+                    IndexType bottomVertex = startVertex + 1;
+                    IndexType topVertex    = startVertex + vertexCount;
+                    rasterizer.beginPrimitive(TriangleStrip);
+                    for (IndexType x = 0; x < size(0); ++x) {
+                        rasterizer.vertexIndex(bottomVertex);
+                        rasterizer.vertexIndex(topVertex);
+                        bottomVertex += 2;
+                        topVertex += 2;
+                    }
+                    rasterizer.endPrimitive();
+                }
+
+            }
+        } else if (typeid(Mode) == typeid(Wireframe)) {
+            IndexArray idx;
+            bool increasing = true;
+
+            rasterizer.beginPrimitive(LineStrip);
+            for (idx[1] = 0; idx[1] < size(1); ++idx[1]) {
+                if (increasing) {
+                    for (idx[0] = 0; idx[0] < size(0); ++idx[0])
+                        rasterizer.vertexIndex(indexOf(idx));
+                } else {
+                    for (idx[0] = size(0) - 1; idx[0] >= 0; --idx[0])
+                        rasterizer.vertexIndex(indexOf(idx));
+                }
+                increasing = ! increasing;
+            }
+            rasterizer.endPrimitive();
+
+            rasterizer.beginPrimitive(LineStrip);
+            for (idx[0] = 0; idx[0] < size(0); ++idx[0]) {
+                if (increasing) {
+                    for (idx[1] = 0; idx[1] < size(1); ++idx[1])
+                        rasterizer.vertexIndex(indexOf(idx));
+                } else {
+                    for (idx[1] = size(1) - 1; idx[1] >= 0; --idx[1])
+                        rasterizer.vertexIndex(indexOf(idx));
+                }
+                increasing = ! increasing;
+            }
+            rasterizer.endPrimitive();
+
+        } else if (typeid(Mode) == typeid(Vertices)) {
+            if (! this->isOverallocated())
+                // We can do the whole thing in one fell swoop
+                rasterizer.renderPrimitive(Points, 0, this->size());
+            else {
+                // We have to do it in two parts
+
+                // First, all but the last row
+                rasterizer.renderPrimitive(Points, 0, this->size() - this->size(0));
+
+                // Now do the last row separately
+                rasterizer.beginPrimitive(Points);
+                IndexArray idx;
+                idx[1] = size(1) - 1;
+                for (idx[0] = 0; idx[0] < size(0); ++idx[0])
+                    rasterizer.vertexIndex(indexOf(idx));
+                rasterizer.endPrimitive();
+            }
+
+        } else if (typeid(Mode) == typeid(Normals)) {
+            IndexArray idx;
+            rasterizer.beginPrimitive(Lines);
+            for (idx[0] = 0; idx[0] < size(0); ++idx[0])
+                for (idx[1] = 0; idx[1] < size(1); ++idx[1]) {
+                    VertexType v = vertex(idx);
+                    rasterizer.vertexAt(v);
+                    rasterizer.vertexAt(v + normal(idx) * 50.0f);
+                }
+            rasterizer.endPrimitive();
+        }
+    }
 };
 
 #endif

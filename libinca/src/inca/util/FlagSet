@@ -55,20 +55,30 @@ protected:
  | Get/set individual flags and sets of flags
  *---------------------------------------------------------------------------*/
 public:
-    void clear() { _flags = 0; }
+    void clear()                     { _flags = 0; }
+    void set(BitVectorType f)        { _flags = f; }
     void include(BitVectorType f)    { _flags |= f; }
     void keepCommon(BitVectorType f) { _flags &= f; }
     void exclude(BitVectorType f)    { _flags &= ~f; }
-    void set(IndexType i)   { _flags |=  (1 << i); }
-    void unset(IndexType i) { _flags &= ~(1 << i); }
-    void set(IndexType i, bool enabled) {
-        if (enabled)    set(i);
-        else            unset(i);
-    }
+    BitVectorType get() const        { return _flags; }
 
+    void clear(BitVectorType mask)                       { _flags = (_flags & ~mask); }
+    void set(BitVectorType f, BitVectorType mask)        { _flags = (_flags & ~mask) | (f & mask); }
+    void include(BitVectorType f, BitVectorType mask)    { _flags = (_flags & ~mask) | ((f | _flags) & mask); }
+    void keepCommon(BitVectorType f, BitVectorType mask) { _flags = (_flags & ~mask) | ((f & _flags) & mask); }
+    void exclude(BitVectorType f, BitVectorType mask)    { _flags = (_flags & ~mask) | ((~f & _flags) & mask); }
+    BitVectorType get(BitVectorType mask) const          { return _flags & mask; }
+
+//    void set(IndexType i)   { _flags |=  (1 << i); }
+//    void unset(IndexType i) { _flags &= ~(1 << i); }
+//    void set(IndexType i, bool enabled) {
+//        if (enabled)    set(i);
+//        else            unset(i);
+//    }
     bool isSet(IndexType i) const { return _flags & (1 << i) != 0; }
-    bool anySet(BitVectorType f) const { return _flags & f != 0; }
-    bool allSet(BitVectorType f) const { return _flags & ~f == 0; }
+
+    bool anySet(BitVectorType f) const { return (_flags & f) != 0; }
+    bool allSet(BitVectorType f) const { return (_flags & f) == f; }
 };
 
 #endif

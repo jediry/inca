@@ -44,7 +44,8 @@ namespace std {
 typedef long clock_t;
 
 // Disable some obnoxious warnings
-#pragma warning(disable : 4290)		// Ignoring C++ exception spec.
+#pragma warning(disable : 4290)     // Ignoring C++ exception spec.
+#pragma warning(disable : 4561)     // __fastcall incompatible with '/clr' option
 
 #define HAVE_LIBFFTW3F  1
 #define HAVE_LIBFFTW3   1

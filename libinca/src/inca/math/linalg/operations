@@ -464,7 +464,9 @@ namespace inca {
         }
         S_TEMPLATE
         V(2) rotate(const V(2) & v, S_ARG angle) {
-            S mag_v = magnitude(v);    // Length of v
+            S mag_v = magnitude(v);     // Length of v
+            if (mag_v == S(0))          // Oops! Zero-length vector!
+                return v;
             S cos_a = v[0] / mag_v,
               sin_a = v[1] / mag_v,
               cos_b = cos(angle),
@@ -477,10 +479,13 @@ namespace inca {
         A_TEMPLATE(1)
         P(D0) rotate(const P(D0) & p, S_ARG angle,
                      const V(D0) & axis, const P(D0) & center) {
-            // Change this into a vector rotation problem
             V(D0) diff = p - center;
             S length = magnitude(diff);
-            return center + length * rotate(diff / length, angle, normalize(axis));
+            if (length == 0)        // Trivial -- just return the point
+                return p;
+            else                    // Rephrase this as vector rotation problem
+                return center
+                     + length * rotate(diff / length, angle, normalize(axis));
         }
 
 

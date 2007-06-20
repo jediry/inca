@@ -85,12 +85,14 @@ public:
     }
 
     // Bases/extents constructor FIXME: can we make this handle all combos somehow?
+    // TODO: can we performantly collapse this with one of the accessors, to make
+    // maintenance of this simpler?
     template <class IndexList0, class IndexList1>
     explicit Region(const IndexList0 & bs, const IndexList1 & ext)
             : _bases(bs), _extents(ext) {
         bool degenerate = false;
         for (IndexType d = 0; d < dimensionality; ++d) {
-            if (base(d) < extent(d)) {
+            if (base(d) <= extent(d)) {
                 _sizes[d] = extent(d) - base(d) + 1;
             } else {
                 _sizes[d] = _size = 0;
@@ -132,6 +134,12 @@ public:
     // Getters
     const IndexArray & bases()   const { return _bases; }
     const IndexArray & extents() const { return _extents; }
+    IndexArray centers() const {
+        IndexArray c;
+        for (IndexType d = 0; d < dimensionality; ++d)
+            c[d] = center(d);
+        return c;
+    }
     const SizeArray  & sizes()   const { return _sizes; }
 
     // Set the minimum included indices for each dimension
@@ -141,7 +149,7 @@ public:
         typename IndexList::const_iterator it = indices.begin();
         for (IndexType d = 0; d < dimensionality; ++d, ++it) {
             IndexType b(*it);
-            if (b < extent(d)) {
+            if (b <= extent(d)) {
                 _bases[d] = b;
                 _sizes[d] = extent(d) - base(d) + 1;
             } else {
@@ -167,7 +175,7 @@ public:
         typename IndexList::const_iterator it = indices.begin();
         for (IndexType d = 0; d < dimensionality; ++d, ++it) {
             IndexType e(*it);
-            if (e > base(d)) {
+            if (e >= base(d)) {
                 _extents[d] = e;
                 _sizes[d] = extent(d) - base(d) + 1;
             } else {
@@ -281,7 +289,7 @@ public:
         typename IndexList1::const_iterator ei = ex.begin();
         for (IndexType d = 0; d < dimensionality; ++d, ++bi, ++ei) {
             IndexType b(*bi), e(*ei);
-            if (b < e) {
+            if (b <= e) {
                 _bases[d] = b;
                 _extents[d] = e;
                 _sizes[d] = extent(d) - base(d) + 1;
@@ -325,13 +333,14 @@ public:
     // Getters
     IndexType base(IndexType d)   const { return _bases[d]; }
     IndexType extent(IndexType d) const { return _extents[d]; }
+    IndexType center(IndexType d) const { return _extents[d] - _bases[d] / 2; }
     SizeType  size(IndexType d)   const { return _sizes[d]; }
     SizeType  size()              const { return _size; }
 
     // Setters
     void setBase(IndexType d, IndexType b) {
         _bases[d] = b;
-        if (base(d) < extent(d)) {
+        if (base(d) <= extent(d)) {
             _sizes[d] = extent(d) - base(d) + 1;
             recalculateSize();
         } else {
@@ -341,13 +350,18 @@ public:
     }
     void setExtent(IndexType d, IndexType e) {
         _extents[d] = e;
-        if (base(d) < extent(d)) {
+        if (base(d) <= extent(d)) {
             _sizes[d] = extent(d) - base(d) + 1;
             recalculateSize();
         } else {
             _sizes[d] = _size = 0;
             _bases[d] = extent(d);
         }
+    }
+    void setCenter(IndexType d, IndexType c) {
+        DifferenceType diff = c - center(d);
+        _bases[d]   += diff;
+        _extents[d] += diff
     }
     void setSize(IndexType d, SizeType s) {
         if (s > 0) {

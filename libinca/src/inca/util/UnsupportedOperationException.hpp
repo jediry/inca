@@ -1,7 +1,8 @@
-/*
- * File: UnsupportedOperationException.hpp
+/** -*- C++ -*-
+ *
+ * \file    UnsupportedOperationException.hpp
  * 
- * Author: Ryan L. Saunders
+ * \author  Ryan L. Saunders
  * 
  * Copyright 2003, Ryan L. Saunders. All rights reserved.
  *

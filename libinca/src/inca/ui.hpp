@@ -63,37 +63,27 @@
  *      and should defer any GUI object initialization until the
  *      constructInterface.
  *
- * TODO:
- *      WidgetContainer needs some thoughtful elaboration!
  */
 
 #ifndef INCA_UI
 #define INCA_UI
 
 // Import core ui framework classes
-#include "ui/UIComponent.hpp"
-#include "ui/WidgetPart.hpp"
-#include "ui/View.hpp"
-#include "ui/Control.hpp"
-#include "ui/Widget.hpp"
-#include "ui/Window.hpp"
-#include "ui/Application.hpp"
+#include "ui/Component.hpp"
 
-// Import basic widget subclasses
-#include "ui/BasicView.hpp"
-#include "ui/BasicControl.hpp"
-#include "ui/BasicWidget.hpp"
-#include "ui/PassThruView.hpp"
-#include "ui/PassThruControl.hpp"
-#include "ui/PassThruWidget.hpp"
-#include "ui/CompositeWidget.hpp"
+// Import heavyweight component classes
+#include "ui/Application.hpp"
+#include "ui/Window.hpp"
+#include "ui/RenderableSurface.hpp"
+
+// Import primitive widget classes
+#include "ui/widgets/Widget.hpp"
+#include "ui/widgets/BasicWidget.hpp"
+#include "ui/widgets/PassThruWidget.hpp"
 
 // Import specialized widget classes
-#include "ui/CameraNavigationWidget.hpp"
-#include "ui/MultiplexorWidget.hpp"
-
-// Import supported toolkit implementations
-#include <inca/integration/glut/GLUTApplication.hpp>
-#include <inca/integration/glut/GLUTWindow.hpp>
+#include "ui/widgets/CameraNavigationWidget.hpp"
+#include "ui/widgets/LightingWidget.hpp"
+#include "ui/widgets/MultiplexorWidget.hpp"
 
 #endif

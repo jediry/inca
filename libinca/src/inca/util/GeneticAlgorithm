@@ -88,20 +88,32 @@ public:
         typedef ScalarT                                 Scalar;
 
         // Constructor
-        explicit Operator() : _owner(NULL) { }
+        explicit Operator() : _owner(NULL), _count(0) { }
 
         // Access to the parent GA
-        GAType & owner() { return *_owner; }
+        GAType       & owner()       { return *_owner; }
+        GAType const & owner() const { return *_owner; }
         void setOwner(GAType & dad) { _owner = &dad; }
+        
+        // Control over the call count
+        int count() const     { return _count; }
+        void incrementCount() { ++_count; }
+        void resetCount()     { _count = 0; }
 
     protected:
         GAType * _owner;
+        int      _count;
     };
     struct InitializationOperator : public Operator {
         virtual void operator()(Chromosome & c) = 0;
     };
     struct CrossoverOperator : public Operator {
         virtual void operator()(Chromosome & c1, Chromosome & c2) = 0;
+        void swap(Gene & g1, Gene & g2) {
+            Gene g = g1;
+            g1 = g2;
+            g2 = g;
+        }
     };
     struct MutationOperator : public Operator {
         virtual void operator()(Gene & g) = 0;
@@ -193,6 +205,7 @@ public:
      * Returns the index of the given chromosome within the population.
      */
     IndexType indexOf(const Chromosome & c) const {
+        // TODO: Might ought to have bounds check here, and elsewhere in this file
         DifferenceType diff = &c - &chromosome(0);
 //        if (diff >= populationSize() || diff < 0) {
 //            GeneticAlgorithmException e;
@@ -355,10 +368,16 @@ public:
     FitnessOperator & fitnessOperator(IndexType idx) {
         return *_fitnessOperators[idx];
     }
+
     SizeType initializationOperatorCount() const { return _initializationOperators.size(); }
     SizeType crossoverOperatorCount() const { return _crossoverOperators.size(); }
     SizeType mutationOperatorCount() const { return _mutationOperators.size(); }
     SizeType fitnessOperatorCount() const { return _fitnessOperators.size(); }
+    
+    SizeType initializationCount() const { return _initializationCount; }
+    SizeType crossoverCount() const { return _crossoverCount; }
+    SizeType mutationCount() const { return _mutationCount; }
+
 
     /**
      * Calculates and/or returns the probability mass function corresponding
@@ -419,6 +438,9 @@ protected:
     CrossoverOperatorList       _crossoverOperators;
     MutationOperatorList        _mutationOperators;
     FitnessOperatorList         _fitnessOperators;
+    SizeType _initializationCount,
+             _crossoverCount,
+             _mutationCount;
     mutable PMF _initializationOperatorPMF,
                 _crossoverOperatorPMF,
                 _mutationOperatorPMF,
@@ -461,13 +483,12 @@ public:
             for (IndexType i = 0; i < populationSize(); ++i) {
                 Chromosome & c = chromosome(i);
                 if (alive(c) && shouldMutate(c)) {
-                    typename Chromosome::IndexArray idx;
-                    for (idx[0] = 0; idx[0] < c.size(0); ++idx[0])
-                        for (idx[1] = 0; idx[1] < c.size(1); ++idx[1]) {
-                            Gene & g = c(idx);
-                            if (shouldMutate(g))
-                                mutate(g);
-                        }
+                    typename Chromosome::iterator it;
+                    for (it = c.begin(); it != c.end(); ++it) {
+                        Gene & g = *it;
+                        if (shouldMutate(g))
+                            mutate(g);
+                    }
                 }
             }
 
@@ -478,9 +499,12 @@ public:
 
         // Return our most viable candidate
         const FitnessMap & fitMap = sortedFitnessMap();
-        INCA_INFO("GA produced most fit  " << fitMap.front().second)
-        INCA_INFO("GA produced least fit " << fitMap.back().second)
-        return chromosome(fitMap.front().first);
+        typename FitnessMap::const_reference best = fitMap.front();
+        typename FitnessMap::const_reference worst = fitMap.back();
+        INCA_INFO("GA results:\n"
+                  "\tMost fit  " << best.first << " (" << best.second << ")\n"
+                  "\tLeast fit " << worst.first << " (" << worst.second << ')')
+        return chromosome(best.first);
     }
 
     /**
@@ -490,9 +514,22 @@ public:
      * This may be overridden in a subclass.
      */
     virtual void beginAlgorithm() {
-        INCA_DEBUG("Beginning algorithm")
+//        INCA_DEBUG("Beginning algorithm")
         _currentCycle = 0;
+        
+        // Kill off the whole population
         std::fill(_alive.begin(), _alive.end(), false);
+        
+        // Reset all of the operator counts
+        for (IndexType i = 0; i < IndexType(initializationOperatorCount()); ++i)
+            initializationOperator(i).resetCount();
+        for (IndexType i = 0; i < IndexType(crossoverOperatorCount()); ++i)
+            crossoverOperator(i).resetCount();
+        for (IndexType i = 0; i < IndexType(mutationOperatorCount()); ++i)
+            mutationOperator(i).resetCount();
+        _initializationCount = 0;
+        _crossoverCount = 0;
+        _mutationCount = 0;
     }
 
     /**
@@ -503,7 +540,25 @@ public:
      * This may be overridden in a subclass.
      */
     virtual void endAlgorithm() {
-        INCA_DEBUG("Finishing algorithm")
+        INCA_DEBUG("Algorithm statistics:")
+        INCA_DEBUG("  Initializations " << initializationCount())
+        for (IndexType i = 0; i < IndexType(initializationOperatorCount()); ++i) {
+            const InitializationOperator & op = initializationOperator(i);
+            INCA_DEBUG("    " << typeid(op).name() << '\t' << op.count() << " calls "
+                       << int(op.count() * 100.0f / initializationCount()) << '%')
+        }
+        INCA_DEBUG("  Crossovers      " << crossoverCount())
+        for (IndexType i = 0; i < IndexType(crossoverOperatorCount()); ++i) {
+            const CrossoverOperator & op = crossoverOperator(i);
+            INCA_DEBUG("    " << typeid(op).name() << '\t' << op.count() << " calls "
+                       << int(op.count() * 100.0f / crossoverCount()) << '%')
+        }
+        INCA_DEBUG("  Mutations       " << mutationCount())
+        for (IndexType i = 0; i < IndexType(mutationOperatorCount()); ++i) {
+            const MutationOperator & op = mutationOperator(i);
+            INCA_DEBUG("    " << typeid(op).name() << '\t' << op.count() << " calls "
+                       << int(op.count() * 100.0f / mutationCount()) << '%')
+        }
     }
 
     /**
@@ -514,7 +569,7 @@ public:
      * This may be overridden in a subclass.
      */
     virtual void beginCycle() {
-        INCA_DEBUG("Beginning cycle " << currentCycle())
+//        INCA_DEBUG("Beginning cycle " << currentCycle())
     }
 
     /**
@@ -525,7 +580,7 @@ public:
      * This may be overridden in a subclass.
      */
     virtual void endCycle() {
-        INCA_DEBUG("Finishing cycle " << currentCycle())
+//        INCA_DEBUG("Finishing cycle " << currentCycle())
         _currentCycle++;
     }
 
@@ -602,44 +657,47 @@ public:
                 numberSelected++;
             }
 
-            // Now, we randomly choose the remaining amount to select from among
-            // the non-elites.
+            // Now, get the population fitness PMF, removing any entries that
+            // have already been selected (i.e., that were elites).
             PMF pmf = chromosomeFitnessPMF();
-            int attempts = 0;
+            std::vector<IndexType> remap;
+            int deleted = 0;
+            for (IndexType c = 0; c < populationSize(); ++c)
+                if (selected[c])
+                    pmf.erase(c - deleted++);
+                else
+                    remap.push_back(c);
+
+            // Now, we randomly choose the remaining amount to select from among
+            // the non-elites, with the probability of a chromosome being
+            // chosen proportional to the chromosome's fitness. Once chosen, the
+            // PMF is recalculated with that chromosome  removed, to prevent
+            // duplicates.
             while (numberSelected < numberToSelect) {
-                // Select an individual from the old population to carry over
-                // into the new one. We might have to try multiple times in
-                // case we accidentally select one we've already picked.
-                IndexType index;
-                do {
-                    // Generate a random value between 0 and 1, which is a
-                    // point in the probability mass function. We
-                    // will select the individual chromosome corresponding
-                    // to that point. The result of this is that chromosomes
-                    // with higher fitness have a greater chance of being
-                    // picked, since they occupy a larger proportion of the PMF.
-                    index = pmf.indexFor(randomFraction());
-                    attempts++;
-                } while (selected[index]);  // Keep trying 'til we get a new one
+                IndexType index = pmf.indexFor(randomFraction());
 
                 // Mark this one as 'kept'
-                INCA_DEBUG("\tNon-elite:\t" << index << "\tfitness("
+                INCA_DEBUG("\tNon-elite:\t" << remap[index] << "\tfitness("
                            << pmf.element(index) << ")")
-                selected[index] = true;
+                selected[remap[index]] = true;
                 numberSelected++;
+                
+                // Remove it from future calculations (also forces the PMF to
+                // be recalculated).
+                remap.erase(remap.begin() + index);
+                pmf.erase(index);
             }
-            INCA_DEBUG("Selecting non-elites took " << attempts << " attempts");
 
             // OK. We know which ones to keep. Let's kill off the rest.
             for (int i = 0; i < populationSize(); ++i)
                 if (! selected[i]) {
-                    INCA_DEBUG("'Reeducating' chromosome " << i);
+//                    INCA_DEBUG("'Reeducating' chromosome " << i);
                     kill(i);
                 }
 
         } else {
-            INCA_DEBUG("You asked me to select the entire population?? "
-                       "Well, ok...it's your program...")
+            INCA_WARNING("You asked me to select the entire population?? "
+                         "Well, ok...it's your program...")
         }
     }
 
@@ -654,7 +712,10 @@ public:
         if (initializationOperatorCount() > 0) {
             const PMF & pmf = initializationOperatorPMF(c);
             IndexType opIndex = pmf.indexFor(randomFraction());
-            initializationOperator(opIndex)(c);
+            InitializationOperator & op = initializationOperator(opIndex);
+            op(c);
+            op.incrementCount();
+            ++_initializationCount;
         } else {
             INCA_WARNING(typeid(this).name() << "::mutate(...) called, "
                          "but no initialization operators have been added")
@@ -672,7 +733,10 @@ public:
         if (crossoverOperatorCount() > 0) {
             const PMF & pmf = crossoverOperatorPMF(c1, c2);
             IndexType opIndex = pmf.indexFor(randomFraction());
-            crossoverOperator(opIndex)(c1, c2);
+            CrossoverOperator & op = crossoverOperator(opIndex);
+            op(c1, c2);
+            op.incrementCount();
+            ++_crossoverCount;
         } else {
             INCA_WARNING(typeid(this).name() << "::cross(...) called, "
                          "but no crossover operators have been added")
@@ -690,7 +754,15 @@ public:
         if (mutationOperatorCount() > 0) {
             const PMF & pmf = mutationOperatorPMF(g);
             IndexType opIndex = pmf.indexFor(randomFraction());
-            mutationOperator(opIndex)(g);
+            if (opIndex >= pmf.size()) {
+                INCA_WARNING("PMF broke:")
+                for (int i = 0; i < pmf.size(); ++i)
+                    INCA_WARNING("\t[" << i << "]: " << pmf.mass(i))
+            }
+            MutationOperator & op = mutationOperator(opIndex);
+            op(g);
+            op.incrementCount();
+            ++_mutationCount;
         } else {
             INCA_WARNING(typeid(this).name() << "::mutate(...) called, "
                          "but no mutation operators have been added")
@@ -717,6 +789,26 @@ public:
                   FitnessMapGreaterThan());
         return _fitnessMap;
     }
+    
+    /**
+     * Returns the index of the most fit chromosome in the population.
+     *
+     * XXX Currently, this does not know whether the fitness map is valid, so
+     * use at your own risk.
+     */
+    IndexType strongestChromosomeIndex() const {
+        return _fitnessMap.front().first;
+    }
+
+    /**
+     * Returns the index of the least fit chromosome in the population.
+     *
+     * XXX Currently, this does not know whether the fitness map is valid, so
+     * use at your own risk. It also doesn't guarantee that 
+     */
+    IndexType weakestChromosomeIndex() const {
+        return _fitnessMap.back().first;
+    }
 
     /**
      * Calculates and/or returns the probability mass function built from the
@@ -735,14 +827,14 @@ public:
      */
     virtual Scalar calculateFitness(Chromosome & c) {
         Scalar fitness = 0;
-        INCA_DEBUG("Fitness for chromosome " << indexOf(c))
+//        INCA_DEBUG("Fitness for chromosome " << indexOf(c))
         if (fitnessOperatorCount() > 0) {
             const PMF & weights = fitnessOperatorWeights(c);
             for (IndexType i = 0; i < fitnessOperatorCount(); ++i)
                 // Only have to do it if it has a non-zero weight
                 if (weights.element(i) != 0) {
                     fitness += weights.probability(i) * fitnessOperator(i)(c);
-                    INCA_DEBUG("Doing op " << i << " for a cum.fit. of " << fitness)
+//                    INCA_DEBUG("Doing op " << i << " for a cum.fit. of " << fitness)
                 }
         } else {
             INCA_WARNING(typeid(this).name() << "::calculateFitness(...) called, "

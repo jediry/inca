@@ -22,10 +22,15 @@
 // Import operator base class and macros
 #include "OperatorRasterBase"
 
+#include <inca/math/scalar.hpp>
+ 
 // Import augmented enum mechanism
 #include <inca/util/Enumeration.hpp>
 
-#include <inca/math/scalar.hpp>
+// Import container definitions
+#include <vector>
+//#include <inca/util/hash_container>   // Microsoft hates me!
+#include <map>
 
 // Import metaprogramming tools
 #include <inca/util/metaprogramming/is_collection.hpp>
@@ -97,6 +102,43 @@ namespace inca {
                 for (IndexType i = 1; i < IndexType(_elements.size()); ++i)
                     tmp += _elements[i];
                 return tmp / _elements.size();
+            }
+        };
+
+        // "Most common" box filter -- minifier version of NN
+        template <typename ScalarType>
+        struct BoxFilter<IDType, ScalarType> {
+            ScalarType t;
+            SizeType _elementsBelow, _elementsAbove;
+            std::vector<IDType> _elements;
+//            typedef stl_ext::hash_map<IDType, int> IDCountMap;
+            typedef std::map<IDType, int> IDCountMap;
+
+            void resize(SizeType s) {
+                _elements.resize(s);
+                _elementsBelow = s / 2 + s % 2;
+                _elementsAbove = s / 2;
+            }
+
+            SizeType elementsBelow() const { return _elementsBelow; }
+            SizeType elementsAbove() const { return _elementsAbove; }
+            IDType & operator[](IndexType i) { return _elements[i + elementsBelow() - 1]; }
+
+            IDType evaluate() const {
+                // Calculate how many of each there are
+                IDCountMap counts;
+                for (IndexType i = 1; i < IndexType(_elements.size()); ++i) {
+                    typename IDCountMap::iterator it = counts.find(_elements[i]);
+                    if (it != counts.end()) ++(it->second);
+                    else                    counts[_elements[i]] = 1;
+                }
+                
+                // Find the most common element (using the first such to break ties)
+                typename IDCountMap::const_iterator it, max = counts.begin();
+                for (it = counts.begin(); it != counts.end(); ++it)
+                    if (it->second > max->second)
+                        max = it;
+                return max->first;
             }
         };
 

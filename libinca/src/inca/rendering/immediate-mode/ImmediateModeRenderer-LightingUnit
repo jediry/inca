@@ -40,6 +40,9 @@ public:
     void setPosition(const Point3D & p) {
         API::template setHardwareState<API::LightingUnitPosition>(this->id(), p);
     }
+    void setDirection(const Vector3D & v) {
+        API::template setHardwareState<API::LightingUnitPosition>(this->id(), v);
+    }
     void setAmbientColor(const Color & c) {
         API::template setHardwareState<API::LightingUnitAmbientColor>(this->id(), c);
     }

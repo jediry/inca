@@ -1068,7 +1068,7 @@ public:
                 : Superclass(so) { }
 
     // Copy constructor
-    MultiArray(const ThisType &a)
+    MultiArray(const ThisType & a)
                 : Superclass(a.storageOrder()) {
         // Become same-sized, then copy memory
         setBounds(a.bounds(), false);
@@ -1113,10 +1113,18 @@ public:
                             const StorageOrder & so = CStorageOrder())      \
                 : Superclass(SizeArray(PARAMS(DIM, e)), so) {               \
             BOOST_STATIC_ASSERT(dimensionality == DIM);                     \
-            this->resizeMemory(false);                                      \
+            this->_resizeMemory(false);                                      \
         }
     FOR_ALL_DIMS(CREATE_DIMENSIONAL_CONSTRUCTOR);
     #undef CREATE_DIMENSIONAL_CONSTRUCTOR
+    
+    /**
+     * Destructor. Frees any memory reserved by the array.
+     */
+    ~MultiArray() {
+        if (_elements != NULL)
+            delete[] _elements;
+    }
 
 
 /*---------------------------------------------------------------------------*
@@ -1130,7 +1138,7 @@ public:
         CHECK_DIMENSIONALITY(dim, sz.size());
 
         this->_bounds.setSizes(sz);
-        resizeMemory(preserveContents);
+        _resizeMemory(preserveContents);
     }
 
     // Dimensionality-specific versions
@@ -1151,13 +1159,13 @@ public:
         CHECK_DIMENSIONALITY(dim, ex.size());
 
         this->_bounds.setBasesAndExtents(bs, ex);
-        resizeMemory(preserveContents);
+        _resizeMemory(preserveContents);
     }
 
     // This version takes a Region object.
     void setBounds(const Region & b, bool preserveContents = false) {
         this->_bounds = b;
-        resizeMemory(preserveContents);
+        _resizeMemory(preserveContents);
     }
 
 protected:
@@ -1168,14 +1176,14 @@ protected:
     // does change, then the elements in the array are NOT preserved unless
     // preservation is requested. If preservation is requested, then any indices
     // that are valid in both the original and the resized arrays will be copied.
-    void resizeMemory(bool preserveContents) {
+    void _resizeMemory(bool preserveContents) {
         // Only do this if we need a different sized block of memory
         if (this->size() != this->_memoryLayout.size()) {
             QualifiedPointer oldElements = this->_elements;
             if (this->size() > 0) {             // Make some more
                 this->_elements = new QualifiedType[this->size()];
                 if (preserveContents) {         // Copy the common elements
-                    cerr << "non-destructive resize not implemented!\n";
+                    INCA_ERROR("MultiArray: non-destructive resize not implemented!")
                 }
             } else {
                 this->_elements = NULL;

@@ -49,10 +49,12 @@ public:
 public:
     TOGGLE_PROPERTY(DepthBuffering)
     TOGGLE_PROPERTY(AlphaBlending)
+    TOGGLE_PROPERTY(FaceCulling)
     TOGGLE_PROPERTY(Lighting)
     TOGGLE_PROPERTY(PointSmoothing)
     TOGGLE_PROPERTY(LineSmoothing)
     TOGGLE_PROPERTY(PolygonSmoothing)
+    TOGGLE_PROPERTY(Fog)
 
 
 /*---------------------------------------------------------------------------*
@@ -68,6 +70,13 @@ public:
     VALUE_PROPERTY(Normal,          CurrentNormal,      currentNormal)
     VALUE_PROPERTY(TexCoord,        CurrentTexCoord,    currentTexCoords)
     VALUE_PROPERTY(bool,            CurrentEdgeFlag,    currentEdgeFlag)
+    VALUE_PROPERTY(FogModel,        FogModel,           fogModel)
+    VALUE_PROPERTY(geometry_t,      FogStartDepth,      fogStartDepth)
+    VALUE_PROPERTY(geometry_t,      FogEndDepth,        fogEndDepth)
+    VALUE_PROPERTY(geometry_t,      FogDensity,         fogDensity)
+    VALUE_PROPERTY(Color,           FogColor,           fogColor)
+    VALUE_PROPERTY(PolygonFace,     CulledFace,         culledFace)
+    VALUE_PROPERTY(TextureType,     TextureType,        textureType)
 
     // Scalar-list versions
     // FIXME: scalar versions of setNormal, etc.

@@ -55,8 +55,23 @@ namespace inca {
                 Point p;
                 for (IndexType d = 0; d < dimensionality; ++d)
                     p[d] = Scalar(indices[d]);
-                IndexArray idx(math::rotate(p, rotationAngle, rotationAxis, centerPoint));
-                return operand0(idx);
+                Point rotated(math::rotate(p, rotationAngle, rotationAxis, centerPoint));
+                
+                // TODO: Need some way of controlling the interpolation scheme
+                // HACK: this is only applicable to 2D!
+                // Calculate the linear interpolation at this point
+                IndexArray idx(rotated);
+                Scalar t(rotated[0] - idx[0]);
+                Scalar s(rotated[1] - idx[1]);
+                ElementType ll(operand0(idx));
+                idx[0]++;
+                ElementType lr(operand0(idx));
+                idx[1]++;
+                ElementType ur(operand0(idx));
+                idx[0]--;
+                ElementType ul(operand0(idx));
+                ElementType result = (ll * (1-t) + lr * t) * (1-s) + (ul * (1-t) + ur * t) * s;
+                return result;
             }
 
             // Transformation parameters
@@ -66,15 +81,18 @@ namespace inca {
         };
 
 
-        // Factory function taking 2D raster and rotation angle, about (0, 0)
+        // Factory function taking 2D raster and rotation angle, about the
+        // center-point of the raster
         template <typename R0, typename Scalar>
         ENABLE_IF_T( AND2( is_raster<R0>,
                            EQUAL( raster_dimensionality<R0>, INT(2) ) ),
         RotateOperatorRaster<R0 COMMA Scalar> ) rotate(const R0 & r,
                                                        const Scalar & angle) {
             typedef RotateOperatorRaster<R0, Scalar> Rotate;
-            return Rotate(r, angle, typename Rotate::Vector(Scalar(0)),
-                                    typename Rotate::Point(Scalar(0)));
+            // HACK: This needs a fix to the Point converting constructors
+            typename Rotate::Point center(r.bounds().center(0), r.bounds().center(1));
+            typename Rotate::Vector axis(Scalar(0));
+            return Rotate(r, angle, axis, center);
         }
 
         // Factory function taking N-D raster, rotation angle and center
