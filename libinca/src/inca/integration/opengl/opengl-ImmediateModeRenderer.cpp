@@ -182,12 +182,6 @@ void API::getHardwareState<API::CurrentTexturingUnit>(IDType & id) {
     id = 0;
 #endif
 }
-template <>
-void API::setHardwareState<API::CurrentMatrixStack>(IDType id) {
-//    if (id == GL_PROJECTION) std::cerr << "Proj is current\n";
-//    if (id == GL_MODELVIEW) std::cerr << "ModV is current\n";
-    GL::glMatrixMode(id);
-}
 
 SizeType API::matrixStackCount() {
     SizeType count = 0;

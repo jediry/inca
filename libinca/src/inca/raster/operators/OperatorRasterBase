@@ -407,7 +407,7 @@ protected:
             RasterTags<typename combine_size_tags<PARAMS(ARITY, R)>::type,  \
                        StationaryRasterTag,                                 \
                        ReadableRasterTag,                                   \
-                       true, false, false>,                                 \
+                       true, UncheckedIndexingRasterTag>,                   \
             RasterTypes<RETURN,                                             \
                         maximum_dimensionality<PARAMS(ARITY, R)>::value,    \
                         RETURN, RETURN, RETURN >                            \

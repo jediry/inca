@@ -204,8 +204,8 @@ protected:
  | shared_ptr would delete the object upon going out of scope, even if there
  | were other shared_ptrs to the object elsewhere.
  *---------------------------------------------------------------------------*/
-protected:
-    friend class shared_ptr;    // WFT??
+//protected:
+//    friend class shared_ptr;    // WFT??
 //    friend template <typename T> class boost::shared_ptr;
 
     // Non-const version, returning a shared_ptr-to-object of the requested

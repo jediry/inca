@@ -227,7 +227,7 @@ class RasterSlice
                                                   FixedSizeRasterTag),
                                      StationaryRasterTag,
                                      AccessTag,
-                                     true, false, false>,
+                                     true, UncheckedIndexingRasterTag>,
                           RasterTypes<typename R::ElementType,
                                       ::boost::mpl::minus< INT(R::dimensionality),
                                                            INT(1) >::type::value,

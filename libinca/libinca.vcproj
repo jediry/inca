@@ -1,115 +1,164 @@
 <?xml version="1.0" encoding="Windows-1252"?>
 <VisualStudioProject
 	ProjectType="Visual C++"
-	Version="7.10"
+	Version="8.00"
 	Name="libinca"
 	ProjectGUID="{B0ADBFEC-EBDA-46C4-BFD0-8AE7A6BCEA3D}"
 	RootNamespace="libinca"
-	Keyword="ManagedCProj">
+	Keyword="ManagedCProj"
+	>
 	<Platforms>
 		<Platform
-			Name="Win32"/>
+			Name="Win32"
+		/>
 	</Platforms>
+	<ToolFiles>
+	</ToolFiles>
 	<Configurations>
 		<Configuration
 			Name="Debug|Win32"
 			OutputDirectory="C:\Development\projects\build\$(ConfigurationName)"
 			IntermediateDirectory="C:\Development\projects\build\$(ConfigurationName)\$(ProjectName)"
 			ConfigurationType="4"
+			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC71.vsprops"
 			CharacterSet="2"
-			ManagedExtensions="TRUE"
-			WholeProgramOptimization="FALSE">
+			ManagedExtensions="0"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+			/>
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
 				AdditionalIncludeDirectories=".\src"
-				PreprocessorDefinitions="WIN32;_DEBUG;BOOST_DISABLE_ASSERTS"
-				MinimalRebuild="FALSE"
+				PreprocessorDefinitions="WIN32;_DEBUG;BOOST_DISABLE_ASSERTS;_SECURE_SCL=0"
+				MinimalRebuild="false"
+				ExceptionHandling="1"
 				BasicRuntimeChecks="0"
-				RuntimeLibrary="1"
-				ForceConformanceInForLoopScope="TRUE"
-				RuntimeTypeInfo="TRUE"
+				RuntimeLibrary="3"
+				ForceConformanceInForLoopScope="true"
+				RuntimeTypeInfo="true"
 				PrecompiledHeaderThrough="inca-common.h"
 				ProgramDataBaseFileName="$(OutDir)/vc70.pdb"
 				WarningLevel="3"
-				DebugInformationFormat="3"/>
+				DebugInformationFormat="3"
+			/>
 			<Tool
-				Name="VCCustomBuildTool"/>
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
 			<Tool
 				Name="VCLibrarianTool"
 				AdditionalOptions="/LTCG"
 				OutputFile="$(OutDir)/$(ProjectName).lib"
-				AdditionalLibraryDirectories=""/>
+				AdditionalLibraryDirectories=""
+			/>
 			<Tool
-				Name="VCMIDLTool"/>
+				Name="VCALinkTool"
+			/>
 			<Tool
-				Name="VCPostBuildEventTool"/>
+				Name="VCXDCMakeTool"
+			/>
 			<Tool
-				Name="VCPreBuildEventTool"/>
+				Name="VCBscMakeTool"
+			/>
 			<Tool
-				Name="VCPreLinkEventTool"/>
+				Name="VCFxCopTool"
+			/>
 			<Tool
-				Name="VCResourceCompilerTool"/>
-			<Tool
-				Name="VCWebServiceProxyGeneratorTool"/>
-			<Tool
-				Name="VCXMLDataGeneratorTool"/>
-			<Tool
-				Name="VCManagedWrapperGeneratorTool"/>
-			<Tool
-				Name="VCAuxiliaryManagedWrapperGeneratorTool"/>
+				Name="VCPostBuildEventTool"
+			/>
 		</Configuration>
 		<Configuration
 			Name="Release|Win32"
 			OutputDirectory="C:\Development\projects\build\$(ConfigurationName)"
 			IntermediateDirectory="C:\Development\projects\build\$(ConfigurationName)\$(ProjectName)"
 			ConfigurationType="4"
+			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC71.vsprops"
 			CharacterSet="2"
-			ManagedExtensions="TRUE"
-			WholeProgramOptimization="FALSE">
+			ManagedExtensions="0"
+			WholeProgramOptimization="1"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				Optimization="4"
-				GlobalOptimizations="FALSE"
+				Optimization="2"
 				InlineFunctionExpansion="2"
-				EnableIntrinsicFunctions="TRUE"
+				EnableIntrinsicFunctions="true"
 				FavorSizeOrSpeed="1"
-				OmitFramePointers="TRUE"
-				OptimizeForProcessor="2"
-				OptimizeForWindowsApplication="TRUE"
+				OmitFramePointers="true"
+				WholeProgramOptimization="true"
 				AdditionalIncludeDirectories=".\src"
-				PreprocessorDefinitions="WIN32;NDEBUG;BOOST_DISABLE_ASSERTS"
-				RuntimeLibrary="0"
-				ForceConformanceInForLoopScope="TRUE"
-				RuntimeTypeInfo="TRUE"
+				PreprocessorDefinitions="WIN32;NDEBUG;BOOST_DISABLE_ASSERTS;_SECURE_SCL=0"
+				ExceptionHandling="1"
+				RuntimeLibrary="2"
+				ForceConformanceInForLoopScope="true"
+				RuntimeTypeInfo="true"
 				PrecompiledHeaderThrough=""
 				ProgramDataBaseFileName="$(OutDir)/vc70.pdb"
 				WarningLevel="3"
-				DebugInformationFormat="3"/>
+				DebugInformationFormat="3"
+			/>
 			<Tool
-				Name="VCCustomBuildTool"/>
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
 			<Tool
 				Name="VCLibrarianTool"
 				AdditionalOptions="/LTCG"
-				AdditionalLibraryDirectories=""/>
+				AdditionalLibraryDirectories=""
+			/>
 			<Tool
-				Name="VCMIDLTool"/>
+				Name="VCALinkTool"
+			/>
 			<Tool
-				Name="VCPostBuildEventTool"/>
+				Name="VCXDCMakeTool"
+			/>
 			<Tool
-				Name="VCPreBuildEventTool"/>
+				Name="VCBscMakeTool"
+			/>
 			<Tool
-				Name="VCPreLinkEventTool"/>
+				Name="VCFxCopTool"
+			/>
 			<Tool
-				Name="VCResourceCompilerTool"/>
-			<Tool
-				Name="VCWebServiceProxyGeneratorTool"/>
-			<Tool
-				Name="VCXMLDataGeneratorTool"/>
-			<Tool
-				Name="VCManagedWrapperGeneratorTool"/>
-			<Tool
-				Name="VCAuxiliaryManagedWrapperGeneratorTool"/>
+				Name="VCPostBuildEventTool"
+			/>
 		</Configuration>
 	</Configurations>
 	<References>
@@ -117,762 +166,971 @@
 	<Files>
 		<Filter
 			Name="dynamics"
-			Filter="">
+			>
 		</Filter>
 		<Filter
 			Name="raster"
-			Filter="">
+			>
 			<File
-				RelativePath=".\src\inca\raster\concepts.hpp">
+				RelativePath=".\src\inca\raster\concepts.hpp"
+				>
 			</File>
 			<File
-				RelativePath=".\src\inca\raster\MultiArrayRaster">
+				RelativePath=".\src\inca\raster\MultiArrayRaster"
+				>
 			</File>
 			<File
-				RelativePath=".\src\inca\raster\MultiArrayViewRaster">
+				RelativePath=".\src\inca\raster\MultiArrayViewRaster"
+				>
 			</File>
 			<File
-				RelativePath=".\src\inca\raster\RasterFacade">
+				RelativePath=".\src\inca\raster\RasterFacade"
+				>
 			</File>
 			<Filter
 				Name="operators"
-				Filter="">
+				>
 				<File
-					RelativePath=".\src\inca\raster\operators\angle">
+					RelativePath=".\src\inca\raster\operators\angle"
+					>
 				</File>
 				<File
-					RelativePath=".\src\inca\raster\operators\arithmetic">
+					RelativePath=".\src\inca\raster\operators\arithmetic"
+					>
 				</File>
 				<File
-					RelativePath=".\src\inca\raster\operators\blur">
+					RelativePath=".\src\inca\raster\operators\blur"
+					>
 				</File>
 				<File
-					RelativePath=".\src\inca\raster\operators\clamp">
+					RelativePath=".\src\inca\raster\operators\clamp"
+					>
 				</File>
 				<File
-					RelativePath=".\src\inca\raster\operators\complex">
+					RelativePath=".\src\inca\raster\operators\complex"
+					>
 				</File>
 				<File
-					RelativePath=".\src\inca\raster\operators\derivative">
+					RelativePath=".\src\inca\raster\operators\derivative"
+					>
 				</File>
 				<File
-					RelativePath=".\src\inca\raster\operators\fourier">
+					RelativePath=".\src\inca\raster\operators\fourier"
+					>
 				</File>
 				<File
-					RelativePath=".\src\inca\raster\operators\gradient">
+					RelativePath=".\src\inca\raster\operators\gradient"
+					>
 				</File>
 				<File
-					RelativePath=".\src\inca\raster\operators\hacked_in_lambda">
+					RelativePath=".\src\inca\raster\operators\hacked_in_lambda"
+					>
 				</File>
 				<File
-					RelativePath=".\src\inca\raster\operators\linear_map">
+					RelativePath=".\src\inca\raster\operators\linear_map"
+					>
 				</File>
 				<File
-					RelativePath=".\src\inca\raster\operators\magnitude">
+					RelativePath=".\src\inca\raster\operators\magnitude"
+					>
 				</File>
 				<File
-					RelativePath=".\src\inca\raster\operators\masking">
+					RelativePath=".\src\inca\raster\operators\masking"
+					>
 				</File>
 				<File
-					RelativePath=".\src\inca\raster\operators\OperatorRasterBase">
+					RelativePath=".\src\inca\raster\operators\OperatorRasterBase"
+					>
 				</File>
 				<File
-					RelativePath=".\src\inca\raster\operators\resample">
+					RelativePath=".\src\inca\raster\operators\resample"
+					>
 				</File>
 				<File
-					RelativePath=".\src\inca\raster\operators\rotate">
+					RelativePath=".\src\inca\raster\operators\rotate"
+					>
 				</File>
 				<File
-					RelativePath=".\src\inca\raster\operators\select">
+					RelativePath=".\src\inca\raster\operators\select"
+					>
 				</File>
 				<File
-					RelativePath=".\src\inca\raster\operators\statistic">
+					RelativePath=".\src\inca\raster\operators\statistic"
+					>
 				</File>
 			</Filter>
 			<Filter
 				Name="generators"
-				Filter="">
+				>
 				<File
-					RelativePath=".\src\inca\raster\generators\array">
+					RelativePath=".\src\inca\raster\generators\array"
+					>
 				</File>
 				<File
-					RelativePath=".\src\inca\raster\generators\constant">
+					RelativePath=".\src\inca\raster\generators\constant"
+					>
 				</File>
 				<File
-					RelativePath=".\src\inca\raster\generators\gaussian">
+					RelativePath=".\src\inca\raster\generators\gaussian"
+					>
 				</File>
 				<File
-					RelativePath=".\src\inca\raster\generators\GeneratorRasterBase">
+					RelativePath=".\src\inca\raster\generators\GeneratorRasterBase"
+					>
 				</File>
 				<File
-					RelativePath=".\src\inca\raster\generators\linear_fade">
+					RelativePath=".\src\inca\raster\generators\linear_fade"
+					>
 				</File>
 			</Filter>
 			<Filter
 				Name="algorithms"
-				Filter="">
+				>
 				<File
-					RelativePath=".\src\inca\raster\algorithms\apply">
+					RelativePath=".\src\inca\raster\algorithms\apply"
+					>
 				</File>
 				<File
-					RelativePath=".\src\inca\raster\algorithms\copy">
+					RelativePath=".\src\inca\raster\algorithms\copy"
+					>
 				</File>
 				<File
-					RelativePath=".\src\inca\raster\algorithms\fill">
+					RelativePath=".\src\inca\raster\algorithms\fill"
+					>
 				</File>
 				<File
-					RelativePath=".\src\inca\raster\algorithms\find_edges">
+					RelativePath=".\src\inca\raster\algorithms\find_edges"
+					>
 				</File>
 				<File
-					RelativePath=".\src\inca\raster\algorithms\find_isosurface_intersection">
+					RelativePath=".\src\inca\raster\algorithms\find_isosurface_intersection"
+					>
 				</File>
 				<File
-					RelativePath=".\src\inca\raster\algorithms\find_ridges">
+					RelativePath=".\src\inca\raster\algorithms\find_ridges"
+					>
 				</File>
 				<File
-					RelativePath=".\src\inca\raster\algorithms\flood_fill">
+					RelativePath=".\src\inca\raster\algorithms\flood_fill"
+					>
 				</File>
 				<File
-					RelativePath=".\src\inca\raster\algorithms\scale_space_project">
+					RelativePath=".\src\inca\raster\algorithms\scale_space_project"
+					>
 				</File>
 			</Filter>
 			<Filter
 				Name="concepts"
-				Filter="">
+				>
 				<File
-					RelativePath=".\src\inca\raster\concepts\ArbitrarySizeRasterConcept">
+					RelativePath=".\src\inca\raster\concepts\ArbitrarySizeRasterConcept"
+					>
 				</File>
 				<File
-					RelativePath=".\src\inca\raster\concepts\FixedSizeRasterConcept">
+					RelativePath=".\src\inca\raster\concepts\FixedSizeRasterConcept"
+					>
 				</File>
 				<File
-					RelativePath=".\src\inca\raster\concepts\MovableRasterConcept">
+					RelativePath=".\src\inca\raster\concepts\MovableRasterConcept"
+					>
 				</File>
 				<File
-					RelativePath=".\src\inca\raster\concepts\MutableSizeRasterConcept">
+					RelativePath=".\src\inca\raster\concepts\MutableSizeRasterConcept"
+					>
 				</File>
 				<File
-					RelativePath=".\src\inca\raster\concepts\RasterConcept">
+					RelativePath=".\src\inca\raster\concepts\RasterConcept"
+					>
 				</File>
 				<File
-					RelativePath=".\src\inca\raster\concepts\ReadableRasterConcept">
+					RelativePath=".\src\inca\raster\concepts\ReadableRasterConcept"
+					>
 				</File>
 				<File
-					RelativePath=".\src\inca\raster\concepts\ReadWriteRasterConcept">
+					RelativePath=".\src\inca\raster\concepts\ReadWriteRasterConcept"
+					>
 				</File>
 				<File
-					RelativePath=".\src\inca\raster\concepts\StationaryRasterConcept">
+					RelativePath=".\src\inca\raster\concepts\StationaryRasterConcept"
+					>
 				</File>
 				<File
-					RelativePath=".\src\inca\raster\concepts\WritableRasterConcept">
+					RelativePath=".\src\inca\raster\concepts\WritableRasterConcept"
+					>
 				</File>
 			</Filter>
 			<Filter
 				Name="facets"
-				Filter="">
+				>
 				<File
-					RelativePath=".\src\inca\raster\facets\RasterAccessFacet">
+					RelativePath=".\src\inca\raster\facets\RasterAccessFacet"
+					>
 				</File>
 				<File
-					RelativePath=".\src\inca\raster\facets\RasterAssignmentFacet">
+					RelativePath=".\src\inca\raster\facets\RasterAssignmentFacet"
+					>
 				</File>
 				<File
-					RelativePath=".\src\inca\raster\facets\RasterBoundsFacet">
+					RelativePath=".\src\inca\raster\facets\RasterBoundsFacet"
+					>
 				</File>
 				<File
-					RelativePath=".\src\inca\raster\facets\RasterIndexingFacet">
+					RelativePath=".\src\inca\raster\facets\RasterIndexingFacet"
+					>
 				</File>
 			</Filter>
 		</Filter>
 		<Filter
 			Name="integration"
-			Filter="">
+			>
 			<Filter
 				Name="opengl"
-				Filter="">
+				>
 				<File
-					RelativePath=".\src\inca\integration\opengl\GL.hpp">
+					RelativePath=".\src\inca\integration\opengl\GL.hpp"
+					>
 				</File>
 				<File
-					RelativePath=".\src\inca\integration\opengl\opengl-ImmediateModeRenderer.cpp">
+					RelativePath=".\src\inca\integration\opengl\opengl-ImmediateModeRenderer.cpp"
+					>
 				</File>
 			</Filter>
 			<Filter
 				Name="glut"
-				Filter="">
+				>
 				<File
-					RelativePath=".\src\inca\integration\glut\GLUT-peers.cpp">
+					RelativePath=".\src\inca\integration\glut\GLUT-peers.cpp"
+					>
 				</File>
 				<File
-					RelativePath=".\src\inca\integration\glut\GLUT-peers.hpp">
+					RelativePath=".\src\inca\integration\glut\GLUT-peers.hpp"
+					>
 				</File>
 			</Filter>
 			<Filter
 				Name="win32"
-				Filter="">
+				>
 				<File
-					RelativePath=".\src\inca\integration\win32\win32-missing.cpp">
+					RelativePath=".\src\inca\integration\win32\win32-missing.cpp"
+					>
 				</File>
 				<File
-					RelativePath=".\src\inca\integration\win32\win32-Timer.cpp">
+					RelativePath=".\src\inca\integration\win32\win32-Timer.cpp"
+					>
 				</File>
 			</Filter>
 			<Filter
 				Name="hardware-math"
-				Filter="">
+				>
 				<File
-					RelativePath=".\src\inca\integration\hardware-math\math_api.cpp">
+					RelativePath=".\src\inca\integration\hardware-math\math_api.cpp"
+					>
 				</File>
 			</Filter>
 			<Filter
 				Name="fftw"
-				Filter="">
+				>
 				<File
-					RelativePath=".\src\inca\integration\fftw\fftw-raster-DFT.cpp">
+					RelativePath=".\src\inca\integration\fftw\fftw-raster-DFT.cpp"
+					>
 				</File>
 			</Filter>
 		</Filter>
 		<Filter
 			Name="io"
-			Filter="">
+			>
 			<File
-				RelativePath=".\src\inca\io\FileExceptions.hpp">
+				RelativePath=".\src\inca\io\FileExceptions.hpp"
+				>
 			</File>
 		</Filter>
 		<Filter
 			Name="math"
-			Filter="">
+			>
 			<File
-				RelativePath=".\src\inca\math\color.hpp">
+				RelativePath=".\src\inca\math\color.hpp"
+				>
 			</File>
 			<File
-				RelativePath=".\src\inca\math\linalg.hpp">
+				RelativePath=".\src\inca\math\linalg.hpp"
+				>
 			</File>
 			<File
-				RelativePath=".\src\inca\math\math-macros.hpp">
+				RelativePath=".\src\inca\math\math-macros.hpp"
+				>
 			</File>
 			<File
-				RelativePath=".\src\inca\math\scalar.hpp">
+				RelativePath=".\src\inca\math\scalar.hpp"
+				>
 			</File>
 			<File
-				RelativePath="..\..\Documents\src\libinca\src\inca\math\type-traits.hpp">
+				RelativePath="..\..\Documents\src\libinca\src\inca\math\type-traits.hpp"
+				>
 			</File>
 			<Filter
 				Name="curve"
-				Filter="">
+				>
 			</Filter>
 			<Filter
 				Name="generator"
-				Filter="">
+				>
 				<File
-					RelativePath=".\src\inca\math\generator\RandomGaussian">
+					RelativePath=".\src\inca\math\generator\RandomGaussian"
+					>
 				</File>
 				<File
-					RelativePath=".\src\inca\math\generator\RandomGeneratorBase.hpp">
+					RelativePath=".\src\inca\math\generator\RandomGeneratorBase.hpp"
+					>
 				</File>
 				<File
-					RelativePath=".\src\inca\math\generator\RandomUniform">
+					RelativePath=".\src\inca\math\generator\RandomUniform"
+					>
 				</File>
 			</Filter>
 			<Filter
 				Name="solid"
-				Filter="">
+				>
 				<File
-					RelativePath=".\src\inca\math\solid\Block">
+					RelativePath=".\src\inca\math\solid\Block"
+					>
 				</File>
 				<File
-					RelativePath=".\src\inca\math\solid\Sphere">
+					RelativePath=".\src\inca\math\solid\Sphere"
+					>
 				</File>
 			</Filter>
 			<Filter
 				Name="surface"
-				Filter="">
+				>
 			</Filter>
 			<Filter
 				Name="topology"
-				Filter="">
+				>
 				<File
-					RelativePath=".\src\inca\math\topology\MeshSubdivideDooSabin">
+					RelativePath=".\src\inca\math\topology\MeshSubdivideDooSabin"
+					>
 				</File>
 				<File
-					RelativePath=".\src\inca\math\topology\NonManifoldGeometryException.hpp">
+					RelativePath=".\src\inca\math\topology\NonManifoldGeometryException.hpp"
+					>
 				</File>
 				<File
-					RelativePath=".\src\inca\math\topology\PolygonMesh-algorithms">
+					RelativePath=".\src\inca\math\topology\PolygonMesh-algorithms"
+					>
 				</File>
 				<File
-					RelativePath=".\src\inca\math\topology\WingedEdgeMesh">
+					RelativePath=".\src\inca\math\topology\WingedEdgeMesh"
+					>
 				</File>
 				<File
-					RelativePath=".\src\inca\math\topology\WingedEdgeMesh-Edge">
+					RelativePath=".\src\inca\math\topology\WingedEdgeMesh-Edge"
+					>
 				</File>
 				<File
-					RelativePath=".\src\inca\math\topology\WingedEdgeMesh-EdgeVertex">
+					RelativePath=".\src\inca\math\topology\WingedEdgeMesh-EdgeVertex"
+					>
 				</File>
 				<File
-					RelativePath=".\src\inca\math\topology\WingedEdgeMesh-Face">
+					RelativePath=".\src\inca\math\topology\WingedEdgeMesh-Face"
+					>
 				</File>
 				<File
-					RelativePath=".\src\inca\math\topology\WingedEdgeMesh-FaceVertex">
+					RelativePath=".\src\inca\math\topology\WingedEdgeMesh-FaceVertex"
+					>
 				</File>
 				<File
-					RelativePath=".\src\inca\math\topology\WingedEdgeMesh-iostream">
+					RelativePath=".\src\inca\math\topology\WingedEdgeMesh-iostream"
+					>
 				</File>
 				<File
-					RelativePath=".\src\inca\math\topology\WingedEdgeMesh-iterator">
+					RelativePath=".\src\inca\math\topology\WingedEdgeMesh-iterator"
+					>
 				</File>
 				<File
-					RelativePath=".\src\inca\math\topology\WingedEdgeMesh-MeshElement">
+					RelativePath=".\src\inca\math\topology\WingedEdgeMesh-MeshElement"
+					>
 				</File>
 				<File
-					RelativePath=".\src\inca\math\topology\WingedEdgeMesh-Vertex">
+					RelativePath=".\src\inca\math\topology\WingedEdgeMesh-Vertex"
+					>
 				</File>
 			</Filter>
 			<Filter
 				Name="color"
-				Filter="">
+				>
 				<File
-					RelativePath=".\src\inca\math\color\Color">
+					RelativePath=".\src\inca\math\color\Color"
+					>
 				</File>
 				<File
-					RelativePath="..\..\Documents\src\libinca\src\inca\math\color\color-type-traits.hpp">
+					RelativePath="..\..\Documents\src\libinca\src\inca\math\color\color-type-traits.hpp"
+					>
 				</File>
 				<File
-					RelativePath=".\src\inca\math\color\Grayscale">
+					RelativePath=".\src\inca\math\color\Grayscale"
+					>
 				</File>
 				<File
-					RelativePath=".\src\inca\math\color\operations">
+					RelativePath=".\src\inca\math\color\operations"
+					>
 				</File>
 				<File
-					RelativePath=".\src\inca\math\color\sRGB">
+					RelativePath=".\src\inca\math\color\sRGB"
+					>
 				</File>
 			</Filter>
 			<Filter
 				Name="scalar"
-				Filter="">
+				>
 				<File
-					RelativePath=".\src\inca\math\scalar\scalar-type-traits.hpp">
+					RelativePath=".\src\inca\math\scalar\scalar-type-traits.hpp"
+					>
 				</File>
 				<File
-					RelativePath=".\src\inca\math\scalar\scalar_ops">
+					RelativePath=".\src\inca\math\scalar\scalar_ops"
+					>
 				</File>
 				<File
-					RelativePath=".\src\inca\math\scalar\scalar_types">
+					RelativePath=".\src\inca\math\scalar\scalar_types"
+					>
 				</File>
 			</Filter>
 			<Filter
 				Name="linalg"
-				Filter="">
+				>
 				<File
-					RelativePath=".\src\inca\math\linalg\Matrix">
+					RelativePath=".\src\inca\math\linalg\Matrix"
+					>
 				</File>
 				<File
-					RelativePath=".\src\inca\math\linalg\operations">
+					RelativePath=".\src\inca\math\linalg\operations"
+					>
 				</File>
 				<File
-					RelativePath=".\src\inca\math\linalg\Point">
+					RelativePath=".\src\inca\math\linalg\Point"
+					>
 				</File>
 				<File
-					RelativePath=".\src\inca\math\linalg\projections">
+					RelativePath=".\src\inca\math\linalg\projections"
+					>
 				</File>
 				<File
-					RelativePath=".\src\inca\math\linalg\Quaternion">
+					RelativePath=".\src\inca\math\linalg\Quaternion"
+					>
 				</File>
 				<File
-					RelativePath=".\src\inca\math\linalg\Ray">
+					RelativePath=".\src\inca\math\linalg\Ray"
+					>
 				</File>
 				<File
-					RelativePath=".\src\inca\math\linalg\transformations">
+					RelativePath=".\src\inca\math\linalg\transformations"
+					>
 				</File>
 				<File
-					RelativePath=".\src\inca\math\linalg\Vector">
+					RelativePath=".\src\inca\math\linalg\Vector"
+					>
 				</File>
 			</Filter>
 			<Filter
 				Name="statistics"
-				Filter="">
+				>
 				<File
-					RelativePath=".\src\inca\math\statistics\DistributionMatcher">
+					RelativePath=".\src\inca\math\statistics\DistributionMatcher"
+					>
 				</File>
 				<File
-					RelativePath=".\src\inca\math\statistics\ProbabilityMass">
+					RelativePath=".\src\inca\math\statistics\ProbabilityMass"
+					>
 				</File>
 				<File
-					RelativePath=".\src\inca\math\statistics\Statistics">
+					RelativePath=".\src\inca\math\statistics\Statistics"
+					>
 				</File>
 			</Filter>
 		</Filter>
 		<Filter
 			Name="rendering"
-			Filter="">
+			>
 			<File
-				RelativePath=".\src\inca\rendering\Renderer.hpp">
+				RelativePath=".\src\inca\rendering\Renderer.hpp"
+				>
 			</File>
 			<Filter
 				Name="immediate-mode"
-				Filter="">
+				>
 				<File
-					RelativePath=".\src\inca\rendering\immediate-mode\CameraProjection.hpp">
+					RelativePath=".\src\inca\rendering\immediate-mode\CameraProjection.hpp"
+					>
 				</File>
 				<File
-					RelativePath=".\src\inca\rendering\immediate-mode\ExclusiveAccessCachePolicy">
+					RelativePath=".\src\inca\rendering\immediate-mode\ExclusiveAccessCachePolicy"
+					>
 				</File>
 				<File
-					RelativePath=".\src\inca\rendering\immediate-mode\ImmediateModeRenderer">
+					RelativePath=".\src\inca\rendering\immediate-mode\ImmediateModeRenderer"
+					>
 				</File>
 				<File
-					RelativePath=".\src\inca\rendering\immediate-mode\ImmediateModeRenderer-Buffer">
+					RelativePath=".\src\inca\rendering\immediate-mode\ImmediateModeRenderer-Buffer"
+					>
 				</File>
 				<File
-					RelativePath=".\src\inca\rendering\immediate-mode\ImmediateModeRenderer-Component">
+					RelativePath=".\src\inca\rendering\immediate-mode\ImmediateModeRenderer-Component"
+					>
 				</File>
 				<File
-					RelativePath=".\src\inca\rendering\immediate-mode\ImmediateModeRenderer-Device">
+					RelativePath=".\src\inca\rendering\immediate-mode\ImmediateModeRenderer-Device"
+					>
 				</File>
 				<File
-					RelativePath=".\src\inca\rendering\immediate-mode\ImmediateModeRenderer-LightingUnit">
+					RelativePath=".\src\inca\rendering\immediate-mode\ImmediateModeRenderer-LightingUnit"
+					>
 				</File>
 				<File
-					RelativePath=".\src\inca\rendering\immediate-mode\ImmediateModeRenderer-MatrixStack">
+					RelativePath=".\src\inca\rendering\immediate-mode\ImmediateModeRenderer-MatrixStack"
+					>
 				</File>
 				<File
-					RelativePath=".\src\inca\rendering\immediate-mode\ImmediateModeRenderer-Rasterizer">
+					RelativePath=".\src\inca\rendering\immediate-mode\ImmediateModeRenderer-Rasterizer"
+					>
 				</File>
 				<File
-					RelativePath=".\src\inca\rendering\immediate-mode\ImmediateModeRenderer-Statistics">
+					RelativePath=".\src\inca\rendering\immediate-mode\ImmediateModeRenderer-Statistics"
+					>
 				</File>
 				<File
-					RelativePath=".\src\inca\rendering\immediate-mode\ImmediateModeRenderer-Texture">
+					RelativePath=".\src\inca\rendering\immediate-mode\ImmediateModeRenderer-Texture"
+					>
 				</File>
 				<File
-					RelativePath=".\src\inca\rendering\immediate-mode\ImmediateModeRenderer-TexturingUnit">
+					RelativePath=".\src\inca\rendering\immediate-mode\ImmediateModeRenderer-TexturingUnit"
+					>
 				</File>
 				<File
-					RelativePath=".\src\inca\rendering\immediate-mode\ImmediateModeRenderer-Viewport">
+					RelativePath=".\src\inca\rendering\immediate-mode\ImmediateModeRenderer-Viewport"
+					>
 				</File>
 				<File
-					RelativePath=".\src\inca\rendering\immediate-mode\macros.hpp">
+					RelativePath=".\src\inca\rendering\immediate-mode\macros.hpp"
+					>
 				</File>
 				<File
-					RelativePath=".\src\inca\rendering\immediate-mode\OpenGLTraits.hpp">
+					RelativePath=".\src\inca\rendering\immediate-mode\OpenGLTraits.hpp"
+					>
 				</File>
 				<File
-					RelativePath=".\src\inca\rendering\immediate-mode\PrimitiveArray">
+					RelativePath=".\src\inca\rendering\immediate-mode\PrimitiveArray"
+					>
 				</File>
 				<File
-					RelativePath=".\src\inca\rendering\immediate-mode\PrimitiveGrid">
+					RelativePath=".\src\inca\rendering\immediate-mode\PrimitiveGrid"
+					>
 				</File>
 				<File
-					RelativePath=".\src\inca\rendering\immediate-mode\types.hpp">
+					RelativePath=".\src\inca\rendering\immediate-mode\types.hpp"
+					>
 				</File>
 			</Filter>
 		</Filter>
 		<Filter
 			Name="ui"
-			Filter="">
+			>
 			<File
-				RelativePath=".\src\inca\ui\Application.cpp">
+				RelativePath=".\src\inca\ui\Application.cpp"
+				>
 			</File>
 			<File
-				RelativePath=".\src\inca\ui\Application.hpp">
+				RelativePath=".\src\inca\ui\Application.hpp"
+				>
 			</File>
 			<File
-				RelativePath=".\src\inca\ui\Component.cpp">
+				RelativePath=".\src\inca\ui\Component.cpp"
+				>
 			</File>
 			<File
-				RelativePath=".\src\inca\ui\Component.hpp">
+				RelativePath=".\src\inca\ui\Component.hpp"
+				>
 			</File>
 			<File
-				RelativePath=".\src\inca\ui\HeavyweightComponent">
+				RelativePath=".\src\inca\ui\HeavyweightComponent"
+				>
 			</File>
 			<File
-				RelativePath=".\src\inca\ui\RenderableSurface.cpp">
+				RelativePath=".\src\inca\ui\RenderableSurface.cpp"
+				>
 			</File>
 			<File
-				RelativePath=".\src\inca\ui\RenderableSurface.hpp">
+				RelativePath=".\src\inca\ui\RenderableSurface.hpp"
+				>
 			</File>
 			<File
-				RelativePath=".\src\inca\ui\Window.cpp">
+				RelativePath=".\src\inca\ui\Window.cpp"
+				>
 			</File>
 			<File
-				RelativePath=".\src\inca\ui\Window.hpp">
+				RelativePath=".\src\inca\ui\Window.hpp"
+				>
 			</File>
 			<Filter
 				Name="events"
-				Filter="">
+				>
 				<File
-					RelativePath=".\src\inca\ui\events\ButtonEvent.hpp">
+					RelativePath=".\src\inca\ui\events\ButtonEvent.hpp"
+					>
 				</File>
 				<File
-					RelativePath=".\src\inca\ui\events\ComponentEvent.hpp">
+					RelativePath=".\src\inca\ui\events\ComponentEvent.hpp"
+					>
 				</File>
 				<File
-					RelativePath=".\src\inca\ui\events\Event.hpp">
+					RelativePath=".\src\inca\ui\events\Event.hpp"
+					>
 				</File>
 				<File
-					RelativePath=".\src\inca\ui\events\EventDispatcher">
+					RelativePath=".\src\inca\ui\events\EventDispatcher"
+					>
 				</File>
 				<File
-					RelativePath=".\src\inca\ui\events\InputEvent.cpp">
+					RelativePath=".\src\inca\ui\events\InputEvent.cpp"
+					>
 				</File>
 				<File
-					RelativePath=".\src\inca\ui\events\InputEvent.hpp">
+					RelativePath=".\src\inca\ui\events\InputEvent.hpp"
+					>
 				</File>
 				<File
-					RelativePath=".\src\inca\ui\events\KeyEvent.hpp">
+					RelativePath=".\src\inca\ui\events\KeyEvent.hpp"
+					>
 				</File>
 				<File
-					RelativePath=".\src\inca\ui\events\PointerEvent.hpp">
+					RelativePath=".\src\inca\ui\events\PointerEvent.hpp"
+					>
 				</File>
 				<File
-					RelativePath=".\src\inca\ui\events\WindowEvent.hpp">
+					RelativePath=".\src\inca\ui\events\WindowEvent.hpp"
+					>
 				</File>
 			</Filter>
 			<Filter
 				Name="widgets"
-				Filter="">
+				>
 				<File
-					RelativePath=".\src\inca\ui\widgets\BasicWidget.cpp">
+					RelativePath=".\src\inca\ui\widgets\BasicWidget.cpp"
+					>
 				</File>
 				<File
-					RelativePath=".\src\inca\ui\widgets\BasicWidget.hpp">
+					RelativePath=".\src\inca\ui\widgets\BasicWidget.hpp"
+					>
 				</File>
 				<File
-					RelativePath=".\src\inca\ui\widgets\CameraNavigationWidget.cpp">
+					RelativePath=".\src\inca\ui\widgets\CameraNavigationWidget.cpp"
+					>
 				</File>
 				<File
-					RelativePath=".\src\inca\ui\widgets\CameraNavigationWidget.hpp">
+					RelativePath=".\src\inca\ui\widgets\CameraNavigationWidget.hpp"
+					>
 				</File>
 				<File
-					RelativePath=".\src\inca\ui\widgets\LayeringWidget.cpp">
+					RelativePath=".\src\inca\ui\widgets\LayeringWidget.cpp"
+					>
 				</File>
 				<File
-					RelativePath=".\src\inca\ui\widgets\LayeringWidget.hpp">
+					RelativePath=".\src\inca\ui\widgets\LayeringWidget.hpp"
+					>
 				</File>
 				<File
-					RelativePath=".\src\inca\ui\widgets\LightingWidget.cpp">
+					RelativePath=".\src\inca\ui\widgets\LightingWidget.cpp"
+					>
 				</File>
 				<File
-					RelativePath=".\src\inca\ui\widgets\LightingWidget.hpp">
+					RelativePath=".\src\inca\ui\widgets\LightingWidget.hpp"
+					>
 				</File>
 				<File
-					RelativePath=".\src\inca\ui\widgets\MultiplexorWidget.cpp">
+					RelativePath=".\src\inca\ui\widgets\MultiplexorWidget.cpp"
+					>
 				</File>
 				<File
-					RelativePath=".\src\inca\ui\widgets\MultiplexorWidget.hpp">
+					RelativePath=".\src\inca\ui\widgets\MultiplexorWidget.hpp"
+					>
 				</File>
 				<File
-					RelativePath=".\src\inca\ui\widgets\PassThruWidget.cpp">
+					RelativePath=".\src\inca\ui\widgets\PassThruWidget.cpp"
+					>
 				</File>
 				<File
-					RelativePath=".\src\inca\ui\widgets\PassThruWidget.hpp">
+					RelativePath=".\src\inca\ui\widgets\PassThruWidget.hpp"
+					>
 				</File>
 				<File
-					RelativePath=".\src\inca\ui\widgets\Widget.cpp">
+					RelativePath=".\src\inca\ui\widgets\Widget.cpp"
+					>
 				</File>
 				<File
-					RelativePath=".\src\inca\ui\widgets\Widget.hpp">
+					RelativePath=".\src\inca\ui\widgets\Widget.hpp"
+					>
 				</File>
 				<File
-					RelativePath=".\src\inca\ui\widgets\WindowControlWidget.cpp">
+					RelativePath=".\src\inca\ui\widgets\WindowControlWidget.cpp"
+					>
 				</File>
 				<File
-					RelativePath=".\src\inca\ui\widgets\WindowControlWidget.hpp">
+					RelativePath=".\src\inca\ui\widgets\WindowControlWidget.hpp"
+					>
 				</File>
 			</Filter>
 		</Filter>
 		<Filter
 			Name="util"
-			Filter="">
+			>
 			<File
-				RelativePath=".\src\inca\util\Array">
+				RelativePath=".\src\inca\util\Array"
+				>
 			</File>
 			<File
-				RelativePath=".\src\inca\util\Enumeration.hpp">
+				RelativePath=".\src\inca\util\Enumeration.hpp"
+				>
 			</File>
 			<File
-				RelativePath=".\src\inca\util\FlagSet">
+				RelativePath=".\src\inca\util\FlagSet"
+				>
 			</File>
 			<File
-				RelativePath=".\src\inca\util\GeneticAlgorithm">
+				RelativePath=".\src\inca\util\GeneticAlgorithm"
+				>
 			</File>
 			<File
-				RelativePath=".\src\inca\util\hash_container">
+				RelativePath=".\src\inca\util\hash_container"
+				>
 			</File>
 			<File
-				RelativePath=".\src\inca\util\IllegalStateException.hpp">
+				RelativePath=".\src\inca\util\IllegalStateException.hpp"
+				>
 			</File>
 			<File
-				RelativePath=".\src\inca\util\Logger.hpp">
+				RelativePath=".\src\inca\util\Logger.hpp"
+				>
 			</File>
 			<File
-				RelativePath=".\src\inca\util\multi-dimensional-macros.hpp">
+				RelativePath=".\src\inca\util\multi-dimensional-macros.hpp"
+				>
 			</File>
 			<File
-				RelativePath=".\src\inca\util\multi_dimensional_iterator_facade.hpp">
+				RelativePath=".\src\inca\util\multi_dimensional_iterator_facade.hpp"
+				>
 			</File>
 			<File
-				RelativePath=".\src\inca\util\MultiArray">
+				RelativePath=".\src\inca\util\MultiArray"
+				>
 			</File>
 			<File
-				RelativePath=".\src\inca\util\object_pool">
+				RelativePath=".\src\inca\util\object_pool"
+				>
 			</File>
 			<File
-				RelativePath=".\src\inca\util\OutOfBoundsException.hpp">
+				RelativePath=".\src\inca\util\OutOfBoundsException.hpp"
+				>
 			</File>
 			<File
-				RelativePath=".\src\inca\util\property">
+				RelativePath=".\src\inca\util\property"
+				>
 			</File>
 			<File
-				RelativePath=".\src\inca\util\random_access_list">
+				RelativePath=".\src\inca\util\random_access_list"
+				>
 			</File>
 			<File
-				RelativePath=".\src\inca\util\Region">
+				RelativePath=".\src\inca\util\Region"
+				>
 			</File>
 			<File
-				RelativePath=".\src\inca\util\StreamException.hpp">
+				RelativePath=".\src\inca\util\StreamException.hpp"
+				>
 			</File>
 			<File
-				RelativePath=".\src\inca\util\StreamTokenizer.cpp">
+				RelativePath=".\src\inca\util\StreamTokenizer.cpp"
+				>
 			</File>
 			<File
-				RelativePath=".\src\inca\util\StreamTokenizer.hpp">
+				RelativePath=".\src\inca\util\StreamTokenizer.hpp"
+				>
 			</File>
 			<File
-				RelativePath=".\src\inca\util\Timer">
+				RelativePath=".\src\inca\util\Timer"
+				>
 			</File>
 			<File
-				RelativePath=".\src\inca\util\UnsupportedOperationException.hpp">
+				RelativePath=".\src\inca\util\UnsupportedOperationException.hpp"
+				>
 			</File>
 			<File
-				RelativePath=".\src\inca\util\ustring.cpp">
+				RelativePath=".\src\inca\util\ustring.cpp"
+				>
 			</File>
 			<File
-				RelativePath=".\src\inca\util\ustring.hpp">
+				RelativePath=".\src\inca\util\ustring.hpp"
+				>
 			</File>
 			<File
-				RelativePath=".\src\inca\util\weak_ptr_iterator">
+				RelativePath=".\src\inca\util\weak_ptr_iterator"
+				>
 			</File>
 			<File
-				RelativePath=".\src\inca\util\weak_ptr_set">
+				RelativePath=".\src\inca\util\weak_ptr_set"
+				>
 			</File>
 			<File
-				RelativePath=".\src\inca\util\wraparound_iterator">
+				RelativePath=".\src\inca\util\wraparound_iterator"
+				>
 			</File>
 			<Filter
 				Name="iterators"
-				Filter="">
+				>
 				<File
-					RelativePath=".\src\inca\util\iterators\MultiArrayIterator">
+					RelativePath=".\src\inca\util\iterators\MultiArrayIterator"
+					>
 				</File>
 				<File
-					RelativePath=".\src\inca\util\iterators\MultiDimensionalIterator">
+					RelativePath=".\src\inca\util\iterators\MultiDimensionalIterator"
+					>
 				</File>
 				<File
-					RelativePath=".\src\inca\util\iterators\ReverseIteratorAdapter">
+					RelativePath=".\src\inca\util\iterators\ReverseIteratorAdapter"
+					>
 				</File>
 				<File
-					RelativePath=".\src\inca\util\iterators\WeakPtrIteratorAdapter">
+					RelativePath=".\src\inca\util\iterators\WeakPtrIteratorAdapter"
+					>
 				</File>
 				<File
-					RelativePath=".\src\inca\util\iterators\WraparoundIteratorAdapter">
+					RelativePath=".\src\inca\util\iterators\WraparoundIteratorAdapter"
+					>
 				</File>
 			</Filter>
 			<Filter
 				Name="metaprogramming"
-				Filter="">
+				>
 				<File
-					RelativePath=".\src\inca\util\metaprogramming\is_collection.hpp">
+					RelativePath=".\src\inca\util\metaprogramming\is_collection.hpp"
+					>
 				</File>
 				<File
-					RelativePath=".\src\inca\util\metaprogramming\macros.hpp">
+					RelativePath=".\src\inca\util\metaprogramming\macros.hpp"
+					>
 				</File>
 				<File
-					RelativePath=".\src\inca\util\metaprogramming\Nothing.hpp">
+					RelativePath=".\src\inca\util\metaprogramming\Nothing.hpp"
+					>
 				</File>
 				<File
-					RelativePath=".\src\inca\util\metaprogramming\numeric_macros.hpp">
+					RelativePath=".\src\inca\util\metaprogramming\numeric_macros.hpp"
+					>
 				</File>
 			</Filter>
 		</Filter>
 		<Filter
 			Name="world"
-			Filter="">
+			>
 			<File
-				RelativePath=".\src\inca\world\Cameras.hpp">
+				RelativePath=".\src\inca\world\Cameras.hpp"
+				>
 			</File>
 			<File
-				RelativePath=".\src\inca\world\Interior.hpp">
+				RelativePath=".\src\inca\world\Interior.hpp"
+				>
 			</File>
 			<File
-				RelativePath=".\src\inca\world\Light.hpp">
+				RelativePath=".\src\inca\world\Light.hpp"
+				>
 			</File>
 			<File
-				RelativePath=".\src\inca\world\Material.cpp">
+				RelativePath=".\src\inca\world\Material.cpp"
+				>
 			</File>
 			<File
-				RelativePath=".\src\inca\world\Material.hpp">
+				RelativePath=".\src\inca\world\Material.hpp"
+				>
 			</File>
 			<File
-				RelativePath=".\src\inca\world\Object.hpp">
+				RelativePath=".\src\inca\world\Object.hpp"
+				>
 			</File>
 			<File
-				RelativePath=".\src\inca\world\Scene.hpp">
+				RelativePath=".\src\inca\world\Scene.hpp"
+				>
 			</File>
 			<File
-				RelativePath=".\src\inca\world\SelectionSet.cpp">
+				RelativePath=".\src\inca\world\SelectionSet.cpp"
+				>
 			</File>
 			<File
-				RelativePath=".\src\inca\world\SelectionSet.hpp">
+				RelativePath=".\src\inca\world\SelectionSet.hpp"
+				>
 			</File>
 			<File
-				RelativePath=".\src\inca\world\Surface.hpp">
+				RelativePath=".\src\inca\world\Surface.hpp"
+				>
 			</File>
 			<File
-				RelativePath=".\src\inca\world\Transform.cpp">
+				RelativePath=".\src\inca\world\Transform.cpp"
+				>
 			</File>
 			<File
-				RelativePath=".\src\inca\world\Transform.hpp">
+				RelativePath=".\src\inca\world\Transform.hpp"
+				>
 			</File>
 			<File
-				RelativePath=".\src\inca\world\WorldObject.hpp">
+				RelativePath=".\src\inca\world\WorldObject.hpp"
+				>
 			</File>
 		</Filter>
 		<File
-			RelativePath=".\src\inca\config-win32.h">
+			RelativePath=".\src\inca\config-win32.h"
+			>
 		</File>
 		<File
-			RelativePath=".\doc\Design Questions.txt">
+			RelativePath=".\doc\Design Questions.txt"
+			>
 		</File>
 		<File
-			RelativePath=".\src\inca\dynamics.hpp">
+			RelativePath=".\src\inca\dynamics.hpp"
+			>
 		</File>
 		<File
-			RelativePath=".\src\inca\globals.cpp">
+			RelativePath=".\src\inca\globals.cpp"
+			>
 		</File>
 		<File
-			RelativePath=".\src\inca\inca-common.h">
+			RelativePath=".\src\inca\inca-common.h"
+			>
 		</File>
 		<File
-			RelativePath=".\src\inca\io.hpp">
+			RelativePath=".\src\inca\io.hpp"
+			>
 		</File>
 		<File
-			RelativePath=".\src\inca\math.hpp">
+			RelativePath=".\src\inca\math.hpp"
+			>
 		</File>
 		<File
-			RelativePath=".\src\inca\raster.hpp">
+			RelativePath=".\src\inca\raster.hpp"
+			>
 		</File>
 		<File
-			RelativePath=".\src\inca\rendering.hpp">
+			RelativePath=".\src\inca\rendering.hpp"
+			>
 		</File>
 		<File
-			RelativePath=".\templates\Separators">
+			RelativePath=".\templates\Separators"
+			>
 		</File>
 		<File
-			RelativePath=".\src\inca\ui.hpp">
+			RelativePath=".\src\inca\ui.hpp"
+			>
 		</File>
 		<File
-			RelativePath=".\src\inca\world.hpp">
+			RelativePath=".\src\inca\world.hpp"
+			>
 		</File>
 	</Files>
 	<Globals>

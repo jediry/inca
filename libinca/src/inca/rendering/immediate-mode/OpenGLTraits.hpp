@@ -56,10 +56,11 @@ public:
     typedef math::Point<int, 2>                             Pixel;
     typedef math::Vector<int, 2>                            Dimension;
 
+// TODO: figure out the friend stuff required here
 //protected:
     // Grant the ImmediateModeRenderer access to the hardware functions
-    template <class API, template <inca::SizeType> class CP>
-        friend class ImmediateModeRenderer;
+//    template <class API, template <inca::SizeType> class CP>
+//        friend class ImmediateModeRenderer;
 
 
     // Properties and functions for the IMR::Rasterizer object

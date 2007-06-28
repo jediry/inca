@@ -46,6 +46,8 @@ typedef long clock_t;
 // Disable some obnoxious warnings
 #pragma warning(disable : 4290)     // Ignoring C++ exception spec.
 #pragma warning(disable : 4561)     // __fastcall incompatible with '/clr' option
+#pragma warning(disable : 4996)     // Function call with parameters that may be unsafe - this call relies on the caller to check that the passed values are correct
+
 
 #define HAVE_LIBFFTW3F  1
 #define HAVE_LIBFFTW3   1

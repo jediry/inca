@@ -39,7 +39,7 @@ namespace inca {
             RasterTags<FixedSizeRasterTag,
                        StationaryRasterTag,
                        typename R0::AccessTag,
-                       true, false, false>,
+                       true, UncheckedIndexingRasterTag>,
             RasterTypes< typename R0::ElementType,
                          raster_dimensionality<R0>::value,
                          typename R0::ReadWriteElementType,

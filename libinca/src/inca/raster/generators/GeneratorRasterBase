@@ -36,7 +36,7 @@ class inca::raster::GeneratorRasterBase
                               RasterTags<ArbitrarySizeRasterTag,
                                          MovableRasterTag,
                                          ReadableRasterTag,
-                                         true, false, false>,
+                                         true, UncheckedIndexingRasterTag>,
                               RasterTypes<T const, dim,
                                           T const,
                                           T const,

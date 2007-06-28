@@ -58,6 +58,8 @@ namespace inca {
 };
 #undef BOOST_DISABLE_ASSERTS
 
+#include <boost/static_assert.hpp>
+
 
 // Include C++ strings and IOStream library
 #include <string>

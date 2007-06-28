@@ -41,7 +41,7 @@ namespace inca {
         template <class Derived, class Tags, class Types> class RasterFacade;
         class RasterCoreAccess;
         template <typename S, typename B, typename A,
-                  bool AI, bool VC, bool CVC> class RasterTags;
+                  bool AI, typename I> class RasterTags;
         template <typename T, inca::SizeType dim,
                   typename RWE, typename RE, typename WE> class RasterTypes;
 
@@ -166,6 +166,12 @@ protected:
 
 
 
+// XXX This stuff works around a VS 2005 bug.
+// TODO: decide whether to make this permanent.
+struct UncheckedIndexingRasterTag {};
+struct BoundsCheckedIndexingRasterTag {};
+struct CustomCheckedIndexingRasterTag {};
+
 
 // Import facet implementations. These specialize according to the semantic
 // tags and boolean flags passed to the RasterFacade.
@@ -182,21 +188,23 @@ template <typename Size,
           typename Bounds,
           typename Access,
           bool useAbsoluteIndices = true,
-          bool validityChecks = true,
-          bool customValidityChecks = false>
+          typename Indexing = BoundsCheckedIndexingRasterTag>
+// VS 2005 bug :-(
+//          bool validityChecks = true,
+//          bool customValidityChecks = false>
 class inca::raster::RasterTags {
 public:
     // Semantic tags
-    typedef Size    SizeTag;
-    typedef Bounds  BoundsTag;
-    typedef Access  AccessTag;
+    typedef Size        SizeTag;
+    typedef Bounds      BoundsTag;
+    typedef Access      AccessTag;
+    typedef Indexing    IndexingTag;
 
     // Boolean flags
     static const bool coreUsesAbsoluteIndices   = useAbsoluteIndices;
-    static const bool doValidityChecks          = validityChecks;
-    static const bool doCustomValidityChecks    = customValidityChecks;
+//    static const bool doValidityChecks          = validityChecks;
+//    static const bool doCustomValidityChecks    = customValidityChecks;
 };
-
 
 // The RasterTypes class is simply a container for the usual case where
 // regular inca types (Array, IndexType, Region, etc.) are to be used by the

@@ -82,7 +82,7 @@ public:
     SizeType size() const { return _size; }
 
     // Set the array to be a new size
-    bool resize(SizeType n) {
+    void resize(SizeType n) {
         if (n != size()) {
             if (_elements)
                 delete [] _elements;
