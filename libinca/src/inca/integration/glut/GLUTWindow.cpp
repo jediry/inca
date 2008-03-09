@@ -45,52 +45,56 @@ const GLUTWindow::Timer::scalar_t GLUTWindow::CLICK_DURATION(0.5f);
 /*---------------------------------------------------------------------------*
  | Static GLUT callbacks -- they just call member functions of the window
  *---------------------------------------------------------------------------*/
-void GLUTWindow::reshapeFunc(int width, int height) {
-    WindowPtr w = Application::instance().getWindowForID(glutGetWindow());
-    static_pointer_cast<GLUTWindow>(w)->reshape(width, height);
-}
-void GLUTWindow::entryFunc(int state) {
-    WindowPtr w = Application::instance().getWindowForID(glutGetWindow());
-    static_pointer_cast<GLUTWindow>(w)->entry(state);
-}
-void GLUTWindow::visibilityFunc(int visible) {
-    WindowPtr w = Application::instance().getWindowForID(glutGetWindow());
-    static_pointer_cast<GLUTWindow>(w)->visibility(visible);
-}
-void GLUTWindow::motionFunc(int x, int y) {
-    WindowPtr w = Application::instance().getWindowForID(glutGetWindow());
-    static_pointer_cast<GLUTWindow>(w)->mouseMotion(x, y);
-}
-void GLUTWindow::passiveMotionFunc(int x, int y) {
-    WindowPtr w = Application::instance().getWindowForID(glutGetWindow());
-    static_pointer_cast<GLUTWindow>(w)->passiveMotion(x, y);
-}
-void GLUTWindow::mouseFunc(int button, int state, int x, int y) {
-    WindowPtr w = Application::instance().getWindowForID(glutGetWindow());
-    static_pointer_cast<GLUTWindow>(w)->mouseButton(button, state, x, y);
-}
-void GLUTWindow::keyboardFunc(unsigned char k, int x, int y) {
-    WindowPtr w = Application::instance().getWindowForID(glutGetWindow());
-    static_pointer_cast<GLUTWindow>(w)->key(k, x, y);
-}
-void GLUTWindow::specialFunc(int key, int x, int y) {
-    WindowPtr w = Application::instance().getWindowForID(glutGetWindow());
-    static_pointer_cast<GLUTWindow>(w)->special(key, x, y);
-}
-void GLUTWindow::displayFunc() {
-    WindowPtr w = Application::instance().getWindowForID(glutGetWindow());
-    static_pointer_cast<GLUTWindow>(w)->display();
-}
-void GLUTWindow::overlayDisplayFunc() {
-    WindowPtr w = Application::instance().getWindowForID(glutGetWindow());
-    static_pointer_cast<GLUTWindow>(w)->overlayDisplay();
-}
-void GLUTWindow::idleFunc() {
-    WindowPtr w = Application::instance().getWindowForID(glutGetWindow());
-    static_pointer_cast<GLUTWindow>(w)->idle();
+
+// Mapping of WindowID to GLUTWindow
+std::vector<GLUTWindow*> g_glutWindows;
+
+static GLUTWindow & getWindowForID(IDType id)
+{
+    if (id >= g_glutWindows.size() || g_glutWindows[id] == NULL) {
+        INCA_WARNING("No GLUT window exists for id " << id);
+        throw std::logic_error("No GLUT window exists for ID");
+    }
+    return *g_glutWindows[id];
 }
 
-void GLUTWindow::registerCallbacks() {
+
+void GLUTWindow::reshapeFunc(int width, int height) {
+    getWindowForID(glutGetWindow()).reshape(width, height);
+}
+void GLUTWindow::entryFunc(int state) {
+    getWindowForID(glutGetWindow()).entry(state);
+}
+void GLUTWindow::visibilityFunc(int visible) {
+    getWindowForID(glutGetWindow()).visibility(visible);
+}
+void GLUTWindow::motionFunc(int x, int y) {
+    getWindowForID(glutGetWindow()).mouseMotion(x, y);
+}
+void GLUTWindow::passiveMotionFunc(int x, int y) {
+    getWindowForID(glutGetWindow()).passiveMotion(x, y);
+}
+void GLUTWindow::mouseFunc(int button, int state, int x, int y) {
+    getWindowForID(glutGetWindow()).mouseButton(button, state, x, y);
+}
+void GLUTWindow::keyboardFunc(unsigned char k, int x, int y) {
+    getWindowForID(glutGetWindow()).key(k, x, y);
+}
+void GLUTWindow::specialFunc(int key, int x, int y) {
+    getWindowForID(glutGetWindow()).special(key, x, y);
+}
+void GLUTWindow::displayFunc() {
+    getWindowForID(glutGetWindow()).display();
+}
+void GLUTWindow::overlayDisplayFunc() {
+    getWindowForID(glutGetWindow()).overlayDisplay();
+}
+void GLUTWindow::idleFunc() {
+    getWindowForID(glutGetWindow()).idle();
+}
+
+
+void GLUTWindow::registerWindow(GLUTWindow& window) {
     // Register our multiplexor functions as callbacks for this window
     glutReshapeFunc(reshapeFunc);
     glutEntryFunc(entryFunc);
@@ -103,7 +107,20 @@ void GLUTWindow::registerCallbacks() {
     glutDisplayFunc(displayFunc);
 //    glutOverlayDisplayFunc(overlayDisplayFunc);
     glutIdleFunc(idleFunc);
+
+    // Add this window to the global list
+    IDType id = window.getWindowID();
+    if (id >= g_glutWindows.size() )
+        g_glutWindows.resize(id + 1);
+    g_glutWindows[id] = &window;
 }
+
+
+void GLUTWindow::unregisterWindow(GLUTWindow& window) {
+    IDType id = window.getWindowID();
+    g_glutWindows[id] = NULL;
+}
+
 
 
 /*---------------------------------------------------------------------------*
@@ -122,7 +139,7 @@ GLUTWindow::GLUTWindow(const std::string & title)
     windowID = glutCreateWindow(title.c_str());
 
     // Register to receive events
-    registerCallbacks();
+    registerWindow(*this);
 }
 
 // Widget-specific constructor
@@ -138,15 +155,16 @@ GLUTWindow::GLUTWindow(WidgetPtr w, const std::string & title)
     windowID = glutCreateWindow(title.c_str());
 
     // Set our shiny new widget in its place
-    widget = w;
+    surface()->setWidget(w);
 
     // Register to receive events
-    registerCallbacks();
+    registerWindow(*this);
 }
 
 
 // End the window's pitiful existence
 GLUTWindow::~GLUTWindow() {
+    unregisterWindow(*this);
     glutDestroyWindow(windowID);
 }
 
@@ -164,15 +182,15 @@ void GLUTWindow::reshape(int w, int h) {
     }
 
     size[0] = w; size[1] = h;           // Update our window dimensions
-    if (widget) {
-        if (! widgetInitialized) {      // We only call initializeView() once
-            this->_renderer.reset(new Renderer());
-            widget->setRenderer(this->_renderer);
-            widget->initializeView();
-            widgetInitialized = true;
-        }
-        widget->resizeView(size);       // Inform the widget of the change
-    }
+//    if (widget) {
+//        if (! widgetInitialized) {      // We only call initializeView() once
+//            this->_renderer.reset(new Renderer());
+//            widget->setRenderer(this->_renderer);
+//            widget->initializeView();
+//            widgetInitialized = true;
+//        }
+//        widget->resizeView(size);       // Inform the widget of the change
+//    }
 
     glViewport(0, 0, size[0], size[1]); // Tell GL what we did
     requestRedisplay();                 // Now go redraw everything
@@ -184,50 +202,50 @@ void GLUTWindow::visibility(int visible) { }
 // GLUT input callbacks
 void GLUTWindow::mouseMotion(int x, int y) {
     // Pass through a mouse movement
-    if (widget) widget->mouseDragged(Pixel(x, y));
+//    if (widget) widget->mouseDragged(Pixel(x, y));
 }
 
 void GLUTWindow::passiveMotion(int x, int y) {
     // Pass through a mouse movement
-    if (widget) widget->mouseTracked(Pixel(x, y));
+//    if (widget) widget->mouseTracked(Pixel(x, y));
 }
 
 void GLUTWindow::mouseButton(int button, int state, int x, int y) {
     // Pass through a mouse button press
-    if (widget) {
-        widget->setModifierFlags(glutGetModifiers());
-        ButtonCode b = translateMouseButton(button);
-        if (state == GLUT_DOWN) {
-            widget->addButtonFlag(b);
-            widget->buttonPressed(b, Pixel(x, y));
-            buttonTimer[button].reset();
-            buttonTimer[button].start();
-        } else {
-            widget->removeButtonFlag(b);
-            widget->buttonReleased(b, Pixel(x, y));
-            buttonTimer[button].stop();
-            if (buttonTimer[button].time() < CLICK_DURATION)
-                widget->buttonClicked(b, Pixel(x, y));
-        }
-    }
+//    if (widget) {
+//        widget->setModifierFlags(glutGetModifiers());
+//        ButtonCode b = translateMouseButton(button);
+//        if (state == GLUT_DOWN) {
+//            widget->addButtonFlag(b);
+//            widget->buttonPressed(b, Pixel(x, y));
+//            buttonTimer[button].reset();
+//            buttonTimer[button].start();
+//        } else {
+//            widget->removeButtonFlag(b);
+//            widget->buttonReleased(b, Pixel(x, y));
+//            buttonTimer[button].stop();
+//            if (buttonTimer[button].time() < CLICK_DURATION)
+//                widget->buttonClicked(b, Pixel(x, y));
+//        }
+//    }
 }
 
 void GLUTWindow::key(unsigned char key, int x, int y) {
     // Pass through a normal (ASCII) keypress
-    if (widget) {
-        KeyCode k = translateNormalKey(key);
-        widget->setModifierFlags(glutGetModifiers());
-        widget->keyPressed(k, Pixel(x, y));
-    }
+//    if (widget) {
+//        KeyCode k = translateNormalKey(key);
+//        widget->setModifierFlags(glutGetModifiers());
+//        widget->keyPressed(k, Pixel(x, y));
+//    }
 }
 
 void GLUTWindow::special(int key, int x, int y) {
     // Pass through a special (control) key
-    if (widget) {
-        KeyCode k = translateSpecialKey(key);
-        widget->setModifierFlags(glutGetModifiers());
-        widget->keyPressed(k, Pixel(x, y));
-    }
+//    if (widget) {
+//        KeyCode k = translateSpecialKey(key);
+//        widget->setModifierFlags(glutGetModifiers());
+//        widget->keyPressed(k, Pixel(x, y));
+//    }
 }
 
 // GLUT display callbacks
@@ -235,14 +253,14 @@ void GLUTWindow::overlayDisplay() { /* Do nothing right now */ }
 void GLUTWindow::display() {
     INCA_DEBUG("Display")
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    if (widget) {
-        renderer().beginFrame();
-
-            widget->renderView();
-
-        renderer().endFrame();
-        glutSwapBuffers();
-    }
+//    if (widget) {
+//        renderer().beginFrame();
+//
+//            widget->renderView();
+//
+//        renderer().endFrame();
+//        glutSwapBuffers();
+//    }
 }
 
 // GLUT idle callback

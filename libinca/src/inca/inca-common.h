@@ -62,6 +62,7 @@ namespace inca {
 
 
 // Include C++ strings and IOStream library
+#include <stdexcept>
 #include <string>
 #include <iostream>
 #include <iomanip>

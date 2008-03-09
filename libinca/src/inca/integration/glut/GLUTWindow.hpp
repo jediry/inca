@@ -74,7 +74,7 @@ protected:
 /*---------------------------------------------------------------------------*
  | Static functions to patch thru the GLUT event-handling mechanism
  *---------------------------------------------------------------------------*/
-public:
+private:
     static void reshapeFunc(int width, int height);
     static void entryFunc(int state);
     static void visibilityFunc(int visible);
@@ -88,7 +88,8 @@ public:
     static void idleFunc();
 
 protected:
-    static void registerCallbacks();
+    static void registerWindow(GLUTWindow& window);
+    static void unregisterWindow(GLUTWindow& window);
 
 
 /*---------------------------------------------------------------------------*
