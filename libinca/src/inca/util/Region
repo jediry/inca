@@ -361,7 +361,7 @@ public:
     void setCenter(IndexType d, IndexType c) {
         DifferenceType diff = c - center(d);
         _bases[d]   += diff;
-        _extents[d] += diff
+        _extents[d] += diff;
     }
     void setSize(IndexType d, SizeType s) {
         if (s > 0) {

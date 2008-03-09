@@ -230,34 +230,34 @@ namespace inca {
 
 #define ENUM_REL_OP(OP)                                                     \
     ENUM_OP(bool) OP (E e0, E e1) {                                         \
-        return int(e0) OP int(e1);                                          \
+        return static_cast<int>(e0) OP static_cast<int>(e1);                \
     }
 
 #define ENUM_REL_OP_T(OP, TYPE)                                             \
     ENUM_OP(bool) OP (E e, TYPE i) {                                        \
-        return TYPE(e) OP i;                                                \
+        return static_cast<TYPE>(e) OP i;                                   \
     }                                                                       \
     ENUM_OP(bool) OP (TYPE i, E e) {                                        \
-        return i OP TYPE(e);                                                \
+        return i OP static_cast<TYPE>(e);                                   \
     }
 
 #define ENUM_ARITH_OP(OP)                                                   \
     ENUM_OP(E) OP (E e0, E e1) throw(IllegalEnumerantException) {           \
-        return E(int(e0) OP int(e1));                                       \
+        return E(static_cast<int>(e0) OP static_cast<int>(e1));             \
     }                                                                       \
     ENUM_OP(E &) OP ## = (E e0, E e1) throw(IllegalEnumerantException) {    \
-        return (e0 = E(int(e0) OP int(e1)));                                \
+        return (e0 = E(static_cast<int>(e0) OP static_cast<int>(e1)));      \
     }
 
 #define ENUM_ARITH_OP_T(OP, TYPE)                                           \
     ENUM_OP(E) OP (E e, TYPE i) throw(IllegalEnumerantException) {          \
-        return E(TYPE(e) OP i);                                             \
+        return E(static_cast<TYPE>(e) OP i);                                \
     }                                                                       \
     ENUM_OP(E) OP (TYPE i, E e) throw(IllegalEnumerantException) {          \
-        return E(i OP TYPE(e));                                             \
+        return E(i OP static_cast<TYPE>(e));                                \
     }                                                                       \
     ENUM_OP(E &) OP ## = (E e, TYPE i) throw(IllegalEnumerantException) {   \
-        return (e = E(TYPE(e) OP i));                                       \
+        return (e = E(static_cast<TYPE>(e) OP i));                          \
     }
 
     // Relational operators

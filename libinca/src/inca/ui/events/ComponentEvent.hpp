@@ -49,7 +49,7 @@ namespace inca {
 #include "Event.hpp"
 
 // Import Component class definition
-#include "Component.hpp"
+#include "../Component.hpp"
 
 
 class inca::ui::ComponentEvent : public inca::ui::Event {

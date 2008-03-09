@@ -54,10 +54,10 @@ public:
     void add(ListenerPtr lp) {
         typename ListenerList::const_iterator it;
         if (! lp)
-            INCA_WARNING(__FUNCTION__ "(...): Refusing to add NULL listener")
+            INCA_WARNING(__FUNCTION__ << "(...): Refusing to add NULL listener")
         else if ((it = std::find(_listeners.begin(),
                                  _listeners.end(), lp)) != _listeners.end())
-            INCA_WARNING(__FUNCTION__ "(...): Refusing to add duplicate listener "
+            INCA_WARNING(__FUNCTION__ << "(...): Refusing to add duplicate listener "
                          "-- would-be listener # " << _listeners.size() <<
                          " is a duplicate of # " << (it - _listeners.begin()))
         else
@@ -68,10 +68,10 @@ public:
     void remove(ListenerPtr lp) {
         typename ListenerList::iterator it;
         if (! lp)
-            INCA_WARNING(__FUNCTION__ "(...): Refusing to remove NULL listener")
+            INCA_WARNING(__FUNCTION__ << "(...): Refusing to remove NULL listener")
         else if ((it = std::find(_listeners.begin(),
                                  _listeners.end(), lp)) == _listeners.end())
-            INCA_WARNING(__FUNCTION__ "(): Unable to delete listener -- "
+            INCA_WARNING(__FUNCTION__ << "(): Unable to delete listener -- "
                          "it is not in the current list of listeners")
         else
             _listeners.erase(it);

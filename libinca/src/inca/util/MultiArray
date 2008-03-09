@@ -1113,7 +1113,7 @@ public:
                             const StorageOrder & so = CStorageOrder())      \
                 : Superclass(SizeArray(PARAMS(DIM, e)), so) {               \
             BOOST_STATIC_ASSERT(dimensionality == DIM);                     \
-            this->_resizeMemory(false);                                      \
+            this->_resizeMemory(false);                                     \
         }
     FOR_ALL_DIMS(CREATE_DIMENSIONAL_CONSTRUCTOR);
     #undef CREATE_DIMENSIONAL_CONSTRUCTOR
@@ -1122,8 +1122,8 @@ public:
      * Destructor. Frees any memory reserved by the array.
      */
     ~MultiArray() {
-        if (_elements != NULL)
-            delete[] _elements;
+        if (this->_elements != NULL)
+            delete[] this->_elements;
     }
 
 

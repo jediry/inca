@@ -101,14 +101,14 @@ public:
     // Window position
     Pixel position() const {
         if (! peer()) {
-            INCA_WARNING(__FUNCTION__ "() called with no Peer")
+            INCA_WARNING(__FUNCTION__ << "() called with no Peer")
             return Pixel(0);
         }
         return peer()->position();
     }
     void setPosition(Pixel p) {
         if (! peer()) {
-            INCA_WARNING(__FUNCTION__ "(p) called with no Peer")
+            INCA_WARNING(__FUNCTION__ << "(p) called with no Peer")
             return;
         }
         peer()->setPosition(p);
@@ -116,7 +116,7 @@ public:
     }
     void setPosition(IndexType x, IndexType y)  {
         if (! peer()) {
-            INCA_WARNING(__FUNCTION__ "(x,y) called with no Peer")
+            INCA_WARNING(__FUNCTION__ << "(x,y) called with no Peer")
             return;
         }
         peer()->setPosition(Pixel(x, y));
@@ -126,14 +126,14 @@ public:
     // Current size
     Dimension size() const {
         if (! peer()) {
-            INCA_WARNING(__FUNCTION__ "() called with no Peer")
+            INCA_WARNING(__FUNCTION__ << "() called with no Peer")
             return Dimension(0);
         }
         return peer()->size();
     }
     void setSize(Dimension d) {
         if (! peer()) {
-            INCA_WARNING(__FUNCTION__ "(d) called with no Peer")
+            INCA_WARNING(__FUNCTION__ << "(d) called with no Peer")
             return;
         }
         peer()->setSize(d);
@@ -141,7 +141,7 @@ public:
     }
     void setSize(SizeType w, SizeType h) {
         if (! peer()) {
-            INCA_WARNING(__FUNCTION__ "(w,h) called with no Peer")
+            INCA_WARNING(__FUNCTION__ << "(w,h) called with no Peer")
             return;
         }
         peer()->setSize(Dimension(w, h));
@@ -151,21 +151,21 @@ public:
     // Minimum allowable size
     Dimension minimumSize() const {
         if (! peer()) {
-            INCA_WARNING(__FUNCTION__ "() called with no Peer")
+            INCA_WARNING(__FUNCTION__ << "() called with no Peer")
             return Dimension(0);
         }
         return peer()->minimumSize();
     }
     void setMinimumSize(Dimension d) {
         if (! peer()) {
-            INCA_WARNING(__FUNCTION__ "(d) called with no Peer")
+            INCA_WARNING(__FUNCTION__ << "(d) called with no Peer")
             return;
         }
         peer()->setMinimumSize(d);
     }
     void setMinimumSize(SizeType w, SizeType h) {
         if (! peer()) {
-            INCA_WARNING(__FUNCTION__ "(w,h) called with no Peer")
+            INCA_WARNING(__FUNCTION__ << "(w,h) called with no Peer")
             return;
         }
         peer()->setMinimumSize(Dimension(w, h));
@@ -174,21 +174,21 @@ public:
     // Maximum allowable size
     Dimension maximumSize() const {
         if (! peer()) {
-            INCA_WARNING(__FUNCTION__ "() called with no Peer")
+            INCA_WARNING(__FUNCTION__ << "() called with no Peer")
             return Dimension(0);
         }
         return peer()->maximumSize();
     }
     void setMaximumSize(Dimension d) {
         if (! peer()) {
-            INCA_WARNING(__FUNCTION__ "(d) called with no Peer")
+            INCA_WARNING(__FUNCTION__ << "(d) called with no Peer")
             return;
         }
         peer()->setMaximumSize(d);
     }
     void setMaximumSize(SizeType w, SizeType h) {
         if (! peer()) {
-            INCA_WARNING(__FUNCTION__ "(w,h) called with no Peer")
+            INCA_WARNING(__FUNCTION__ << "(w,h) called with no Peer")
             return;
         }
         peer()->setMaximumSize(Dimension(w, h));
@@ -196,14 +196,14 @@ public:
     
     bool visible() const {
         if (! peer()) {
-            INCA_WARNING(__FUNCTION__ "() called with no Peer")
+            INCA_WARNING(__FUNCTION__ << "() called with no Peer")
             return false;
         }
         return peer()->visible();
     }
     void setVisible(bool v) {
         if (! peer()) {
-            INCA_WARNING(__FUNCTION__ "(v) called with no Peer")
+            INCA_WARNING(__FUNCTION__ << "(v) called with no Peer")
             return;
         }
         if (v != peer()->visible()) {

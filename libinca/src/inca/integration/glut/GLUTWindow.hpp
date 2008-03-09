@@ -104,9 +104,6 @@ public:
     // Destructor
     virtual ~GLUTWindow();
 
-    // self() function to get a shared_ptr to myself of the appropriate type
-    SHARED_PTR_TO_SELF(GLUTWindow);
-
     // The window's GLUT window-id
     IDType getWindowID() const { return windowID; }
 
@@ -152,8 +149,8 @@ protected:
  | GLUT -> Inca event translation functions
  *---------------------------------------------------------------------------*/
 protected:
-    // Translate a GLUT mouse button into an Inca MouseButton
-    MouseButton translateMouseButton(int button);
+    // Translate a GLUT mouse button into an Inca ButtonCode
+    ButtonCode translateMouseButton(int button);
 
     // Translate a GLUT key into an Inca KeyCode
     KeyCode translateNormalKey(unsigned char key);

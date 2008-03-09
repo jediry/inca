@@ -105,7 +105,7 @@ void GLUTWindowPeer::registerPeer(GLUTWindowPeer * peer) {
     // Make sure the peer is pointing to something
     if (! peer->valid()) {
         IllegalStateException e;
-        e << __FUNCTION__ "(...): the peer does not manage a valid window";
+        e << __FUNCTION__ << "(...): the peer does not manage a valid window";
         throw e;
     }
 
@@ -127,7 +127,7 @@ void GLUTWindowPeer::deregisterPeer(GLUTWindowPeer * peer) {
     // Make sure the peer is pointing to something
     if (! peer->valid()) {
         IllegalStateException e;
-        e << __FUNCTION__ "(...): the peer does not manage a valid window";
+        e << __FUNCTION__ << "(...): the peer does not manage a valid window";
         throw e;
     }
 
@@ -175,14 +175,14 @@ GLUTWindowPeer::~GLUTWindowPeer() {
 // Return a pointer to the GLUTRenderableSurfacePeer owned by this W
 GLUTRenderableSurfacePeer * GLUTWindowPeer::renderableSurfacePeer() {
     if (id() == NO_WINDOW) {
-        INCA_WARNING(__FUNCTION__ "() called with no associated GLUT window ID")
+        INCA_WARNING(__FUNCTION__ << "() called with no associated GLUT window ID")
         return NULL;
     }
     return GLUTRenderableSurfacePeer::_peers[id()];
 }
 GLUTRenderableSurfacePeer const * GLUTWindowPeer::renderableSurfacePeer() const {
     if (id() == NO_WINDOW) {
-        INCA_WARNING(__FUNCTION__ "() called with no associated GLUT window ID")
+        INCA_WARNING(__FUNCTION__ << "() called with no associated GLUT window ID")
         return NULL;
     }
     return GLUTRenderableSurfacePeer::_peers[id()];
@@ -240,7 +240,7 @@ GLUTWindowPeer::Dimension GLUTWindowPeer::minimumSize() const {
 }
 void GLUTWindowPeer::setMinimumSize(Dimension d) {
     UnsupportedOperationException e;
-    e << __FUNCTION__ "(...): Window size limits not supported by GLUT";
+    e << __FUNCTION__ << "(...): Window size limits not supported by GLUT";
     throw e;
 }
 
@@ -250,7 +250,7 @@ GLUTWindowPeer::Dimension GLUTWindowPeer::maximumSize() const {
 }
 void GLUTWindowPeer::setMaximumSize(Dimension d) {
     UnsupportedOperationException e;
-    e << __FUNCTION__ "(...): Window size limits not supported by GLUT";
+    e << __FUNCTION__ << "(...): Window size limits not supported by GLUT";
     throw e;
 }
 
@@ -283,7 +283,7 @@ void GLUTWindowPeer::create() {
     // Make sure we're not shooting ourselves in the foot
     if (valid()) {
         IllegalStateException e;
-        e << __FUNCTION__ "() called, but this peer already "
+        e << __FUNCTION__ << "() called, but this peer already "
              "manages a window";
         throw e;
     }
@@ -298,7 +298,7 @@ void GLUTWindowPeer::destroy() {
     // Make sure we have something to destroy
     if (! valid()) {
         IllegalStateException e;
-        e << __FUNCTION__ "() called, but this peer is not currently "
+        e << __FUNCTION__ << "() called, but this peer is not currently "
              "managing a window";
         throw e;
     }
@@ -358,7 +358,7 @@ bool GLUTWindowPeer::maximized() const {
 void GLUTWindowPeer::setMaximized(bool m) {
     if (! m) {
         UnsupportedOperationException e;
-        e << __FUNCTION__ "(...): Maximization of windows not supported by GLUT";
+        e << __FUNCTION__ << "(...): Maximization of windows not supported by GLUT";
         throw e;
     }
 }
@@ -395,7 +395,7 @@ bool GLUTWindowPeer::resizable() const {
 void GLUTWindowPeer::setResizable(bool r) {
     if (! r) {
         UnsupportedOperationException e;
-        e << __FUNCTION__ "(...): non-resizable windows not supported by GLUT";
+        e << __FUNCTION__ << "(...): non-resizable windows not supported by GLUT";
         throw e;
     }
 }
@@ -573,7 +573,7 @@ void GLUTRenderableSurfacePeer::registerPeer(GLUTRenderableSurfacePeer * peer) {
     // Make sure the peer is pointing to something
     if (! peer->valid()) {
         IllegalStateException e;
-        e << __FUNCTION__ "(...): the peer does not manage a valid window";
+        e << __FUNCTION__ << "(...): the peer does not manage a valid window";
         throw e;
     }
     
@@ -608,7 +608,7 @@ void GLUTRenderableSurfacePeer::deregisterPeer(GLUTRenderableSurfacePeer * peer)
     // Make sure the peer is pointing to something
     if (! peer->valid()) {
         IllegalStateException e;
-        e << __FUNCTION__ "(...): the peer does not manage a valid window";
+        e << __FUNCTION__ << "(...): the peer does not manage a valid window";
         throw e;
     }
 
@@ -678,14 +678,14 @@ GLUTRenderableSurfacePeer::~GLUTRenderableSurfacePeer() { }
 // Return a pointer to the GLUTWindowPeer owning this RS
 GLUTWindowPeer * GLUTRenderableSurfacePeer::windowPeer() {
     if (id() == NO_WINDOW) {
-        INCA_WARNING(__FUNCTION__ "() called with no associated GLUT window ID")
+        INCA_WARNING(__FUNCTION__ << "() called with no associated GLUT window ID")
         return NULL;
     }
     return GLUTWindowPeer::_peers[id()];
 }
 GLUTWindowPeer const * GLUTRenderableSurfacePeer::windowPeer() const {
     if (id() == NO_WINDOW) {
-        INCA_WARNING(__FUNCTION__ "() called with no associated GLUT window ID")
+        INCA_WARNING(__FUNCTION__ << "() called with no associated GLUT window ID")
         return NULL;
     }
     return GLUTWindowPeer::_peers[id()];
@@ -718,7 +718,7 @@ GLUTRenderableSurfacePeer::Dimension GLUTRenderableSurfacePeer::size() const {
 }
 void GLUTRenderableSurfacePeer::setSize(Dimension d) {
     UnsupportedOperationException e;
-    e << __FUNCTION__ "(d): RenderableSurface is not resizable in GLUT--"
+    e << __FUNCTION__ << "(d): RenderableSurface is not resizable in GLUT--"
          "it must fill the whole window";
     throw e;
 }
@@ -729,7 +729,7 @@ GLUTRenderableSurfacePeer::Dimension GLUTRenderableSurfacePeer::minimumSize() co
 }
 void GLUTRenderableSurfacePeer::setMinimumSize(Dimension d) {
     UnsupportedOperationException e;
-    e << __FUNCTION__ "(d): Window size limits not supported by GLUT";
+    e << __FUNCTION__ << "(d): Window size limits not supported by GLUT";
     throw e;
 }
 
@@ -739,7 +739,7 @@ GLUTRenderableSurfacePeer::Dimension GLUTRenderableSurfacePeer::maximumSize() co
 }
 void GLUTRenderableSurfacePeer::setMaximumSize(Dimension d) {
     UnsupportedOperationException e;
-    e << __FUNCTION__ "(d): Window size limits not supported by GLUT";
+    e << __FUNCTION__ << "(d): Window size limits not supported by GLUT";
     throw e;
 }
 
@@ -752,7 +752,7 @@ bool GLUTRenderableSurfacePeer::visible() const {
 }
 void GLUTRenderableSurfacePeer::setVisible(bool vis) {
     UnsupportedOperationException e;
-    e << __FUNCTION__ "(d): RenderableSurface cannot be shown/hidden "
+    e << __FUNCTION__ << "(d): RenderableSurface cannot be shown/hidden "
          "independently in GLUT--use Window::setVisible(v) instead";
     throw e;
 }

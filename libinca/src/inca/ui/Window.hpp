@@ -43,7 +43,6 @@ class inca::ui::Window
 public:
     // The Application is allowed to set my Peer
     friend class Application;
-    friend class WindowPeer;
 
 
 /*---------------------------------------------------------------------------*

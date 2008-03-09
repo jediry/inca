@@ -39,6 +39,8 @@ namespace inca {
     };
 };
 
+#include <cmath>
+
 // Import scalar type definition
 #include "scalar_types"
 

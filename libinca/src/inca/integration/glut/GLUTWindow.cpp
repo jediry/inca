@@ -196,7 +196,7 @@ void GLUTWindow::mouseButton(int button, int state, int x, int y) {
     // Pass through a mouse button press
     if (widget) {
         widget->setModifierFlags(glutGetModifiers());
-        MouseButton b = translateMouseButton(button);
+        ButtonCode b = translateMouseButton(button);
         if (state == GLUT_DOWN) {
             widget->addButtonFlag(b);
             widget->buttonPressed(b, Pixel(x, y));
@@ -252,8 +252,8 @@ void GLUTWindow::idle() { }
 /*---------------------------------------------------------------------------*
  | GLUT -> Inca event translation functions
  *---------------------------------------------------------------------------*/
-// Translate a GLUT mouse button into an Inca MouseButton
-MouseButton GLUTWindow::translateMouseButton(int button) {
+// Translate a GLUT mouse button into an Inca ButtonCode
+ButtonCode GLUTWindow::translateMouseButton(int button) {
     if (button == GLUT_LEFT_BUTTON)    return LeftButton;
     if (button == GLUT_MIDDLE_BUTTON)  return MiddleButton;
     if (button == GLUT_RIGHT_BUTTON)   return RightButton;
