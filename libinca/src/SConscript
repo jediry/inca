@@ -24,6 +24,12 @@ def CatalogSubtree(self, path, catalog):
 
         fn = str(f).lower()
 
+        # Skip files that we don't want right now
+        if fn.endswith('xmlutilities.cpp') \
+        or fn.endswith('interpreter.cpp') \
+        or fn.endswith('modelhandler.cpp'):
+            continue
+
         # C/C++ header files
         if fn.endswith('.h') \
         or fn.endswith('.hpp') \
@@ -46,7 +52,8 @@ def CatalogSubtree(self, path, catalog):
 
         # Build files
         elif fn == 'sconscript' \
-        or fn.startswith('makefile'):
+        or fn.startswith('makefile') \
+        or fn.endswith('.o'):
             pass
 
         # Editor files

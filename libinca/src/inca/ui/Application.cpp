@@ -50,7 +50,7 @@ Application::Application() : HeavyweightComponent<ApplicationPeer>("Application"
         _instance = this;   // Claim singleton-ness
     } else {
         IllegalStateException e;
-        e << __FUNCTION__ "(): An application instance already exists";
+        e << __FUNCTION__ << "(): An application instance already exists";
         throw e;
     }
 }

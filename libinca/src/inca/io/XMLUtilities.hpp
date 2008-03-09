@@ -89,22 +89,22 @@ public:
     XMLDocument();
 
     // Parse an XML file
-    XMLDocument(const string &filename, const string &schemas = "");
+    XMLDocument(const std::string &filename, const std::string &schemas = "");
 
     // Destructor
     ~XMLDocument();
 
     // Accessor functions
-    const string & filename() { return filenameString; }
+    const std::string & filename() { return filenameString; }
     
 
     // Read/write functions
     void clear();
-    void read(const string &filename, const string &schemas);
-    void write(const string &filename);
+    void read(const std::string &filename, const std::string &schemas);
+    void write(const std::string &filename);
 
 protected:
-    string filenameString;  // Where we loaded/stored this from/to
+    std::string filenameString; // Where we loaded/stored this from/to
 #if XML_SUPPORT_ENABLED
     DOMDocumentPtr dom;     // The DOM document we get from the parser
 #endif

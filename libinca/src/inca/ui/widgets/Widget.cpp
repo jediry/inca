@@ -59,7 +59,7 @@ void Widget::setSurface(RenderableSurfacePtr s) { _surface = s; }
 RenderableSurface::Renderer & Widget::renderer() const {
     if (! _surface) {
         IllegalStateException e;
-        e << __FUNCTION__ "Widget '" << this->name() << "' is not attached to "
+        e << __FUNCTION__ << "Widget '" << this->name() << "' is not attached to "
              "an instance of RenderableSurface";
         throw e;
     }
@@ -73,7 +73,7 @@ RenderableSurface::Renderer & Widget::renderer() const {
 void Widget::requestRedisplay() const {
     if (! _surface) {
         IllegalStateException e;
-        e << __FUNCTION__ "Widget '" << this->name() << "' is not attached to "
+        e << __FUNCTION__ << "Widget '" << this->name() << "' is not attached to "
              "an instance of RenderableSurface";
         throw e;
     }
