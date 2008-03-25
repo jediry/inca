@@ -1,91 +1,12 @@
-import SCons.Node.FS
+import SourceCatalog
 
 # Get the construction environment from the top-level script
 Import('env')
 
-def CatalogFiles(self, path):
-    catalog = { 'headers':  [], \
-                'sources':  [], \
-                'grammars': [],\
-              }
-    self.CatalogSubtree(path, catalog)
-    return catalog
-
-env.AddMethod(CatalogFiles)
-
-
-def CatalogSubtree(self, path, catalog):
-    files = self.Glob(path + '/*')
-    for f in files:
-        # Recurse directories
-        if isinstance(f, SCons.Node.FS.Dir):
-            self.CatalogSubtree(str(f), catalog)
-            continue
-
-        fn = str(f).lower()
-
-        # Skip files that we don't want right now
-        if fn.endswith('xmlutilities.cpp') \
-        or fn.endswith('interpreter.cpp') \
-        or fn.endswith('modelhandler.cpp'):
-            continue
-
-        # C/C++ header files
-        if fn.endswith('.h') \
-        or fn.endswith('.hpp') \
-        or fn.endswith('.h++') \
-        or fn.endswith('.hxx') \
-        or fn.endswith('.hh'):
-            catalog['headers'].append(f)
-
-        # C/C++ source files
-        elif fn.endswith('.c') \
-        or fn.endswith('.cpp') \
-        or fn.endswith('.c++') \
-        or fn.endswith('.cxx') \
-        or fn.endswith('.cc'):
-            catalog['sources'].append(f)
-
-        # Antlr grammar files
-        elif fn.endswith('.g'):
-            catalog['grammars'].append(f)
-
-        # Build files
-        elif fn == 'sconscript' \
-        or fn.startswith('makefile') \
-        or fn.endswith('.o'):
-            pass
-
-        # Editor files
-        elif fn.endswith('~') \
-        or fn.startswith('#') \
-        or fn.endswith('.swp'):
-            pass
-
-        # Files without extensions are probably C++ templates
-        elif fn.find('.') == -1:
-            catalog['headers'].append(f)
-
-        # Uhh...what's this?
-        else:
-            print "Ignoring unrecognized file:", fn
-
-    return catalog
-
-env.AddMethod(CatalogSubtree)
-
-
-files = env.CatalogFiles('inca')
-#print "Returned headers: "
-#for x in files['headers']:
-#    print '\t',x
-#print "Returned sources: "
-#for x in files['sources']:
-#    print '\t',x
-#print "Returned grammars: "
-#for x in files['grammars']:
-#    print '\t',x
-
+# Scan the directory tree (minus any files we specifically want to ignore)
+ignore = ['.*Interpreter.*', '.*XMLUtilities.*', '.*ModelHandler.*']
+SourceCatalog.EnableSourceCatalog(env)
+files = env.CatalogFiles('./inca', ignorePatterns = ignore)
 
 env.Append(CPPPATH = '.')
 env.StaticLibrary('inca', files['sources'])

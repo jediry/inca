@@ -370,7 +370,7 @@ public:
     typedef Statistics<T, false>    Superclass;
     typedef std::vector<T>          ValueCache;
 
-    using Superclass::ElementType;
+    typedef typename Superclass::ElementType ElementType;
 
 
 /*---------------------------------------------------------------------------*
@@ -392,7 +392,7 @@ public:
 public:
     // Process a new value
     void operator()(const ElementType & e) {
-        if (! _firstPassDone) {
+        if (! this->_firstPassDone) {
             _processFirstPass(e);
             _valueCache.push_back(e);
         } else
@@ -404,13 +404,13 @@ public:
     // Finish processing the data and free the cache memory
     void finish() {
         // Complete the first pass
-        _finishFirstPass();
+        this->_finishFirstPass();
 
         // Run the second pass over the cached elements        
         typename ValueCache::const_iterator it;
         for (it = _valueCache.begin(); it != _valueCache.end(); ++it)
             _processSecondPass(*it);
-        _finishSecondPass();
+        this->_finishSecondPass();
         
         // Clear out the cache
         _valueCache.clear();
