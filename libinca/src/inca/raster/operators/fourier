@@ -33,6 +33,7 @@
  *       the number of elements and the dft_XXX_transform call.
  */
 
+#pragma once
 #ifndef INCA_RASTER_OPERATOR_FOURIER
 #define INCA_RASTER_OPERATOR_FOURIER
 

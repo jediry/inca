@@ -13,6 +13,7 @@
  *      destroy a window that does not exist.
  */
 
+#pragma once
 #ifndef INCA_ILLEGAL_STATE_EXCEPTION
 #define INCA_ILLEGAL_STATE_EXCEPTION
 

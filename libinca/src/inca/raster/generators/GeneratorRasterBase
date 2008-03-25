@@ -8,6 +8,7 @@
  * Description:
  */
 
+#pragma once
 #ifndef INCA_RASTER_GENERATOR_BASE
 #define INCA_RASTER_GENERATOR_BASE
 

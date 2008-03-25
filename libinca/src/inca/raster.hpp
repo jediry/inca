@@ -10,6 +10,7 @@
  *      configuring the raster processing library.
  */
 
+#pragma once
 #ifndef INCA_RASTER
 #define INCA_RASTER
 

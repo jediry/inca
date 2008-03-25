@@ -17,6 +17,7 @@
  * TODO: Don't assume a texture belongs to the same rendering context
  */
 
+#pragma once
 #ifndef INCA_RENDERING_IMMEDIATE_MODE_RENDERER_TEXTURING_UNIT
 #define INCA_RENDERING_IMMEDIATE_MODE_RENDERER_TEXTURING_UNIT
 

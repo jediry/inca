@@ -33,6 +33,7 @@
  *
  */
 
+#pragma once
 #ifndef INCA_RASTER_FACET_ACCESS
 #define INCA_RASTER_FACET_ACCESS
 

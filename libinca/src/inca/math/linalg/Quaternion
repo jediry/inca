@@ -10,6 +10,7 @@
  *      The Quaternion template class represents a rotation in 3-space.
  */
 
+#pragma once
 #ifndef INCA_MATH_LINALG_QUATERNION
 #define INCA_MATH_LINALG_QUATERNION
 

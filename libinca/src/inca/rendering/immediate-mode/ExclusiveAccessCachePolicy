@@ -14,6 +14,7 @@
  *      exclusive access to the rendering context).
  */
 
+#pragma once
 #ifndef INCA_RENDERING_IMMEDIATE_MODE_EXCLUSIVE_ACCESS_CACHE_POLICY
 #define INCA_RENDERING_IMMEDIATE_MODE_EXCLUSIVE_ACCESS_CACHE_POLICY
 

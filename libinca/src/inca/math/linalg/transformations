@@ -9,6 +9,7 @@
  * Description:
  */
 
+#pragma once
 #ifndef INCA_MATH_LINALG_TRANSFORMATIONS
 #define INCA_MATH_LINALG_TRANSFORMATIONS
 

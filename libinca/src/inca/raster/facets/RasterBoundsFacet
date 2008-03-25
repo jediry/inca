@@ -88,6 +88,7 @@
  * FIXME: This is actually two facets...but I'm too tired to doc them both.
  */
 
+#pragma once
 #ifndef INCA_RASTER_FACET_BOUNDS
 #define INCA_RASTER_FACET_BOUNDS
 

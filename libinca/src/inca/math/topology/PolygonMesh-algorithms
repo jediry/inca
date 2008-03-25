@@ -9,6 +9,7 @@
  * Description:
  */
 
+#pragma once
 #ifndef INCA_POLY_POLYGON_MESH_ALGORITHMS
 #define INCA_POLY_POLYGON_MESH_ALGORITHMS
 

@@ -9,6 +9,7 @@
  * FIXME: This ought to calculate the actual bounds of the rotation.
  */
 
+#pragma once
 #ifndef INCA_RASTER_OPERATOR_ROTATE
 #define INCA_RASTER_OPERATOR_ROTATE
 

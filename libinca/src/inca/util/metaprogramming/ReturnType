@@ -29,6 +29,7 @@
  *      redoing this work, since the others are more aesthetic than functional.
  */
 
+#pragma once
 #ifndef INCA_UTIL_METAPROGRAMMING_RETURN_TYPE
 #define INCA_UTIL_METAPROGRAMMING_RETURN_TYPE
 

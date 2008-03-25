@@ -8,6 +8,7 @@
  * Description:
  */
 
+#pragma once
 #ifndef INCA_WORLD_SURFACE
 #define INCA_WORLD_SURFACE
 

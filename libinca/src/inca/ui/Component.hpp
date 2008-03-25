@@ -84,6 +84,7 @@
  * TODO: Finish Array math ops and remove dependency on math.hpp
  */
 
+#pragma once
 #ifndef INCA_UI_COMPONENT
 #define INCA_UI_COMPONENT
 

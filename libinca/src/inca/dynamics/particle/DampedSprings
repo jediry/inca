@@ -9,6 +9,7 @@
  * Description:
  */
 
+#pragma once
 #ifndef INCA_DYNAMICS_DAMPED_SPRINGS
 #define INCA_DYNAMICS_DAMPED_SPRINGS
 

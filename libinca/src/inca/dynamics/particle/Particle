@@ -10,6 +10,7 @@
  *      A Particle is a 
  */
 
+#pragma once
 #ifndef INCA_DYNAMICS_PARTICLE
 #define INCA_DYNAMICS_PARTICLE
 

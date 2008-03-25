@@ -12,6 +12,7 @@
  *      of the input type.
  */
 
+#pragma once
 #ifndef INCA_RASTER_OPERATOR_GRADIENT
 #define INCA_RASTER_OPERATOR_GRADIENT
 

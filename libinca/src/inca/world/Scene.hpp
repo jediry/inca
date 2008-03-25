@@ -10,6 +10,7 @@
  *      one or more Cameras, Lights, and Objects.
  */
 
+#pragma once
 #ifndef INCA_WORLD_SCENE
 #define INCA_WORLD_SCENE
 

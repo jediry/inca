@@ -9,6 +9,7 @@
  * Description:
  */
 
+#pragma once
 #ifndef INCA_DYNAMICS_PARTICLE_GENERATOR
 #define INCA_DYNAMICS_PARTICLE_GENERATOR
 

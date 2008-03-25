@@ -22,6 +22,7 @@
  *      symbolically tagged according to the type of event.
  */
 
+#pragma once
 #ifndef INCA_UTIL_LOGGER
 #define INCA_UTIL_LOGGER
 

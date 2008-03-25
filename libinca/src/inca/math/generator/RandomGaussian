@@ -17,6 +17,7 @@
  * TODO: recode to allow the granularity of the lookup table to be specified
  */
 
+#pragma once
 #ifndef INCA_MATH_GENERATOR_RANDOM_GAUSSIAN
 #define INCA_MATH_GENERATOR_RANDOM_GAUSSIAN
 

@@ -12,6 +12,7 @@
  *      It also provides macros for easily typedefing the primitives.
  */
 
+#pragma once
 #ifndef INCA_MATH_COLOR_HPP
 #define INCA_MATH_COLOR_HPP
 

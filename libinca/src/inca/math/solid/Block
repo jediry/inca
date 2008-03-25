@@ -18,6 +18,7 @@
  *      hyper-dimensional shapes.
  */
 
+#pragma once
 #ifndef INCA_RASTER_BLOCK
 #define INCA_RASTER_BLOCK
 

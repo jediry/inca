@@ -14,6 +14,7 @@
  *      data or regular ASCII strings.
  */
 
+#pragma once
 #ifndef INCA_UTIL_UNICODE_STRING
 #define INCA_UTIL_UNICODE_STRING
 

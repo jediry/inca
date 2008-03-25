@@ -13,6 +13,7 @@
  *      documentation.
  */
 
+#pragma once
 #ifndef INCA_MATH_SCALAR_TYPE_TRAITS
 #define INCA_MATH_SCALAR_TYPE_TRAITS
 

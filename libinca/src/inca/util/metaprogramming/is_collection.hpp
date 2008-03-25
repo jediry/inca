@@ -1,3 +1,4 @@
+#pragma once
 #ifndef INCA_UTIL_IS_COLLECTION
 #define INCA_UTIL_IS_COLLECTION
 

@@ -14,6 +14,7 @@
  *      into a set of BezierCurves.
  */
 
+#pragma once
 #ifndef INCA_MATH_BSPLINE_SURFACE
 #define INCA_MATH_BSPLINE_SURFACE
 

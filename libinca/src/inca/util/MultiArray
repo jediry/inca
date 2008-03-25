@@ -36,6 +36,7 @@
  * XXX Reverse iterators are broken
  */
 
+#pragma once
 #ifndef INCA_UTIL_MULTI_ARRAY
 #define INCA_UTIL_MULTI_ARRAY
 

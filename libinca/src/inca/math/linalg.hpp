@@ -12,6 +12,7 @@
  *      It also provides macros for easily typedefing the primitives.
  */
 
+#pragma once
 #ifndef INCA_MATH_LINALG_HPP
 #define INCA_MATH_LINALG_HPP
 

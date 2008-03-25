@@ -18,6 +18,7 @@
 // Oh my gosh. This needs like a BOOK of documentation!!!
 // Abandon all hope...
 
+#pragma once
 #ifndef INCA_RASTER_ALGORITHM_FIND_ISOSURFACE_INTERSECTION
 #define INCA_RASTER_ALGORITHM_FIND_ISOSURFACE_INTERSECTION
 

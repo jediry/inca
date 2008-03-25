@@ -9,6 +9,7 @@
  * Description:
  */
 
+#pragma once
 #ifndef INCA_RASTER_CONCEPT_READ_WRITE_RASTER
 #define INCA_RASTER_CONCEPT_READ_WRITE_RASTER
 

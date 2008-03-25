@@ -8,6 +8,7 @@
  * Description:
  */
 
+#pragma once
 #ifndef INCA_RENDERING_TYPES
 #define INCA_RENDERING_TYPES
 

@@ -42,6 +42,7 @@
  *          func(1, 2.5);   // Prints out two doubles
  */
 
+#pragma once
 #ifndef INCA_UTIL_METAPROGRAMMING_PROMOTE
 #define INCA_UTIL_METAPROGRAMMING_PROMOTE
 

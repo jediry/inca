@@ -23,6 +23,7 @@
  *      library (as any good generic programmer should know not to do).
  */
 
+#pragma once
 #ifndef INCA_DYNAMICS_PARTICLE_SYSTEM
 #define INCA_DYNAMICS_PARTICLE_SYSTEM
 

@@ -10,6 +10,7 @@
  *      rendering classes and functions.
  */
 
+#pragma once
 #ifndef INCA_RENDERING
 #define INCA_RENDERING
 

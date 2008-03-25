@@ -14,6 +14,7 @@
  *      Finally,
  */
 
+#pragma once
 #ifndef INCA_UI_APPLICATION
 #define INCA_UI_APPLICATION
 

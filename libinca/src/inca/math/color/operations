@@ -14,6 +14,7 @@
  *      implemented as class members are implemented as free functions.
  */
 
+#pragma once
 #ifndef INCA_MATH_COLOR_OPERATIONS
 #define INCA_MATH_COLOR_OPERATIONS
 

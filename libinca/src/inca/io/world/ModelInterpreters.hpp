@@ -13,6 +13,7 @@
  *      conversion, an interpreter must create a single PolygonMesh.
  */
 
+#pragma once
 #ifndef INCA_IO_MODEL_INTERPRETERS
 #define INCA_IO_MODEL_INTERPRETERS
 

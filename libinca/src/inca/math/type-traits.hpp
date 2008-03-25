@@ -24,6 +24,7 @@
  *      to implement core functionality.
  */
 
+#pragma once
 #ifndef INCA_MATH_TYPE_TRAITS
 #define INCA_MATH_TYPE_TRAITS
 

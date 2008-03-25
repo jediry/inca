@@ -17,6 +17,7 @@
  * FIXME: Should be able to turn on/off vertex/primitive counting with a template parameter
  */
 
+#pragma once
 #ifndef INCA_RENDERING_IMMEDIATE_MODE_RENDERER_RASTERIZER
 #define INCA_RENDERING_IMMEDIATE_MODE_RENDERER_RASTERIZER
 

@@ -9,6 +9,7 @@
  * Description:
  */
 
+#pragma once
 #ifndef INCA_MATH_STATISTICS_PROBABILITY_MASS
 #define INCA_MATH_STATISTICS_PROBABILITY_MASS
 

@@ -8,6 +8,7 @@
  * Description:
  */
 
+#pragma once
 #ifndef INCA_RASTER_GENERATOR_LINEAR_FADE
 #define INCA_RASTER_GENERATOR_LINEAR_FADE
 

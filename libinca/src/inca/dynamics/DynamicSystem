@@ -25,6 +25,7 @@
  *      a state vector and a time value.
  */
 
+#pragma once
 #ifndef INCA_DYNAMIC_SYSTEM
 #define INCA_DYNAMIC_SYSTEM
 

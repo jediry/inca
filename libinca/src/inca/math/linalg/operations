@@ -16,6 +16,7 @@
  *      implemented as class members are implemented as free functions.
  */
 
+#pragma once
 #ifndef INCA_MATH_LINALG_OPERATIONS
 #define INCA_MATH_LINALG_OPERATIONS
 

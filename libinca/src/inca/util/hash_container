@@ -13,6 +13,7 @@
  *      these with additional common data types.
  */
 
+#pragma once
 #ifndef INCA_UTIL_HASH_CONTAINER
 #define INCA_UTIL_HASH_CONTAINER
 

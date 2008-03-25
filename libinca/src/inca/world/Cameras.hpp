@@ -11,6 +11,7 @@
  *      rasterization of the image is performed by the rendering subsystem.
  */
 
+#pragma once
 #ifndef INCA_WORLD_CAMERAS
 #define INCA_WORLD_CAMERAS
 

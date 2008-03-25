@@ -11,6 +11,7 @@
  *      polygon mesh subdivision algorithm to 
  */
 
+#pragma once
 #ifndef INCA_MATH_MESH_SUBDIVIDE_DOO_SABIN
 #define INCA_MATH_MESH_SUBDIVIDE_DOO_SABIN
 

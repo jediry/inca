@@ -42,6 +42,7 @@
 //        contiguous patch
 
 
+#pragma once
 #ifndef INCA_MATH_TOPOLOGY_WINGED_EDGE_MESH
 #define INCA_MATH_TOPOLOGY_WINGED_EDGE_MESH
 

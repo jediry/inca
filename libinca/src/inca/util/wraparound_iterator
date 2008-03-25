@@ -13,6 +13,7 @@
  *
  */
 
+#pragma once
 #ifndef INCA_UTIL_WRAPAROUND_ITERATOR
 #define INCA_UTIL_WRAPAROUND_ITERATOR
 

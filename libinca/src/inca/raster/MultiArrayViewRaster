@@ -28,6 +28,7 @@
  * TODO: This should not have the ReadWrite tag for const elements type
  */
 
+#pragma once
 #ifndef INCA_RASTER_MULTI_ARRAY_VIEW_RASTER
 #define INCA_RASTER_MULTI_ARRAY_VIEW_RASTER
 

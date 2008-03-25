@@ -118,6 +118,7 @@
  *      What happens if we change timeWarpFactor mid-use?
  */
 
+#pragma once
 #ifndef INCA_UTIL_TIMER
 #define INCA_UTIL_TIMER
 

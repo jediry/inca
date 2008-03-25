@@ -28,6 +28,7 @@
  *      Should we be a little sloppier on re-allocation?
  */
 
+#pragma once
 #ifndef INCA_RENDERING_PRIMITIVE_GRID
 #define INCA_RENDERING_PRIMITIVE_GRID
 

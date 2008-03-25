@@ -10,6 +10,7 @@
  * FIXME: can we give this a better name??
  */
 
+#pragma once
 #ifndef INCA_RASTER_GENERATOR_ARRAY
 #define INCA_RASTER_GENERATOR_ARRAY
 

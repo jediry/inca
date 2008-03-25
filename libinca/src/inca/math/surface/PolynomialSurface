@@ -11,6 +11,7 @@
  *      a multivariate polynomial (e.g. p(x,y,z) = 0).
  */
 
+#pragma once
 #ifndef INCA_MATH_POLYNOMIAL_SURFACE
 #define INCA_MATH_POLYNOMIAL_SURFACE
 

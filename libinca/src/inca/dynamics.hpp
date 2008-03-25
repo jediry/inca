@@ -11,6 +11,7 @@
  *      all of the dynamics stuff.
  */
 
+#pragma once
 #ifndef INCA_DYNAMICS
 #define INCA_DYNAMICS
 

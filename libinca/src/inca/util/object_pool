@@ -37,6 +37,7 @@
  *      restore the object to an initial state (the default is a no-op).
  */
 
+#pragma once
 #ifndef INCA_UTIL_OBJECT_POOL
 #define INCA_UTIL_OBJECT_POOL
 

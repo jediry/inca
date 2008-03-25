@@ -12,6 +12,7 @@
  *      are defined for it.
  */
 
+#pragma once
 #ifndef INCA_MATH_LINALG_MATRIX
 #define INCA_MATH_LINALG_MATRIX
 

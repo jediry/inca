@@ -11,6 +11,7 @@
  *      derivative along a single dimensional axis.
  */
 
+#pragma once
 #ifndef INCA_RASTER_OPERATOR_DERIVATIVE
 #define INCA_RASTER_OPERATOR_DERIVATIVE
 

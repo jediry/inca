@@ -9,6 +9,7 @@
  * Description:
  */
 
+#pragma once
 #ifndef INCA_MATH_SOLID_SPHERE
 #define INCA_MATH_SOLID_SPHERE
 

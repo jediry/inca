@@ -8,6 +8,7 @@
  * Description:
  */
 
+#pragma once
 #ifndef INCA_IO_IMAGE_CODEC
 #define INCA_IO_IMAGE_CODEC
 

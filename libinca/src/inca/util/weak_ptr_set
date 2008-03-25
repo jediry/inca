@@ -5,6 +5,7 @@
  *XXX This could probably be done more efficiently
  */
 
+#pragma once
 #ifndef INCA_UTIL_WEAK_PTR_SET
 #define INCA_UTIL_WEAK_PTR_SET
 

@@ -8,6 +8,7 @@
  * Description:
  */
 
+#pragma once
 #ifndef INCA_UI_WINDOW
 #define INCA_UI_WINDOW
 

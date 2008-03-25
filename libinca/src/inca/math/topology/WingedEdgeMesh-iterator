@@ -29,6 +29,7 @@
  * XXX Should the fixed-count iterators (around Edge) be returning NULLs?
  */
 
+#pragma once
 #ifndef INCA_MATH_TOPOLOGY_WINGED_EDGE_MESH_ITERATOR
 #define INCA_MATH_TOPOLOGY_WINGED_EDGE_MESH_ITERATOR
 

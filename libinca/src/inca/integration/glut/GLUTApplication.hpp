@@ -10,6 +10,7 @@
  *      specialized to use the GLUT toolkit.
  */
 
+#pragma once
 #ifndef INCA_INTEGRATION_GLUT_APPLICATION
 #define INCA_INTEGRATION_GLUT_APPLICATION
 

@@ -10,6 +10,7 @@
  *      components of the I/O subsystem.
  */
 
+#pragma once
 #ifndef INCA_IO
 #define INCA_IO
 

@@ -29,6 +29,7 @@
  *      Stipple, color-index mode, culling, poly offset, poly mode (f/b)
  */
 
+#pragma once
 #ifndef INCA_RENDERING_IMMEDIATE_MODE_RENDERER
 #define INCA_RENDERING_IMMEDIATE_MODE_RENDERER
 

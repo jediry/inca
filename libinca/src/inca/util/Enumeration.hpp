@@ -57,6 +57,7 @@
  *      ENUM and ENUMV (the longer forms are still allowed).
  */
 
+#pragma once
 #ifndef INCA_ENUMERATION
 #define INCA_ENUMERATION
 

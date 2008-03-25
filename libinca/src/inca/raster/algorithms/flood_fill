@@ -13,6 +13,7 @@
                            http://www.codeproject.com/gdi/QuickFill.asp
  */
 
+#pragma once
 #ifndef INCA_RASTER_ALGORITHM_FLOOD_FILL
 #define INCA_RASTER_ALGORITHM_FLOOD_FILL
 

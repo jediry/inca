@@ -14,6 +14,7 @@
  *      when one of the references is written to.
  */
 
+#pragma once
 #ifndef INCA_RASTER_CONCEPTS
 #define INCA_RASTER_CONCEPTS
 

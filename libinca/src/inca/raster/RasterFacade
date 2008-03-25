@@ -28,6 +28,7 @@
  * TODO: talk about how the multiple src files works
  */
 
+#pragma once
 #ifndef INCA_RASTER_FACADE
 #define INCA_RASTER_FACADE
 

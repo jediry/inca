@@ -19,6 +19,7 @@
  *      (int, float, double, etc.).
  */
 
+#pragma once
 #ifndef INCA_MATH
 #define INCA_MATH
 

@@ -11,6 +11,7 @@
  *      between an XML DOM tree and their specific non-Inca format.
  */
 
+#pragma once
 #ifndef INCA_IO_SCENE_INTERPRETERS
 #define INCA_IO_SCENE_INTERPRETERS
 

@@ -18,6 +18,7 @@
  *      autoconf.
  */
 
+#pragma once
 #ifndef INCA_COMMON_H
 #define INCA_COMMON_H
 

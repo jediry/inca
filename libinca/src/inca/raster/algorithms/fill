@@ -9,6 +9,7 @@
  * Description:
  */
 
+#pragma once
 #ifndef INCA_RASTER_ALGORITHM_FILL
 #define INCA_RASTER_ALGORITHM_FILL
 

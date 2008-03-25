@@ -1,6 +1,6 @@
 /** -*- C++ -*-
  *
- * File: math_api
+ * File: math_api.cpp
  *
  * Author: Ryan L. Saunders
  *

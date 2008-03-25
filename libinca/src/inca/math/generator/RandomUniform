@@ -15,6 +15,7 @@
  *        Also needs to handle Array subclasses
  */
 
+#pragma once
 #ifndef INCA_MATH_GENERATOR_RANDOM_UNIFORM
 #define INCA_MATH_GENERATOR_RANDOM_UNIFORM
 

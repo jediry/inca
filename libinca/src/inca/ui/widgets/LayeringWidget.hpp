@@ -16,6 +16,7 @@
  *      TODO: terminology is ghetto
  */
 
+#pragma once
 #ifndef INCA_UI_LAYERING_WIDGET
 #define INCA_UI_LAYERING_WIDGET
 

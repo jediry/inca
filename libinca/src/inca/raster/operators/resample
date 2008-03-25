@@ -15,6 +15,7 @@
  * XXX: Is it good to have only one mag/min policy each? Or should we allow per-dim?
  */
 
+#pragma once
 #ifndef INCA_RASTER_OPERATOR_RESAMPLE
 #define INCA_RASTER_OPERATOR_RESAMPLE
 

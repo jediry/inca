@@ -14,6 +14,7 @@
  *      detected (e.g., a face with only two vertices/edges).
  */
 
+#pragma once
 #ifndef INCA_MATH_TOPOLOGY_EXCEPTIONS
 #define INCA_MATH_TOPOLOGY_EXCEPTIONS
 

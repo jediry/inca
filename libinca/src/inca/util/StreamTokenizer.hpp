@@ -7,6 +7,7 @@
  *                  of the University of Stuttgart, Supercomputing Center
  */
 
+#pragma once
 #ifndef INCA_STREAM_TOKENIZER
 #define INCA_STREAM_TOKENIZER
 

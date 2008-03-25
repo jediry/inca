@@ -9,9 +9,6 @@
  * Description:
  */
 
-#ifndef INCA_INTEGRATION_POSIX_TIMER
-#define INCA_INTEGRATION_POSIX_TIMER
-
 #if __GNUC__    // Ensure we're compiling for the right platform
 
 // Import the class definition
@@ -40,7 +37,5 @@ clock_t inca::getSystemClocks() {
     // Convert from (sec, usec) struct to (usec) counter_t
     return clock_t(tval.tv_sec * 1000000 + tval.tv_usec);
 }
-
-#endif
 
 #endif

@@ -15,6 +15,7 @@
  *      a circular orbit.
  */
 
+#pragma once
 #ifndef INCA_DYNAMICS_FLOCK
 #define INCA_DYNAMICS_FLOCK
 

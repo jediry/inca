@@ -14,6 +14,7 @@
  *      FIXME: this is horribly inefficient!
  */
 
+#pragma once
 #ifndef INCA_MATH_BEZIER_CURVE
 #define INCA_MATH_BEZIER_CURVE
 

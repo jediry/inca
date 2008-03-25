@@ -14,6 +14,7 @@
  *      BezierCurves.
  */
 
+#pragma once
 #ifndef INCA_MATH_BSPLINE_CURVE
 #define INCA_MATH_BSPLINE_CURVE
 

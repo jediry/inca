@@ -1,3 +1,4 @@
+#pragma once
 #ifndef HACKED_COMPLEX_OPS
 #define HACKED_COMPLEX_OPS
 

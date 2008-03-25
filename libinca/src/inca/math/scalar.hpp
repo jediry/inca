@@ -28,6 +28,7 @@
  *      suffixed onto all of the typedef'd names.
  */
 
+#pragma once
 #ifndef INCA_MATH_SCALAR_HPP
 #define INCA_MATH_SCALAR_HPP
 

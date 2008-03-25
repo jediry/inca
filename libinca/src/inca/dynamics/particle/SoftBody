@@ -9,6 +9,7 @@
  * Description:
  */
 
+#pragma once
 #ifndef INCA_DYNAMICS_SOFT_BODY
 #define INCA_DYNAMICS_SOFT_BODY
 

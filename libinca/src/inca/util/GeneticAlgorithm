@@ -23,6 +23,7 @@
  *      overridden in a subclass.
  */
 
+#pragma once
 #ifndef INCA_UTIL_GENETIC_ALGORITHM
 #define INCA_UTIL_GENETIC_ALGORITHM
 

@@ -10,6 +10,7 @@
  *      configuring the world object model.
  */
 
+#pragma once
 #ifndef INCA_WORLD
 #define INCA_WORLD
 

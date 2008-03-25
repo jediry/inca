@@ -11,6 +11,7 @@
  *      the Inca UI framework for the GL Utilities Toolkit (GLUT).
  */
 
+#pragma once
 #ifndef INCA_INTEGRATION_GLUT_PEERS
 #define INCA_INTEGRATION_GLUT_PEERS
 

@@ -12,6 +12,7 @@
  *      the more specialized generic views & controls.
  */
 
+#pragma once
 #ifndef INCA_QT_GL_VIEW_CONTROL
 #define INCA_QT_GL_VIEW_CONTROL
 

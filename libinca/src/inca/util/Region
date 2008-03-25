@@ -10,6 +10,7 @@
  * FIXME: Something needs to be decided about Bs/Ex vs Bs/Sz ambiguity.
  */
 
+#pragma once
 #ifndef INCA_UTIL_REGION
 #define INCA_UTIL_REGION
 

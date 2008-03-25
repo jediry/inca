@@ -19,6 +19,7 @@
  * tests. It would be interesting to see how they compare.
  */
 
+#pragma once
 #ifndef INCA_MATH_STATISTICS_DISTRIBUTION_MATCHER
 #define INCA_MATH_STATISTICS_DISTRIBUTION_MATCHER
 

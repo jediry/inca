@@ -15,6 +15,7 @@
  *      the main ImmediateModeRenderer header file.
  */
 
+#pragma once
 #ifndef INCA_RENDERING_IMMEDIATE_MODE_RENDERER_LIGHTING_UNIT
 #define INCA_RENDERING_IMMEDIATE_MODE_RENDERER_LIGHTING_UNIT
 

@@ -12,6 +12,7 @@
  *      the object's response to light, and thus, its appearance.
  */
 
+#pragma once
 #ifndef INCA_WORLD_MATERIAL
 #define INCA_WORLD_MATERIAL
 

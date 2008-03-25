@@ -14,6 +14,7 @@
  type must be equality comparable, and hashable. Probably shouldn't be too big
  */
 
+#pragma once
 #ifndef INCA_UTIL_RANDOM_ACCESS_LIST
 #define INCA_UTIL_RANDOM_ACCESS_LIST
 

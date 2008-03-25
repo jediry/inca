@@ -26,6 +26,7 @@
  *      surfaces of different dimensionality (3D, 4D, etc.).
  */
 
+#pragma once
 #ifndef INCA_MATH_PARAMETRIC_SURFACE
 #define INCA_MATH_PARAMETRIC_SURFACE
 

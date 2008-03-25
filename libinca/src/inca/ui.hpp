@@ -65,6 +65,7 @@
  *
  */
 
+#pragma once
 #ifndef INCA_UI
 #define INCA_UI
 

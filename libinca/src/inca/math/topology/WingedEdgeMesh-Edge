@@ -37,6 +37,7 @@
  *             then you obviously need to call the EV accessor functions.
  */
 
+#pragma once
 #ifndef INCA_MATH_TOPOLOGY_WINGED_EDGE_MESH_EDGE
 #define INCA_MATH_TOPOLOGY_WINGED_EDGE_MESH_EDGE
 

@@ -11,6 +11,7 @@
  *      n-space. The usual vector mathematics operations are defined for it.
  */
 
+#pragma once
 #ifndef INCA_MATH_LINALG_POINT
 #define INCA_MATH_LINALG_POINT
 

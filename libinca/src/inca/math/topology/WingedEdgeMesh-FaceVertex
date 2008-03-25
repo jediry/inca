@@ -19,6 +19,7 @@
  *      the main WingedEdgeMesh header file.
  */
 
+#pragma once
 #ifndef INCA_MATH_TOPOLOGY_WINGED_EDGE_MESH_FACE_VERTEX
 #define INCA_MATH_TOPOLOGY_WINGED_EDGE_MESH_FACE_VERTEX
 

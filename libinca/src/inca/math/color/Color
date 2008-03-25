@@ -9,7 +9,7 @@
  * Description:
  */
 
-
+#pragma once
 #ifndef INCA_MATH_COLOR
 #define INCA_MATH_COLOR
 

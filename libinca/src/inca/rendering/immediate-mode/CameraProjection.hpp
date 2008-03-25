@@ -9,6 +9,7 @@
  *      FIXME: This class needs a different name. This is sorta just a hack until I figure out the "right" way to do this.
  */
 
+#pragma once
 #ifndef INCA_RENDERING_IMMEDIATE_MODE_CAMERA_PROJECTION
 #define INCA_RENDERING_IMMEDIATE_MODE_CAMERA_PROJECTION
 

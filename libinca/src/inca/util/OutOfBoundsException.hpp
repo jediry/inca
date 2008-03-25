@@ -41,6 +41,7 @@
  *     Raster does bounds checking, regardless of the value of this.
  */
 
+#pragma once
 #ifndef INCA_UTIL_OUT_OF_BOUNDS_EXCEPTION
 #define INCA_UTIL_OUT_OF_BOUNDS_EXCEPTION
 

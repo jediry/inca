@@ -10,6 +10,7 @@
  *      object in the world has a unique ID.
  */
 
+#pragma once
 #ifndef INCA_WORLD_OBJECT_BASE
 #define INCA_WORLD_OBJECT_BASE
 

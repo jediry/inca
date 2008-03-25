@@ -12,6 +12,7 @@
  *      (e.g. glVertex3f(), glVertex3d(), et. al. -> glVertex()).
  */
 
+#pragma once
 #ifndef GL_HPP
 #define GL_HPP
 

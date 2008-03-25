@@ -17,6 +17,7 @@
  *             this case, it represents an implementation deficiency.
  */
 
+#pragma once
 #ifndef INCA_UNSUPPORTED_OPERATION_EXCEPTION
 #define INCA_UNSUPPORTED_OPERATION_EXCEPTION
 

@@ -23,6 +23,7 @@
  *  FIXME: there may be some issues with const/non-const for writable operators
  */
 
+#pragma once
 #ifndef INCA_RASTER_OPERATOR_BASE
 #define INCA_RASTER_OPERATOR_BASE
 

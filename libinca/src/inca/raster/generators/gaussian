@@ -12,6 +12,7 @@
  *      direction.
  */
 
+#pragma once
 #ifndef INCA_RASTER_GENERATOR_GAUSSIAN
 #define INCA_RASTER_GENERATOR_GAUSSIAN
 

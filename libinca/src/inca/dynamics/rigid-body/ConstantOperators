@@ -9,6 +9,7 @@
  * Description:
  */
 
+#pragma once
 #ifndef INCA_DYNAMICS_RIGID_BODY_CONSTANT_OPERATORS
 #define INCA_DYNAMICS_RIGID_BODY_CONSTANT_OPERATORS
 

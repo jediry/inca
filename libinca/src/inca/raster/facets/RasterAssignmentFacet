@@ -22,6 +22,7 @@
  *      easier.
  */
 
+#pragma once
 #ifndef INCA_RASTER_FACET_ASSIGNMENT
 #define INCA_RASTER_FACET_ASSIGNMENT
 

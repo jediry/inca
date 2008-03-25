@@ -9,6 +9,7 @@
  * Description:
  */
 
+#pragma once
 #ifndef INCA_UTIL_METAPROGRAMMING_NOTHING
 #define INCA_UTIL_METAPROGRAMMING_NOTHING
 

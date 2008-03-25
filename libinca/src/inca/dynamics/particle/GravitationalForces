@@ -9,6 +9,7 @@
  * Description:
  */
 
+#pragma once
 #ifndef INCA_DYNAMICS_GRAVITATIONAL_FORCES
 #define INCA_DYNAMICS_GRAVITATIONAL_FORCES
 

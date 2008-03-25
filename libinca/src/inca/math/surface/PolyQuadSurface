@@ -19,6 +19,7 @@
  *      irrespective of the arc-length of that face.
  */
 
+#pragma once
 #ifndef INCA_MATH_POLY_QUAD_SURFACE
 #define INCA_MATH_POLY_QUAD_SURFACE
 

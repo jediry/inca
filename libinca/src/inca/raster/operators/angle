@@ -8,6 +8,7 @@
  * Description:
  */
 
+#pragma once
 #ifndef INCA_RASTER_OPERATOR_ANGLE
 #define INCA_RASTER_OPERATOR_ANGLE
 

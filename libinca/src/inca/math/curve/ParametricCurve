@@ -23,6 +23,7 @@
  *      curves (e.g., a curve in the parameter domain of a surface patch).
  */
 
+#pragma once
 #ifndef INCA_MATH_PARAMETRIC_CURVE
 #define INCA_MATH_PARAMETRIC_CURVE
 

@@ -12,6 +12,7 @@
  *      using the standard IOstream << operator.
  */
 
+#pragma once
 #ifndef INCA_STREAM_EXCEPTION
 #define INCA_STREAM_EXCEPTION
 

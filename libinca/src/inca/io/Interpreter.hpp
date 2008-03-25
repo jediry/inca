@@ -26,6 +26,7 @@
  *      will not actually release the resources allocated to the DOM object).
  */
 
+#pragma once
 #ifndef INCA_IO_INTERPRETER
 #define INCA_IO_INTERPRETER
 

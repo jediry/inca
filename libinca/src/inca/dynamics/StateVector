@@ -25,6 +25,7 @@
  *      incurring a large performance penalty due to memory allocation.
  */
 
+#pragma once
 #ifndef INCA_DYNAMIC_SYSTEM_STATE
 #define INCA_DYNAMIC_SYSTEM_STATE
 

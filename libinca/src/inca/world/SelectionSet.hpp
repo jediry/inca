@@ -35,6 +35,7 @@
  *          Subset      s1 <= s2        Strict subset       s1 <  s2
  */
 
+#pragma once
 #ifndef INCA_WORLD_SELECTION
 #define INCA_WORLD_SELECTION
 

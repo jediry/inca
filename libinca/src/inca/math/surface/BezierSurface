@@ -15,6 +15,7 @@
  *      This patch may be of arbitrary dimension in both the S and T dimensions.
  */
 
+#pragma once
 #ifndef INCA_MATH_BEZIER_SURFACE
 #define INCA_MATH_BEZIER_SURFACE
 

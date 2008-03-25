@@ -10,6 +10,7 @@
  *      rendering classes and functions.
  */
 
+#pragma once
 #ifndef INCA_RENDERING_IMMEDIATE_MODE_OPENGL_TRAITS
 #define INCA_RENDERING_IMMEDIATE_MODE_OPENGL_TRAITS
 

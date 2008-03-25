@@ -13,6 +13,7 @@
  *      for the sake of simplicity.
  */
 
+#pragma once
 #ifndef INCA_CONFIG_WIN32
 #define INCA_CONFIG_WIN32
 

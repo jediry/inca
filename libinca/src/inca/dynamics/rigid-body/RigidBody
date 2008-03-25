@@ -22,6 +22,7 @@
  *      area for future research.
  */
 
+#pragma once
 #ifndef INCA_DYNAMICS_RIGID_BODY
 #define INCA_DYNAMICS_RIGID_BODY
 

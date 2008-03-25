@@ -9,7 +9,7 @@
  * Description:
  */
 
-
+#pragma once
 #ifndef INCA_MATH_COLOR_GRAYSCALE
 #define INCA_MATH_COLOR_GRAYSCALE
 

@@ -23,6 +23,7 @@
  *          scalar_transcendental_functions
  */
 
+#pragma once
 #ifndef INCA_MATH_SCALAR_OPS
 #define INCA_MATH_SCALAR_OPS
 

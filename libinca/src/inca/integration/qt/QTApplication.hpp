@@ -11,6 +11,7 @@
  *      application need only implement the constructInterface function.
  */
 
+#pragma once
 #ifndef INCA_QT_APPLICATION
 #define INCA_QT_APPLICATION
 

@@ -79,6 +79,7 @@
  *      is 'false', then assigning to an OOB element has no effect.
  */
 
+#pragma once
 #ifndef INCA_RASTER_FACET_INDEXING
 #define INCA_RASTER_FACET_INDEXING
 

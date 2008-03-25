@@ -8,6 +8,7 @@
  * Description:
  */
 
+#pragma once
 #ifndef INCA_WORLD_INTERIOR
 #define INCA_WORLD_INTERIOR
 

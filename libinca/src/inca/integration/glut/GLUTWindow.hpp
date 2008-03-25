@@ -14,6 +14,7 @@
  *      windows and graphics modes.
  */
 
+#pragma once
 #ifndef INCA_INTEGRATION_GLUT_WINDOW
 #define INCA_INTEGRATION_GLUT_WINDOW
 

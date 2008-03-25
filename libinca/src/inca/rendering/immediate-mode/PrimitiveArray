@@ -13,6 +13,7 @@
  *       check to ensure that only one of them is non-Nothing?
  */
 
+#pragma once
 #ifndef INCA_RENDERING_PRIMITIVE_ARRAY
 #define INCA_RENDERING_PRIMITIVE_ARRAY
 

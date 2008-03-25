@@ -12,6 +12,7 @@
  *      the following pure virtual functions:
  */
 
+#pragma once
 #ifndef INCA_MATH_IMPLICIT_SURFACE
 #define INCA_MATH_IMPLICIT_SURFACE
 

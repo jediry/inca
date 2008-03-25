@@ -9,6 +9,7 @@
  * Description:
  */
 
+#pragma once
 #ifndef INCA_UTIL_ARRAY
 #define INCA_UTIL_ARRAY
 

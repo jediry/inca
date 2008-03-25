@@ -27,6 +27,7 @@
  *          USING_XERCES_PARSER -- use the Apache Xerces parser
  */
 
+#pragma once
 #ifndef INCA_IO_XML_UTILITIES
 #define INCA_IO_XML_UTILITIES
 

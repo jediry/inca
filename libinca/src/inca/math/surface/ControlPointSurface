@@ -13,6 +13,7 @@
  *      in the ParametricSurface class.
  */
 
+#pragma once
 #ifndef INCA_MATH_CONTROL_POINT_SURFACE
 #define INCA_MATH_CONTROL_POINT_SURFACE
 

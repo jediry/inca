@@ -16,6 +16,7 @@
  *      equal parameter-length, regardless of the arc-length of that segment.
  */
 
+#pragma once
 #ifndef INCA_MATH_POLY_LINE_CURVE
 #define INCA_MATH_POLY_LINE_CURVE
 

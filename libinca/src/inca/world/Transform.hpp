@@ -22,6 +22,7 @@
  *      along the world axes (before rotation and translation are applied).
  */
 
+#pragma once
 #ifndef INCA_WORLD_TRANSFORM
 #define INCA_WORLD_TRANSFORM
 

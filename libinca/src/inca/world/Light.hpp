@@ -9,6 +9,7 @@
  *      The Light class represents a scene light, which may be
  */
 
+#pragma once
 #ifndef INCA_WORLD_LIGHTS
 #define INCA_WORLD_LIGHTS
 

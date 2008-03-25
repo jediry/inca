@@ -75,6 +75,7 @@
 // TODO: implement bounds checks on moments and such
 
 
+#pragma once
 #ifndef INCA_MATH_STATISTICS
 #define INCA_MATH_STATISTICS
 

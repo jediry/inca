@@ -9,6 +9,7 @@
  * Description:
  */
 
+#pragma once
 #ifndef INCA_RASTER_ALGORITHM_FIND_EDGES
 #define INCA_RASTER_ALGORITHM_FIND_EDGES
 

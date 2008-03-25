@@ -9,6 +9,7 @@
  * TODO: merge cmag and vmag generator functions. Probably should unify treatment of complex and vector at the math level too.
  */
 
+#pragma once
 #ifndef INCA_RASTER_OPERATOR_MAGNITUDE
 #define INCA_RASTER_OPERATOR_MAGNITUDE
 

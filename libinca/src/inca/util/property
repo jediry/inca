@@ -53,6 +53,7 @@
  *      list ops - clear()?
  */
 
+#pragma once
 #ifndef INCA_UTIL_PROPERTY
 #define INCA_UTIL_PROPERTY
 

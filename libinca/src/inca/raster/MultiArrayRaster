@@ -17,6 +17,7 @@
  *      adjustable index bases, and user-configurable storage order.
  */
 
+#pragma once
 #ifndef INCA_RASTER_MULTI_ARRAY_RASTER
 #define INCA_RASTER_MULTI_ARRAY_RASTER
 

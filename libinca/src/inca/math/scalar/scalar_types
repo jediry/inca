@@ -80,6 +80,7 @@
  *             transcendental functions are pretty pointless for integer math).
  */
 
+#pragma once
 #ifndef INCA_MATH_SCALAR_TYPES_
 #define INCA_MATH_SCALAR_TYPES_
 

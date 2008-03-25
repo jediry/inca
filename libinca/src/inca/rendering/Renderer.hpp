@@ -10,6 +10,7 @@
  *      common to classes that convert a 3D scene model into a 2D image.
  */
 
+#pragma once
 #ifndef INCA_RENDERING_RENDERER
 #define INCA_RENDERING_RENDERER
 

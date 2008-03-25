@@ -13,6 +13,7 @@
  *      directly to a specific widget.
  */
 
+#pragma once
 #ifndef INCA_UI_MULTIPLEXOR_WIDGET
 #define INCA_UI_MULTIPLEXOR_WIDGET
 

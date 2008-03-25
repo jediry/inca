@@ -12,6 +12,7 @@
  *      rendered (usually).
  */
 
+#pragma once
 #ifndef INCA_WORLD_OBJECT
 #define INCA_WORLD_OBJECT
 

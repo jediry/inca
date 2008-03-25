@@ -28,6 +28,7 @@
  *      deletes the Peer when it dies, for this reason). 
  */
 
+#pragma once
 #ifndef INCA_UI_HEAVYWEIGHT_COMPONENT
 #define INCA_UI_HEAVYWEIGHT_COMPONENT
 

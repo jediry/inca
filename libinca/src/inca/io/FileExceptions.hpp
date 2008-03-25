@@ -25,6 +25,7 @@
  *      or because the file does not exist or is locked by another program.
  */
 
+#pragma once
 #ifndef INCA_IO_FILE_EXCEPTIONS
 #define INCA_IO_FILE_EXCEPTIONS
 

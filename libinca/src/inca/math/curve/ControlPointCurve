@@ -15,6 +15,7 @@
  *      This class encapsulates the details of managing the control point array.
  */
 
+#pragma once
 #ifndef INCA_MATH_CONTROL_POINT_CURVE
 #define INCA_MATH_CONTROL_POINT_CURVE
 

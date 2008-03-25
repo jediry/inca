@@ -9,6 +9,7 @@
  *      This file implements
  */
 
+#pragma once
 #ifndef INCA_RASTER_OPERATORS_STATISTIC
 #define INCA_RASTER_OPERATORS_STATISTIC
 

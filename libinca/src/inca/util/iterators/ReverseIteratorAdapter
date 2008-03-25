@@ -13,6 +13,7 @@
  *
  */
 
+#pragma once
 #ifndef INCA_UTIL_REVERSE_ITERATOR_ADAPTER
 #define INCA_UTIL_REVERSE_ITERATOR_ADAPTER
 

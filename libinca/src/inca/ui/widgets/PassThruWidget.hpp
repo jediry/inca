@@ -19,6 +19,7 @@
  *      they wrap--
  */
 
+#pragma once
 #ifndef INCA_UI_PASS_THRU_WIDGET
 #define INCA_UI_PASS_THRU_WIDGET
 
