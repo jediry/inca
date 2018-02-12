@@ -9,6 +9,9 @@
  * Comments:        Define ST_STANDALONE for demonstration mode
  */
 
+// Include precompiled header
+#include <inca/precomp.h>
+
 // We need this for case conversion
 #include <algorithm>
 #include <iostream>

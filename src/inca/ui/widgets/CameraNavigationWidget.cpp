@@ -11,6 +11,9 @@
  *      CameraNavigationWidget.hpp.
  */
 
+// Include precompiled header
+#include <inca/precomp.h>
+
 // Import class definition
 #include "CameraNavigationWidget.hpp"
 

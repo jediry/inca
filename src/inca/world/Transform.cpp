@@ -10,6 +10,9 @@
  *      declared in Transform.hpp.
  */
 
+// Include precompiled header
+#include <inca/precomp.h>
+
 // Include class definition
 #include "Transform.hpp"
 using namespace inca::world;

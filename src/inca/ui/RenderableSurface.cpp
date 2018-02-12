@@ -9,6 +9,9 @@
  * Description:
  */
 
+// Include precompiled header
+#include <inca/precomp.h>
+
 // Import class definition
 #include "RenderableSurface.hpp"
 using namespace inca::ui;

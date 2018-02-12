@@ -9,6 +9,9 @@
  * Description:
  */
 
+// Include precompiled header
+#include <inca/precomp.h>
+
 // Import system configuration
 #include <inca/inca-common.h>
 

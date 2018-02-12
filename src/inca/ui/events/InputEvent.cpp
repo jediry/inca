@@ -10,6 +10,9 @@
  *      This file implements the functions belonging to the InputEvent class.
  */
 
+// Include precompiled header
+#include <inca/precomp.h>
+
 // Import class definition
 #include "InputEvent.hpp"
 using namespace inca::ui;

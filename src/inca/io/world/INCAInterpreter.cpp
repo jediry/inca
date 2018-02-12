@@ -16,6 +16,9 @@
  *      FIXME: We don't do any error checking on file-write.
  */
 
+// Include precompiled header
+#include <inca/precomp.h>
+
 // Import class definition
 #include "SceneInterpreters.hpp"
 using namespace Inca;

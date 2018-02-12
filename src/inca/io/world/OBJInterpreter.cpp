@@ -17,6 +17,8 @@
 
 //XXX maybe do checking for separately specified, but identical normals/vertices?
 
+// Include precompiled header
+#include <inca/precomp.h>
 
 // Import class definition
 #include "ModelInterpreters.hpp"

@@ -14,6 +14,9 @@
  *      This is used by the XMLDocument object to report errors.
  */
 
+// Include precompiled header
+#include <inca/precomp.h>
+
 // Include the function prototypes and Xerces XML parser
 #include "XMLUtilities.hpp"
 using namespace Inca;

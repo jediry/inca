@@ -9,6 +9,9 @@
  * Description:
  */
 
+// Include precompiled header
+#include <inca/precomp.h>
+
 // Import class definition
 #include <inca/math/scalar/scalar_ops>
 using namespace inca::math;

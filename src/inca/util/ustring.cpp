@@ -10,6 +10,9 @@
  */
 
 
+// Include precompiled header
+#include <inca/precomp.h>
+
 // Import the class definition
 #include "ustring.hpp"
 using namespace inca;

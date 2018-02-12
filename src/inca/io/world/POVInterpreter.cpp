@@ -14,6 +14,9 @@
  *      the actual scene objects and the scene file.
  */
 
+// Include precompiled header
+#include <inca/precomp.h>
+
 // Include class definitions
 #include "SceneInterpreters.hpp"
 using Inca::IO::POVInterpreter;

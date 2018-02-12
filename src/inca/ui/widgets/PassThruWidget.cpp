@@ -13,6 +13,9 @@
  *      and pass through the rest of them (mouse clicks, other key presses).
  */
 
+// Include precompiled header
+#include <inca/precomp.h>
+
 // Import class definition
 #include "PassThruWidget.hpp"
 using namespace inca;

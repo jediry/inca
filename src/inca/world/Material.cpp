@@ -12,6 +12,9 @@
  *      the object's response to light, and thus, its appearance.
  */
 
+// Include precompiled header
+#include <inca/precomp.h>
+
 // Import class definition
 #include "Material.hpp"
 using namespace inca::world;

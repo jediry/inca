@@ -15,6 +15,9 @@
 // tracking in a TK-neutral manner?
 
 
+// Include precompiled header
+#include <inca/precomp.h>
+
 // Import class definition
 #include "GLUT-peers.hpp"
 

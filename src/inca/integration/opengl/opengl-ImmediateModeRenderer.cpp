@@ -10,6 +10,9 @@
  *      the OpenGL API.
  */
 
+// Include precompiled header
+#include <inca/precomp.h>
+
 // Import type definitions
 #include <inca/rendering/immediate-mode/OpenGLTraits.hpp>
 #include <inca/rendering/immediate-mode/types.hpp>

@@ -10,6 +10,9 @@
  *      This file implements the functions belonging to the Widget class.
  */
 
+// Include precompiled header
+#include <inca/precomp.h>
+
 // Import class definition
 #include "Widget.hpp"
 

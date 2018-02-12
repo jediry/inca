@@ -10,6 +10,9 @@
  *      This file implements the functions belonging to the BasicWidget class.
  */
 
+// Include precompiled header
+#include <inca/precomp.h>
+
 // Import class definition
 #include "BasicWidget.hpp"
 

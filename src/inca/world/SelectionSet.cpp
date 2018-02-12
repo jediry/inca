@@ -10,6 +10,9 @@
  *      This file implements the operations belonging to the SelectionSet class.
  */
 
+// Include precompiled header
+#include <inca/precomp.h>
+
 // Import class definition
 #include "SelectionSet.hpp"
 #include <algorithm>

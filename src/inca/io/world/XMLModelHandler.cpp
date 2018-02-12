@@ -8,6 +8,9 @@
  * Description:
  */
 
+// Include precompiled header
+#include <inca/precomp.h>
+
 // Import class definition
 #include "ModelInterpreters.hpp"
 using namespace Inca::IO;

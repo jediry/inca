@@ -11,6 +11,9 @@
  *      inca/raster/operators/fourier using the FFTW library.
  */
 
+// Include precompiled header
+#include <inca/precomp.h>
+
 // Import the class definitions
 #include <inca/raster/operators/fourier>
 using namespace inca;
