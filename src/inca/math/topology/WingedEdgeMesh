@@ -11,7 +11,7 @@
  *      data structure. This is a pure topological construct with no additional
  *      data inherent to it -- any data that should be associated with the
  *      vertices, edges, faces, or face-vertices must associated externally
- *      (e.g., using a hash_map) or must be included in the *Data template
+ *      (e.g., using a unordered_map) or must be included in the *Data template
  *      arguments. The template arguments for this class are optional
  *      classes/structs containing user-data (such as vertex positions,
  *      normals, texture coordinates, colors, etc.) that will be used as the

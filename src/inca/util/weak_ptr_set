@@ -25,13 +25,13 @@ namespace inca {
 
 
 template <typename T>
-class inca::weak_ptr_set : public stl_ext::hash_set< weak_ptr<T> > {
+class inca::weak_ptr_set : public std::unordered_set< weak_ptr<T> > {
 /*---------------------------------------------------------------------------*
  | Type definitions
  *---------------------------------------------------------------------------*/
 private:
     // Underlying container typedef
-    typedef stl_ext::hash_set< weak_ptr<T> >        container_type;
+    typedef std::unordered_set< weak_ptr<T> >       container_type;
     typedef typename container_type::iterator       cnt_iterator;
     typedef typename container_type::const_iterator cnt_const_iterator;
 

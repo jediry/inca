@@ -12,6 +12,7 @@
 
 // Import class definition
 #include "SelectionSet.hpp"
+#include <iterator>
 using namespace inca;
 using namespace inca::world;
 

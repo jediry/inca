@@ -47,8 +47,8 @@ namespace Inca {
 class Inca::IO::ModelHandler {
 public:
     // Container typedefs
-    typedef hash_map<IndexType, IndexType>  IndexMap;
-    typedef hash_map<string, IndexType>   MaterialMap;
+    typedef std::unordered_map<IndexType, IndexType>  IndexMap;
+    typedef std::unordered_map<string, IndexType>     MaterialMap;
 
     static const IndexType NONE = 0;
 
@@ -135,7 +135,7 @@ public:
     typedef PolygonMesh::Vector                     Vector;
     typedef PolygonMesh::TexCoords                  TexCoords;
     
-    typedef hash_map<IndexType, PolygonMesh::VertexPtr>   VertexMap;
+    typedef std::unordered_map<IndexType, PolygonMesh::VertexPtr> VertexMap;
 
 
     // Constructor

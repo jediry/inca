@@ -27,9 +27,8 @@
 
 // Include the STL header files are, 
 #if __MS_WINDOZE__              // Microsoft systems have these headers, and have a
-#   include <hash_map>          // dual-purpose 'hash_compare' functor
-#   include <hash_set>
-#   define STL_EXT_NAMESPACE stdext
+#   include <unordered_map>     // dual-purpose 'hash_compare' functor
+#   include <unordered_set>
 
     // Implement hash stuff to work on Boost's shared_ptr
     namespace std {
@@ -65,19 +64,25 @@
     };
 
     // Stick some extra stuff into the extension namespace
-    namespace stdext {
+    namespace std {
         // Hash function for shared_ptr
         template <class T>
-        inline size_t hash_value(boost::shared_ptr<T> ptr) {
-            return hash_value(ptr.get());
-        }
+        class hash<boost::shared_ptr<T>> {
+        public:
+            inline size_t operator()(const boost::shared_ptr<T>& ptr) const noexcept {
+                return std::hash<T*>()(ptr.get());
+            }
+        };
 
         // Hash function for weak_ptr
         template <class T>
-        inline size_t hash_value(boost::weak_ptr<T> ptr) {
-            // First convert to shared_ptr, then hash
-            return hash_value(boost::shared_ptr<T>(ptr).get());
-        }
+        class hash<boost::weak_ptr<T>> {
+        public:
+            inline size_t operator()(const boost::weak_ptr<T>& ptr) const noexcept {
+                // First convert to shared_ptr, then hash
+                return std::hash<boost::shared_ptr<T>>()(boost::shared_ptr<T>(ptr).get());
+            }
+        };
     };
 
 #elif __GNUC__                  // OK. We're using an SGI-style STL
@@ -166,9 +171,5 @@
 #else   // Uh-oh! We're not compiling for a supported system
 #   error "The current platform's hash_map implementation is not supported"
 #endif
-
-// Create a namespace alias for wherever the hash containers are
-namespace stl_ext = STL_EXT_NAMESPACE;
-#undef STL_EXT_NAMESPACE
 
 #endif  /* End multi-include protection */

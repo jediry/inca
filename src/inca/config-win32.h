@@ -30,17 +30,6 @@
 #define M_PIl   3.14159265358979323846
 #define M_El    2.71828182845904523536
 
-// ...and Windows doesn't have a few math thingies that we kinda need
-
-float       roundf(float x);        // Prototype floating point round functions
-double      round(double x);        // implemented in integration/win32
-long double roundl(long double x);
-namespace std {
-    bool isnan(float x);
-    bool isnan(double x);
-    bool isnan(long double x);
-}
-
 // Windows also doesn't seem to know what a clock_t is...(sigh)
 typedef long clock_t;
 
@@ -51,7 +40,7 @@ typedef long clock_t;
 
 
 #define HAVE_LIBFFTW3F  1
-#define HAVE_LIBFFTW3   1
+//#define HAVE_LIBFFTW3   1
 //#define HAVE_LIBFFTW3L  0
 
 #endif

@@ -112,7 +112,7 @@ namespace inca {
             ScalarType t;
             SizeType _elementsBelow, _elementsAbove;
             std::vector<IDType> _elements;
-//            typedef stl_ext::hash_map<IDType, int> IDCountMap;
+//            typedef std::unordered_map<IDType, int> IDCountMap;
             typedef std::map<IDType, int> IDCountMap;
 
             void resize(SizeType s) {
