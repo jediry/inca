@@ -1,0 +1,10 @@
+# Get the construction environment from the parent script
+Import('env')
+
+objs = env.StaticObject(Split("""
+    StreamTokenizer.cpp
+    ustring.cpp
+"""))
+
+Return('objs')
+

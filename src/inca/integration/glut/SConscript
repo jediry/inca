@@ -1,0 +1,10 @@
+# Get the construction environment from the parent script
+Import('env')
+
+objs = env.StaticObject(Split("""
+    GLUT-peers.cpp
+    GLUTApplication.cpp
+    GLUTWindow.cpp
+"""))
+
+Return('objs')

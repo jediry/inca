@@ -1,0 +1,6 @@
+# Get the construction environment from the parent script
+Import('env')
+
+objs = env.SConscript(dirs = ['util', 'world', 'integration', 'ui'], exports = { 'env' : env }))
+
+env.StaticLibrary('inca', objs)

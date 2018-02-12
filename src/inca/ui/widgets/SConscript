@@ -1,0 +1,15 @@
+# Get the construction environment from the parent script
+Import('env')
+
+objs = env.StaticObject(Split("""
+    BasicWidget.cpp
+    CameraNavigationWidget.cpp
+    LayeringWidget.cpp
+    LightingWidget.cpp
+    MultiplexorWidget.cpp
+    PassThruWidget.cpp
+    Widget.cpp
+    WindowControlWidget.cpp
+"""))
+
+Return('objs')

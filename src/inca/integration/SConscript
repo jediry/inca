@@ -1,0 +1,7 @@
+# Get the construction environment from the parent script
+Import('env')
+
+objs = env.SConscript(dirs = ['win32', 'opengl', 'hardware-math', 'glut', 'fftw'], exports = { 'env' : env }))
+
+Return('objs')
+

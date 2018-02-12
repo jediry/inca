@@ -1,0 +1,11 @@
+# Get the construction environment from the parent script
+Import('env')
+
+objs = env.StaticObject(Split("""
+    Material.cpp
+    SelectionSet.cpp
+    Transform.cpp
+"""))
+
+Return('objs')
+

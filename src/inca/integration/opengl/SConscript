@@ -1,0 +1,8 @@
+# Get the construction environment from the parent script
+Import('env')
+
+objs = env.StaticObject(Split("""
+    opengl-ImmediateModeRenderer.cpp
+"""))
+
+Return('objs')

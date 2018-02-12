@@ -1,0 +1,13 @@
+# Get the construction environment from the parent script
+Import('env')
+
+objs = env.StaticObject(Split("""
+    Application.cpp
+    Component.cpp
+    RenderableSurface.cpp
+    Window.cpp
+"""))
+
+objs += env.SConscript(dirs = ['events', 'widgets'], exports = { 'env' : env }))
+
+Return('objs')
