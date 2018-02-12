@@ -8,6 +8,6 @@ objs = env.StaticObject(Split("""
     Window.cpp
 """))
 
-objs += env.SConscript(dirs = ['events', 'widgets'], exports = { 'env' : env }))
+objs += env.SConscript(dirs = ['events', 'widgets'], exports = { 'env' : env })
 
 Return('objs')
