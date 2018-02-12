@@ -30,7 +30,6 @@
 
 // Import container definitions
 #include <vector>
-//#include <inca/util/hash_container>   // Microsoft hates me!
 #include <map>
 
 // Import metaprogramming tools

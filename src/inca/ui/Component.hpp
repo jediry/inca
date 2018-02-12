@@ -113,15 +113,8 @@ namespace inca {
 #include "events/EventDispatcher"
 
 
-// Import support for getting a shared_ptr from a 'this' ptr
-#include <boost/enable_shared_from_this.hpp>
-namespace boost {
-    template <typename T> class shared_ptr;
-}
-
-
 class inca::ui::Component
-    : public boost::enable_shared_from_this<inca::ui::Component> {
+    : public std::enable_shared_from_this<inca::ui::Component> {
 /*---------------------------------------------------------------------------*
  | Type definitions
  *---------------------------------------------------------------------------*/

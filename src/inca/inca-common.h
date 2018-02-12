@@ -42,20 +42,12 @@ namespace inca {
 
 // We take the C++ stdlib & Boost smart(er) pointers as "core" components
 #include <memory>
-#include <boost/scoped_ptr.hpp>
-#include <boost/scoped_array.hpp>
-#include <boost/shared_ptr.hpp>
-#include <boost/shared_array.hpp>
-#include <boost/weak_ptr.hpp>
 namespace inca {
     using std::auto_ptr;
-    using boost::scoped_ptr;
-    using boost::scoped_array;
-    using boost::shared_ptr;
-    using boost::shared_array;
-    using boost::weak_ptr;
-    using boost::dynamic_pointer_cast;
-    using boost::static_pointer_cast;
+    using std::shared_ptr;
+    using std::weak_ptr;
+    using std::static_pointer_cast;
+    using std::dynamic_pointer_cast;
 };
 #undef BOOST_DISABLE_ASSERTS
 

@@ -20,7 +20,7 @@ namespace inca {
 };
 
 // Import container and iterator definitions
-#include "hash_container"
+#include <unordered_set>
 #include "weak_ptr_iterator"
 
 
