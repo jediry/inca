@@ -1,6 +1,12 @@
 #! /usr/bin/env python
-import os
-from AutoConfigurator import AutoConfigurator
+
+#######################################################################################################################
+# SConstruct -- build script for doing standalone build of inca
+#
+# Inca supports being embedded as a submodule of another project (`git help submodule`), in which case the parent project
+# can invoke inca/SConscript directly, and bypass this script entirely. See comments at the top of the SConscript.
+#######################################################################################################################
+
 
 """
 help       -> scons -h
@@ -16,135 +22,19 @@ The variables are saved automatically after the first run (look at cache/kde.cac
 
 
 ###################################################################
-# LOAD THE ENVIRONMENT AND SET UP THE TOOLS
+# Create and configure the Environment
 ###################################################################
 
-buildDir = 'build'
-config_h = buildDir + '/config-ac.h'
+env = Environment(tools = ['default', 'doxygen', 'build.flavor'],
+                  toolpath = ['#/external/scons-tools', '#/tools'])
 
-env = Environment(tools = ['default', 'generic', 'doxygen'], toolpath = ['./tools'])
-env.BuildDir(buildDir, 'src', duplicate = 0)
-if not os.path.isdir(buildDir):
-    os.makedirs(buildDir)
+# Determine debug vs. ship build, and use this to determine the variant directory
+flavor = GetOption('flavor')
+variantDir = '#/build/' + flavor
 
-if not env.GetOption('clean'):
+# Here's where VCPkg is located
+env['VCPKGROOT'] = '#/external/vcpkg'
 
-    ## Examine the system configuration
-    conf = Configure(env)
-
-    autoConf = AutoConfigurator(conf)
-
-    autoConf.CheckHeader('sys/time.h')
-    autoConf.CheckHeader('time.h')
-
-    autoConf.CheckHeader('hash_map', language = 'C++')
-    autoConf.CheckHeader('ext/hash_map', language = 'C++')
-
-    autoConf.RequireHeader('boost/shared_ptr.hpp', language = 'C++')
-
-    autoConf.CheckHeader('GL/gl.h')
-    autoConf.CheckHeader('GL/glu.h')
-    autoConf.CheckLib('GL')
-    autoConf.CheckLib('GLU')
-
-    autoConf.CheckHeader('fftw3.h')
-    autoConf.CheckLib('fftw3f')
-
-    autoConf.RequireHeader('Magick++.h', language = 'C++')
-    autoConf.RequireLib('Magick++')
-
-    autoConf.CheckHeader('FreeImage.h')
-    autoConf.CheckLib('freeimage')
-
-    env = conf.Finish()
-
-    # Write out the config.h file
-    autoConf.GenerateConfigHeader(config_h)
-
-env.BuildDir(buildDir, 'src', duplicate = 0)
-env.Clean('.', config_h)
-
-
-###################################################################
-# SCRIPTS FOR BUILDING THE TARGETS
-###################################################################
-
+# Delegate to the SConscript file for the core build logic
 Export('env')
-env.SConscript('src/SConscript', build_dir = buildDir)
-
-
-###################################################################
-# CONVENIENCE FUNCTIONS TO EMULATE 'make dist' and 'make distclean'
-###################################################################
-
-### To make a tarball of your masterpiece, use 'scons dist'
-if 'dist' in COMMAND_LINE_TARGETS:
-
-	## The target scons dist requires the python module shutil which is in 2.3
-	env.EnsurePythonVersion(2, 3)
-
-	import os
-	APPNAME = 'bksys'
-	VERSION = os.popen("cat VERSION").read().rstrip()
-	FOLDER  = APPNAME+'-'+VERSION
-	ARCHIVE = FOLDER+'.tar.bz2'
-
-	## If your app name and version number are defined in 'version.h', use this instead:
-	## (contributed by Dennis Schridde devurandom@gmx@net)
-	#import re
-	#INFO = dict( re.findall( '(?m)^#define\s+(\w+)\s+(.*)(?<=\S)', open(r"version.h","rb").read() ) )
-	#APPNAME = INFO['APPNAME']
-	#VERSION = INFO['VERSION']
-
-	import shutil
-	import glob
-
-	## check if the temporary directory already exists
-	if os.path.isdir(FOLDER):
-		shutil.rmtree(FOLDER)
-	if os.path.isfile(ARCHIVE):
-		os.remove(ARCHIVE)
-
-	## create a temporary directory
-	startdir = os.getcwd()
-	shutil.copytree(startdir, FOLDER)
-
-	## remove our object files first
-	os.popen("find "+FOLDER+" -name \"*cache*\" | xargs rm -rf")
-	os.popen("find "+FOLDER+" -name \"*.pyc\" | xargs rm -f")
-	#os.popen("pushd %s && scons -c " % FOLDER) # TODO
-
-	## CVS cleanup
-	os.popen("find "+FOLDER+" -name \"CVS\" | xargs rm -rf")
-	os.popen("find "+FOLDER+" -name \".cvsignore\" | xargs rm -rf")
-
-	## Subversion cleanup
-	os.popen("find %s -name .svn -type d | xargs rm -rf" % FOLDER)
-
-	## GNU Arch cleanup
-	os.popen("find "+FOLDER+" -name \"{arch}\" | xargs rm -rf")
-	os.popen("find "+FOLDER+" -name \".arch-i*\" | xargs rm -rf")
-
-	## Create the tarball (coloured output)
-	print "\033[92m"+"Writing archive "+ARCHIVE+"\033[0m"
-	os.popen("tar cjf "+ARCHIVE+" "+FOLDER)
-
-	## Remove the temporary directory
-	if os.path.isdir(FOLDER):
-		shutil.rmtree(FOLDER)
-
-	env.Default(None)
-	env.Exit(0)
-
-
-### Emulate "make distclean"
-if 'distclean' in COMMAND_LINE_TARGETS:
-	## Remove the cache directory
-	import os, shutil
-	if os.path.isdir(env['CACHEDIR']):
-		shutil.rmtree(env['CACHEDIR'])
-	os.popen("find . -name \"*.pyc\" | xargs rm -rf")
-
-	env.Default(None)
-	env.Exit(0)
-
+env.SConscript('#/SConscript', variant_dir = variantDir, duplicate = 0)

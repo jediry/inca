@@ -10,6 +10,9 @@ env['PCH'] = pch[0]
 env['PCHSTOP'] = 'inca/precomp.h'
 objs += [pch[1]]
 
+# Add inca/src to the include path
+env.AppendUnique(CPPPATH = [env.Dir('..').get_path()])
+
 objs += env.SConscript(dirs = ['util', 'world', 'integration', 'ui'], exports = { 'env' : env })
 
 env.StaticLibrary('inca', objs)
