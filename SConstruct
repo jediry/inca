@@ -25,6 +25,7 @@ The variables are saved automatically after the first run (look at cache/kde.cac
 # Create and configure the Environment
 ###################################################################
 
+DefaultEnvironment(tools = [])
 env = Environment(tools = ['default', 'doxygen', 'build.flavor'],
                   toolpath = ['#/external/scons-tools', '#/tools'])
 
