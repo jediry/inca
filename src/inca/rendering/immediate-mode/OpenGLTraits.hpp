@@ -144,8 +144,8 @@ public:
 
     template <Property p> static void getHardwareState(IDType id, Color & c);
     template <Property p> static void setHardwareState(IDType id, const Color & c);
-    template <Property p> static void getHardwareState(IDType id, Point3D & p);
-    template <Property p> static void setHardwareState(IDType id, const Point3D & p);
+    template <Property p> static void getHardwareState(IDType id, Point3D & pt);
+    template <Property p> static void setHardwareState(IDType id, const Point3D & pt);
 
     template <Property p> static void getHardwareState(IDType id, Matrix & m);
     template <Property p> static void setHardwareState(IDType id, const Matrix & m);

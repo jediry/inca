@@ -26,7 +26,7 @@ The variables are saved automatically after the first run (look at cache/kde.cac
 ###################################################################
 
 DefaultEnvironment(tools = [])
-env = Environment(tools = ['default', 'doxygen', 'build.flavor'],
+env = Environment(tools = ['default', 'doxygen', 'c++17', 'build.flavor'],
                   toolpath = ['#/external/scons-tools', '#/tools'])
 
 # Determine debug vs. ship build, and use this to determine the variant directory

@@ -43,7 +43,6 @@ namespace inca {
 // We take the C++ stdlib & Boost smart(er) pointers as "core" components
 #include <memory>
 namespace inca {
-    using std::auto_ptr;
     using std::shared_ptr;
     using std::weak_ptr;
     using std::static_pointer_cast;

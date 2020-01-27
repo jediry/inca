@@ -110,7 +110,7 @@ public:
         // value is 0.51, then it will return index 2, corresponding
         // to 0.55 (remember, C++ indexes starting from 0).
         return (std::find_if(_mass.begin(), _mass.end(),
-                             std::bind1st(std::less_equal<Scalar>(), e))
+                             [&](const Scalar& s) { return e <= s; })
                 - _mass.begin());
     }
 
